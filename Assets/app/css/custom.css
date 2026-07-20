@@ -1,0 +1,786 @@
+/* Add here all your CSS customizations */
+
+
+/*==================================================================
+[ Custom General CSS ] */
+
+body {
+    /* font-family: "Montserrat", sans-serif; */
+    font-family: "Roboto Flex", Arial, sans-serif;
+    background-color: #e9edf1;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+    color: var(--bs-gray-400) !important;
+    /* font-weight: 400; */
+}
+
+input:-moz-placeholder,
+textarea:-moz-placeholder {
+    /* Firefox 18- */
+    color: var(--bs-gray-400) !important;
+    /* font-weight: 400; */
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+    /* Firefox 19+ */
+    color: var(--bs-gray-400) !important;
+    /* font-weight: 400; */
+}
+
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+    color: var(--bs-gray-400) !important;
+    /* font-weight: 400; */
+}
+
+html.dark p {
+    color: var(--bs-gray-500);
+    line-height: 24px;
+    margin: 0 0 20px;
+}
+
+hr {
+    border: 0;
+    height: 2px;
+    background-image: linear-gradient(to left, rgba(0, 0, 0, 0), #2baab1, rgba(0, 0, 0, 0));
+    margin: 22px 0 22px 0;
+}
+
+.nav-link:hover,
+.nav-link:focus {
+    /* color: #00809f57; */
+}
+
+ul.nav-main li .nav-children li.nav-active>a {
+    /* color: #00809f57; */
+}
+
+html .heading-primary,
+html .lnk-primary,
+html .text-color-primary,
+html .text-primary {
+    /* color: #00809f57 !important; */
+}
+
+.text-info {
+    --bs-text-opacity: 1;
+    color: rgb(0 178 213) !important;
+}
+
+.btnCerrar {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: red;
+    color: white;
+    border: none;
+    cursor: pointer;
+    z-index: 1;
+}
+
+
+/*==================================================================
+[ Login ] */
+
+.login-img {
+    background: url(../../../Assets/img/fondos/login9.jpg);
+    background-blend-mode: overlay;
+    background-size: cover;
+    background-position: left;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    content: "";
+    inset: 0;
+    width: 100%;
+    background-color: var(--bs-gray-dark) !important;
+}
+
+.login-registro-img {
+    background: url(../../../Assets/img/fondos/2.jpg);
+    background-blend-mode: overlay;
+    background-size: cover;
+    background-position: right;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    content: "";
+    inset: 0;
+    width: 100%;
+    background-color: var(--bs-gray-dark) !important;
+}
+
+.show-hide {
+    position: absolute;
+    top: 20px;
+    right: 60px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide span:before {
+    content: "Ocultar";
+}
+
+.show-hide span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-registro {
+    position: absolute;
+    top: 42px;
+    right: 25px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-registro span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-registro span:before {
+    content: "Ocultar";
+}
+
+.show-hide-registro span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-registro-confirm {
+    position: absolute;
+    top: 42px;
+    right: 25px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-registro-confirm span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-registro-confirm span:before {
+    content: "Ocultar";
+}
+
+.show-hide-registro-confirm span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-cliente {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-cliente span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-cliente span:before {
+    content: "Ocultar";
+}
+
+.show-hide-cliente span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-cliente-confirm {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-cliente-confirm span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-cliente-confirm span:before {
+    content: "Ocultar";
+}
+
+.show-hide-cliente-confirm span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-efirma {
+    position: absolute;
+    top: 55px;
+    right: 45px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-efirma span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-efirma span:before {
+    content: "Ocultar";
+}
+
+.show-hide-efirma span.show:before {
+    content: "Mostrar";
+}
+
+
+/*==================================================================
+[ Validating ] */
+
+.was-validated .form-control:valid:focus,
+.form-control.is-valid:focus {
+    /* border-color: #198754; */
+    /* box-shadow: 0 0 0 0.25rem rgb(25 135 84 / 25%); */
+    border-color: #f8a25c;
+    box-shadow: 0 1px 1px rgb(0 0 0 / 8%) inset, 0 0 8px rgb(228 108 10 / 30%);
+}
+
+.was-validated .form-control:valid,
+.form-control.is-valid {
+    border-color: #ced4da;
+}
+
+.was-validated .form-control:invalid:focus,
+.form-control.is-invalid:focus {
+    /* border-color: #dc3545; */
+    /* box-shadow: 0 0 0 0.25rem rgb(220 53 69 / 25%); */
+    box-shadow: none;
+}
+
+html.dark .was-validated .form-control:valid:focus,
+.form-control.is-valid:focus {
+    border-color: var(--bs-gray-700);
+}
+
+html.dark .was-validated .form-control:valid,
+.form-control.is-valid {
+    border-color: var(--bs-gray-700);
+}
+
+
+/*==================================================================
+[ Form ] */
+
+.form-group+.form-group {
+    border-top: none;
+    /* padding-top: 16px; */
+    /* padding-top: 1rem; */
+}
+
+.form-control {
+    -webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+}
+
+html.dark .form-control {
+    background-color: #282d36;
+    border-color: var(--bs-gray-700);
+    color: #EEE;
+}
+
+html.dark .card.card-big-info .card-body {
+    padding: 0;
+    background: #21262d;
+}
+
+
+/*==================================================================
+[ Sign Up Registro ] */
+
+.body-sign .card-sign .card-body {
+    border-top-color: none;
+}
+
+.body-sign .card-sign .card-body {
+    border-top: none;
+}
+
+
+/*==================================================================
+[ Loading ] */
+
+
+/* Loading Overlay */
+
+.loading-panel-showing {
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-panel-showing>.loading-panel {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-panel {
+    transition: visibility 0s ease-in-out 0.5s, opacity 0.5s ease-in-out;
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    opacity: 0;
+    right: 0;
+    top: 0;
+    visibility: hidden;
+    /* background: #FFF; */
+    background-color: #288a7d1f;
+    border-radius: 0px;
+    z-index: 10;
+    display: none;
+}
+
+html.dark .loading-panel {
+    background-color: #0e36309e;
+}
+
+
+/* Loading Panel 2 */
+
+.loading-panel-showing2 {
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-panel-showing2>.loading-panel2 {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-panel2 {
+    transition: visibility 0s ease-in-out 0.5s, opacity 0.5s ease-in-out;
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    opacity: 0;
+    right: 0;
+    top: 0;
+    visibility: hidden;
+    /* background: #FFF; */
+    background-color: #288a7d1f;
+    border-radius: 0px;
+    z-index: 10;
+    display: none;
+}
+
+html.dark .loading-panel2 {
+    background-color: #0e36309e;
+}
+
+
+/* Loading Overlay */
+
+.loading-element-showing {
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-element-showing>.loading-element {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-element {
+    transition: visibility 0s ease-in-out 0.5s, opacity 0.5s ease-in-out;
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    opacity: 0;
+    right: 0;
+    top: 0;
+    visibility: hidden;
+    /* background: #FFF; */
+    background-color: #288a7d1f;
+    border-radius: 0px;
+    z-index: 10;
+    display: none;
+    margin-left: 12px;
+    margin-top: 23px;
+    width: calc(100% - 24px);
+}
+
+html.dark .loading-element {
+    background-color: #0e36309e;
+}
+
+
+/* Loading Overlay */
+
+.loading-form-showing {
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-form-showing>.loading-form {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-form {
+    transition: visibility 0s ease-in-out 0.5s, opacity 0.5s ease-in-out;
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    opacity: 0;
+    right: 0;
+    top: 0;
+    visibility: hidden;
+    /* background: #FFF; */
+    background-color: #288a7d1f;
+    border-radius: 0px;
+    z-index: 10;
+    display: none;
+}
+
+html.dark .loading-form {
+    background-color: #0e36309e;
+}
+
+
+/*==================================================================
+[ ToolTips ] */
+
+.custom-tooltip {
+    --bs-tooltip-bg: #006499;
+    font-size: 11px;
+    padding: 7px 5px;
+}
+
+
+/**=====================
+    Custom Autocomplete CSS
+==========================**/
+
+.ui-autocomplete {
+    height: 300px !important;
+    overflow-y: auto !important;
+    overflow-X: hidden !important;
+    border-radius: 4px;
+}
+
+.ui-widget.ui-widget-content {
+    border: 1px solid #3a99a854;
+    z-index: 350;
+    -webkit-box-shadow: 0 1px 2px 0 rgb(0 0 0 / 20%) !important;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 20%) !important;
+}
+
+.ui-widget-content a {
+    color: #333333;
+}
+
+.ui-widget-content a span {
+    color: var(--primary);
+}
+
+.ui-state-active,
+.ui-widget-content .ui-state-active,
+.ui-widget-header .ui-state-active,
+a.ui-button:active,
+.ui-button:active,
+.ui-button.ui-state-active:hover {
+    border: 1px solid #ffffff;
+    background: var(--primary);
+    font-weight: normal;
+    color: #ffffff !important;
+}
+
+.ui-state-active .text-main,
+.ui-widget-content .ui-state-active .text-main,
+.ui-widget-header .ui-state-active .text-main,
+a.ui-button:active .text-main,
+.ui-button:active .text-main,
+.ui-button.ui-state-active .text-main:hover {
+    color: var(--secondary) !important;
+}
+
+.ui-state-active .small-text,
+.ui-widget-content .ui-state-active .small-text,
+.ui-widget-header .ui-state-active .small-text,
+a.ui-button:active .small-text,
+.ui-button:active .small-text,
+.ui-button.ui-state-active .small-text:hover {
+    color: var(--gray-700) !important;
+}
+
+.ui-button.ui-state-active:hover {
+    transition: background 0.3s ease-in-out !important;
+}
+
+.ui-widget-content a.list-group-item-action {
+    color: var(--primary);
+}
+
+#ui-id-2 {
+    top: 182.188px !important;
+    width: calc(100% - 52px) !important;
+    z-index: 999 !important;
+    box-shadow: 0 10px 40px 0 rgb(104 113 123 / 30%);
+    border: 1px solid #eaedf1;
+}
+
+#ui-id-1 {
+    /* top: 182.188px!important;
+    width: calc(100% - 52px)!important;
+    z-index: 999!important; */
+    box-shadow: 0 10px 40px 0 rgb(104 113 123 / 30%);
+    border: 1px solid #eaedf1;
+}
+
+
+/**=====================
+    Authentication CSS Start
+==========================**/
+
+.show-hide {
+    position: absolute;
+    top: 57px;
+    right: 24px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide span:before {
+    content: "Ocultar";
+}
+
+.show-hide span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-login {
+    position: absolute;
+    top: 21px;
+    right: 55px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-login span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-login span:before {
+    content: "Ocultar";
+}
+
+.show-hide-login span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-usuarios {
+    position: absolute;
+    top: 58px;
+    right: 45px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-usuarios span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-usuarios span:before {
+    content: "Ocultar";
+}
+
+.show-hide-usuarios span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-confirm {
+    position: absolute;
+    top: 57px;
+    right: 24px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-confirm span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-confirm span:before {
+    content: "Ocultar";
+}
+
+.show-hide-confirm span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-cambiar {
+    position: absolute;
+    top: 50px;
+    right: 14px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-cambiar span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-cambiar span:before {
+    content: "Ocultar";
+}
+
+.show-hide-cambiar span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-cambiar-confirm {
+    position: absolute;
+    top: 66px;
+    right: 14px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-cambiar-confirm span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-cambiar-confirm span:before {
+    content: "Ocultar";
+}
+
+.show-hide-cambiar-confirm span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-efirma {
+    position: absolute;
+    top: 58px;
+    right: 45px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-efirma span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-efirma span:before {
+    content: "Ocultar";
+}
+
+.show-hide-efirma span.show:before {
+    content: "Mostrar";
+}
+
+.show-hide-smtp {
+    position: absolute;
+    top: 58px;
+    right: 27px;
+    -webkit-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-transform: capitalize;
+    z-index: 6;
+}
+
+.show-hide-smtp span {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-primary);
+}
+
+.show-hide-smtp span:before {
+    content: "Ocultar";
+}
+
+.show-hide-smtp span.show:before {
+    content: "Mostrar";
+}
+
+
+/* Plantilla summer note */
+
+#descripcion_read p {
+    margin: 0 0 0;
+}
+
+td p {
+    margin: 0 0 0;
+}
+
+
+/* Inicio */
+
+.btn-inicio {
+    transition: all 0.3s linear 0.2s;
+    /* transition: background-color 0.3s linear 0.2s; */
+}
+
+.btn-inicio:hover {
+    -webkit-box-shadow: 0 4px 10px 0 rgba(255, 255, 255, 0.7), 0 4px 20px 0 rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 10px 0 rgba(255, 255, 255, 0.7), 0 4px 20px 0 rgba(255, 255, 255, 0.8);
+    -webkit-transition: all .3s ease;
+    -moz-transition: all .3s ease;
+    -ms-transition: all .3s ease;
+    -o-transition: all .3s ease;
+    transition: all .3s ease;
+}

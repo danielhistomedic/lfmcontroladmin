@@ -1,0 +1,5 @@
+[2024-04-21T06:07:14.377830-06:00] lfmcontrol.WARNING: Usuario o Password No Válido [] []
+[2024-04-21T18:57:40.012049-06:00] lfmcontrol.ERROR: mensaje: There is no active transaction, archivo: C:\xampp82\htdocs\lfm_admin\Models\EFirmaModel.php, linea: 154, codigo: 0 [] []
+[2024-04-21T18:57:40.590758-06:00] lfmcontrol.WARNING: Codigo Error: config_1005, Error Desconocido [] []
+[2024-04-21T19:01:38.300888-06:00] lfmcontrol.WARNING: Codigo Error: config_1004. Error Desconocido [] []
+[2024-04-21T19:05:00.992002-06:00] lfmcontrol.ERROR: mensaje: OpenSSL execution error, archivo: C:\xampp82\htdocs\lfm_admin\Libraries\Custom\cfdiutils\src\CfdiUtils\OpenSSL\Caller.php, linea: 51, codigo: 0 [] []

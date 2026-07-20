@@ -1,0 +1,16 @@
+{
+    "name": "his/web",
+    "authors": [{
+        "name": "Informatica Medica Histoclin S.A. de C.V.",
+        "email": "daniel@histoclin.mx"
+    }],
+    "autoload": {
+        "psr-4": {
+            "Lib\\": "Libraries/Custom/"
+        },
+        "classmap": ["Libraries/Custom/"]
+    },
+    "require": {
+        "monolog/monolog": "^2.2"
+    }
+}

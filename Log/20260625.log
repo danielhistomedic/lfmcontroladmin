@@ -1,0 +1,2 @@
+[2026-06-25T05:50:11.473878-06:00] lfmcontrol.ERROR: mensaje: Call to undefined method VentasModel::selectTotalEmpleados(), archivo: C:\xampp\htdocs\lfm_admin\Controllers\Ventas.php, linea: 409, codigo: 0 [] []
+[2026-06-25T05:50:11.535256-06:00] lfmcontrol.WARNING: Codigo Error: ventas_1001. Error Desconocido [] []

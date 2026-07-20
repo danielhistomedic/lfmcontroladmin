@@ -1,0 +1,76 @@
+/*-------------------------------------------
+[ Custom DatePicker ]*/
+
+.datepicker-panel>ul>li:hover {
+    background-color: var(--light) !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.transparent-mode .datepicker-panel>ul>li:hover {
+    color: var(--primary-bg-hover) !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.datepicker-panel>ul>li {
+    background-color: var(--primary02);
+    border-left: 1px dashed var(--light);
+    border-bottom: 1px dashed var(--light);
+    transition: all 0.2s ease-in-out;
+}
+
+.transparent-mode .datepicker-panel>ul>li {
+    background-color: var(--transparent-body);
+    border-left: 1px dashed rgb(255 255 255 / 25%);
+    border-bottom: 1px dashed rgb(255 255 255 / 25%);
+    transition: all 0.2s ease-in-out;
+}
+
+.datepicker-panel>ul>li.picked::before {
+    content: '';
+    position: absolute;
+    width: 29px;
+    height: 29px;
+    border: 1px solid #eaedf1;
+    border-radius: 50%;
+    left: 0px;
+    top: 0px;
+}
+
+.datepicker-panel>ul>li.picked,
+.datepicker-panel>ul>li.picked:hover {
+    position: relative;
+    color: #dc3545;
+    transition: all 0.2s ease-in-out;
+}
+
+.datepicker-panel>ul>li[data-view="month picked"]::before {
+    content: '';
+    position: absolute;
+    width: 52px;
+    height: 52px;
+    border: 1px solid #eaedf1;
+    border-radius: 50%;
+    left: 0px;
+    top: 0px;
+}
+
+.datepicker-panel>ul>li[data-view="year picked"]::before {
+    content: '';
+    position: absolute;
+    width: 52px;
+    height: 52px;
+    border: 1px solid #eaedf1;
+    border-radius: 50%;
+    left: 0px;
+    top: 0px;
+}
+
+.datepicker-dropdown:before {
+    border-bottom: 7px solid var(--primary02);
+    border-bottom-color: var(--primary02);
+}
+
+.transparent-mode .datepicker-dropdown:before {
+    border-bottom: 7px solid var(--transparent-body);
+    border-bottom-color: var(--transparent-body);
+}

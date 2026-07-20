@@ -1,0 +1,27 @@
+/* Add here all your CSS customizations */
+
+.login-img {
+    background: url(../../Assets/img/fondos/1.jpg);
+    background-blend-mode: overlay;
+    background-size: cover;
+    background-position: left;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    content: "";
+    inset: 0;
+    width: 100%;
+    background-color: var(--bs-gray-dark)!important;
+}
+
+.login-registro-img {
+    background: url(../../Assets/img/fondos/2.jpg);
+    background-blend-mode: overlay;
+    background-size: cover;
+    background-position: right;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    content: "";
+    inset: 0;
+    width: 100%;
+    background-color: var(--bs-gray-dark)!important;
+}

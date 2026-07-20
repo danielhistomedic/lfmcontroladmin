@@ -1,0 +1,74 @@
+{
+    "name": "phpcfdi/sat-estado-cfdi-soap",
+    "description": "Consulta el estado de un CFDI en el webservice del SAT usando SOAP (sin WSDL)",
+    "keywords": ["phpcfdi", "sat", "cfdi", "ConsultaCFDIService.svc"],
+    "homepage": "https://github.com/phpcfdi/sat-estado-cfdi-soap",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Carlos C Soto",
+            "email": "eclipxe13@gmail.com"
+        }
+    ],
+    "support": {
+        "source": "https://github.com/phpcfdi/sat-estado-cfdi-soap",
+        "issues": "https://github.com/phpcfdi/sat-estado-cfdi-soap/issues"
+    },
+    "prefer-stable": true,
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": {
+            "*": "dist"
+        }
+    },
+    "require": {
+        "php": ">=7.3",
+        "ext-soap": "*",
+        "phpcfdi/sat-estado-cfdi": "^1.0.2"
+    },
+    "require-dev": {
+        "phpcfdi/cfdi-expresiones": "^3.0",
+        "phpunit/phpunit": "^9.5"
+    },
+    "suggest": {
+        "phpcfdi/cfdi-expresiones": "Genera expresiones de CFDI 3.3, CFDI 3.2 y RET 1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpCfdi\\SatEstadoCfdi\\Soap\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhpCfdi\\SatEstadoCfdi\\Tests\\Soap\\": "tests/"
+        }
+    },
+    "scripts": {
+        "dev:build": ["@dev:fix-style", "@dev:test"],
+        "dev:check-style": [
+            "@php tools/php-cs-fixer fix --dry-run --verbose",
+            "@php tools/phpcs --colors -sp"
+        ],
+        "dev:fix-style": [
+            "@php tools/php-cs-fixer fix --verbose",
+            "@php tools/phpcbf --colors -sp"
+        ],
+        "dev:test": [
+            "@dev:check-style",
+            "@php vendor/bin/phpunit --testdox --verbose --stop-on-failure",
+            "@php tools/phpstan analyse --no-progress",
+            "@php tools/psalm --no-progress",
+            "@php tools/infection --no-progress --no-interaction --show-mutations"
+        ],
+        "dev:coverage": [
+            "@php -dzend_extension=xdebug.so -dxdebug.mode=coverage vendor/bin/phpunit --verbose --coverage-html build/coverage/html/"
+        ]
+    },
+    "scripts-descriptions": {
+        "dev:build": "DEV: run dev:fix-style and dev:tests, run before pull request",
+        "dev:check-style": "DEV: search for code style errors using php-cs-fixer and phpcs",
+        "dev:fix-style": "DEV: fix code style errors using php-cs-fixer and phpcbf",
+        "dev:test": "DEV: run dev:check-style, phpunit, phpstan, psalm and infection",
+        "dev:coverage": "DEV: run phpunit with xdebug and storage coverage in build/coverage/html/"
+    }
+}

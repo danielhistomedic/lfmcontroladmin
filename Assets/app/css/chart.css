@@ -1,0 +1,121 @@
+.transparent-mode .highcharts-background {
+    fill: transparent;
+}
+
+.highcharts-title {
+    font-size: 13px !important;
+    font-family: 'Roboto' !important;
+    font-family: 'Roboto' !important;
+}
+
+.transparent-mode .highcharts-title {
+    color: rgb(57 192 237) !important;
+    fill: rgb(57 192 237) !important;
+}
+
+.transparent-mode .highcharts-legend-item text {
+    font-family: 'Roboto' !important;
+}
+
+.transparent-mode .highcharts-legend-item text {
+    color: #6c757d !important;
+    fill: #fff !important;
+}
+
+.table-td-info-chart {
+    padding: 5px 10px;
+}
+
+.transparent-mode .table-td-info-chart {
+    color: #fff !important;
+}
+
+.transparent-mode .highcharts-menu {
+    background: #fff !important;
+}
+
+.transparent-mode .highcharts-menu-item {
+    color: #fff !important;
+}
+
+.highcharts-no-tooltip {
+    font-size: 13px !important;
+    font-weight: 300;
+}
+
+
+/* //======== */
+
+.highcharts-figuretotal,
+.highcharts-figure,
+.highcharts-data-table table {
+    /* min-width: 200px; */
+    /* max-width: 800px; */
+    width: 100%;
+    margin: 1em auto;
+}
+
+.highcharts-data-table table {
+    /* font-family: Verdana, sans-serif; */
+    border-collapse: collapse;
+    border: 1px solid #EBEBEB;
+    margin: 10px auto;
+    text-align: center;
+    width: 100%;
+    /* max-width: 500px; */
+}
+
+.highcharts-data-table caption {
+    padding: 1em 0;
+    font-size: 1.2em;
+    color: #555;
+}
+
+.highcharts-data-table th {
+    font-weight: 600;
+    padding: 0.5em;
+}
+
+.highcharts-data-table td,
+.highcharts-data-table th,
+.highcharts-data-table caption {
+    padding: 0.5em;
+}
+
+.highcharts-data-table thead tr,
+.highcharts-data-table tr:nth-child(even) {
+    background: #f8f8f8;
+}
+
+.highcharts-data-table tr:hover {
+    background: #f1f7ff;
+}
+
+.highcharts-menu-item:nth-child(2),
+.highcharts-menu-item:nth-child(5),
+.highcharts-menu-item:nth-child(6),
+.highcharts-menu-item:nth-child(7),
+.highcharts-menu-item:nth-child(8),
+.highcharts-menu-item:nth-child(9),
+.highcharts-menu-item:nth-child(10),
+.highcharts-menu-item:nth-child(11) {
+    display: none !important;
+}
+
+.highcharts-menu hr {
+    display: none !important;
+}
+
+ul.highcharts-menu {
+    border: 1px solid var(--colorBtnOutline) !important;
+    /* border: 1px solid #8e8e8e !important; */
+    border-radius: 3px !important;
+    /* box-shadow: 0 2px 8px 0 #c9c9c9 !important; */
+    -webkit-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .25), 0 3px 10px 0 rgba(0, 0, 0, .2) !important;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .25), 0 3px 10px 0 rgba(0, 0, 0, .2) !important;
+}
+
+.highcharts-title {
+    font-family: "Roboto", sans-serif !important;
+    font-weight: 600 !important;
+}

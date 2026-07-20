@@ -1,0 +1,1 @@
+[2026-06-11T17:01:57.697132-06:00] lfmcontrol.ERROR: mensaje: mysqli_fetch_assoc(): Argument #1 ($result) must be of type mysqli_result, null given, archivo: C:\xampp\htdocs\lfm_admin\Views\Dashboard\dashboard.php, linea: 548, codigo: 0 [] []

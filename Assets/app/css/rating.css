@@ -1,0 +1,48 @@
+/* Edit */
+
+.start_rating {
+    user-select: none;
+}
+
+.start {
+    color: #ff9800;
+    background-color: unset;
+    border: none;
+}
+
+.start:hover {
+    cursor: pointer;
+}
+
+.start i {
+    font-size: 22px!important;
+}
+
+
+/* Read */
+
+.start_rating_read {
+    user-select: none;
+}
+
+.start_read {
+    color: #ff9800;
+    background-color: unset;
+    border: none;
+}
+
+.start_read:hover {
+    cursor: pointer;
+}
+
+.start_read i {
+    font-size: 22px!important;
+}
+
+.rating-color-nosel {
+    color: var(--primary03);
+}
+
+.transparent-mode .rating-color-nosel {
+    color: var(--bs-gray-600);
+}

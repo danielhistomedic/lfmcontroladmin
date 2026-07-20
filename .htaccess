@@ -1,0 +1,19 @@
+# Options All -Indexes
+Options -Indexes
+
+# Permite reescribir las peticiones de URL
+RewriteEngine on 
+
+# Quitar el www
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# Permite reescribir las peticiones de URL
+RewriteEngine on 
+
+# Si el archivo y la carpeta no existen hacer siguiente reescritura
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# Redirecciona todas las peticiones a index
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

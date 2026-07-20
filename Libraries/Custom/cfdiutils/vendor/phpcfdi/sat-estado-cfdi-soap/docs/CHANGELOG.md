@@ -1,0 +1,67 @@
+# CHANGELOG
+
+## Acerca de SemVer
+
+Usamos [Versionado Semántico 2.0.0](SEMVER.md) por lo que puedes usar esta librería sin temor a romper tu aplicación.
+
+## Cambios no liberados en una versión
+
+Pueden aparecer cambios no liberados que se integran a la rama principal, pero no ameritan una nueva liberación de
+versión, aunque sí su incorporación en la rama principal de trabajo. Generalmente se tratan de cambios en el desarrollo.
+
+## Listado de cambios
+
+### Version 1.0.3 2022-02-22
+
+- Se actualiza el año en el archivo de licencia. Feliz 2022.
+- Se corrige el grupo de mantenedores de phpCfdi.
+- Se actualizan las dependencias de desarrollo.
+- Se corrige el archivo de configuración de Psalm porque el atributo `totallyTyped` está deprecado.
+- Se actualiza la dependencia de desarrollo `phpcfdi/cfdi-expresiones:^3.0`.
+- Se deja de utilizar Scrutinizer CI. Gracias Scrutinizer CI.
+- El flujo de integración continua se cambia de pasos a trabajos.
+- Se agrega la integración con *sonarcloud*.
+
+### Version 1.0.2 2021-11-04
+
+- Se actualiza la dependencia `phpcfdi/sat-estado-cfdi:^1.0.2`.
+- Se corrige el nombre del archivo de configuración de PHPStan en los archivos excluidos del paquete de distribución.
+
+### Version 1.0.1 2021-09-03
+
+- La versión menor de PHP es 7.3.
+- Se actualiza PHPUnit a 9.5.
+- Se migra de Travis-CI a GitHub Workflows. Gracias Travis-CI.
+- Se instalan las herramientas de desarrollo usando `phive` en lugar de `composer`.
+- Se agregan revisiones de `psalm` e `infection`.
+- Se cambia la rama principal a `main`.
+
+### Version 1.0.0 2021-01-10
+
+- A partir de esta versión se ha puesto la documentación del proyecto en español.
+- Se garatiza la compatibilidad con PHP 8.0.
+- Dependencia con `phpcfdi/sat-estado-cfdi:^1.0.0`.
+
+## Version 0.2.2 2021-01-08
+
+- Add support for PHP 8.0.
+- Upgrade to PHPStan 0.12.
+- Change ownership from Carlos C Soto to PhpCfdi.
+- Update documentation: Fix README badges, contributing build instructions, etc.
+- Update settings on Travis-CI and Scrutinizer.
+- Remove PHPLint.
+
+## Version 0.2.1 2019-05-16
+
+- Change dependence versions `phpcfdi/sat-estado-cfdi: ^0.6.1|^0.7.0`.
+  See <https://github.com/phpcfdi/sat-estado-cfdi/issues/7>
+  
+## Version 0.2.0 2019-03-29
+
+- Works with `phpcfdi/sat-estado-cfdi:^0.6.0`.
+- Increase soap connection timeout from 5 to 10 seconds.
+- Fix CONTRIBUTING & other documentation & project files.
+
+## Version 0.1.0 2019-03-28
+
+- Implemented `phpcfdi/sat-estado-cfdi:^0.5.0`.

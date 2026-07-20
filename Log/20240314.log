@@ -1,0 +1,7 @@
+[2024-03-14T07:15:18.518436-06:00] surtifarma.WARNING: Debe seleccionar un registro [] []
+[2024-03-14T07:15:57.731253-06:00] surtifarma.WARNING: Debe seleccionar un registro [] []
+[2024-03-14T07:16:22.471002-06:00] surtifarma.WARNING: Debe seleccionar un registro [] []
+[2024-03-14T07:18:19.284693-06:00] surtifarma.ERROR: mensaje: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'FROM ssf_legales t INNER JOIN  ssf_sucursales s ON (s.id = t.sucursal_id) INNER ' at line 1, archivo: C:\xampp82\htdocs\surtifarma_admin\Libraries\Core\Mysql.php, linea: 126, codigo: 42000 [] []
+[2024-03-14T07:18:19.286449-06:00] surtifarma.WARNING: Lo sentimos, Datos no encontrados [] []
+[2024-03-14T08:50:27.275196-06:00] surtifarma.WARNING: Debe indicar terminos y condiciones [] []
+[2024-03-14T08:51:13.083319-06:00] surtifarma.WARNING: Lo sentimos, Datos no encontrados [] []

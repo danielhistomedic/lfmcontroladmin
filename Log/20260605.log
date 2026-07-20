@@ -1,0 +1,2 @@
+[2026-06-05T14:16:41.368217-06:00] lfmcontrol.ERROR: mensaje: Undefined constant "MOD_DASHBOARD_VENTAS", archivo: C:\xampp\htdocs\lfm_admin\Template\aside.php, linea: 64, codigo: 0 [] []
+[2026-06-05T14:16:47.321623-06:00] lfmcontrol.ERROR: mensaje: Undefined constant "MOD_DASHBOARD_VENTAS", archivo: C:\xampp\htdocs\lfm_admin\Template\aside.php, linea: 64, codigo: 0 [] []

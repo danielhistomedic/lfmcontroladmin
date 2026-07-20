@@ -1,0 +1,61 @@
+{
+  "_from": "@fortawesome/fontawesome@~6.4.2",
+  "_id": "@fortawesome/fontawesome@6.4.2",
+  "_inBundle": false,
+  "_integrity": "sha512-viouXhegu/TjkvYQoiRZK3aax69dGXxgEjpvZW81wIJdxm5Fnvp3VVIP4VHKqX4SvFw6qpmkILkD4RJWAdrt7A==",
+  "_location": "/@fortawesome/fontawesome",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "range",
+    "registry": true,
+    "raw": "@fortawesome/fontawesome@~6.4.2",
+    "name": "@fortawesome/fontawesome",
+    "escapedName": "@fortawesome%2ffontawesome",
+    "scope": "@fortawesome",
+    "rawSpec": "~6.4.2",
+    "saveSpec": null,
+    "fetchSpec": "~6.4.2"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/@fortawesome/fontawesome/-/fontawesome-6.4.2.tgz",
+  "_shasum": "344baf6ff9eaad7a73cff067d8c56bfc11ae5304",
+  "_spec": "@fortawesome/fontawesome@~6.4.2",
+  "_where": "E:\\_OKLER\\Templates\\Porto-Admin\\HTML",
+  "author": {
+    "name": "The Font Awesome Team",
+    "url": "https://github.com/orgs/FortAwesome/people"
+  },
+  "bugs": {
+    "url": "https://github.com/FortAwesome/Font-Awesome/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {},
+  "deprecated": false,
+  "description": "The iconic font, CSS, and SVG framework",
+  "engines": {
+    "node": ">=6"
+  },
+  "homepage": "https://fontawesome.com",
+  "keywords": [
+    "font",
+    "awesome",
+    "fontawesome",
+    "icon",
+    "svg",
+    "bootstrap"
+  ],
+  "license": "(CC-BY-4.0 AND OFL-1.1 AND MIT)",
+  "main": "js/fontawesome.js",
+  "name": "@fortawesome/fontawesome",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FortAwesome/Font-Awesome.git"
+  },
+  "scripts": {
+    "postinstall": "node attribution.js"
+  },
+  "style": "css/fontawesome.css",
+  "version": "6.4.2"
+}
