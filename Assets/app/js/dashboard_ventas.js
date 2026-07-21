@@ -867,7 +867,7 @@ function openModalPedidosCotizados() {
 
     if (tbody) {
         tbody.innerHTML = `<tr>
-            <td colspan="8" class="text-center text-muted py-4">
+            <td colspan="10" class="text-center text-muted py-4">
                 <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                 Cargando pedidos cotizados...
             </td>
@@ -906,6 +906,20 @@ function openModalPedidosCotizados() {
                 const totalMoneda = (p.cmoneda === 'MXN') ? formatMXN(p.total) : formatUSD(p.total);
                 const totalUSD = formatUSD(p.total_usd);
 
+                const activoVal = (p.activo !== null && p.activo !== undefined && p.activo !== '') ? String(p.activo).trim() : 'ACTIVO';
+                const isCerrado = (activoVal.toUpperCase() === 'CERRADO');
+                const cellActivoStyle = isCerrado
+                    ? 'class="text-center text-3 bg-danger text-white fw-bold"'
+                    : 'class="text-center text-3"';
+                const activoHtml = isCerrado
+                    ? `<span class="badge bg-white text-danger fw-bold px-2 py-1">CERRADO</span>`
+                    : `<span class="badge bg-light text-dark border px-2 py-1">${activoVal}</span>`;
+
+                const isColocado = parseInt(p.valida_colocados || 0, 10) >= 6;
+                const colocadoHtml = isColocado
+                    ? `<span class="badge bg-success text-white px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>Sí</span>`
+                    : `<span class="badge bg-secondary text-white px-2 py-1">No</span>`;
+
                 html += `<tr>
                     <td class="text-center fw-bold text-dark text-3">${id}</td>
                     <td class="text-center fw-semibold text-secondary text-3">${proyectoId}</td>
@@ -913,6 +927,8 @@ function openModalPedidosCotizados() {
                     <td class="fw-semibold text-primary text-3">${cliente}</td>
                     <td class="text-dark text-3">${vendedor}</td>
                     <td class="text-3"><span class="badge bg-light text-dark border">${clasificacion}</span></td>
+                    <td ${cellActivoStyle}>${activoHtml}</td>
+                    <td class="text-center text-3">${colocadoHtml}</td>
                     <td class="text-end font-monospace fw-semibold text-3">${totalMoneda}</td>
                     <td class="text-end font-monospace fw-bold text-primary text-3">${totalUSD}</td>
                 </tr>`;
@@ -920,7 +936,7 @@ function openModalPedidosCotizados() {
         } else {
             if (lblCount) lblCount.innerHTML = `0 Pedidos`;
             html = `<tr>
-                <td colspan="8" class="text-center text-muted py-4">
+                <td colspan="10" class="text-center text-muted py-4">
                     <i class="fa-regular fa-folder-open fa-2x d-block mb-2"></i>
                     No se encontraron pedidos cotizados en este periodo.
                 </td>

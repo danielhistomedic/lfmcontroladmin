@@ -467,19 +467,21 @@
                     <table class="table table-hover table-striped table-custom align-middle w-100 mb-0" id="table_pedidos_cotizados">
                         <thead>
                             <tr>
-                                <th class="text-center" width="6%">ID</th>
-                                <th class="text-center" width="10%">ID Proyecto</th>
-                                <th width="11%">Fecha</th>
-                                <th width="26%">Cliente</th>
-                                <th width="20%">Vendedor</th>
-                                <th width="11%">Clasificación</th>
-                                <th class="text-end" width="8%">Total</th>
-                                <th class="text-end" width="8%">Total (USD)</th>
+                                <th class="text-center" width="5%">ID</th>
+                                <th class="text-center" width="9%">ID Proyecto</th>
+                                <th width="10%">Fecha</th>
+                                <th width="20%">Cliente</th>
+                                <th width="16%">Vendedor</th>
+                                <th width="10%">Clasificación</th>
+                                <th class="text-center" width="8%">Activo</th>
+                                <th class="text-center" width="8%">Colocado</th>
+                                <th class="text-end" width="7%">Total</th>
+                                <th class="text-end" width="7%">Total (USD)</th>
                             </tr>
                         </thead>
                         <tbody id="tbl_pedidos_cotizados_body">
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">
+                                <td colspan="10" class="text-center text-muted py-4">
                                     <i class="fa-regular fa-folder-open fa-2x d-block mb-2"></i>
                                     Cargando pedidos cotizados...
                                 </td>

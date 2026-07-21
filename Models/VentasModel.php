@@ -866,7 +866,9 @@ class VentasModel extends Mysql
                 COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
                 COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
-                COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto
+                COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto,
+                (SELECT vc.estatus_proyecto_id FROM tb_ventas vc WHERE vc.id = v.id) as valida_colocados,
+                COALESCE(v.activo, 'ACTIVO') AS activo
             FROM tb_ventas v
             LEFT JOIN cat_clientes c ON c.id = v.cliente_id
             LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
