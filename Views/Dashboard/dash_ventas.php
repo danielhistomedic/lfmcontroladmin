@@ -463,20 +463,20 @@
                     <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1"></i> Periodo: <strong id="lbl_modal_cotizados_rango" class="text-dark">--/--/---- al --/--/----</strong></span>
                     <span class="badge bg-primary text-white text-3 px-3 py-2" id="lbl_modal_cotizados_count">0 Pedidos</span>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped table-custom align-middle w-100 mb-0" id="table_pedidos_cotizados">
+                <div class="table-responsive export-table">
+                    <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table_pedidos_cotizados">
                         <thead>
                             <tr>
-                                <th class="text-center" width="5%">ID</th>
-                                <th class="text-center" width="9%">ID Proyecto</th>
-                                <th width="10%">Fecha</th>
-                                <th width="20%">Cliente</th>
-                                <th width="16%">Vendedor</th>
-                                <th width="10%">Clasificación</th>
-                                <th class="text-center" width="8%">Activo</th>
-                                <th class="text-center" width="8%">Colocado</th>
-                                <th class="text-end" width="7%">Total</th>
-                                <th class="text-end" width="7%">Total (USD)</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="5%">ID</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="9%">ID Proyecto</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="10%">Fecha</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="20%">Cliente</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="16%">Vendedor</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="10%">Clasificación</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="8%">Activo</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="8%">Colocado</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="7%">Total</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="7%">Total (USD)</th>
                             </tr>
                         </thead>
                         <tbody id="tbl_pedidos_cotizados_body">

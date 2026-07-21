@@ -865,6 +865,13 @@ function openModalPedidosCotizados() {
     const tbody = document.getElementById('tbl_pedidos_cotizados_body');
     const lblCount = document.getElementById('lbl_modal_cotizados_count');
 
+    if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_pedidos_cotizados')) {
+        $('#table_pedidos_cotizados').DataTable().destroy();
+    }
+    if (typeof $ !== 'undefined') {
+        $('#table_pedidos_cotizados thead tr:gt(0)').remove();
+    }
+
     if (tbody) {
         tbody.innerHTML = `<tr>
             <td colspan="10" class="text-center text-muted py-4">
@@ -891,6 +898,13 @@ function openModalPedidosCotizados() {
     formData.append('fecha_fin', fecha_fin_send);
 
     postFunctionData(formData, 'Ventas', 'getPedidosCotizados', function (responseObj) {
+        if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_pedidos_cotizados')) {
+            $('#table_pedidos_cotizados').DataTable().destroy();
+        }
+        if (typeof $ !== 'undefined') {
+            $('#table_pedidos_cotizados thead tr:gt(0)').remove();
+        }
+
         let html = '';
         if (responseObj && responseObj.respuesta === "ok" && responseObj.data && responseObj.data.length > 0) {
             const list = responseObj.data;
@@ -933,6 +947,76 @@ function openModalPedidosCotizados() {
                     <td class="text-end font-monospace fw-bold text-primary text-3">${totalUSD}</td>
                 </tr>`;
             });
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
+
+            if (typeof $ !== 'undefined' && $.fn.DataTable) {
+                let tableCotizados;
+
+                // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable
+                const $filterRow = $('#table_pedidos_cotizados thead tr:eq(0)').clone(true);
+                $filterRow.find('th').each(function (colIdx) {
+                    const title = $(this).text().trim();
+                    const $input = $('<input type="text" style="max-height: 12px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
+
+                    $input.on('keyup change clear', function () {
+                        if (tableCotizados && tableCotizados.column(colIdx).search() !== this.value) {
+                            tableCotizados.column(colIdx).search(this.value).draw();
+                        }
+                    });
+
+                    $(this).removeClass('sorting sorting_asc sorting_desc')
+                           .html($('<div class="form-group mb-0"></div>').append($input));
+                });
+                $('#table_pedidos_cotizados thead').append($filterRow);
+
+                tableCotizados = $('#table_pedidos_cotizados').DataTable({
+                    orderCellsTop: true,
+                    scrollX: "100%",
+                    destroy: true,
+                    select: true,
+                    order: [[0, "desc"]],
+                    iDisplayLength: 10,
+                    lengthMenu: [
+                        [5, 10, 25, 50, 100, -1],
+                        [5, 10, 25, 50, 100, "Todos"]
+                    ],
+                    dom: 'Blfrtip',
+                    buttons: [
+                        {
+                            extend: 'excelHtml5',
+                            autoFilter: true,
+                            sheetName: 'Pipeline Activo',
+                            extend: 'excel',
+                            messageTop: "",
+                            title: 'Listado de Pedidos Cotizados (Pipeline Activo)',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'colvis',
+                            postfixButtons: ['colvisRestore']
+                        }
+                    ],
+                    columnDefs: [
+                        { className: "text-center", targets: [0, 1, 2, 6, 7] },
+                        { className: "text-start", targets: [3, 4, 5] },
+                        { className: "text-end", targets: [8, 9] }
+                    ],
+                    language: (typeof idioma_espanol !== 'undefined') ? idioma_espanol : {}
+                });
+
+                // Evento delegado en el contenedor para asegurar funcionamiento con scrollX (.dataTables_scrollHead)
+                $(tableCotizados.table().container()).on('keyup change clear', 'thead input', function () {
+                    const colIdx = $(this).closest('th').index();
+                    if (tableCotizados && tableCotizados.column(colIdx).search() !== this.value) {
+                        tableCotizados.column(colIdx).search(this.value).draw();
+                    }
+                });
+            }
         } else {
             if (lblCount) lblCount.innerHTML = `0 Pedidos`;
             html = `<tr>
@@ -941,11 +1025,12 @@ function openModalPedidosCotizados() {
                     No se encontraron pedidos cotizados en este periodo.
                 </td>
             </tr>`;
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
         }
 
-        if (tbody) {
-            tbody.innerHTML = html;
-        }
         hideLoader();
     });
 }
