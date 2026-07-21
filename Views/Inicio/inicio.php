@@ -36,7 +36,7 @@
 
         <!-- <i class="fa-regular fa-file-circle-check"></i> -->
 
-        <div class="col-12 col-md-6 col-lg-4 col-xl-4 col-xxl-3 mb-3">
+        <div class="col-12 col-md-6 col-lg-4 col-xl-4 col-xxl-3 mb-3 d-none">
             <a href="<?= base_url(); ?>/oportunidad" class=" card-inicio">
                 <div class="card card-inicio">
                     <div class="card-body text-center btn-inicio">
@@ -49,7 +49,7 @@
             </a>
         </div>
 
-        <div class="col-12 col-md-6 col-lg-4 col-xl-4  col-xxl-3 mb-3">
+        <div class="col-12 col-md-6 col-lg-4 col-xl-4  col-xxl-3 mb-3 d-none">
             <a href="<?= base_url(); ?>/cotizacionclientes" class=" card-inicio">
                 <div class="card card-inicio">
                     <div class="card-body text-center btn-inicio">
@@ -62,7 +62,7 @@
             </a>
         </div>
 
-        <div class="col-12 col-md-6 col-lg-4 col-xl-4  col-xxl-3 mb-3">
+        <div class="col-12 col-md-6 col-lg-4 col-xl-4  col-xxl-3 mb-3 d-none">
             <a href="<?= base_url(); ?>/cotizacionclientes" class=" card-inicio">
                 <div class="card card-inicio">
                     <div class="card-body text-center btn-inicio">
