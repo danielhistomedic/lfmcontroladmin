@@ -1,0 +1,2 @@
+[2026-07-22T14:48:00.273138-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[HY000] [2002] Se ha anulado una conexión establecida por el software en su equipo host, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Conexion.php, linea: 18, codigo: 2002 [] []
+[2026-07-22T14:48:00.356361-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 261, codigo: 0 [] []

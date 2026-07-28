@@ -926,8 +926,9 @@ function openModalPedidosCotizados() {
                     ? 'class="text-center text-3 bg-danger text-white fw-bold"'
                     : 'class="text-center text-3"';
                 const activoHtml = isCerrado
-                    ? `<span class="badge bg-white text-danger fw-bold px-2 py-1">CERRADO</span>`
+                    ? `<span class="badge bg-white text-danger fw-bold px-2 py-1 shadow-sm" style="cursor:pointer;" onclick="verSeguimientosProyecto(${id}, '${proyectoId}')" title="Haz clic para ver seguimientos">CERRADO <i class="fa-solid fa-eye ms-1"></i></span>`
                     : `<span class="badge bg-light text-dark border px-2 py-1">${activoVal}</span>`;
+
 
                 const isColocado = parseInt(p.valida_colocados || 0, 10) >= 6;
                 const colocadoHtml = isColocado
@@ -1123,5 +1124,114 @@ function openModalClientesActivos() {
         hideLoader();
     });
 }
+
+/**
+     * Muestra el modal con el listado de seguimientos asociados a un proyecto / venta
+     */
+function verSeguimientosProyecto(ventaId, proyectoId) {
+    const lblProyecto = document.getElementById('lbl_modal_seguimiento_proyecto');
+    const lblVentaId = document.getElementById('lbl_modal_seguimiento_venta_id');
+    const lblCount = document.getElementById('lbl_modal_seguimiento_count');
+    const tbody = document.getElementById('tbl_seguimiento_venta_body');
+
+    if (lblProyecto) lblProyecto.textContent = proyectoId || 'N/A';
+    if (lblVentaId) lblVentaId.textContent = ventaId || '--';
+    if (lblCount) lblCount.textContent = '0 Seguimientos';
+
+    if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_seguimiento_venta')) {
+        $('#table_seguimiento_venta').DataTable().destroy();
+    }
+
+    if (tbody) {
+        tbody.innerHTML = `<tr>
+            <td colspan="4" class="text-center text-muted py-4">
+                <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
+                Cargando seguimientos...
+            </td>
+        </tr>`;
+    }
+
+    const modalEl = document.getElementById('modalSeguimientosVenta');
+    if (modalEl) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+        } else if (typeof $ !== 'undefined' && $.fn.modal) {
+            $('#modalSeguimientosVenta').modal('show');
+        }
+    }
+
+    const formData = new FormData();
+    formData.append('venta_id', ventaId);
+
+    postFunctionData(formData, 'Ventas', 'getSeguimientoVenta', function (responseObj) {
+        if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_seguimiento_venta')) {
+            $('#table_seguimiento_venta').DataTable().destroy();
+        }
+
+        let html = '';
+        if (responseObj && responseObj.respuesta === "ok" && responseObj.data && responseObj.data.length > 0) {
+            const list = responseObj.data;
+            if (lblCount) lblCount.textContent = `${list.length} Seguimiento${list.length > 1 ? 's' : ''}`;
+
+            list.forEach(s => {
+                const id = s.id || s.ID || 'N/A';
+                const fecha = s.fecha_formateada || s.fecha || s.fecha_registro || s.fchregistro || s.created_at || 'N/A';
+                const usuario = (s.nombre_usuario && s.nombre_usuario.trim() !== '') 
+                    ? s.nombre_usuario 
+                    : (s.usuario_nombre || s.usuario || s.vendedor || s.ccveusuario || 'N/A');
+
+                let detalle = s.seguimiento || s.comentario || s.observaciones || s.observacion || s.nota || s.descripcion || s.mensaje || '';
+                if (!detalle) {
+                    const extra = [];
+                    Object.keys(s).forEach(k => {
+                        if (!['id', 'venta_id', 'ccveusuario', 'nombre_usuario', 'fecha', 'fchregistro', 'created_at'].includes(k.toLowerCase()) && s[k]) {
+                            extra.push(`<strong>${k}:</strong> ${s[k]}`);
+                        }
+                    });
+                    detalle = extra.length > 0 ? extra.join(' | ') : 'Sin observaciones';
+                }
+
+                html += `<tr>
+                    <td class="text-center fw-bold text-dark text-3">${id}</td>
+                    <td class="text-center text-muted text-3">${fecha}</td>
+                    <td class="text-dark text-3">${usuario}</td>
+                    <td class="text-3 text-wrap" style="white-space: normal;">${detalle}</td>
+                </tr>`;
+            });
+
+            if (tbody) tbody.innerHTML = html;
+
+            if (typeof $ !== 'undefined' && $.fn.DataTable) {
+                $('#table_seguimiento_venta').DataTable({
+                    scrollX: "100%",
+                    destroy: true,
+                    order: [[0, "desc"]],
+                    iDisplayLength: 10,
+                    lengthMenu: [
+                        [5, 10, 25, 50, -1],
+                        [5, 10, 25, 50, "Todos"]
+                    ],
+                    language: {
+                        url: "//cdn.datatables.net/plug-ins/1.10.20/i18n/Spanish.json"
+                    }
+                });
+            }
+        } else {
+            if (lblCount) lblCount.textContent = '0 Seguimientos';
+            if (tbody) {
+                tbody.innerHTML = `<tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        <i class="fa-regular fa-folder-open fa-2x d-block mb-2"></i>
+                        No hay seguimientos registrados para este proyecto.
+                    </td>
+                </tr>`;
+            }
+        }
+    });
+}
+
+window.verSeguimientosProyecto = verSeguimientosProyecto;
+
 
 

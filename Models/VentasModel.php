@@ -1287,4 +1287,32 @@ class VentasModel extends Mysql
 
         return $this;
     }
+
+    /**
+     * Obtiene la lista de seguimientos de una venta específica desde tb_ventas_seguimiento.
+     */
+    public function selectSeguimientoVenta(int $venta_id): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT s.*,
+                           COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), '') AS nombre_usuario
+                    FROM tb_ventas_seguimiento s
+                    LEFT JOIN cat_medico u ON u.ccvemedico = s.ccveusuario
+                    WHERE s.venta_id = :venta_id
+                    ORDER BY s.id DESC";
+            $arr_values = ['venta_id' => $venta_id];
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            try {
+                $sql = "SELECT s.* FROM tb_ventas_seguimiento s WHERE s.venta_id = :venta_id ORDER BY s.id DESC";
+                $arr_values = ['venta_id' => $venta_id];
+                $arrResponse = $this->select($sql, $arr_values);
+            } catch (\Throwable $th2) {
+                getLoggerSystem()->error(getMensajeError($th2));
+            }
+        }
+        return $arrResponse;
+    }
 }
+

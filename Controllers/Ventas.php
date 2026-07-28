@@ -671,5 +671,32 @@ class Ventas extends Controllers
         }
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
+
+    public function getSeguimientoVenta()
+    {
+        try {
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos) || empty($arrPermisos[MOD_DASHBOARD_VENTAS]['r'])) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $venta_id = intval($_POST['venta_id'] ?? 0);
+
+            if ($venta_id <= 0) {
+                die(json_encode(getResponse('ID de venta no válido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $model = new VentasModel;
+            $arrData = $model->selectSeguimientoVenta($venta_id);
+
+            $arrResponse = getResponse('Datos encontrados', 'ok', false);
+            $arrResponse['data'] = $arrData;
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            die(json_encode(getResponse('Error al obtener el seguimiento de la venta', 'error'), JSON_UNESCAPED_UNICODE));
+        }
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
 }
+
 

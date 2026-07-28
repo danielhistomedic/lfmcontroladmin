@@ -101,7 +101,7 @@ class PersonalModel extends Mysql
             $sql .= "cat_medico.cEspecialidad, ";
             $sql .= "cat_medico.cSubEspecialidad ";
             $sql .= "FROM cat_medico ";
-            $sql .= "INNER JOIN cat_perfiles ON (cat_perfiles.icveperfil = cat_medico.icveperfil) ";
+            $sql .= "LEFT JOIN cat_perfiles ON (cat_perfiles.icveperfil = cat_medico.icveperfil) ";
             $sql .= "LEFT JOIN cat_medico usr ON (usr.ccvemedico = cat_medico.ccveusuarioregistra) ";
             $sql .= "LEFT JOIN cat_medico usr_upd ON (usr_upd.ccvemedico = cat_medico.ccveusuarioactualiza) ";
             $sql .= "LEFT JOIN cat_medico usr_susp ON (usr_susp.ccvemedico = cat_medico.ccveusuariosuspende) ";
@@ -151,56 +151,56 @@ class PersonalModel extends Mysql
             /*-------------------------------------------
             [ Instruccion sql ]*/
 
-            $sql = "SELECT ";
-            $sql .= "cat_medico.icvemedico as id, ";
-            $sql .= "cat_medico.cempleo, ";
-            $sql .= "cat_medico.cnombre, ";
-            $sql .= "cat_medico.cpriapellido, ";
-            $sql .= "cat_medico.csegapellido, ";
-            $sql .= "cat_medico.cdscareaafectada, ";
-            $sql .= "cat_medico.cdscservicio, ";
-            $sql .= "cat_medico.cdsctipousuario, ";
-            $sql .= "cat_medico.user, ";
-            $sql .= "cat_medico.ccvemedico, ";
-            $sql .= "cat_perfiles.cdscperfil, ";
-            $sql .= "cat_medico.icvemedico, ";
-            $sql .= "cat_medico.iActivo, ";
-            $sql .= "cat_medico.usuariofiel, ";
-            $sql .= "cat_medico.cMatricula, ";
-            $sql .= "cat_medico.cCURP, ";
-            $sql .= "cat_medico.cDomicilio, ";
-            $sql .= "cat_medico.cDomicilio as telefono, ";
-            $sql .= "cat_medico.email, ";
-            $sql .= "cat_medico.cdsctipousuario, ";
-            $sql .= "cat_medico.cEspecialidad, ";
-            $sql .= "cat_medico.cSubEspecialidad, ";
-            $sql .= "cat_medico.cEscuela, ";
-            $sql .= "cat_medico.cCedulaProf, ";
-            $sql .= "cat_medico.formacion_especifique, ";
-            $sql .= "cat_medico.cCargo, ";
-            $sql .= "CONCAT_WS(' ', cat_medico.cempleo, cat_medico.cnombre, cat_medico.cpriapellido, cat_medico.csegapellido) AS nombre, ";
-            $sql .= "CONCAT_WS(' ', usr.cnombre, usr.cpriapellido, usr.csegapellido) AS registro, ";
-            $sql .= "CONCAT_WS(' ', usr_upd.cnombre, usr_upd.cpriapellido, usr_upd.csegapellido) AS actualizo, ";
-            $sql .= "CONCAT_WS(' ', usr_susp.cnombre, usr_susp.cpriapellido, usr_susp.csegapellido) AS suspende, ";
-            $sql .= "CONCAT_WS(' ', jefe_in.cnombre, jefe_in.cpriapellido, jefe_in.csegapellido) AS jefe_in, ";
-            $sql .= "cat_medico.fchregistro, ";
-            $sql .= "cat_medico.ccveusuariosuspende, ";
-            $sql .= "cat_medico.fchregistrosuspende, ";
-            $sql .= "cat_medico.fchregistroactualiza, ";
-            $sql .= "IF(cat_medico.revocado = 1, 'USUARIO REVOCADO', '') as revocado, ";
-            $sql .= "IF(cat_medico.iActivo = 1, 'ACTIVO', 'SUSPENDIDO') as Estatus, ";
-            $sql .= "cat_medico.fecha_caducidad_acceso as fecha_ingreso, ";
-            $sql .= "cat_medico.formacion_especifique, ";
-            $sql .= "cat_medico.cEmpleo, ";
-            $sql .= "cat_medico.cEspecialidad, ";
-            $sql .= "cat_medico.cSubEspecialidad ";
-            $sql .= "FROM cat_medico ";
-            $sql .= "INNER JOIN cat_perfiles ON (cat_perfiles.icveperfil = cat_medico.icveperfil) ";
-            $sql .= "LEFT JOIN cat_medico usr ON (usr.ccvemedico = cat_medico.ccveusuarioregistra) ";
-            $sql .= "LEFT JOIN cat_medico usr_upd ON (usr_upd.ccvemedico = cat_medico.ccveusuarioactualiza) ";
-            $sql .= "LEFT JOIN cat_medico usr_susp ON (usr_susp.ccvemedico = cat_medico.ccveusuariosuspende) ";
-            $sql .= "LEFT JOIN cat_medico jefe_in ON (jefe_in.ccvemedico = cat_medico.ccveusuario_jefe_inmediato) ";
-            $sql .= "where cat_medico.control_rh = 1 AND cat_medico.icvemedico = :registro_id ";
+            $sql = "SELECT 
+            cat_medico.icvemedico as id, 
+            cat_medico.cempleo, 
+            cat_medico.cnombre, 
+            cat_medico.cpriapellido, 
+            cat_medico.csegapellido, 
+            cat_medico.cdscareaafectada, 
+            cat_medico.cdscservicio, 
+            cat_medico.cdsctipousuario, 
+            cat_medico.user, 
+            cat_medico.ccvemedico, 
+            cat_perfiles.cdscperfil, 
+            cat_medico.icvemedico, 
+            cat_medico.iActivo, 
+            cat_medico.usuariofiel, 
+            cat_medico.cMatricula, 
+            cat_medico.cCURP, 
+            cat_medico.cDomicilio, 
+            cat_medico.cDomicilio as telefono, 
+            cat_medico.email, 
+            cat_medico.cdsctipousuario, 
+            cat_medico.cEspecialidad, 
+            cat_medico.cSubEspecialidad, 
+            cat_medico.cEscuela, 
+            cat_medico.cCedulaProf, 
+            cat_medico.formacion_especifique, 
+            cat_medico.cCargo, 
+            CONCAT_WS(' ', cat_medico.cempleo, cat_medico.cnombre, cat_medico.cpriapellido, cat_medico.csegapellido) AS nombre, 
+            CONCAT_WS(' ', usr.cnombre, usr.cpriapellido, usr.csegapellido) AS registro, 
+            CONCAT_WS(' ', usr_upd.cnombre, usr_upd.cpriapellido, usr_upd.csegapellido) AS actualizo, 
+            CONCAT_WS(' ', usr_susp.cnombre, usr_susp.cpriapellido, usr_susp.csegapellido) AS suspende, 
+            CONCAT_WS(' ', jefe_in.cnombre, jefe_in.cpriapellido, jefe_in.csegapellido) AS jefe_in, 
+            cat_medico.fchregistro, 
+            cat_medico.ccveusuariosuspende, 
+            cat_medico.fchregistrosuspende, 
+            cat_medico.fchregistroactualiza, 
+            IF(cat_medico.revocado = 1, 'USUARIO REVOCADO', '') as revocado, 
+            IF(cat_medico.iActivo = 1, 'ACTIVO', 'SUSPENDIDO') as Estatus, 
+            cat_medico.fecha_caducidad_acceso as fecha_ingreso, 
+            cat_medico.formacion_especifique, 
+            cat_medico.cEmpleo, 
+            cat_medico.cEspecialidad, 
+            cat_medico.cSubEspecialidad 
+            FROM cat_medico 
+            LEFT JOIN cat_perfiles ON (cat_perfiles.icveperfil = cat_medico.icveperfil) 
+            LEFT JOIN cat_medico usr ON (usr.ccvemedico = cat_medico.ccveusuarioregistra) 
+            LEFT JOIN cat_medico usr_upd ON (usr_upd.ccvemedico = cat_medico.ccveusuarioactualiza) 
+            LEFT JOIN cat_medico usr_susp ON (usr_susp.ccvemedico = cat_medico.ccveusuariosuspende) 
+            LEFT JOIN cat_medico jefe_in ON (jefe_in.ccvemedico = cat_medico.ccveusuario_jefe_inmediato) 
+            where cat_medico.control_rh = 1 AND cat_medico.icvemedico = :registro_id ";
 
 
             /*-------------------------------------------
@@ -420,6 +420,7 @@ class PersonalModel extends Mysql
             $sql .= "SUM(CASE WHEN iActivo = 1 THEN 1 ELSE 0 END) as activos, ";
             $sql .= "SUM(CASE WHEN iActivo = 0 THEN 1 ELSE 0 END) as inactivos ";
             $sql .= "FROM cat_medico ";
+            $sql .= "WHERE control_rh = 1 ";
             $sql .= "GROUP BY puestos ORDER BY activos DESC, cdscservicio; ";
 
             /*-------------------------------------------
@@ -464,6 +465,7 @@ class PersonalModel extends Mysql
             $sql .= "SUM(CASE WHEN iActivo = 1 THEN 1 ELSE 0 END) as activos, ";
             $sql .= "SUM(CASE WHEN iActivo = 0 THEN 1 ELSE 0 END) as inactivos ";
             $sql .= "FROM cat_medico ";
+            $sql .= "WHERE control_rh = 1 ";
             $sql .= "GROUP BY departamento ORDER BY activos DESC, cdscareaafectada; ";
 
 
