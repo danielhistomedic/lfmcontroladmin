@@ -111,7 +111,7 @@
                 <!-- KPI Card 1: Total de Empleados -->
                 <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex align-items-center">
+                        <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-primary-lighten text-primary me-3">
                                 <i class="fa-solid fa-users"></i>
                             </div>
@@ -129,7 +129,7 @@
                 <!-- KPI Card 2: Empleados Activos -->
                 <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex align-items-center">
+                        <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-success-lighten text-success me-3">
                                 <i class="fa-solid fa-user-check"></i>
                             </div>
@@ -147,7 +147,7 @@
                 <!-- KPI Card 3: Empleados de Baja -->
                 <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex align-items-center">
+                        <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-danger-lighten text-danger me-3">
                                 <i class="fa-solid fa-user-xmark"></i>
                             </div>
@@ -169,7 +169,7 @@
 
                 <!-- 1. Empleados por Departamento (Full Width) -->
                 <div class="col-12">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-building text-primary me-2"></i> Total de Empleados por Departamento
                         </div>
@@ -179,7 +179,7 @@
 
                 <!-- 2. Empleados por Puesto (Full Width) -->
                 <div class="col-12">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-id-badge text-primary me-2"></i> Total de Empleados por Puesto
                         </div>
@@ -193,7 +193,7 @@
             <!-- Tabla Detalle Empleados por Departamento -->
             <div class="row d-none" id="detalle-personal">
                 <div class="col-12">
-                    <section class="card shadow-sm border-0 mb-5" style="border-radius: 10px; overflow: hidden;">
+                    <section class="card shadow-sm border mb-5" style="border-radius: 2px; overflow: hidden;">
                         <header class="card-header border-0 bg-white pt-4 pb-2 d-flex justify-content-between align-items-center">
                             <h4 class="card-title text-primary fw-semibold mb-0">
                                 <i class="fa-regular fa-users text-secondary me-2"></i>
@@ -203,7 +203,7 @@
                                 <i class="fa-regular fa-xmark me-1"></i> Cerrar
                             </button>
                         </header>
-                        <div class="card-body pt-2">
+                        <div class="card-body border pt-2">
                             <div class="table-responsive">
                                 <table class="table table-hover table-striped table-custom align-middle mb-0" style="width: 100%;">
                                     <thead>

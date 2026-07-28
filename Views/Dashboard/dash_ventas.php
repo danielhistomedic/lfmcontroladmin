@@ -140,7 +140,7 @@
                 <!-- KPI Card 0: Booking - Comparativo vs Meta Global (USD) -->
                 <div class="col-12 mb-4">
                     <div class="card kpi-card shadow-sm border-0" style="border-left: 4px solid #CC4F4F;">
-                        <div class="card-body py-3">
+                        <div class="card-body border py-3">
                             <div class="row align-items-center">
                                 <div class="col-12 col-md-auto mb-2 mb-md-0">
                                     <div class="kpi-icon bg-danger-lighten text-danger me-md-3" style="background:rgba(204,79,79,.12);">
@@ -187,7 +187,7 @@
                 <!-- KPI Card 2: Pipeline Activo -->
                 <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex align-items-center">
+                        <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-primary-lighten text-primary me-3">
                                 <i class="fa-solid fa-chart-line-up"></i>
                             </div>
@@ -211,7 +211,7 @@
                  <!-- KPI Card 1: Total de Ventas (Pedidos Colocados) / Facturadas -->
                 <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex align-items-center">
+                        <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-success-lighten text-success me-3">
                                 <i class="fa-solid fa-circle-dollar-to-slot"></i>
                             </div>
@@ -240,7 +240,7 @@
                 <!-- KPI Card 3: Clientes & Artículos -->
                 <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex align-items-center">
+                        <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-info-lighten text-info me-3">
                                 <i class="fa-solid fa-users-gear"></i>
                             </div>
@@ -268,7 +268,7 @@
                 
                 <!-- Comparativo Ventas vs Pipeline (Full Width) -->
                 <div class="col-12">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-chart-column text-primary me-2"></i> Comparativo: Total de Ventas (Colocados) vs Pipeline Activo (USD Consolidado) (Pedidos Cotizados)
                         </div>
@@ -278,7 +278,7 @@
 
                 <!-- 1. Tendencia de Ventas (Full Width) -->
                 <div class="col-12">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-chart-line text-primary me-2"></i> Tendencia de Ventas del Periodo (USD Consolidado)
                         </div>
@@ -288,7 +288,7 @@
 
                 <!-- 2. Vendedores & Clientes (2 Columns) -->
                 <div class="col-12 col-lg-6">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-users text-primary me-2"></i> Top Vendedores por Ventas (USD)
                         </div>
@@ -297,7 +297,7 @@
                 </div>
 
                 <div class="col-12 col-lg-6">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-building text-primary me-2"></i> Top Clientes por Facturación (USD)
                         </div>
@@ -307,7 +307,7 @@
 
                 <!-- Tabla comparativa Ventas vs Meta por Vendedor (Full Width) -->
                 <div class="col-12">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-bullseye-arrow text-danger me-2"></i> Ventas vs Meta por Vendedor (USD)
                         </div>
@@ -338,7 +338,7 @@
 
                 <!-- 3. Clasificación & Estatus (2 Columns) -->
                 <div class="col-12 col-lg-6">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-tags text-primary me-2"></i> Ventas por Clasificación de Proyecto
                         </div>
@@ -347,7 +347,7 @@
                 </div>
 
                 <div class="col-12 col-lg-6">
-                    <div class="chart-container">
+                    <div class="chart-container border">
                         <div class="chart-title">
                             <i class="fa-regular fa-diagram-project text-primary me-2"></i> Funnel de Estatus de Proyectos (Volumen)
                         </div>
@@ -361,13 +361,13 @@
             <!-- Tabla Top Productos -->
             <div class="row">
                 <div class="col-12">
-                    <section class="card shadow-sm border-0 mb-5" style="border-radius: 10px; overflow: hidden;">
+                    <section class="card shadow-sm border mb-5" style="border-radius: 2px; overflow: hidden;">
                         <header class="card-header border-0 bg-white pt-4 pb-2">
                             <h4 class="card-title text-primary fw-semibold mb-0">
                                 <i class="fa-regular fa-box-open text-secondary me-2"></i> Top 10 Refacciones y Materiales Más Vendidos
                             </h4>
                         </header>
-                        <div class="card-body pt-2">
+                        <div class="card-body border pt-2">
                             <div class="table-responsive">
                                 <table class="table table-hover table-striped table-custom align-middle mb-0" id="table_productos_mas_vendidos">
                                     <thead>
