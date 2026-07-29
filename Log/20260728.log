@@ -1,0 +1,2 @@
+[2026-07-28T16:54:31.921532-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'folio' in 'WHERE', archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 126, codigo: 42S22 [] []
+[2026-07-28T16:54:31.968290-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'folio' in 'WHERE', archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 126, codigo: 42S22 [] []
