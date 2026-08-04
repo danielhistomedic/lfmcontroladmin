@@ -397,15 +397,11 @@ class VentasModel extends Mysql
                     CASE WHEN v.moneda_id = 3 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_mxn,
 
-                SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN 1 ELSE 0 END) AS count_pipeline,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_pipeline_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_pipeline_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                    CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
-                ELSE 0 END), 2) AS sum_pipeline_combined_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                    CASE WHEN v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
-                ELSE 0 END), 2) AS sum_pipeline_combined_mxn,
+                (p1.p1_count + p2.p2_count) AS count_pipeline,
+                ROUND(p1.p1_mxn_only + p2.p2_mxn_only, 2) AS sum_pipeline_mxn,
+                ROUND(p1.p1_usd_only + p2.p2_usd_only, 2) AS sum_pipeline_usd,
+                ROUND(p1.p1_usd + p2.p2_usd, 2) AS sum_pipeline_combined_usd,
+                ROUND(p1.p1_mxn + p2.p2_mxn, 2) AS sum_pipeline_combined_mxn,
 
                 COUNT(DISTINCT CASE WHEN v.estatus_proyecto_id >= 6 THEN v.cliente_id ELSE NULL END) AS count_clientes_activos,
 
@@ -418,7 +414,7 @@ class VentasModel extends Mysql
                     INNER JOIN tb_ventas vd ON vd.id = d.venta_id
                     WHERE vd.estatus_proyecto_id >= 6
                       AND d.cancelado = 0
-                      AND vd.fecha BETWEEN :fecha_ini_sub AND :fecha_fin_sub
+                      AND DATE(vd.fecha) BETWEEN :fecha_ini_sub AND :fecha_fin_sub
                 ), 0) AS total_articulos_vendidos,
 
                 metas.MetaGlobalUSD,
@@ -444,9 +440,7 @@ class VentasModel extends Mysql
                             SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
                                 CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                             ELSE 0 END)
-                            / NULLIF(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                                CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
-                            ELSE 0 END), 0)
+                            / NULLIF(p1.p1_usd + p2.p2_usd, 0)
                         ) * 100,
                         0
                     ),
@@ -461,14 +455,62 @@ class VentasModel extends Mysql
                 WHERE enviado = 1
                 GROUP BY venta_id
             ) pc ON pc.venta_id = v.id
-            LEFT JOIN (
+            CROSS JOIN (
                 SELECT 
-                    venta_id,
-                    SUM(subtotal - descuento) AS monto
-                FROM tb_ventas_cotizacion_cliente
-                WHERE enviado = 1
-                GROUP BY venta_id
-            ) cc ON cc.venta_id = v.id
+                    COALESCE(SUM(cc.subtotal - cc.descuento), 0) AS p1_raw,
+                    COALESCE(SUM(
+                        CASE WHEN COALESCE(v1.moneda_id, 3) = 1 THEN (cc.subtotal - cc.descuento) / tc1.valor 
+                             ELSE (cc.subtotal - cc.descuento) 
+                        END
+                    ), 0) AS p1_usd,
+                    COALESCE(SUM(
+                        CASE WHEN COALESCE(v1.moneda_id, 3) = 3 THEN (cc.subtotal - cc.descuento) * tc1.valor 
+                             ELSE (cc.subtotal - cc.descuento) 
+                        END
+                    ), 0) AS p1_mxn,
+                    COALESCE(SUM(CASE WHEN COALESCE(v1.moneda_id, 3) = 1 THEN (cc.subtotal - cc.descuento) ELSE 0 END), 0) AS p1_mxn_only,
+                    COALESCE(SUM(CASE WHEN COALESCE(v1.moneda_id, 3) = 3 THEN (cc.subtotal - cc.descuento) ELSE 0 END), 0) AS p1_usd_only,
+                    COUNT(DISTINCT cc.venta_id) AS p1_count
+                FROM tb_ventas_cotizacion_cliente cc
+                LEFT JOIN tb_ventas v1 ON v1.id = cc.venta_id
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc1
+                WHERE cc.enviado = 1
+                  AND DATE(COALESCE(cc.fecha, v1.fecha)) BETWEEN :fecha_ini_p1 AND :fecha_fin_p1
+            ) p1
+            CROSS JOIN (
+                SELECT 
+                    COALESCE(SUM(v2.subtotal - v2.descuento), 0) AS p2_raw,
+                    COALESCE(SUM(
+                        CASE WHEN v2.moneda_id = 1 THEN (v2.subtotal - v2.descuento) / tc2.valor 
+                             ELSE (v2.subtotal - v2.descuento) 
+                        END
+                    ), 0) AS p2_usd,
+                    COALESCE(SUM(
+                        CASE WHEN v2.moneda_id = 3 THEN (v2.subtotal - v2.descuento) * tc2.valor 
+                             ELSE (v2.subtotal - v2.descuento) 
+                        END
+                    ), 0) AS p2_mxn,
+                    COALESCE(SUM(CASE WHEN v2.moneda_id = 1 THEN (v2.subtotal - v2.descuento) ELSE 0 END), 0) AS p2_mxn_only,
+                    COALESCE(SUM(CASE WHEN v2.moneda_id = 3 THEN (v2.subtotal - v2.descuento) ELSE 0 END), 0) AS p2_usd_only,
+                    COUNT(DISTINCT v2.id) AS p2_count
+                FROM tb_ventas v2
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc2
+                WHERE COALESCE(v2.activo, 'ACTIVO') = 'ACTIVO'
+                  AND v2.estatus_proyecto_id >= 5
+                  AND DATE(v2.fecha) BETWEEN :fecha_ini_p2 AND :fecha_fin_p2
+            ) p2
             CROSS JOIN (
                 SELECT valor
                 FROM tb_historial_tipos_cambio
@@ -481,13 +523,17 @@ class VentasModel extends Mysql
                 FROM tb_metas
                 WHERE anio = YEAR(CURDATE())
             ) metas
-            WHERE v.fecha BETWEEN :fecha_ini AND :fecha_fin";
+            WHERE DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin";
 
             $arr_values = [
                 'fecha_ini'     => $fecha_ini,
                 'fecha_fin'     => $fecha_fin,
                 'fecha_ini_sub' => $fecha_ini,
                 'fecha_fin_sub' => $fecha_fin,
+                'fecha_ini_p1'  => $fecha_ini,
+                'fecha_fin_p1'  => $fecha_fin,
+                'fecha_ini_p2'  => $fecha_ini,
+                'fecha_fin_p2'  => $fecha_fin,
             ];
 
             $arrResponse = $this->select($sql, $arr_values);
