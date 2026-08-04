@@ -679,9 +679,25 @@ class VentasModel extends Mysql
         try {
             $sql = "SELECT 
                 v.fecha AS fecha_grupo,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2) AS sum_ventas_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2) AS sum_pipeline_usd
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_ventas_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_pipeline_usd
             FROM tb_ventas v
+            LEFT JOIN (
+                SELECT 
+                    venta_id,
+                    SUM(subtotal - descuento) AS monto
+                FROM tb_pedidos_cliente
+                WHERE enviado = 1
+                GROUP BY venta_id
+            ) pc ON pc.venta_id = v.id
+            LEFT JOIN (
+                SELECT 
+                    venta_id,
+                    SUM(subtotal - descuento) AS monto
+                FROM tb_ventas_cotizacion_cliente
+                WHERE enviado = 1
+                GROUP BY venta_id
+            ) cc ON cc.venta_id = v.id
             CROSS JOIN (
                 SELECT valor
                 FROM tb_historial_tipos_cambio
