@@ -358,7 +358,7 @@
                             <div class="info-label">Total SIN IVA</div>
                             <div class="info-value highlight-total">
                                 <?php 
-                                $montoBD = $cotizacion['subtotal'] ?? $cotizacion['total'] ?? $cotizacion['monto_total'] ?? $cotizacion['gran_total'] ?? $qr['subtotal'];
+                                $montoBD = (float)($cotizacion['subtotal'] ?? 0) - (float)($cotizacion['descuento'] ?? 0);
                                 echo !empty($montoBD) ? '$' . number_format((float)$montoBD, 2, '.', ',') . ' MXN' : 'N/A';
                                 ?>
                             </div>

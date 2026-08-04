@@ -171,14 +171,14 @@ class VentasModel extends Mysql
 
             $sql .= "COUNT(*) AS CantidadVentas, ";
 
-            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS VentaMXN, ";
+            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS VentaMXN, ";
 
-            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS VentaUSD, ";
+            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS VentaUSD, ";
 
             $sql .= "ROUND( ";
             $sql .= "    SUM( ";
             $sql .= "        CASE ";
-            $sql .= "            WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "            WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "            ELSE 0 ";
             $sql .= "        END ";
             $sql .= "    ), 2 ";
@@ -187,8 +187,8 @@ class VentasModel extends Mysql
             $sql .= "ROUND( ";
             $sql .= "    SUM( ";
             $sql .= "        CASE ";
-            $sql .= "            WHEN v.moneda_id = 3 THEN v.total ";
-            $sql .= "            WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "            WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ";
+            $sql .= "            WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "            ELSE 0 ";
             $sql .= "        END ";
             $sql .= "    ), 2 ";
@@ -200,8 +200,8 @@ class VentasModel extends Mysql
             $sql .= "    ( ";
             $sql .= "        SUM( ";
             $sql .= "            CASE ";
-            $sql .= "                WHEN v.moneda_id = 3 THEN v.total ";
-            $sql .= "                WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "                WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ";
+            $sql .= "                WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "                ELSE 0 ";
             $sql .= "            END ";
             $sql .= "        ) / metas.MetaGlobalUSD ";
@@ -213,8 +213,8 @@ class VentasModel extends Mysql
             $sql .= "    metas.MetaGlobalUSD - ";
             $sql .= "    SUM( ";
             $sql .= "        CASE ";
-            $sql .= "            WHEN v.moneda_id = 3 THEN v.total ";
-            $sql .= "            WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "            WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ";
+            $sql .= "            WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "            ELSE 0 ";
             $sql .= "        END ";
             $sql .= "    ), ";
@@ -284,14 +284,14 @@ class VentasModel extends Mysql
 
             $sql .= "CONCAT_WS(' ', vd.cNombre, vd.cPriApellido, vd.cSegApellido) AS Vendedor, ";
 
-            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS VentaMXN, ";
+            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS VentaMXN, ";
 
-            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS VentaUSD, ";
+            $sql .= "ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS VentaUSD, ";
 
             $sql .= "ROUND( ";
             $sql .= "    SUM( ";
             $sql .= "        CASE ";
-            $sql .= "            WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "            WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "            ELSE 0 ";
             $sql .= "        END ";
             $sql .= "    ), 2 ";
@@ -300,8 +300,8 @@ class VentasModel extends Mysql
             $sql .= "ROUND( ";
             $sql .= "    SUM( ";
             $sql .= "        CASE ";
-            $sql .= "            WHEN v.moneda_id = 3 THEN v.total ";
-            $sql .= "            WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "            WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ";
+            $sql .= "            WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "            ELSE 0 ";
             $sql .= "        END ";
             $sql .= "    ), 2 ";
@@ -313,8 +313,8 @@ class VentasModel extends Mysql
             $sql .= "    ( ";
             $sql .= "        SUM( ";
             $sql .= "            CASE ";
-            $sql .= "                WHEN v.moneda_id = 3 THEN v.total ";
-            $sql .= "                WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "                WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ";
+            $sql .= "                WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "                ELSE 0 ";
             $sql .= "            END ";
             $sql .= "        ) / NULLIF(m.meta, 0) ";
@@ -326,8 +326,8 @@ class VentasModel extends Mysql
             $sql .= "    COALESCE(m.meta,0) - ";
             $sql .= "    SUM( ";
             $sql .= "        CASE ";
-            $sql .= "            WHEN v.moneda_id = 3 THEN v.total ";
-            $sql .= "            WHEN v.moneda_id = 1 THEN v.total / tc.valor ";
+            $sql .= "            WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ";
+            $sql .= "            WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ";
             $sql .= "            ELSE 0 ";
             $sql .= "        END ";
             $sql .= "    ), ";
@@ -388,23 +388,23 @@ class VentasModel extends Mysql
         try {
             $sql = "SELECT
                 SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN 1 ELSE 0 END) AS count_ganadas,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS sum_ganadas_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS sum_ganadas_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_ganadas_mxn,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_ganadas_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END
+                    CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END
+                    CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_mxn,
 
                 SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN 1 ELSE 0 END) AS count_pipeline,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS sum_pipeline_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS sum_pipeline_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_pipeline_mxn,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_pipeline_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                    CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END
+                    CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
                 ELSE 0 END), 2) AS sum_pipeline_combined_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                    CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END
+                    CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END
                 ELSE 0 END), 2) AS sum_pipeline_combined_mxn,
 
                 COUNT(DISTINCT CASE WHEN v.estatus_proyecto_id >= 6 THEN v.cliente_id ELSE NULL END) AS count_clientes_activos,
@@ -425,7 +425,7 @@ class VentasModel extends Mysql
                 ROUND(
                     (
                         SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                            CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END
+                            CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
                         ELSE 0 END)
                         / NULLIF(metas.MetaGlobalUSD, 0)
                     ) * 100,
@@ -434,7 +434,7 @@ class VentasModel extends Mysql
                 ROUND(
                     metas.MetaGlobalUSD -
                     SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                        CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END
+                        CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
                     ELSE 0 END),
                     2
                 ) AS FaltanteUSD,
@@ -442,10 +442,10 @@ class VentasModel extends Mysql
                     COALESCE(
                         (
                             SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                                CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END
+                                CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
                             ELSE 0 END)
                             / NULLIF(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                                CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END
+                                CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
                             ELSE 0 END), 0)
                         ) * 100,
                         0
@@ -491,20 +491,20 @@ class VentasModel extends Mysql
             $sql = "SELECT
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
                 COUNT(*) AS count_ventas,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS sum_mxn,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS sum_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END), 2) AS sum_combined_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END), 2) AS sum_combined_mxn,
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_mxn,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_mxn,
                 COALESCE(m.meta, 0) AS MetaAnualUSD,
                 ROUND(
                     (
-                        SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END)
+                        SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END)
                         / NULLIF(m.meta, 0)
                     ) * 100, 2
                 ) AS PorcentajeCumplimiento,
                 ROUND(
                     COALESCE(m.meta, 0) -
-                    SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END),
+                    SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END),
                     2
                 ) AS FaltanteUSD
             FROM tb_ventas v
@@ -547,10 +547,10 @@ class VentasModel extends Mysql
             $sql = "SELECT 
                 c.nombre_comercial AS cliente,
                 COUNT(*) AS count_ventas,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS sum_mxn,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS sum_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END), 2) AS sum_combined_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END), 2) AS sum_combined_mxn
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_mxn,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_mxn
             FROM tb_ventas v
             INNER JOIN cat_clientes c ON c.id = v.cliente_id
             CROSS JOIN (
@@ -588,8 +588,8 @@ class VentasModel extends Mysql
             $sql = "SELECT 
                 cl.clasificacion AS clasificacion,
                 COUNT(*) AS count_ventas,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END), 2) AS sum_combined_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END), 2) AS sum_combined_mxn
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_mxn
             FROM tb_ventas v
             INNER JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
             CROSS JOIN (
@@ -627,8 +627,8 @@ class VentasModel extends Mysql
                 s.cEstatus AS estatus,
                 v.estatus_proyecto_id AS estatus_id,
                 COUNT(*) AS count_ventas,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END), 2) AS sum_combined_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END), 2) AS sum_combined_mxn
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_mxn
             FROM tb_ventas v
             LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
             CROSS JOIN (
@@ -663,8 +663,8 @@ class VentasModel extends Mysql
         try {
             $sql = "SELECT 
                 v.fecha AS fecha_grupo,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END) ELSE 0 END), 2) AS sum_ventas_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END) ELSE 0 END), 2) AS sum_pipeline_usd
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2) AS sum_ventas_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2) AS sum_pipeline_usd
             FROM tb_ventas v
             CROSS JOIN (
                 SELECT valor
@@ -699,8 +699,8 @@ class VentasModel extends Mysql
         try {
             $sql = "SELECT 
                 v.fecha AS fecha_grupo,
-                COALESCE(ROUND(SUM(CASE WHEN v.estatus_proyecto_id IN (11, 12) THEN (CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END) ELSE 0 END), 2), 0) AS sum_facturado_usd,
-                COALESCE(ROUND(SUM(CASE WHEN v.estatus_proyecto_id = 12 THEN (CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END) ELSE 0 END), 2), 0) AS sum_pagado_usd
+                COALESCE(ROUND(SUM(CASE WHEN v.estatus_proyecto_id IN (11, 12) THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2), 0) AS sum_facturado_usd,
+                COALESCE(ROUND(SUM(CASE WHEN v.estatus_proyecto_id = 12 THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2), 0) AS sum_pagado_usd
             FROM tb_ventas v
             CROSS JOIN (
                 SELECT valor
@@ -809,10 +809,10 @@ class VentasModel extends Mysql
                 v.clues,
                 v.fecha,
                 DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
-                v.total,
+                (v.subtotal - v.descuento) AS total,
                 v.moneda_id,
                 CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
-                ROUND(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END, 2) AS total_usd,
+                ROUND(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END, 2) AS total_usd,
                 COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
                 COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
@@ -859,10 +859,10 @@ class VentasModel extends Mysql
                 v.clues,
                 v.fecha,
                 DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
-                v.total,
+                (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) AS total,
                 v.moneda_id,
                 CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
-                ROUND(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END, 2) AS total_usd,
+                ROUND(CASE WHEN v.moneda_id = 1 THEN (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) / COALESCE(NULLIF(tc.valor, 0), 1) ELSE (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) END, 2) AS total_usd,
                 COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
                 COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
@@ -874,13 +874,13 @@ class VentasModel extends Mysql
             LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
             LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
             LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-            CROSS JOIN (
+            LEFT JOIN (
                 SELECT valor
                 FROM tb_historial_tipos_cambio
                 WHERE idMoneda = 3
                 ORDER BY fecha DESC, id DESC
                 LIMIT 1
-            ) tc
+            ) tc ON 1=1
             WHERE v.estatus_proyecto_id >= 5
               AND DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin
             ORDER BY clasificacion_proyecto, v.proyecto_id, v.id";
@@ -911,10 +911,10 @@ class VentasModel extends Mysql
                 COALESCE(c.razon_social, '') AS razon_social,
                 COALESCE(c.rfc, '') AS rfc,
                 COUNT(v.id) AS count_pedidos,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total ELSE 0 END), 2) AS sum_mxn,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total ELSE 0 END), 2) AS sum_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN v.total / tc.valor ELSE v.total END), 2) AS sum_combined_usd,
-                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN v.total * tc.valor ELSE v.total END), 2) AS sum_combined_mxn
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_mxn,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_usd,
+                ROUND(SUM(CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END), 2) AS sum_combined_mxn
             FROM tb_ventas v
             LEFT JOIN cat_clientes c ON c.id = v.cliente_id
             CROSS JOIN (

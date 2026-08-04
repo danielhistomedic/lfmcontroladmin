@@ -869,7 +869,20 @@ function openModalPedidosCotizados() {
         $('#table_pedidos_cotizados').DataTable().destroy();
     }
     if (typeof $ !== 'undefined') {
-        $('#table_pedidos_cotizados thead tr:gt(0)').remove();
+        $('#table_pedidos_cotizados thead').html(`
+            <tr>
+                <th class="border-bottom-0 fw-semibold text-center" width="5%">ID</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="9%">ID Proyecto</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="10%">Fecha</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="20%">Cliente</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="16%">Vendedor</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="10%">Clasificación</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="8%">Activo</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="8%">Colocado</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="7%">Total</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="7%">Total (USD)</th>
+            </tr>
+        `);
     }
 
     if (tbody) {
@@ -892,6 +905,14 @@ function openModalPedidosCotizados() {
         }
     }
 
+    if (typeof $ !== 'undefined') {
+        $('#modalPedidosCotizados').off('shown.bs.modal').on('shown.bs.modal', function () {
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#table_pedidos_cotizados')) {
+                $('#table_pedidos_cotizados').DataTable().columns.adjust().draw();
+            }
+        });
+    }
+
     showLoader();
     const formData = new FormData();
     formData.append('fecha_ini', fecha_ini_send);
@@ -902,7 +923,20 @@ function openModalPedidosCotizados() {
             $('#table_pedidos_cotizados').DataTable().destroy();
         }
         if (typeof $ !== 'undefined') {
-            $('#table_pedidos_cotizados thead tr:gt(0)').remove();
+            $('#table_pedidos_cotizados thead').html(`
+                <tr>
+                    <th class="border-bottom-0 fw-semibold text-center" width="5%">ID</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="9%">ID Proyecto</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="10%">Fecha</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="20%">Cliente</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="16%">Vendedor</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="10%">Clasificación</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="8%">Activo</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="8%">Colocado</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="7%">Total</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="7%">Total (USD)</th>
+                </tr>
+            `);
         }
 
         let html = '';
@@ -917,8 +951,10 @@ function openModalPedidosCotizados() {
                 const cliente = p.cliente || 'Sin Cliente';
                 const vendedor = p.vendedor || 'Sin Vendedor';
                 const clasificacion = p.clasificacion_proyecto || 'Sin Clasificación';
-                const totalMoneda = (p.cmoneda === 'MXN') ? formatMXN(p.total) : formatUSD(p.total);
-                const totalUSD = formatUSD(p.total_usd);
+                const valTotal = parseFloat(p.total || 0);
+                const valTotalUSD = parseFloat(p.total_usd || 0);
+                const totalMoneda = (p.cmoneda === 'MXN') ? formatMXN(valTotal) : formatUSD(valTotal);
+                const totalUSD = formatUSD(valTotalUSD);
 
                 const activoVal = (p.activo !== null && p.activo !== undefined && p.activo !== '') ? String(p.activo).trim() : 'ACTIVO';
                 const isCerrado = (activoVal.toUpperCase() === 'CERRADO');
@@ -956,11 +992,11 @@ function openModalPedidosCotizados() {
             if (typeof $ !== 'undefined' && $.fn.DataTable) {
                 let tableCotizados;
 
-                // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable
-                const $filterRow = $('#table_pedidos_cotizados thead tr:eq(0)').clone(true);
+                // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable (clone sin data sucia)
+                const $filterRow = $('#table_pedidos_cotizados thead tr:eq(0)').clone(false);
                 $filterRow.find('th').each(function (colIdx) {
                     const title = $(this).text().trim();
-                    const $input = $('<input type="text" style="max-height: 12px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
+                    const $input = $('<input type="text" style="max-height: 24px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
 
                     $input.on('keyup change clear', function () {
                         if (tableCotizados && tableCotizados.column(colIdx).search() !== this.value) {
@@ -968,7 +1004,8 @@ function openModalPedidosCotizados() {
                         }
                     });
 
-                    $(this).removeClass('sorting sorting_asc sorting_desc')
+                    $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
+                           .addClass('text-center p-1')
                            .html($('<div class="form-group mb-0"></div>').append($input));
                 });
                 $('#table_pedidos_cotizados thead').append($filterRow);
@@ -990,7 +1027,6 @@ function openModalPedidosCotizados() {
                             extend: 'excelHtml5',
                             autoFilter: true,
                             sheetName: 'Pipeline Activo',
-                            extend: 'excel',
                             messageTop: "",
                             title: 'Listado de Pedidos Cotizados (Pipeline Activo)',
                             exportOptions: {
@@ -1010,8 +1046,22 @@ function openModalPedidosCotizados() {
                     language: (typeof idioma_espanol !== 'undefined') ? idioma_espanol : {}
                 });
 
+                tableCotizados.columns.adjust().draw();
+
+                setTimeout(function () {
+                    if (tableCotizados && $.fn.DataTable.isDataTable('#table_pedidos_cotizados')) {
+                        tableCotizados.columns.adjust().draw();
+                    }
+                }, 150);
+
+                setTimeout(function () {
+                    if (tableCotizados && $.fn.DataTable.isDataTable('#table_pedidos_cotizados')) {
+                        tableCotizados.columns.adjust().draw();
+                    }
+                }, 350);
+
                 // Evento delegado en el contenedor para asegurar funcionamiento con scrollX (.dataTables_scrollHead)
-                $(tableCotizados.table().container()).on('keyup change clear', 'thead input', function () {
+                $(tableCotizados.table().container()).off('keyup change clear', 'thead input').on('keyup change clear', 'thead input', function () {
                     const colIdx = $(this).closest('th').index();
                     if (tableCotizados && tableCotizados.column(colIdx).search() !== this.value) {
                         tableCotizados.column(colIdx).search(this.value).draw();

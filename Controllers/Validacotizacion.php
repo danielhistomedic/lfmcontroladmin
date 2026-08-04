@@ -22,7 +22,7 @@ class Validacotizacion extends Controllers
             [ Obtención y sanitización de parámetros GET ]*/
             $folio = isset($_GET['folio']) ? trim(strClean($_GET['folio'])) : '';
             $fecha = isset($_GET['fecha']) ? trim(strClean($_GET['fecha'])) : '';
-            $subtotal = isset($_GET['subtotal']) ? trim(strClean($_GET['subtotal'])) : (isset($_GET['total']) ? trim(strClean($_GET['total'])) : '');
+            $subtotal = isset($_GET['subtotal']) ? trim(strClean($_GET['subtotal'])) : '';
             
             $cotizacionBD = array();
             $statusValidacion = "NO_ENCONTRADO";
@@ -45,7 +45,7 @@ class Validacotizacion extends Controllers
 
                     // Obtener valores de BD
                     $fechaBD = $cotizacionBD['fecha'] ;
-                    $subtotalBD = $cotizacionBD['subtotal'];
+                    $subtotalBD = (float)($cotizacionBD['subtotal'] ?? 0) - (float)($cotizacionBD['descuento'] ?? 0);
                   
                     // Formatear fechas para comparación (si la fecha viene en el QR)
                     if (!empty($fecha) && !empty($fechaBD)) {
