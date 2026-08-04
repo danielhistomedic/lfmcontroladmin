@@ -680,7 +680,18 @@ class VentasModel extends Mysql
             $sql = "SELECT 
                 DATE_FORMAT(v.fecha, '%Y-%m') AS fecha_grupo,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_ventas_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_pipeline_usd
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_pipeline_usd,
+                ROUND(
+                    CASE 
+                        WHEN SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END) > 0 
+                        THEN (
+                            SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END)
+                            /
+                            SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END)
+                        ) * 100
+                        ELSE 0 
+                    END
+                , 2) AS PorcentajeEfectividad
             FROM tb_ventas v
             LEFT JOIN (
                 SELECT 

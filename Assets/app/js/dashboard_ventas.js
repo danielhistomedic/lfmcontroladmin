@@ -275,6 +275,12 @@ function loadVentasVsPipeline() {
             const dates = data.map(item => item.fecha_grupo);
             const ventasAmounts = data.map(item => parseFloat(item.sum_ventas_usd || 0));
             const pipelineAmounts = data.map(item => parseFloat(item.sum_pipeline_usd || 0));
+            const efectividadAmounts = data.map(item => {
+                const ventasUSD = parseFloat(item.sum_ventas_usd || 0);
+                const pipelineUSD = parseFloat(item.sum_pipeline_usd || 0);
+                const pctEfectividad = parseFloat(item.PorcentajeEfectividad ?? (pipelineUSD > 0 ? ((ventasUSD / pipelineUSD) * 100) : 0));
+                return parseFloat(pctEfectividad.toFixed(2));
+            });
 
             chartVentasVsPipeline.setOption({
                 tooltip: {
@@ -283,13 +289,17 @@ function loadVentasVsPipeline() {
                     formatter: function (params) {
                         let res = `<b>${params[0].name}</b><br/>`;
                         params.forEach(item => {
-                            res += `${item.marker} ${item.seriesName}: <b>${formatUSD(item.value)}</b><br/>`;
+                            if (item.seriesName.includes('%') || item.seriesName.includes('Eficacia')) {
+                                res += `${item.marker} ${item.seriesName}: <b>${item.value}%</b><br/>`;
+                            } else {
+                                res += `${item.marker} ${item.seriesName}: <b>${formatUSD(item.value)}</b><br/>`;
+                            }
                         });
                         return res;
                     }
                 },
                 legend: {
-                    data: ['Total de Ventas (Pedidos Colocados)', 'Pipeline Activo (Pedidos Cotizados)']
+                    data: ['Total de Ventas (Pedidos Colocados)', 'Pipeline Activo (Pedidos Cotizados)', '% de Eficacia']
                 },
                 grid: {
                     left: '3%', right: '4%', bottom: '3%', containLabel: true
@@ -306,6 +316,13 @@ function loadVentasVsPipeline() {
                         type: 'value',
                         name: 'Monto (USD)',
                         axisLabel: { formatter: '${value}' }
+                    },
+                    {
+                        type: 'value',
+                        name: '% Eficacia',
+                        min: 0,
+                        axisLabel: { formatter: '{value}%' },
+                        splitLine: { show: false }
                     }
                 ],
                 series: [
@@ -320,6 +337,16 @@ function loadVentasVsPipeline() {
                         type: 'bar',
                         data: pipelineAmounts,
                         itemStyle: { color: '#00809F' }
+                    },
+                    {
+                        name: '% de Eficacia',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: efectividadAmounts,
+                        itemStyle: { color: '#ffc107' },
+                        lineStyle: { width: 3 },
+                        symbol: 'circle',
+                        symbolSize: 6
                     }
                 ]
             }, true);
