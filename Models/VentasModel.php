@@ -852,26 +852,34 @@ class VentasModel extends Mysql
                 v.clues,
                 v.fecha,
                 DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
-                (v.subtotal - v.descuento) AS total,
+                COALESCE(pc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) AS total,
                 v.moneda_id,
                 CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
-                ROUND(CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END, 2) AS total_usd,
+                ROUND(CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) / COALESCE(NULLIF(tc.valor, 0), 1) ELSE COALESCE(pc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) END, 2) AS total_usd,
                 COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
                 COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
                 COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto
             FROM tb_ventas v
+            LEFT JOIN (
+                SELECT 
+                    venta_id,
+                    SUM(COALESCE(subtotal, 0) - COALESCE(descuento, 0)) AS monto
+                FROM tb_pedidos_cliente
+                WHERE enviado = 1
+                GROUP BY venta_id
+            ) pc ON pc.venta_id = v.id
             LEFT JOIN cat_clientes c ON c.id = v.cliente_id
             LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
             LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
             LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-            CROSS JOIN (
+            LEFT JOIN (
                 SELECT valor
                 FROM tb_historial_tipos_cambio
                 WHERE idMoneda = 3
                 ORDER BY fecha DESC, id DESC
                 LIMIT 1
-            ) tc
+            ) tc ON 1=1
             WHERE v.estatus_proyecto_id >= 6
               AND DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin
             ORDER BY clasificacion_proyecto, v.proyecto_id, v.id";
