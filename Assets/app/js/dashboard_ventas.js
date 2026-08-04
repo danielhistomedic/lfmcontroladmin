@@ -774,6 +774,24 @@ function openModalPedidosColocados() {
     const tbody = document.getElementById('tbl_pedidos_colocados_body');
     const lblCount = document.getElementById('lbl_modal_pedidos_count');
 
+    if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_pedidos_colocados')) {
+        $('#table_pedidos_colocados').DataTable().destroy();
+    }
+    if (typeof $ !== 'undefined') {
+        $('#table_pedidos_colocados thead').html(`
+            <tr>
+                <th class="border-bottom-0 fw-semibold text-center" width="6%">ID</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="10%">ID Proyecto</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="11%">Fecha</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="26%">Cliente</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="20%">Vendedor</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="11%">Clasificación</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="8%">Total</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="8%">Total (USD)</th>
+            </tr>
+        `);
+    }
+
     if (tbody) {
         tbody.innerHTML = `<tr>
             <td colspan="8" class="text-center text-muted py-4">
@@ -794,12 +812,38 @@ function openModalPedidosColocados() {
         }
     }
 
+    if (typeof $ !== 'undefined') {
+        $('#modalPedidosColocados').off('shown.bs.modal').on('shown.bs.modal', function () {
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#table_pedidos_colocados')) {
+                $('#table_pedidos_colocados').DataTable().columns.adjust().draw();
+            }
+        });
+    }
+
     showLoader();
     const formData = new FormData();
     formData.append('fecha_ini', fecha_ini_send);
     formData.append('fecha_fin', fecha_fin_send);
 
     postFunctionData(formData, 'Ventas', 'getPedidosColocados', function (responseObj) {
+        if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_pedidos_colocados')) {
+            $('#table_pedidos_colocados').DataTable().destroy();
+        }
+        if (typeof $ !== 'undefined') {
+            $('#table_pedidos_colocados thead').html(`
+                <tr>
+                    <th class="border-bottom-0 fw-semibold text-center" width="6%">ID</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="10%">ID Proyecto</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="11%">Fecha</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="26%">Cliente</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="20%">Vendedor</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="11%">Clasificación</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="8%">Total</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="8%">Total (USD)</th>
+                </tr>
+            `);
+        }
+
         let html = '';
         if (responseObj && responseObj.respuesta === "ok" && responseObj.data && responseObj.data.length > 0) {
             const list = responseObj.data;
@@ -812,8 +856,10 @@ function openModalPedidosColocados() {
                 const cliente = p.cliente || 'Sin Cliente';
                 const vendedor = p.vendedor || 'Sin Vendedor';
                 const clasificacion = p.clasificacion_proyecto || 'Sin Clasificación';
-                const totalMoneda = (p.cmoneda === 'MXN') ? formatMXN(p.total) : formatUSD(p.total);
-                const totalUSD = formatUSD(p.total_usd);
+                const valTotal = parseFloat(p.total || 0);
+                const valTotalUSD = parseFloat(p.total_usd || 0);
+                const totalMoneda = (p.cmoneda === 'MXN') ? formatMXN(valTotal) : formatUSD(valTotal);
+                const totalUSD = formatUSD(valTotalUSD);
 
                 html += `<tr>
                     <td class="text-center fw-bold text-dark text-3">${id}</td>
@@ -826,6 +872,90 @@ function openModalPedidosColocados() {
                     <td class="text-end font-monospace fw-bold text-success text-3">${totalUSD}</td>
                 </tr>`;
             });
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
+
+            if (typeof $ !== 'undefined' && $.fn.DataTable) {
+                let tableColocados;
+
+                // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable
+                const $filterRow = $('#table_pedidos_colocados thead tr:eq(0)').clone(false);
+                $filterRow.find('th').each(function (colIdx) {
+                    const title = $(this).text().trim();
+                    const $input = $('<input type="text" style="max-height: 24px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
+
+                    $input.on('keyup change clear', function () {
+                        if (tableColocados && tableColocados.column(colIdx).search() !== this.value) {
+                            tableColocados.column(colIdx).search(this.value).draw();
+                        }
+                    });
+
+                    $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
+                           .addClass('text-center p-1')
+                           .html($('<div class="form-group mb-0"></div>').append($input));
+                });
+                $('#table_pedidos_colocados thead').append($filterRow);
+
+                tableColocados = $('#table_pedidos_colocados').DataTable({
+                    orderCellsTop: true,
+                    scrollX: "100%",
+                    destroy: true,
+                    select: true,
+                    order: [[0, "desc"]],
+                    iDisplayLength: 10,
+                    lengthMenu: [
+                        [5, 10, 25, 50, 100, -1],
+                        [5, 10, 25, 50, 100, "Todos"]
+                    ],
+                    dom: 'Blfrtip',
+                    buttons: [
+                        {
+                            extend: 'excelHtml5',
+                            autoFilter: true,
+                            sheetName: 'Pedidos Colocados',
+                            messageTop: "",
+                            title: 'Listado de Pedidos Colocados',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'colvis',
+                            postfixButtons: ['colvisRestore']
+                        }
+                    ],
+                    columnDefs: [
+                        { className: "text-center", targets: [0, 1, 2] },
+                        { className: "text-start", targets: [3, 4, 5] },
+                        { className: "text-end", targets: [6, 7] }
+                    ],
+                    language: (typeof idioma_espanol !== 'undefined') ? idioma_espanol : {}
+                });
+
+                tableColocados.columns.adjust().draw();
+
+                setTimeout(function () {
+                    if (tableColocados && $.fn.DataTable.isDataTable('#table_pedidos_colocados')) {
+                        tableColocados.columns.adjust().draw();
+                    }
+                }, 150);
+
+                setTimeout(function () {
+                    if (tableColocados && $.fn.DataTable.isDataTable('#table_pedidos_colocados')) {
+                        tableColocados.columns.adjust().draw();
+                    }
+                }, 350);
+
+                // Evento delegado en el contenedor para asegurar funcionamiento con scrollX (.dataTables_scrollHead)
+                $(tableColocados.table().container()).off('keyup change clear', 'thead input').on('keyup change clear', 'thead input', function () {
+                    const colIdx = $(this).closest('th').index();
+                    if (tableColocados && tableColocados.column(colIdx).search() !== this.value) {
+                        tableColocados.column(colIdx).search(this.value).draw();
+                    }
+                });
+            }
         } else {
             if (lblCount) lblCount.innerHTML = `0 Pedidos`;
             html = `<tr>
@@ -834,11 +964,12 @@ function openModalPedidosColocados() {
                     No se encontraron pedidos colocados en este periodo.
                 </td>
             </tr>`;
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
         }
 
-        if (tbody) {
-            tbody.innerHTML = html;
-        }
         hideLoader();
     });
 }

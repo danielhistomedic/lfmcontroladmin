@@ -416,18 +416,18 @@
                     <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1"></i> Periodo: <strong id="lbl_modal_pedidos_rango" class="text-dark">--/--/---- al --/--/----</strong></span>
                     <span class="badge bg-success text-white text-3 px-3 py-2" id="lbl_modal_pedidos_count">0 Pedidos</span>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped table-custom align-middle w-100 mb-0" id="table_pedidos_colocados">
+                <div class="table-responsive export-table">
+                    <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table_pedidos_colocados">
                         <thead>
                             <tr>
-                                <th class="text-center" width="6%">ID</th>
-                                <th class="text-center" width="10%">ID Proyecto</th>
-                                <th width="11%">Fecha</th>
-                                <th width="26%">Cliente</th>
-                                <th width="20%">Vendedor</th>
-                                <th width="11%">Clasificación</th>
-                                <th class="text-end" width="8%">Total</th>
-                                <th class="text-end" width="8%">Total (USD)</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="6%">ID</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="10%">ID Proyecto</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="11%">Fecha</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="26%">Cliente</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="20%">Vendedor</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="11%">Clasificación</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="8%">Total</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="8%">Total (USD)</th>
                             </tr>
                         </thead>
                         <tbody id="tbl_pedidos_colocados_body">
