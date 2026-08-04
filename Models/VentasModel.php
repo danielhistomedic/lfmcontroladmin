@@ -388,23 +388,23 @@ class VentasModel extends Mysql
         try {
             $sql = "SELECT
                 SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN 1 ELSE 0 END) AS count_ganadas,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_ganadas_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_ganadas_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_mxn,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
+                    CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END
+                    CASE WHEN v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_mxn,
 
                 SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN 1 ELSE 0 END) AS count_pipeline,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 1 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_pipeline_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 3 THEN (v.subtotal - v.descuento) ELSE 0 END), 2) AS sum_pipeline_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_pipeline_mxn,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 AND v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_pipeline_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                    CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
+                    CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_pipeline_combined_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                    CASE WHEN v.moneda_id = 3 THEN (v.subtotal - v.descuento) * tc.valor ELSE (v.subtotal - v.descuento) END
+                    CASE WHEN v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_pipeline_combined_mxn,
 
                 COUNT(DISTINCT CASE WHEN v.estatus_proyecto_id >= 6 THEN v.cliente_id ELSE NULL END) AS count_clientes_activos,
@@ -425,7 +425,7 @@ class VentasModel extends Mysql
                 ROUND(
                     (
                         SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                            CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
+                            CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                         ELSE 0 END)
                         / NULLIF(metas.MetaGlobalUSD, 0)
                     ) * 100,
@@ -434,7 +434,7 @@ class VentasModel extends Mysql
                 ROUND(
                     metas.MetaGlobalUSD -
                     SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                        CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
+                        CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                     ELSE 0 END),
                     2
                 ) AS FaltanteUSD,
@@ -442,10 +442,10 @@ class VentasModel extends Mysql
                     COALESCE(
                         (
                             SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                                CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
+                                CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                             ELSE 0 END)
                             / NULLIF(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
-                                CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END
+                                CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
                             ELSE 0 END), 0)
                         ) * 100,
                         0
@@ -453,6 +453,14 @@ class VentasModel extends Mysql
                     2
                 ) AS PorcentajeEfectividad
             FROM tb_ventas v
+            LEFT JOIN (
+                SELECT 
+                    venta_id,
+                    SUM(subtotal - descuento) AS monto
+                FROM tb_ventas_cotizacion_cliente
+                WHERE enviado = 1
+                GROUP BY venta_id
+            ) cc ON cc.venta_id = v.id
             CROSS JOIN (
                 SELECT valor
                 FROM tb_historial_tipos_cambio
@@ -859,10 +867,10 @@ class VentasModel extends Mysql
                 v.clues,
                 v.fecha,
                 DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
-                (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) AS total,
+                COALESCE(cc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) AS total,
                 v.moneda_id,
                 CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
-                ROUND(CASE WHEN v.moneda_id = 1 THEN (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) / COALESCE(NULLIF(tc.valor, 0), 1) ELSE (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) END, 2) AS total_usd,
+                ROUND(CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) / COALESCE(NULLIF(tc.valor, 0), 1) ELSE COALESCE(cc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) END, 2) AS total_usd,
                 COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
                 COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
@@ -870,6 +878,14 @@ class VentasModel extends Mysql
                 (SELECT vc.estatus_proyecto_id FROM tb_ventas vc WHERE vc.id = v.id) as valida_colocados,
                 COALESCE(v.activo, 'ACTIVO') AS activo
             FROM tb_ventas v
+            LEFT JOIN (
+                SELECT 
+                    venta_id,
+                    SUM(COALESCE(subtotal, 0) - COALESCE(descuento, 0)) AS monto
+                FROM tb_ventas_cotizacion_cliente
+                WHERE enviado = 1
+                GROUP BY venta_id
+            ) cc ON cc.venta_id = v.id
             LEFT JOIN cat_clientes c ON c.id = v.cliente_id
             LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
             LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id

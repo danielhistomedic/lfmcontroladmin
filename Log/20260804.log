@@ -1,0 +1,4 @@
+[2026-08-04T13:18:53.177471-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'd.enviado' in 'WHERE', archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 262, codigo: 42S22 [] []
+[2026-08-04T13:18:53.181680-06:00] lfmcontrol.WARNING: Datos no encontrados [] []
+[2026-08-04T13:19:06.120074-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'd.enviado' in 'WHERE', archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 262, codigo: 42S22 [] []
+[2026-08-04T13:19:06.121675-06:00] lfmcontrol.WARNING: Datos no encontrados [] []
