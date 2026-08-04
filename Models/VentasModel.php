@@ -388,13 +388,13 @@ class VentasModel extends Mysql
         try {
             $sql = "SELECT
                 SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN 1 ELSE 0 END) AS count_ganadas,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_usd,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_mxn,
+                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
+                    CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 3 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
+                    CASE WHEN v.moneda_id = 3 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                 ELSE 0 END), 2) AS sum_ganadas_combined_mxn,
 
                 SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN 1 ELSE 0 END) AS count_pipeline,
@@ -425,7 +425,7 @@ class VentasModel extends Mysql
                 ROUND(
                     (
                         SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                            CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
+                            CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                         ELSE 0 END)
                         / NULLIF(metas.MetaGlobalUSD, 0)
                     ) * 100,
@@ -434,7 +434,7 @@ class VentasModel extends Mysql
                 ROUND(
                     metas.MetaGlobalUSD -
                     SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                        CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
+                        CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                     ELSE 0 END),
                     2
                 ) AS FaltanteUSD,
@@ -442,7 +442,7 @@ class VentasModel extends Mysql
                     COALESCE(
                         (
                             SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                                CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
+                                CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
                             ELSE 0 END)
                             / NULLIF(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN
                                 CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END
@@ -453,6 +453,14 @@ class VentasModel extends Mysql
                     2
                 ) AS PorcentajeEfectividad
             FROM tb_ventas v
+            LEFT JOIN (
+                SELECT 
+                    venta_id,
+                    SUM(subtotal - descuento) AS monto
+                FROM tb_pedidos_cliente
+                WHERE enviado = 1
+                GROUP BY venta_id
+            ) pc ON pc.venta_id = v.id
             LEFT JOIN (
                 SELECT 
                     venta_id,
