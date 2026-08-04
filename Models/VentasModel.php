@@ -943,56 +943,102 @@ class VentasModel extends Mysql
     }
 
     /**
-     * Obtiene la lista detallada de pedidos cotizados (estatus_proyecto_id >= 5) en un rango de fechas.
+     * Obtiene la lista detallada de pedidos cotizados para el modal del KPI "Pipeline Activo",
+     * combinando Parte 1 (tb_ventas_cotizacion_cliente enviado=1) y Parte 2 (tb_ventas estatus >= 5 y activo).
      */
     public function selectPedidosCotizados(string $fecha_ini, string $fecha_fin): array
     {
         $arrResponse = array();
         try {
-            $sql = "SELECT 
-                v.id,
-                v.titulo,
-                v.proyecto_id,
-                v.clues,
-                v.fecha,
-                DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
-                COALESCE(cc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) AS total,
-                v.moneda_id,
-                CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
-                ROUND(CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) / COALESCE(NULLIF(tc.valor, 0), 1) ELSE COALESCE(cc.monto, (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0))) END, 2) AS total_usd,
-                COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
-                CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
-                COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
-                COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto,
-                (SELECT vc.estatus_proyecto_id FROM tb_ventas vc WHERE vc.id = v.id) as valida_colocados,
-                COALESCE(v.activo, 'ACTIVO') AS activo
-            FROM tb_ventas v
-            LEFT JOIN (
+            $sql = "(
                 SELECT 
-                    venta_id,
-                    SUM(COALESCE(subtotal, 0) - COALESCE(descuento, 0)) AS monto
-                FROM tb_ventas_cotizacion_cliente
-                WHERE enviado = 1
-                GROUP BY venta_id
-            ) cc ON cc.venta_id = v.id
-            LEFT JOIN cat_clientes c ON c.id = v.cliente_id
-            LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
-            LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
-            LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-            LEFT JOIN (
-                SELECT valor
-                FROM tb_historial_tipos_cambio
-                WHERE idMoneda = 3
-                ORDER BY fecha DESC, id DESC
-                LIMIT 1
-            ) tc ON 1=1
-            WHERE v.estatus_proyecto_id >= 5
-              AND DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin
-            ORDER BY clasificacion_proyecto, v.proyecto_id, v.id";
+                    v.id,
+                    v.titulo,
+                    v.proyecto_id,
+                    v.clues,
+                    COALESCE(MAX(cc.fecha), v.fecha) AS fecha,
+                    DATE_FORMAT(COALESCE(MAX(cc.fecha), v.fecha), '%d/%m/%Y') AS fecha_formateada,
+                    SUM(COALESCE(cc.subtotal, 0) - COALESCE(cc.descuento, 0)) AS total,
+                    v.moneda_id,
+                    CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
+                    ROUND(
+                        CASE 
+                            WHEN v.moneda_id = 1 THEN SUM(COALESCE(cc.subtotal, 0) - COALESCE(cc.descuento, 0)) / COALESCE(NULLIF(tc.valor, 0), 1) 
+                            ELSE SUM(COALESCE(cc.subtotal, 0) - COALESCE(cc.descuento, 0)) 
+                        END, 
+                        2
+                    ) AS total_usd,
+                    COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
+                    CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
+                    COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
+                    COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto,
+                    v.estatus_proyecto_id AS valida_colocados,
+                    COALESCE(v.activo, 'ACTIVO') AS activo
+                FROM tb_ventas_cotizacion_cliente cc
+                INNER JOIN tb_ventas v ON v.id = cc.venta_id
+                LEFT JOIN cat_clientes c ON c.id = v.cliente_id
+                LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
+                LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
+                LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
+                LEFT JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc ON 1=1
+                WHERE cc.enviado = 1
+                  AND DATE(COALESCE(cc.fecha, v.fecha)) BETWEEN :fecha_ini_1 AND :fecha_fin_1
+                GROUP BY cc.venta_id
+            )
+            UNION ALL
+            (
+                SELECT 
+                    v.id,
+                    v.titulo,
+                    v.proyecto_id,
+                    v.clues,
+                    v.fecha,
+                    DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
+                    (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) AS total,
+                    v.moneda_id,
+                    CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
+                    ROUND(
+                        CASE 
+                            WHEN v.moneda_id = 1 THEN (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) / COALESCE(NULLIF(tc.valor, 0), 1) 
+                            ELSE (COALESCE(v.subtotal, 0) - COALESCE(v.descuento, 0)) 
+                        END, 
+                        2
+                    ) AS total_usd,
+                    COALESCE(c.nombre_comercial, 'Sin Cliente') AS cliente,
+                    CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
+                    COALESCE(cl.clasificacion, 'Sin Clasificación') AS clasificacion_proyecto,
+                    COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto,
+                    v.estatus_proyecto_id AS valida_colocados,
+                    COALESCE(v.activo, 'ACTIVO') AS activo
+                FROM tb_ventas v
+                LEFT JOIN cat_clientes c ON c.id = v.cliente_id
+                LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
+                LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
+                LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
+                LEFT JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc ON 1=1
+                WHERE COALESCE(v.activo, 'ACTIVO') = 'ACTIVO'
+                  AND v.estatus_proyecto_id >= 5
+                  AND DATE(v.fecha) BETWEEN :fecha_ini_2 AND :fecha_fin_2
+            )
+            ORDER BY clasificacion_proyecto, proyecto_id, id";
 
             $arr_values = [
-                'fecha_ini' => $fecha_ini,
-                'fecha_fin' => $fecha_fin
+                'fecha_ini_1' => $fecha_ini,
+                'fecha_fin_1' => $fecha_fin,
+                'fecha_ini_2' => $fecha_ini,
+                'fecha_fin_2' => $fecha_fin,
             ];
 
             $arrResponse = $this->select($sql, $arr_values);
