@@ -678,7 +678,7 @@ class VentasModel extends Mysql
         $arrResponse = array();
         try {
             $sql = "SELECT 
-                v.fecha AS fecha_grupo,
+                DATE_FORMAT(v.fecha, '%Y-%m') AS fecha_grupo,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_ventas_usd,
                 ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_pipeline_usd
             FROM tb_ventas v
@@ -707,8 +707,8 @@ class VentasModel extends Mysql
             ) tc
             WHERE (v.estatus_proyecto_id >= 6 OR v.estatus_proyecto_id >= 5)
               AND v.fecha BETWEEN :fecha_ini AND :fecha_fin
-            GROUP BY v.fecha
-            ORDER BY v.fecha ASC";
+            GROUP BY DATE_FORMAT(v.fecha, '%Y-%m')
+            ORDER BY DATE_FORMAT(v.fecha, '%Y-%m') ASC";
 
             $arr_values = [
                 'fecha_ini' => $fecha_ini,

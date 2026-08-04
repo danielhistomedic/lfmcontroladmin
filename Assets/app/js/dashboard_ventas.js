@@ -893,8 +893,8 @@ function openModalPedidosColocados() {
                     });
 
                     $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
-                           .addClass('text-center p-1')
-                           .html($('<div class="form-group mb-0"></div>').append($input));
+                        .addClass('text-center p-1')
+                        .html($('<div class="form-group mb-0"></div>').append($input));
                 });
                 $('#table_pedidos_colocados thead').append($filterRow);
 
@@ -1136,8 +1136,8 @@ function openModalPedidosCotizados() {
                     });
 
                     $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
-                           .addClass('text-center p-1')
-                           .html($('<div class="form-group mb-0"></div>').append($input));
+                        .addClass('text-center p-1')
+                        .html($('<div class="form-group mb-0"></div>').append($input));
                 });
                 $('#table_pedidos_cotizados thead').append($filterRow);
 
@@ -1358,8 +1358,8 @@ function verSeguimientosProyecto(ventaId, proyectoId) {
             list.forEach(s => {
                 const id = s.id || s.ID || 'N/A';
                 const fecha = s.fecha_formateada || s.fecha || s.fecha_registro || s.fchregistro || s.created_at || 'N/A';
-                const usuario = (s.nombre_usuario && s.nombre_usuario.trim() !== '') 
-                    ? s.nombre_usuario 
+                const usuario = (s.nombre_usuario && s.nombre_usuario.trim() !== '')
+                    ? s.nombre_usuario
                     : (s.usuario_nombre || s.usuario || s.vendedor || s.ccveusuario || 'N/A');
 
                 let detalle = s.seguimiento || s.comentario || s.observaciones || s.observacion || s.nota || s.descripcion || s.mensaje || '';
