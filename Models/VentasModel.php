@@ -793,52 +793,130 @@ class VentasModel extends Mysql
         $arrResponse = array();
         try {
             $sql = "SELECT 
-                DATE_FORMAT(v.fecha, '%Y-%m') AS fecha_grupo,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_ventas_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END), 2) AS sum_pipeline_usd,
+                fecha_grupo,
+                ROUND(SUM(ventas_usd), 2) AS sum_ventas_usd,
+                ROUND(SUM(pipeline_usd), 2) AS sum_pipeline_usd,
                 ROUND(
                     CASE 
-                        WHEN SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END) > 0 
-                        THEN (
-                            SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END)
-                            /
-                            SUM(CASE WHEN v.estatus_proyecto_id >= 5 THEN (CASE WHEN v.moneda_id = 1 THEN COALESCE(cc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(cc.monto, (v.subtotal - v.descuento)) END) ELSE 0 END)
-                        ) * 100
+                        WHEN SUM(pipeline_usd) > 0 
+                        THEN (SUM(ventas_usd) / SUM(pipeline_usd)) * 100 
                         ELSE 0 
                     END
                 , 2) AS PorcentajeEfectividad
-            FROM tb_ventas v
-            LEFT JOIN (
+            FROM (
+                /* Pipeline p1: Cotizaciones enviadas */
                 SELECT 
-                    venta_id,
-                    SUM(subtotal - descuento) AS monto
-                FROM tb_pedidos_cliente
-                WHERE enviado = 1
-                GROUP BY venta_id
-            ) pc ON pc.venta_id = v.id
-            LEFT JOIN (
+                    DATE_FORMAT(COALESCE(cc.fecha, v1.fecha), '%Y-%m') AS fecha_grupo,
+                    0 AS ventas_usd,
+                    COALESCE(
+                        CASE WHEN COALESCE(v1.moneda_id, 3) = 1 THEN (cc.subtotal - cc.descuento) / tc1.valor 
+                             ELSE (cc.subtotal - cc.descuento) 
+                        END, 0
+                    ) AS pipeline_usd
+                FROM tb_ventas_cotizacion_cliente cc
+                LEFT JOIN tb_ventas v1 ON v1.id = cc.venta_id
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc1
+                WHERE cc.enviado = 1
+                  AND DATE(COALESCE(cc.fecha, v1.fecha)) BETWEEN :fecha_ini_p1 AND :fecha_fin_p1
+
+                UNION ALL
+
+                /* Pipeline p2: Ventas sin cotización cliente y estatus >= 5 */
                 SELECT 
-                    venta_id,
-                    SUM(subtotal - descuento) AS monto
-                FROM tb_ventas_cotizacion_cliente
-                WHERE enviado = 1
-                GROUP BY venta_id
-            ) cc ON cc.venta_id = v.id
-            CROSS JOIN (
-                SELECT valor
-                FROM tb_historial_tipos_cambio
-                WHERE idMoneda = 3
-                ORDER BY fecha DESC, id DESC
-                LIMIT 1
-            ) tc
-            WHERE (v.estatus_proyecto_id >= 6 OR v.estatus_proyecto_id >= 5)
-              AND v.fecha BETWEEN :fecha_ini AND :fecha_fin
-            GROUP BY DATE_FORMAT(v.fecha, '%Y-%m')
-            ORDER BY DATE_FORMAT(v.fecha, '%Y-%m') ASC";
+                    DATE_FORMAT(v2.fecha, '%Y-%m') AS fecha_grupo,
+                    0 AS ventas_usd,
+                    COALESCE(
+                        CASE WHEN v2.moneda_id = 1 THEN (v2.subtotal - v2.descuento) / tc2.valor 
+                             ELSE (v2.subtotal - v2.descuento) 
+                        END, 0
+                    ) AS pipeline_usd
+                FROM tb_ventas v2
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc2
+                WHERE COALESCE(v2.activo, 'ACTIVO') = 'ACTIVO'
+                  AND v2.estatus_proyecto_id >= 5
+                  AND DATE(v2.fecha) BETWEEN :fecha_ini_p2 AND :fecha_fin_p2
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM tb_ventas_cotizacion_cliente cc2
+                      WHERE cc2.venta_id = v2.id
+                  )
+
+                UNION ALL
+
+                /* Ventas Ganadas g1: Pedidos cliente enviados */
+                SELECT 
+                    DATE_FORMAT(pc.fecha_pedido, '%Y-%m') AS fecha_grupo,
+                    COALESCE(
+                        CASE WHEN COALESCE(v1.moneda_id, 3) = 1 THEN (pc.subtotal - pc.descuento) / tc3.valor 
+                             ELSE (pc.subtotal - pc.descuento) 
+                        END, 0
+                    ) AS ventas_usd,
+                    0 AS pipeline_usd
+                FROM tb_pedidos_cliente pc
+                LEFT JOIN tb_ventas v1 ON v1.id = pc.venta_id
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc3
+                WHERE pc.enviado = 1
+                  AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini_g1 AND :fecha_fin_g1
+
+                UNION ALL
+
+                /* Ventas Ganadas g2: Ventas sin pedido cliente y estatus >= 6 */
+                SELECT 
+                    DATE_FORMAT(v2.fecha, '%Y-%m') AS fecha_grupo,
+                    COALESCE(
+                        CASE WHEN v2.moneda_id = 1 THEN (v2.subtotal - v2.descuento) / tc4.valor 
+                             ELSE (v2.subtotal - v2.descuento) 
+                        END, 0
+                    ) AS ventas_usd,
+                    0 AS pipeline_usd
+                FROM tb_ventas v2
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc4
+                WHERE COALESCE(v2.activo, 'ACTIVO') = 'ACTIVO'
+                  AND v2.estatus_proyecto_id >= 6
+                  AND DATE(v2.fecha) BETWEEN :fecha_ini_g2 AND :fecha_fin_g2
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM tb_pedidos_cliente pc2
+                      WHERE pc2.venta_id = v2.id
+                  )
+            ) t
+            WHERE fecha_grupo IS NOT NULL
+            GROUP BY fecha_grupo
+            ORDER BY fecha_grupo ASC";
 
             $arr_values = [
-                'fecha_ini' => $fecha_ini,
-                'fecha_fin' => $fecha_fin
+                'fecha_ini_p1' => $fecha_ini,
+                'fecha_fin_p1' => $fecha_fin,
+                'fecha_ini_p2' => $fecha_ini,
+                'fecha_fin_p2' => $fecha_fin,
+                'fecha_ini_g1' => $fecha_ini,
+                'fecha_fin_g1' => $fecha_fin,
+                'fecha_ini_g2' => $fecha_ini,
+                'fecha_fin_g2' => $fecha_fin,
             ];
 
             $arrResponse = $this->select($sql, $arr_values);
