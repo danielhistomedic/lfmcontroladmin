@@ -510,6 +510,11 @@ class VentasModel extends Mysql
                 WHERE COALESCE(v2.activo, 'ACTIVO') = 'ACTIVO'
                   AND v2.estatus_proyecto_id >= 5
                   AND DATE(v2.fecha) BETWEEN :fecha_ini_p2 AND :fecha_fin_p2
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM tb_ventas_cotizacion_cliente cc2
+                      WHERE cc2.venta_id = v2.id
+                  )
             ) p2
             CROSS JOIN (
                 SELECT valor
