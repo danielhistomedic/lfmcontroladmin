@@ -1036,6 +1036,11 @@ class VentasModel extends Mysql
                 WHERE COALESCE(v.activo, 'ACTIVO') = 'ACTIVO'
                   AND v.estatus_proyecto_id >= 5
                   AND DATE(v.fecha) BETWEEN :fecha_ini_2 AND :fecha_fin_2
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM tb_ventas_cotizacion_cliente cc2
+                      WHERE cc2.venta_id = v.id
+                  )
             )
             ORDER BY clasificacion_proyecto, proyecto_id, id";
 
