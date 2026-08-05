@@ -386,24 +386,20 @@ class VentasModel extends Mysql
     {
         $arrResponse = array();
         try {
+            /* -------------------------------------------------------
+             * Consulta principal: pipeline (p1, p2), clientes activos,
+             * artículos vendidos y meta global.
+             * "ganadas" se ejecuta en consulta separada para evitar
+             * el error MAX_JOIN_SIZE al combinar múltiples CROSS JOINs.
+             * ------------------------------------------------------- */
             $sql = "SELECT
-                SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN 1 ELSE 0 END) AS count_ganadas,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_mxn,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 AND v.moneda_id = 3 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) ELSE 0 END), 2) AS sum_ganadas_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
-                ELSE 0 END), 2) AS sum_ganadas_combined_usd,
-                ROUND(SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                    CASE WHEN v.moneda_id = 3 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) * tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
-                ELSE 0 END), 2) AS sum_ganadas_combined_mxn,
-
                 (p1.p1_count + p2.p2_count) AS count_pipeline,
                 ROUND(p1.p1_mxn_only + p2.p2_mxn_only, 2) AS sum_pipeline_mxn,
                 ROUND(p1.p1_usd_only + p2.p2_usd_only, 2) AS sum_pipeline_usd,
                 ROUND(p1.p1_usd + p2.p2_usd, 2) AS sum_pipeline_combined_usd,
                 ROUND(p1.p1_mxn + p2.p2_mxn, 2) AS sum_pipeline_combined_mxn,
 
-                COUNT(DISTINCT CASE WHEN v.estatus_proyecto_id >= 6 THEN v.cliente_id ELSE NULL END) AS count_clientes_activos,
+                COUNT(DISTINCT v.cliente_id) AS count_clientes_activos,
 
                 /* Artículos vendidos: se calcula en subconsulta independiente para evitar
                    que el JOIN con detalle multiplique las filas de tb_ventas y distorsione
@@ -417,44 +413,8 @@ class VentasModel extends Mysql
                       AND DATE(vd.fecha) BETWEEN :fecha_ini_sub AND :fecha_fin_sub
                 ), 0) AS total_articulos_vendidos,
 
-                metas.MetaGlobalUSD,
-                ROUND(
-                    (
-                        SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                            CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
-                        ELSE 0 END)
-                        / NULLIF(metas.MetaGlobalUSD, 0)
-                    ) * 100,
-                    2
-                ) AS PorcentajeCumplimiento,
-                ROUND(
-                    metas.MetaGlobalUSD -
-                    SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                        CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
-                    ELSE 0 END),
-                    2
-                ) AS FaltanteUSD,
-                ROUND(
-                    COALESCE(
-                        (
-                            SUM(CASE WHEN v.estatus_proyecto_id >= 6 THEN
-                                CASE WHEN v.moneda_id = 1 THEN COALESCE(pc.monto, (v.subtotal - v.descuento)) / tc.valor ELSE COALESCE(pc.monto, (v.subtotal - v.descuento)) END
-                            ELSE 0 END)
-                            / NULLIF(p1.p1_usd + p2.p2_usd, 0)
-                        ) * 100,
-                        0
-                    ),
-                    2
-                ) AS PorcentajeEfectividad
+                metas.MetaGlobalUSD
             FROM tb_ventas v
-            LEFT JOIN (
-                SELECT 
-                    venta_id,
-                    SUM(subtotal - descuento) AS monto
-                FROM tb_pedidos_cliente
-                WHERE enviado = 1
-                GROUP BY venta_id
-            ) pc ON pc.venta_id = v.id
             CROSS JOIN (
                 SELECT 
                     COALESCE(SUM(cc.subtotal - cc.descuento), 0) AS p1_raw,
@@ -517,13 +477,6 @@ class VentasModel extends Mysql
                   )
             ) p2
             CROSS JOIN (
-                SELECT valor
-                FROM tb_historial_tipos_cambio
-                WHERE idMoneda = 3
-                ORDER BY fecha DESC, id DESC
-                LIMIT 1
-            ) tc
-            CROSS JOIN (
                 SELECT COALESCE(SUM(meta), 0) AS MetaGlobalUSD
                 FROM tb_metas
                 WHERE anio = YEAR(CURDATE())
@@ -541,11 +494,122 @@ class VentasModel extends Mysql
                 'fecha_fin_p2'  => $fecha_fin,
             ];
 
-            $arrResponse = $this->select($sql, $arr_values);
+            $resumen = $this->select($sql, $arr_values)[0] ?? [];
+
+            /* -------------------------------------------------------
+             * Consulta separada: métricas de ventas "ganadas".
+             * Se ejecuta en 2 partes (tb_pedidos_cliente + tb_ventas excluidas)
+             * y se suman los totales.
+             * ------------------------------------------------------- */
+            $sql_ganadas = "SELECT
+                (COALESCE(g1.g1_count, 0) + COALESCE(g2.g2_count, 0)) AS count_ganadas,
+                ROUND(COALESCE(g1.g1_mxn_only, 0) + COALESCE(g2.g2_mxn_only, 0), 2) AS sum_ganadas_mxn,
+                ROUND(COALESCE(g1.g1_usd_only, 0) + COALESCE(g2.g2_usd_only, 0), 2) AS sum_ganadas_usd,
+                ROUND(COALESCE(g1.g1_usd, 0) + COALESCE(g2.g2_usd, 0), 2) AS sum_ganadas_combined_usd,
+                ROUND(COALESCE(g1.g1_mxn, 0) + COALESCE(g2.g2_mxn, 0), 2) AS sum_ganadas_combined_mxn
+            FROM (
+                SELECT 
+                    COALESCE(SUM(pc.subtotal - pc.descuento), 0) AS g1_raw,
+                    COALESCE(SUM(
+                        CASE WHEN COALESCE(v1.moneda_id, 3) = 1 THEN (pc.subtotal - pc.descuento) / tc1.valor 
+                             ELSE (pc.subtotal - pc.descuento) 
+                        END
+                    ), 0) AS g1_usd,
+                    COALESCE(SUM(
+                        CASE WHEN COALESCE(v1.moneda_id, 3) = 3 THEN (pc.subtotal - pc.descuento) * tc1.valor 
+                             ELSE (pc.subtotal - pc.descuento) 
+                        END
+                    ), 0) AS g1_mxn,
+                    COALESCE(SUM(CASE WHEN COALESCE(v1.moneda_id, 3) = 1 THEN (pc.subtotal - pc.descuento) ELSE 0 END), 0) AS g1_mxn_only,
+                    COALESCE(SUM(CASE WHEN COALESCE(v1.moneda_id, 3) = 3 THEN (pc.subtotal - pc.descuento) ELSE 0 END), 0) AS g1_usd_only,
+                    COUNT(DISTINCT pc.venta_id) AS g1_count
+                FROM tb_pedidos_cliente pc
+                LEFT JOIN tb_ventas v1 ON v1.id = pc.venta_id
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc1
+                WHERE pc.enviado = 1
+                  AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini_g1 AND :fecha_fin_g1
+            ) g1
+            CROSS JOIN (
+                SELECT 
+                    COALESCE(SUM(v2.subtotal - v2.descuento), 0) AS g2_raw,
+                    COALESCE(SUM(
+                        CASE WHEN v2.moneda_id = 1 THEN (v2.subtotal - v2.descuento) / tc2.valor 
+                             ELSE (v2.subtotal - v2.descuento) 
+                        END
+                    ), 0) AS g2_usd,
+                    COALESCE(SUM(
+                        CASE WHEN v2.moneda_id = 3 THEN (v2.subtotal - v2.descuento) * tc2.valor 
+                             ELSE (v2.subtotal - v2.descuento) 
+                        END
+                    ), 0) AS g2_mxn,
+                    COALESCE(SUM(CASE WHEN v2.moneda_id = 1 THEN (v2.subtotal - v2.descuento) ELSE 0 END), 0) AS g2_mxn_only,
+                    COALESCE(SUM(CASE WHEN v2.moneda_id = 3 THEN (v2.subtotal - v2.descuento) ELSE 0 END), 0) AS g2_usd_only,
+                    COUNT(DISTINCT v2.id) AS g2_count
+                FROM tb_ventas v2
+                CROSS JOIN (
+                    SELECT valor
+                    FROM tb_historial_tipos_cambio
+                    WHERE idMoneda = 3
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                ) tc2
+                WHERE COALESCE(v2.activo, 'ACTIVO') = 'ACTIVO'
+                  AND v2.estatus_proyecto_id >= 6
+                  AND DATE(v2.fecha) BETWEEN :fecha_ini_g2 AND :fecha_fin_g2
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM tb_pedidos_cliente pc2
+                      WHERE pc2.venta_id = v2.id
+                  )
+            ) g2";
+
+            $arr_values_ganadas = [
+                'fecha_ini_g1' => $fecha_ini,
+                'fecha_fin_g1' => $fecha_fin,
+                'fecha_ini_g2' => $fecha_ini,
+                'fecha_fin_g2' => $fecha_fin,
+            ];
+
+            $ganadas = $this->select($sql_ganadas, $arr_values_ganadas)[0] ?? [];
+            if (empty($ganadas)) {
+                $ganadas = [
+                    'count_ganadas'            => 0,
+                    'sum_ganadas_mxn'          => 0,
+                    'sum_ganadas_usd'          => 0,
+                    'sum_ganadas_combined_usd' => 0,
+                    'sum_ganadas_combined_mxn' => 0,
+                ];
+            }
+
+            /* -------------------------------------------------------
+             * Combinación PHP: merge de ambos resultados + KPIs
+             * calculados a partir de los valores ya obtenidos.
+             * ------------------------------------------------------- */
+            if (!empty($resumen)) {
+                $sumGanadasUSD  = (float)($ganadas['sum_ganadas_combined_usd'] ?? 0);
+                $metaGlobalUSD  = (float)($resumen['MetaGlobalUSD'] ?? 0);
+                $sumPipelineUSD = (float)($resumen['sum_pipeline_combined_usd'] ?? 0);
+
+                $arrResponse = array_merge($resumen, $ganadas, [
+                    'PorcentajeCumplimiento' => $metaGlobalUSD > 0
+                        ? round(($sumGanadasUSD / $metaGlobalUSD) * 100, 2)
+                        : 0,
+                    'FaltanteUSD' => round($metaGlobalUSD - $sumGanadasUSD, 2),
+                    'PorcentajeEfectividad'  => $sumPipelineUSD > 0
+                        ? round(($sumGanadasUSD / $sumPipelineUSD) * 100, 2)
+                        : 0,
+                ]);
+            }
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
-        return $arrResponse[0] ?? [];
+        return $arrResponse;
     }
 
     /**
@@ -1476,4 +1540,3 @@ class VentasModel extends Mysql
         return $arrResponse;
     }
 }
-
