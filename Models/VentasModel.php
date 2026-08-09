@@ -1617,4 +1617,134 @@ class VentasModel extends Mysql
         }
         return $arrResponse;
     }
+
+    /**
+     * Obtiene la lista completa de órdenes de clientes con su seguimiento para la vista de seguimiento.
+     * Une tb_pedidos_cliente con tb_ventas y tb_ventas_seguimiento.
+     *
+     * @return array $arrResponse
+     */
+    public function selectOrdenesClienteSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $filtro_estatus = '', string $filtro_cliente = ''): array
+    {
+        $arrResponse = array();
+
+        try {
+
+            /*-------------------------------------------
+            [ Instruccion sql ]*/
+            $sql = "SELECT
+                pc.id                                                       AS pedido_id,
+                pc.venta_id,
+                v.titulo                                                    AS titulo_venta,
+                v.proyecto_id,
+                v.clues,
+                COALESCE(c.nombre_comercial, 'Sin Cliente')                 AS cliente,
+                CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS vendedor,
+                COALESCE(e.cEstatus, 'Sin Estatus')                         AS estatus_proyecto,
+                v.estatus_proyecto_id,
+                COALESCE(cl.clasificacion, 'Sin Clasificación')             AS clasificacion_proyecto,
+                pc.fecha_pedido,
+                DATE_FORMAT(pc.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
+                CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
+                v.moneda_id,
+                COALESCE(pc.subtotal, 0) - COALESCE(pc.descuento, 0)       AS monto_pedido,
+                ROUND(
+                    CASE
+                        WHEN v.moneda_id = 1 THEN (COALESCE(pc.subtotal, 0) - COALESCE(pc.descuento, 0)) / COALESCE(NULLIF(tc.valor, 0), 1)
+                        ELSE (COALESCE(pc.subtotal, 0) - COALESCE(pc.descuento, 0))
+                    END, 2
+                )                                                           AS monto_pedido_usd,
+                pc.enviado,
+                pc.fchregistro                                              AS fecha_registro_pedido,
+                DATE_FORMAT(pc.fchregistro, '%d/%m/%Y')                     AS fecha_registro_formateada,
+                /* Último seguimiento */
+                (SELECT vs.seguimiento
+                 FROM tb_ventas_seguimiento vs
+                 WHERE vs.venta_id = pc.venta_id
+                 ORDER BY vs.id DESC LIMIT 1)                               AS ultimo_seguimiento_nota,
+                (SELECT DATE_FORMAT(vs2.fchregistro, '%d/%m/%Y')
+                 FROM tb_ventas_seguimiento vs2
+                 WHERE vs2.venta_id = pc.venta_id
+                 ORDER BY vs2.id DESC LIMIT 1)                              AS ultimo_seguimiento_fecha,
+                (SELECT COALESCE(CONCAT_WS(' ', u2.cnombre, u2.cpriapellido, u2.csegapellido), '')
+                 FROM tb_ventas_seguimiento vs3
+                 LEFT JOIN cat_medico u2 ON u2.ccvemedico = vs3.ccveusuario
+                 WHERE vs3.venta_id = pc.venta_id
+                 ORDER BY vs3.id DESC LIMIT 1)                              AS ultimo_seguimiento_usuario,
+                (SELECT COUNT(*) FROM tb_ventas_seguimiento vs4
+                 WHERE vs4.venta_id = pc.venta_id)                         AS total_seguimientos
+            FROM tb_pedidos_cliente pc
+            INNER JOIN tb_ventas v     ON v.id   = pc.venta_id
+            LEFT  JOIN cat_clientes c  ON c.id   = v.cliente_id
+            LEFT  JOIN cat_medico vd   ON vd.ccvemedico = v.ccveusuario_vendedor
+            LEFT  JOIN cat_estatus_proyecto e   ON e.Id  = v.estatus_proyecto_id
+            LEFT  JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
+            LEFT  JOIN (
+                SELECT valor FROM tb_historial_tipos_cambio
+                WHERE idMoneda = 3
+                ORDER BY fecha DESC, id DESC
+                LIMIT 1
+            ) tc ON 1=1
+            WHERE pc.enviado = 1 ";
+
+            /*-------------------------------------------
+            [ Filtros opcionales ]*/
+            $arr_values = [];
+
+            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+                $sql .= " AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+                $arr_values['fecha_fin'] = $fecha_fin;
+            }
+
+            if (!empty($filtro_estatus)) {
+                $sql .= " AND v.estatus_proyecto_id = :estatus_id ";
+                $arr_values['estatus_id'] = $filtro_estatus;
+            }
+
+            if (!empty($filtro_cliente)) {
+                $sql .= " AND v.cliente_id = :cliente_id ";
+                $arr_values['cliente_id'] = $filtro_cliente;
+            }
+
+            $sql .= " ORDER BY pc.fecha_pedido DESC, pc.id DESC ";
+
+            /*-------------------------------------------
+            [ Ejecuta el Metodo select de MySQL ]*/
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        /*-------------------------------------------
+        [ Retorna array con la lista de registros o empty en caso de error ]*/
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene todos los seguimientos de una venta con historial completo.
+     */
+    public function selectHistorialSeguimientoVenta(int $venta_id): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                        vs.id,
+                        vs.venta_id,
+                        vs.seguimiento AS notas,
+                        vs.ccveusuario,
+                        vs.fchregistro AS fecha,
+                        DATE_FORMAT(vs.fchregistro, '%d/%m/%Y %H:%i') AS fecha_formateada,
+                        COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), 'Sistema') AS nombre_usuario
+                    FROM tb_ventas_seguimiento vs
+                    LEFT JOIN cat_medico u ON u.ccvemedico = vs.ccveusuario
+                    WHERE vs.venta_id = :venta_id
+                    ORDER BY vs.id DESC";
+            $arr_values = ['venta_id' => $venta_id];
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+        return $arrResponse;
+    }
 }

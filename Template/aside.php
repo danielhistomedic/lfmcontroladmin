@@ -292,6 +292,39 @@
                         </li>
                     <?php }  ?>
 
+                    <!-- Seguimiento  -->
+                    <?php if (
+                        !empty($data['permisos'][MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r'])
+                    ) {
+                    ?>
+
+                        <li class="nav-parent <?php if (
+                                                    $data['menu'] == MOD_SEGUIMIENTO_ORDENES_CLIENTE
+                                                ) {
+                                                    echo "nav-expanded nav-active";
+                                                } ?>">
+                            <a class="nav-link" href="#">
+                                <i class="fa-sharp fa-light fa-cart-shopping-fast"></i>
+                                <span>Seguimiento</span>
+                            </a>
+                            <ul class="nav nav-children ">
+
+                                <?php if (
+                                    !empty($data['permisos'][MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r'])
+                                ) { ?>
+                                    <li class="<?= ($data['menu'] == MOD_SEGUIMIENTO_ORDENES_CLIENTE) ? "nav-active" : ""; ?>">
+                                        <a class="nav-link" href="<?= base_url(); ?>/seguimiento/ordenesCliente">
+                                            Órdenes de Compra Clientes
+                                        </a>
+                                    </li>
+                                <?php }  ?>
+
+                                <hr class="mb-1 mt-1">
+
+                            </ul>
+                        </li>
+                    <?php }  ?>
+
 
 
                 </ul>

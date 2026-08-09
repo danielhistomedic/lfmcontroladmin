@@ -22,6 +22,11 @@ const MOD_OPORTUNIDAD_VENTA = 121;
 const MOD_VENTAS_CLIENTES = 124;
 
 // ** -----------------------------
+// [ Seguimiento ]
+// ** -----------------------------
+const MOD_SEGUIMIENTO_ORDENES_CLIENTE = 130;
+
+// ** -----------------------------
 // [ Dashboard ]
 // ** -----------------------------
 const MOD_DASHBOARD = 123;
