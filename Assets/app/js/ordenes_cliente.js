@@ -76,8 +76,58 @@ function fntInicializarTabla() {
             '</tr></thead>');
     }
 
+    // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable
+    const $filterRow = $('#tableOrdenes thead tr:eq(0)').clone(false);
+    $filterRow.find('th').each(function (colIdx) {
+        const title = $(this).text().trim();
+        if (title === 'Opciones' || title === 'Seguimientos' || title === '') {
+            $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
+                .addClass('text-center p-1')
+                .html('');
+            return;
+        }
+        const $input = $('<input type="text" style="max-height: 24px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
+
+        $input.on('keyup change clear', function () {
+            if (tableOrdenes && tableOrdenes.column(colIdx).search() !== this.value) {
+                tableOrdenes.column(colIdx).search(this.value).draw();
+            }
+        });
+
+        $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
+            .addClass('text-center p-1')
+            .html($('<div class="form-group mb-0"></div>').append($input));
+    });
+    $('#tableOrdenes thead').append($filterRow);
+
     tableOrdenes = $('#tableOrdenes').DataTable({
         data: [],
+        orderCellsTop: true,
+        scrollX: true,
+        select: true,
+        order: [[2, 'desc']],
+        pageLength: 25,
+        lengthMenu: [
+            [10, 25, 50, 100, -1],
+            [10, 25, 50, 100, "Todos"]
+        ],
+        dom: 'Blfrtip',
+        buttons: [
+            {
+                extend: 'excelHtml5',
+                autoFilter: true,
+                sheetName: 'Órdenes de Compra',
+                messageTop: "",
+                title: 'Lista de Órdenes de Compra Clientes',
+                exportOptions: {
+                    columns: ':visible'
+                }
+            },
+            {
+                extend: 'colvis',
+                postfixButtons: ['colvisRestore']
+            }
+        ],
         columns: [
             { data: 'options', orderable: false, className: 'text-center', width: '60px' },
             { data: 'pedido_id', className: 'text-center' },
@@ -95,12 +145,16 @@ function fntInicializarTabla() {
         language: {
             url: base_url + '/Assets/vendor/datatables/es_mx.json'
         },
-        order: [[2, 'desc']],
-        pageLength: 25,
-        responsive: true,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
         initComplete: function () {
             $('.loading-panel-showing').removeClass('loading-panel-showing');
+        }
+    });
+
+    // Evento delegado en el contenedor para asegurar funcionamiento con scrollX
+    $(tableOrdenes.table().container()).off('keyup change clear', 'thead input').on('keyup change clear', 'thead input', function () {
+        const colIdx = $(this).closest('th').index();
+        if (tableOrdenes && tableOrdenes.column(colIdx).search() !== this.value) {
+            tableOrdenes.column(colIdx).search(this.value).draw();
         }
     });
 }
@@ -137,6 +191,14 @@ function fntCargarTabla() {
 
             if (tableOrdenes !== null && Array.isArray(data)) {
                 tableOrdenes.clear().rows.add(data).draw();
+                fntCalcularKPIs(data);
+                
+                tableOrdenes.columns.adjust().draw();
+                setTimeout(function () {
+                    if (tableOrdenes) {
+                        tableOrdenes.columns.adjust().draw();
+                    }
+                }, 150);
             }
         },
         error: function (xhr, status, error) {
@@ -147,6 +209,39 @@ function fntCargarTabla() {
             $('.loading-panel-showing').removeClass('loading-panel-showing');
         }
     });
+}
+
+/**
+ * Calcula los indicadores clave de rendimiento (KPIs) en tiempo real
+ * a partir de los datos cargados en la tabla de órdenes de compra.
+ * 
+ * @param {Array} data Lista de registros de órdenes
+ */
+function fntCalcularKPIs(data) {
+    var totalOrdenes = data.length;
+    var totalUSD = 0;
+    var totalMXN = 0;
+    var conSeguimiento = 0;
+
+    data.forEach(function (row) {
+        var monto = parseFloat(row.monto_pedido) || 0;
+        var moneda = (row.cmoneda || '').toUpperCase();
+        if (moneda === 'USD') {
+            totalUSD += monto;
+        } else {
+            totalMXN += monto;
+        }
+
+        var totalSeg = parseInt(row.total_seguimientos) || 0;
+        if (totalSeg > 0) {
+            conSeguimiento++;
+        }
+    });
+
+    $('#kpi_total_ordenes').text(new Intl.NumberFormat('en-US').format(totalOrdenes));
+    $('#kpi_monto_usd').text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUSD) + ' USD');
+    $('#kpi_monto_mxn').text(new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalMXN) + ' MXN');
+    $('#kpi_con_seguimiento').text(new Intl.NumberFormat('en-US').format(conSeguimiento));
 }
 
 /* =========================================================
@@ -286,8 +381,13 @@ function fntCargarHistorial(ventaId) {
 function fntMostrarLista() {
     $('#panel_lista_registros').show();
     $('#panel_filtros').show();
+    $('#panel_kpis').show();
     $('#panel_detalle').hide();
     ventaIdActual = '';
+    
+    if (tableOrdenes !== null) {
+        tableOrdenes.columns.adjust().draw();
+    }
 }
 
 /**
@@ -296,6 +396,7 @@ function fntMostrarLista() {
 function fntMostrarDetalle() {
     $('#panel_lista_registros').hide();
     $('#panel_filtros').hide();
+    $('#panel_kpis').hide();
     $('#panel_detalle').show();
 }
 
