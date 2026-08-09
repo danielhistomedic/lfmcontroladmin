@@ -167,7 +167,7 @@ class Seguimiento extends Controllers
                 // Total seguimientos badge
                 $total_seg = (int)($arrData[$i]['total_seguimientos'] ?? 0);
                 if ($total_seg > 0) {
-                    $arrData[$i]['seguimientos_badge'] = '<span class="badge bg-primary-gradient">' . $total_seg . '</span>';
+                    $arrData[$i]['seguimientos_badge'] = '<span class="badge bg-primary">' . $total_seg . '</span>';
                 } else {
                     $arrData[$i]['seguimientos_badge'] = '<span class="badge bg-secondary">0</span>';
                 }

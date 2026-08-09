@@ -14,7 +14,7 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
     }
     .kpi-icon {
-        font-size: 2.2rem;
+        font-size: 2rem;
         width: 60px;
         height: 60px;
         display: flex;
@@ -23,15 +23,15 @@
         border-radius: 12px;
     }
     .text-amount {
-        font-size: 1.6rem;
-        font-weight: 700;
-        line-height: 1.2;
+        font-size: var(--font-report-title);
+        font-weight: var(--font-weight-bold);
+        line-height: var(--line-height-tight);
     }
     .text-label {
-        font-size: 0.85rem;
+        font-size: var(--font-small);
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        font-weight: 600;
+        font-weight: var(--font-weight-semibold);
     }
     .chart-container {
         background: #ffffff;
@@ -41,17 +41,17 @@
         margin-bottom: 2rem;
     }
     .chart-title {
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-size: var(--font-section-title);
+        font-weight: var(--font-weight-semibold);
         color: #333333;
         margin-bottom: 1.2rem;
         border-bottom: 1px solid #f0f0f0;
         padding-bottom: 0.75rem;
     }
     .table-custom th {
-        font-weight: 600;
+        font-size: var(--font-table-header);
+        font-weight: var(--font-weight-semibold);
         text-transform: uppercase;
-        font-size: 0.8rem;
         letter-spacing: 0.5px;
         background-color: #fcfcfc;
     }
@@ -61,94 +61,7 @@
     .bg-warning-lighten { background-color: rgba(255, 193, 7, 0.08) !important; }
     .bg-danger-lighten { background-color: rgba(220, 53, 69, 0.08) !important; }
 
-    /* Estilos personalizados DataTable idénticos a la imagen */
-    .export-table table.dataTable {
-        border-collapse: separate !important;
-        border-spacing: 0;
-        border: 1px solid #ced4da !important;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    .export-table table.dataTable thead tr:first-child {
-        background-color: #00809F !important;
-    }
-    .export-table table.dataTable thead tr:first-child th {
-        color: #ffffff !important;
-        background-color: #00809F !important;
-        font-weight: 700 !important;
-        font-size: 12.5px !important;
-        vertical-align: middle !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
-        border-bottom: 1px solid #006882 !important;
-        padding: 9px 12px !important;
-        text-transform: none !important;
-    }
-    .export-table table.dataTable thead tr:first-child th:last-child {
-        border-right: none !important;
-    }
-    .export-table table.dataTable thead tr:first-child th.sorting:before,
-    .export-table table.dataTable thead tr:first-child th.sorting:after,
-    .export-table table.dataTable thead tr:first-child th.sorting_asc:before,
-    .export-table table.dataTable thead tr:first-child th.sorting_asc:after,
-    .export-table table.dataTable thead tr:first-child th.sorting_desc:before,
-    .export-table table.dataTable thead tr:first-child th.sorting_desc:after {
-        color: #ffffff !important;
-        opacity: 0.85 !important;
-    }
-    .export-table table.dataTable thead tr:nth-child(2) {
-        background-color: #f8f9fa !important;
-    }
-    .export-table table.dataTable thead tr:nth-child(2) th {
-        background-color: #f8f9fa !important;
-        padding: 4px 6px !important;
-        border-bottom: 1px solid #ced4da !important;
-        border-right: 1px solid #e9ecef !important;
-    }
-    .export-table table.dataTable thead tr:nth-child(2) input {
-        height: 25px !important;
-        max-height: 25px !important;
-        font-size: 11px !important;
-        border: 1px solid #ced4da !important;
-        border-radius: 3px !important;
-        background-color: #ffffff !important;
-        color: #495057 !important;
-        text-align: center;
-        padding: 2px 4px;
-        box-shadow: none !important;
-    }
-    .export-table table.dataTable thead tr:nth-child(2) input::placeholder {
-        color: #adb5bd !important;
-        font-weight: 300;
-    }
-    .export-table table.dataTable tbody tr td {
-        font-size: 12px !important;
-        vertical-align: middle !important;
-        padding: 8px 10px !important;
-        border-color: #e9ecef !important;
-    }
-    .export-table table.dataTable.table-striped tbody tr:nth-of-type(odd) {
-        background-color: #ffffff !important;
-    }
-    .export-table table.dataTable.table-striped tbody tr:nth-of-type(even) {
-        background-color: #f8f9fa !important;
-    }
-    .export-table table.dataTable.table-hover tbody tr:hover > * {
-        background-color: #e8f4f8 !important;
-    }
-    .export-table table.dataTable tbody tr.selected > * {
-        background-color: #00809f26 !important;
-        color: #1d2127 !important;
-    }
-    .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
-        background-color: #00809F !important;
-        border-color: #00809F !important;
-        color: #ffffff !important;
-    }
-    .dataTables_wrapper .dataTables_paginate .page-link {
-        color: #00809F;
-        border-radius: 4px;
-        margin: 0 2px;
-    }
+
 </style>
 
 <!-- Header Admin 02 -->
@@ -246,7 +159,7 @@
                             <div class="w-100">
                                 <span class="text-label text-primary d-block mb-1">Total Órdenes</span>
                                 <div class="text-amount text-dark" id="kpi_total_ordenes">0</div>
-                                <div class="text-muted text-4">En el periodo</div>
+                                <div class="text-muted text-3">En el periodo</div>
                             </div>
                         </div>
                     </div>
@@ -262,7 +175,7 @@
                             <div class="w-100">
                                 <span class="text-label text-success d-block mb-1">Monto Acumulado (USD)</span>
                                 <div class="text-amount text-dark" id="kpi_monto_usd">$0.00 USD</div>
-                                <div class="text-muted text-4" id="kpi_monto_mxn">$0.00 MXN</div>
+                                <div class="text-muted text-3" id="kpi_monto_mxn">$0.00 MXN</div>
                             </div>
                         </div>
                     </div>
@@ -278,7 +191,7 @@
                             <div class="w-100">
                                 <span class="text-label text-info d-block mb-1">Con Seguimiento</span>
                                 <div class="text-amount text-dark" id="kpi_con_seguimiento">0</div>
-                                <div class="text-muted text-4">Órdenes con bitácora</div>
+                                <div class="text-muted text-3">Órdenes con bitácora</div>
                             </div>
                         </div>
                     </div>
@@ -349,7 +262,7 @@
                             <div class="row g-3">
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Orden / Pedido #:</label>
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Orden de Compra:</label>
                                     <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-danger mb-0" id="det_pedido_id">—</h6>
                                 </div>
 

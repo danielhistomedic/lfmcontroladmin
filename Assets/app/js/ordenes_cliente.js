@@ -14,6 +14,8 @@
  * VARIABLES GLOBALES
  * ========================================================= */
 var tableOrdenes = null;
+var tableElement = "#tableOrdenes";
+var tableElementJS = "tableOrdenes";
 var ventaIdActual = '';
 var historialSeguimientoData = [];
 var paginaActualSeguimiento = 1;
@@ -66,71 +68,57 @@ $(document).ready(function () {
  */
 function fntInicializarTabla() {
 
-    if (tableOrdenes !== null) {
-        tableOrdenes.destroy();
-        tableOrdenes = null;
-        $('#tableOrdenes').empty();
+    if (!document.getElementById(tableElementJS)) return;
 
-        // Re-agrega el thead
-        $('#tableOrdenes').append('<thead><tr>' +
-            '<th class="text-center">Opciones</th>' +
-            '<th class="text-center">Pedido #</th>' +
-            '<th class="text-center">Fecha Pedido</th>' +
-            '<th class="text-center">Cliente</th>' +
-            '<th class="text-center">Proyecto / Título</th>' +
-            '<th class="text-center">Vendedor</th>' +
-            '<th class="text-center">Monto</th>' +
-            '<th class="text-center">Estatus</th>' +
-            '<th class="text-center">Seguimientos</th>' +
-            '<th class="text-center">Último Seguimiento</th>' +
-            '<th class="text-center">Fecha Últ. Seg.</th>' +
-            '<th class="text-center">Usuario Últ. Seg.</th>' +
-            '</tr></thead>');
-    }
+    /* Inicializamos lo filtros de columna */
+    var elemento_clone = tableElement + ' thead tr';
+    var elemento_appendto = tableElement + ' thead';
+    $(elemento_clone).clone(true).appendTo(elemento_appendto);
 
-    // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable
-    const $filterRow = $('#tableOrdenes thead tr:eq(0)').clone(false);
-    $filterRow.find('th').each(function (colIdx) {
-        const title = $(this).text().trim();
-        if (title === 'Opciones' || title === 'Seguimientos' || title === '') {
-            $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
-                .addClass('text-center p-1')
-                .html('');
-            return;
-        }
-        const $input = $('<input type="text" style="max-height: 24px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
+    var elemento_each = tableElement + ' thead tr:eq(1) th';
+    $(elemento_each).each(function(i) {
 
-        $input.on('keyup change clear', function () {
-            if (tableOrdenes && tableOrdenes.column(colIdx).search() !== this.value) {
-                tableOrdenes.column(colIdx).search(this.value).draw();
+        //Nombre de la columna
+        var title = $(this).text();
+
+        //Crear el elemento imput en cada columna
+        $(this).html('<div class="form-group mb-0"><input type="text" style="max-height: 12px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/></div>');
+
+        // EVento del input creado en cada columna
+        $('input', this).on('keyup change', function() {
+            if (tableOrdenes && tableOrdenes.column(i).search() != this.value) {
+                tableOrdenes
+                    .column(i)
+                    .search(this.value)
+                    .draw();
             }
         });
-
-        $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
-            .addClass('text-center p-1')
-            .html($('<div class="form-group mb-0"></div>').append($input));
     });
-    $('#tableOrdenes thead').append($filterRow);
 
-    tableOrdenes = $('#tableOrdenes').DataTable({
-        data: [],
+    /*-------------------------------------------
+    [ DataTable Inicializa ]*/
+    tableOrdenes = $(tableElement).DataTable({
         orderCellsTop: true,
-        scrollX: true,
+        fixedHeader: true,
+        scrollX: "100%",
+        destroy: true,
         select: true,
-        order: [[2, 'desc']],
-        pageLength: 25,
+        order: [
+            [2, "desc"]
+        ],
+        iDisplayLength: 5,
         lengthMenu: [
-            [10, 25, 50, 100, -1],
-            [10, 25, 50, 100, "Todos"]
+            [5, 10, 25, 50, 100, -1],
+            [5, 10, 25, 50, 100, "Todos"]
         ],
         dom: 'Blfrtip',
-        buttons: [
-            {
+        buttons: [{
                 extend: 'excelHtml5',
                 autoFilter: true,
                 sheetName: 'Órdenes de Compra',
+                extend: 'excel',
                 messageTop: "",
-                title: 'Lista de Órdenes de Compra Clientes',
+                title: 'Lista de Registros',
                 exportOptions: {
                     columns: ':visible'
                 }
@@ -142,39 +130,39 @@ function fntInicializarTabla() {
         ],
         columns: [
             { data: 'options', orderable: false, className: 'text-center align-middle', width: '60px' },
-            { 
-                data: 'pedido_id', 
+            {
+                data: 'pedido_id',
                 className: 'text-center align-middle',
-                render: function(data, type, row) {
+                render: function (data, type, row) {
                     return '<span class="fw-bold text-danger">' + (data || '—') + '</span>';
                 }
             },
-            { 
-                data: 'fecha_pedido_formateada', 
+            {
+                data: 'fecha_pedido_formateada',
                 className: 'text-center align-middle',
-                render: function(data, type, row) {
+                render: function (data, type, row) {
                     return '<span class="text-muted">' + (data || '—') + '</span>';
                 }
             },
-            { 
-                data: 'cliente', 
+            {
+                data: 'cliente',
                 className: 'text-start align-middle',
-                render: function(data, type, row) {
+                render: function (data, type, row) {
                     return '<span class="fw-bold text-primary">' + (data || '—') + '</span>';
                 }
             },
             { data: 'titulo_venta', className: 'text-start align-middle' },
-            { 
-                data: 'vendedor', 
+            {
+                data: 'vendedor',
                 className: 'text-start align-middle',
-                render: function(data, type, row) {
+                render: function (data, type, row) {
                     return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
                 }
             },
-            { 
-                data: 'monto_formateado', 
+            {
+                data: 'monto_formateado',
                 className: 'text-end align-middle',
-                render: function(data, type, row) {
+                render: function (data, type, row) {
                     return '<span class="fw-bold text-dark">' + (data || '$0.00') + '</span>';
                 }
             },
@@ -184,19 +172,23 @@ function fntInicializarTabla() {
             { data: 'ultimo_seguimiento_fecha', className: 'text-center align-middle' },
             { data: 'ultimo_seguimiento_usuario', className: 'text-start align-middle' }
         ],
-        language: {
-            url: base_url + '/Assets/vendor/datatables/es_mx.json'
-        },
-        initComplete: function () {
-            $('.loading-panel-showing').removeClass('loading-panel-showing');
-        }
+        language: idioma_espanol
     });
 
-    // Evento delegado en el contenedor para asegurar funcionamiento con scrollX
-    $(tableOrdenes.table().container()).off('keyup change clear', 'thead input').on('keyup change clear', 'thead input', function () {
-        const colIdx = $(this).closest('th').index();
-        if (tableOrdenes && tableOrdenes.column(colIdx).search() !== this.value) {
-            tableOrdenes.column(colIdx).search(this.value).draw();
+    /*-------------------------------------------
+    [ DataTable - Se ejecuta después de inicializar la tabla ]*/
+    $(tableElement).on('init.dt', function() {
+        if (typeof menu !== 'undefined') {
+            validaPermisoExportar(menu);
+        }
+        $('.loading-panel-showing').removeClass('loading-panel-showing');
+    });
+
+    /*-------------------------------------------
+    [ DataTable - Se ejecuta después de redibujarse la tabla ]*/
+    $(tableElement).on('draw.dt', function() {
+        if (tableOrdenes) {
+            tableOrdenes.columns.adjust();
         }
     });
 }
@@ -318,7 +310,8 @@ function fntVerDetalle(btn) {
     $('#det_cliente').text(rowData.cliente || '—');
     $('#det_titulo').text(rowData.titulo_venta || '—');
     $('#det_vendedor').text(rowData.vendedor || '—');
-    $('#det_estatus').html(rowData.estatus_badge || '—');
+    $('#det_estatus').html(rowData.estatus_badge || '—').addClass('text-wrap');
+    $('#det_estatus').find('span, .badge').addClass('text-wrap');
     $('#det_fecha_pedido').text(rowData.fecha_pedido_formateada || '—');
     $('#det_monto').text(rowData.monto_formateado || '—');
     $('#det_clasificacion').text(rowData.clasificacion_proyecto || '—');

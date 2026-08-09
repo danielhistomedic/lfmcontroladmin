@@ -1,0 +1,113 @@
+/**
+ * Typography CSS - Estandarización de Jerarquía y Estilos Tipográficos
+ * Proyecto: LFM Admin
+ */
+
+/* Reset base de tipografía */
+body, 
+input, 
+button, 
+select, 
+textarea, 
+.form-control,
+.form-select {
+    font-family: var(--font-family-report);
+    font-size: var(--font-body);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Escala visual de encabezados */
+h1, .h1 {
+    font-family: var(--font-family-report);
+    font-size: var(--font-report-title);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.2px;
+}
+
+h2, .h2 {
+    font-family: var(--font-family-report);
+    font-size: 18px;
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-heading);
+}
+
+h3, .h3, h4, .h4 {
+    font-family: var(--font-family-report);
+    font-size: var(--font-section-title);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-heading);
+}
+
+h5, .h5, h6, .h6 {
+    font-family: var(--font-family-report);
+    font-size: var(--font-body);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-normal);
+}
+
+/* Clases de escala tipográfica */
+.font-report-title {
+    font-size: var(--font-report-title) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+}
+
+.font-section-title {
+    font-size: var(--font-section-title) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    line-height: var(--line-height-heading) !important;
+}
+
+.font-highlight {
+    font-size: var(--font-highlight) !important;
+    font-weight: var(--font-weight-semibold) !important;
+}
+
+.font-total-final {
+    font-size: var(--font-total-final) !important;
+    font-weight: var(--font-weight-bold) !important;
+}
+
+.font-body {
+    font-size: var(--font-body) !important;
+    font-weight: var(--font-weight-normal) !important;
+    line-height: var(--line-height-normal) !important;
+}
+
+.font-small {
+    font-size: var(--font-small) !important;
+    font-weight: var(--font-weight-normal) !important;
+    line-height: var(--line-height-normal) !important;
+}
+
+/* Clases de pesos numéricos explícitos */
+.fw-400 { font-weight: var(--font-weight-normal) !important; }
+.fw-500 { font-weight: var(--font-weight-medium) !important; }
+.fw-600 { font-weight: var(--font-weight-semibold) !important; }
+.fw-700 { font-weight: var(--font-weight-bold) !important; }
+
+/* Alineación semántica de celdas y datos */
+.col-number, 
+td.col-number, 
+th.col-number,
+.text-amount {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.col-date, 
+td.col-date, 
+th.col-date {
+    text-align: center !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.col-text, 
+td.col-text, 
+th.col-text {
+    text-align: left !important;
+}

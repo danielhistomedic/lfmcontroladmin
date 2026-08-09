@@ -13,7 +13,7 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
     }
     .kpi-icon {
-        font-size: 2.2rem;
+        font-size: 2rem;
         width: 60px;
         height: 60px;
         display: flex;
@@ -22,15 +22,15 @@
         border-radius: 12px;
     }
     .text-amount {
-        font-size: 1.6rem;
-        font-weight: 700;
-        line-height: 1.2;
+        font-size: var(--font-report-title);
+        font-weight: var(--font-weight-bold);
+        line-height: var(--line-height-tight);
     }
     .text-label {
-        font-size: 0.85rem;
+        font-size: var(--font-small);
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        font-weight: 600;
+        font-weight: var(--font-weight-semibold);
     }
     .chart-container {
         background: #ffffff;
@@ -40,17 +40,17 @@
         margin-bottom: 2rem;
     }
     .chart-title {
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-size: var(--font-section-title);
+        font-weight: var(--font-weight-semibold);
         color: #333333;
         margin-bottom: 1.2rem;
         border-bottom: 1px solid #f0f0f0;
         padding-bottom: 0.75rem;
     }
     .table-custom th {
-        font-weight: 600;
+        font-size: var(--font-table-header);
+        font-weight: var(--font-weight-semibold);
         text-transform: uppercase;
-        font-size: 0.8rem;
         letter-spacing: 0.5px;
         background-color: #fcfcfc;
     }

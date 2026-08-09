@@ -17,6 +17,13 @@
     <!-- <link href="<?= assets(); ?>/css/style.css" rel="stylesheet" /> -->
 
     <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+
         .border {
             border: solid 1px #ccc;
         }
@@ -31,11 +38,31 @@
 
         table {
             width: 100%;
+            border-collapse: collapse;
         }
 
-        table td,
         table th {
             font-size: 12px;
+            font-weight: 600;
+            padding: 6px 8px;
+            text-transform: uppercase;
+        }
+
+        table td {
+            font-size: 13px;
+            font-weight: 400;
+            padding: 6px 8px;
+            line-height: 1.4;
+        }
+
+        .report-total {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .report-total-final {
+            font-size: 16px;
+            font-weight: 700;
         }
 
         .head-center {

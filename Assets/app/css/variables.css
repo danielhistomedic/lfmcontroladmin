@@ -1,0 +1,35 @@
+/**
+ * CSS Variables - Sistema Tipográfico Centralizado
+ * Módulo de Reportes y Sistema Administrativo
+ */
+
+:root {
+    /* Familia tipográfica principal */
+    --font-family-report: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Escala de tamaños tipográficos */
+    --font-body: 14px;
+    --font-small: 12px;
+    --font-table-header: 12px;
+    --font-table-body: 13px;
+    --font-section-title: 16px;
+    --font-report-title: 20px;
+    --font-highlight: 15px;
+    --font-total-final: 16px;
+
+    /* Pesos tipográficos funcionales */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Alturas de línea */
+    --line-height-tight: 1.2;
+    --line-height-heading: 1.3;
+    --line-height-normal: 1.4;
+    --line-height-relaxed: 1.6;
+
+    /* Espaciado interno de celdas y encabezados de tabla */
+    --table-header-padding: 8px 10px;
+    --table-cell-padding: 7px 10px;
+}

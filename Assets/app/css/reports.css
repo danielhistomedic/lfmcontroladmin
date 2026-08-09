@@ -1,0 +1,188 @@
+/**
+ * Reports CSS - Estilos Estandarizados para el Módulo de Reportes
+ * Proyecto: LFM Admin
+ */
+
+/* Jerarquía y Contenedor Principal de Reportes */
+.report-container {
+    padding: 1.25rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.report-header {
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.75rem;
+}
+
+.report-title {
+    font-size: var(--font-report-title);
+    font-weight: var(--font-weight-bold);
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+    line-height: var(--line-height-tight);
+}
+
+.report-subtitle,
+.report-meta {
+    font-size: var(--font-small);
+    font-weight: var(--font-weight-medium);
+    color: #64748b;
+}
+
+.report-section {
+    margin-bottom: 1.5rem;
+}
+
+.report-section-title {
+    font-size: var(--font-section-title);
+    font-weight: var(--font-weight-semibold);
+    color: #334155;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.report-filters {
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+/* Estilos de Tablas para Reportes */
+.report-table,
+table.report-table,
+.table-custom {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-table-body);
+    font-family: var(--font-family-report);
+    background-color: #ffffff;
+    margin-bottom: 1rem;
+}
+
+.report-table th,
+table.report-table th,
+.table-custom th {
+    font-size: var(--font-table-header);
+    font-weight: var(--font-weight-semibold);
+    padding: var(--table-header-padding);
+    background-color: #f8fafc;
+    color: #475569;
+    border-bottom: 2px solid #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    vertical-align: middle;
+}
+
+.report-table td,
+table.report-table td,
+.table-custom td {
+    font-size: var(--font-table-body);
+    font-weight: var(--font-weight-normal);
+    padding: var(--table-cell-padding);
+    line-height: var(--line-height-normal);
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+.report-table tbody tr:hover,
+table.report-table tbody tr:hover,
+.table-custom tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* Totales e Importes */
+.report-total,
+tr.report-total td,
+tfoot td.report-total {
+    font-size: var(--font-highlight);
+    font-weight: var(--font-weight-semibold);
+    color: #0f172a;
+    border-top: 2px solid #94a3b8;
+    background-color: #f8fafc;
+}
+
+.report-total-final,
+tr.report-total-final td,
+tfoot td.report-total-final {
+    font-size: var(--font-total-final);
+    font-weight: var(--font-weight-bold);
+    color: #0f172a;
+    border-top: 2px solid #475569;
+    border-bottom: 2px double #475569;
+    background-color: #f1f5f9;
+}
+
+/* Integración de DataTables con la escala de reportes */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    font-size: var(--font-small);
+    font-weight: var(--font-weight-medium);
+    color: #475569;
+}
+
+/* Reglas de Impresión y PDF */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 12px !important;
+    }
+
+    .report-container {
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .report-title {
+        font-size: 18px !important;
+        color: #000000 !important;
+    }
+
+    .report-section-title {
+        font-size: 14px !important;
+        color: #000000 !important;
+        border-bottom: 1px solid #000000 !important;
+    }
+
+    .report-table th,
+    table.report-table th,
+    .table-custom th {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        border-bottom: 1px solid #000000 !important;
+    }
+
+    .report-table td,
+    table.report-table td,
+    .table-custom td {
+        font-size: 11px !important;
+        padding: 5px 8px !important;
+        color: #000000 !important;
+        border-bottom: 1px solid #dddddd !important;
+    }
+
+    .report-total-final td {
+        font-size: 13px !important;
+        font-weight: bold !important;
+        border-top: 2px solid #000000 !important;
+    }
+
+    .no-print,
+    .btn,
+    .dataTables_filter,
+    .dataTables_length,
+    .dataTables_paginate {
+        display: none !important;
+    }
+}

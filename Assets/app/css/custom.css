@@ -5,11 +5,11 @@
 [ Custom General CSS ] */
 
 body {
-    /* font-family: "Montserrat", sans-serif; */
-    font-family: "Roboto Flex", Arial, sans-serif;
+    font-family: var(--font-family-report);
     background-color: #e9edf1;
-    font-weight: 500;
-    font-size: 13px;
+    font-weight: var(--font-weight-normal);
+    font-size: var(--font-body);
+    line-height: var(--line-height-normal);
 }
 
 input::-webkit-input-placeholder,
