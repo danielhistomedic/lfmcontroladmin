@@ -1634,6 +1634,7 @@ class VentasModel extends Mysql
             [ Instruccion sql ]*/
             $sql = "SELECT
                 pc.id                                                       AS pedido_id,
+                pc.num_orden_compra,
                 pc.venta_id,
                 v.titulo                                                    AS titulo_venta,
                 v.proyecto_id,
@@ -1747,4 +1748,60 @@ class VentasModel extends Mysql
         }
         return $arrResponse;
     }
+
+    /**
+     * Obtiene las partidas/productos con fecha estimada de entrega a clientes para el calendario.
+     * Une tb_pedidos_cliente_detalle con tb_pedidos_cliente, tb_ventas y cat_clientes.
+     *
+     * @param string $fecha_ini
+     * @param string $fecha_fin
+     * @return array
+     */
+    public function selectFechasEntregaClientes(string $fecha_ini = '', string $fecha_fin = ''): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                pcd.id                                                      AS detalle_id,
+                pcd.pedido_id,
+                pc.venta_id,
+                pc.num_orden_compra,
+                COALESCE(c.nombre_comercial, 'Sin Cliente')                 AS cliente,
+                v.titulo                                                    AS titulo_venta,
+                pcd.codigo_partida,
+                pcd.descripcion,
+                pcd.cantidad_pedido,
+                pcd.precio_unitario,
+                pcd.tiempo_entrega,
+                pcd.fecha_estimada_entrega,
+                DATE_FORMAT(pcd.fecha_estimada_entrega, '%d/%m/%Y')         AS fecha_estimada_formateada,
+                pc.fecha_pedido,
+                DATE_FORMAT(pc.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
+                COALESCE(pcd.entregado, 0)                                  AS entregado
+            FROM tb_pedidos_cliente_detalle pcd
+            INNER JOIN tb_pedidos_cliente pc ON pc.id = pcd.pedido_id
+            INNER JOIN tb_ventas v           ON v.id  = pc.venta_id
+            LEFT  JOIN cat_clientes c        ON c.id  = v.cliente_id
+            WHERE pc.enviado = 1
+              AND pcd.fecha_estimada_entrega IS NOT NULL
+              AND pcd.fecha_estimada_entrega != '0000-00-00' ";
+
+            $arr_values = [];
+
+            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+                $sql .= " AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+                $arr_values['fecha_fin'] = $fecha_fin;
+            }
+
+            $sql .= " ORDER BY pcd.fecha_estimada_entrega ASC, pcd.id ASC ";
+
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
 }
+

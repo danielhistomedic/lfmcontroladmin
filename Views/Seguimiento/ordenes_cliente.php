@@ -215,7 +215,7 @@
                         <thead>
                             <tr>
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
-                                <th class="border-bottom-0 fw-semibold text-center">Pedido #</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Orden Compra</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Fecha Pedido</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Cliente</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>
@@ -234,6 +234,69 @@
 
             </div>
             <!-- ========== FIN LISTA ========== -->
+
+            <!-- ========== CALENDARIO DE ENTREGAS A CLIENTES ========== -->
+            <div class="chart-container border mb-4" id="panel_calendario_entregas">
+
+                <!-- Encabezado de la sección -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center chart-title pb-3 mb-3">
+                    <div class="mb-2 mb-md-0">
+                        <span class="fs-16 fw-semibold text-dark">
+                            <i class="fa-regular fa-calendar-days text-primary me-2"></i> Calendario de Fechas Límite de Entrega a Clientes
+                        </span>
+                        <p class="text-muted fs-12 mb-0">Estatus de cumplimiento de entregas estimado por orden y partida</p>
+                    </div>
+
+                    <!-- Leyendas y Badges Resumen -->
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="badge bg-danger p-2 fs-12 d-flex align-items-center" title="Pendientes con fecha de entrega vencida">
+                            <i class="fa-regular fa-circle-exclamation me-1"></i> Vencidas: <strong id="cal_count_vencidos" class="ms-1">0</strong>
+                        </span>
+                        <span class="badge bg-warning text-dark p-2 fs-12 d-flex align-items-center" title="Pendientes próximas a vencer en 7 días">
+                            <i class="fa-regular fa-clock me-1"></i> Próximas (7d): <strong id="cal_count_proximos" class="ms-1">0</strong>
+                        </span>
+                        <span class="badge bg-success p-2 fs-12 d-flex align-items-center" title="Pendientes con entrega en tiempo">
+                            <i class="fa-regular fa-circle-check me-1"></i> En Tiempo: <strong id="cal_count_en_tiempo" class="ms-1">0</strong>
+                        </span>
+                        <span class="badge bg-primary p-2 fs-12 d-flex align-items-center" title="Partidas ya entregadas al cliente (entregado = 1)">
+                            <i class="fa-regular fa-box-check me-1"></i> Entregadas: <strong id="cal_count_entregados" class="ms-1">0</strong>
+                        </span>
+                        <span class="badge bg-secondary p-2 fs-12 d-flex align-items-center" title="Total de partidas con fecha de entrega">
+                            Total: <strong id="cal_count_total" class="ms-1">0</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Filtros rápidos por estatus -->
+                <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+                    <span class="fs-12 text-muted me-1 fw-semibold">Filtrar en calendario:</span>
+                    <button type="button" class="btn btn-xs btn-outline-secondary active btn-filter-cal" data-filter="todos">
+                        <i class="fa-regular fa-layer-group me-1"></i> Todos
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-danger btn-filter-cal" data-filter="vencido">
+                        <i class="fa-regular fa-circle-exclamation me-1"></i> Vencidas
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-warning text-dark btn-filter-cal" data-filter="proximo">
+                        <i class="fa-regular fa-clock me-1"></i> Próximas
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-success btn-filter-cal" data-filter="en_tiempo">
+                        <i class="fa-regular fa-circle-check me-1"></i> En Tiempo
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-primary btn-filter-cal" data-filter="entregado">
+                        <i class="fa-regular fa-box-check me-1"></i> Entregadas
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary btn-filter-cal" data-filter="cancelado">
+                        <i class="fa-regular fa-ban me-1"></i> Canceladas
+                    </button>
+                </div>
+
+                <!-- Contenedor de FullCalendar -->
+                <div class="p-2 border rounded bg-light">
+                    <div id="calendarEntregas" style="min-height: 550px;"></div>
+                </div>
+
+            </div>
+            <!-- ========== FIN CALENDARIO DE ENTREGAS ========== -->
 
             <!-- ========== PANEL DETALLE ========== -->
             <div class="chart-container border mb-4" id="panel_detalle" style="display: none;">
@@ -351,10 +414,73 @@
 </section>
 <!-- FIN CONTENIDO VISTA -->
 
+<!-- Modal Detalle Entrega -->
+<div class="modal fade" id="modalDetalleEntrega" tabindex="-1" aria-labelledby="modalDetalleEntregaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom py-2.5 px-3">
+                <h5 class="modal-title fw-bold text-primary fs-14" id="modalDetalleEntregaLabel">
+                    <i class="fa-regular fa-calendar-lines-pen me-2"></i> Detalle de Fecha Límite de Entrega
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Orden de Compra / Pedido #:</label>
+                        <p class="fw-bold text-danger fs-14 mb-0" id="mdl_pedido_id">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Cliente:</label>
+                        <p class="fw-bold text-dark fs-14 mb-0" id="mdl_cliente">—</p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fs-12 text-muted mb-0">Proyecto / Título:</label>
+                        <p class="fw-semibold text-dark fs-13 mb-0" id="mdl_titulo_venta">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Código Partida:</label>
+                        <p class="fw-semibold text-dark fs-13 mb-0" id="mdl_codigo_partida">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Cantidad Solicitada:</label>
+                        <p class="fw-bold text-primary fs-13 mb-0" id="mdl_cantidad">—</p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fs-12 text-muted mb-0">Descripción del Producto / Servicio:</label>
+                        <div class="p-0 text-dark fs-13 fw-semibold" id="mdl_descripcion" style="white-space: pre-wrap;">—</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Fecha Pedido:</label>
+                        <p class="fw-semibold text-dark fs-13 mb-0" id="mdl_fecha_pedido">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Fecha Límite de Entrega:</label>
+                        <p class="fw-bold fs-14 mb-0" id="mdl_fecha_estimada">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Tiempo Restante para la Entrega:</label>
+                        <p class="fw-bold fs-13 mb-0" id="mdl_tiempo_restante">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Estatus de Cumplimiento:</label>
+                        <div id="mdl_estatus_badge">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FullCalendar JS -->
+<script src="<?= assets(); ?>/vendor/fullcalendar/index.global.min.js"></script>
 
 <!-- Footer Admin 01 -->
 <?php require_once("Template/footer_01.php"); ?>
 
-
 <!-- Footer Admin 02 -->
 <?php require_once("Template/footer_02.php"); ?>
+

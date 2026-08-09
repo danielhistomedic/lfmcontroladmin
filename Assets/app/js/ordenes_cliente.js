@@ -20,6 +20,9 @@ var ventaIdActual = '';
 var historialSeguimientoData = [];
 var paginaActualSeguimiento = 1;
 var registrosPorPaginaSeguimiento = 5;
+var calendarEntregas = null;
+var calendarEventosData = [];
+var calendarFiltroEstatus = 'todos';
 
 /* =========================================================
  * DOCUMENT READY
@@ -39,13 +42,26 @@ $(document).ready(function () {
     // Carga tabla con filtros iniciales al arrancar
     fntCargarTabla();
 
+    // Inicializa y carga Calendario de Entregas
+    fntInicializarCalendarioEntregas();
+    fntCargarCalendarioEntregas();
+
     // Eventos
     $('#btnFiltrar').on('click', function () {
         fntCargarTabla();
+        fntCargarCalendarioEntregas();
     });
 
     $(document).on('click', '.btnReturnList, #btnRegresar', function () {
         fntMostrarLista();
+    });
+
+    // Filtros por estatus del calendario
+    $(document).on('click', '.btn-filter-cal', function () {
+        $('.btn-filter-cal').removeClass('active');
+        $(this).addClass('active');
+        calendarFiltroEstatus = $(this).data('filter');
+        fntAplicarFiltroCalendario();
     });
 
     // Paginación de timeline de seguimientos
@@ -58,6 +74,7 @@ $(document).ready(function () {
     });
 
 });
+
 
 /* =========================================================
  * FUNCIONES PRINCIPALES
@@ -131,10 +148,11 @@ function fntInicializarTabla() {
         columns: [
             { data: 'options', orderable: false, className: 'text-center align-middle', width: '60px' },
             {
-                data: 'pedido_id',
+                data: 'num_orden_compra',
                 className: 'text-center align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-danger">' + (data || '—') + '</span>';
+                    var valorDisplay = data || (row.pedido_id ? ('Pedido #' + row.pedido_id) : '—');
+                    return '<span class="fw-semibold text-dark">' + valorDisplay + '</span>';
                 }
             },
             {
@@ -306,7 +324,7 @@ function fntVerDetalle(btn) {
     }
 
     // Llena el panel de detalle con los datos generales
-    $('#det_pedido_id').text(rowData.pedido_id || '—');
+    $('#det_pedido_id').text(rowData.num_orden_compra || (rowData.pedido_id ? ('Pedido #' + rowData.pedido_id) : '—'));
     $('#det_cliente').text(rowData.cliente || '—');
     $('#det_titulo').text(rowData.titulo_venta || '—');
     $('#det_vendedor').text(rowData.vendedor || '—');
@@ -532,11 +550,18 @@ function fntMostrarLista() {
     $('#panel_lista_registros').show();
     $('#panel_filtros').show();
     $('#panel_kpis').show();
+    $('#panel_calendario_entregas').show();
     $('#panel_detalle').hide();
     ventaIdActual = '';
 
     if (tableOrdenes !== null) {
         tableOrdenes.columns.adjust().draw();
+    }
+
+    if (calendarEntregas !== null) {
+        setTimeout(function () {
+            calendarEntregas.updateSize();
+        }, 150);
     }
 }
 
@@ -547,7 +572,154 @@ function fntMostrarDetalle() {
     $('#panel_lista_registros').hide();
     $('#panel_filtros').hide();
     $('#panel_kpis').hide();
+    $('#panel_calendario_entregas').hide();
     $('#panel_detalle').show();
+}
+
+/* =========================================================
+ * CALENDARIO DE ENTREGAS A CLIENTES
+ * ========================================================= */
+
+/**
+ * Inicializa FullCalendar para mostrar las fechas estimadas de entrega.
+ */
+function fntInicializarCalendarioEntregas() {
+    var calendarEl = document.getElementById('calendarEntregas');
+    if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
+    calendarEntregas = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listMonth'
+        },
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            list: 'Lista'
+        },
+        locale: 'es',
+        height: 'auto',
+        navLinks: true,
+        editable: false,
+        dayMaxEvents: true,
+        eventClick: function (info) {
+            info.jsEvent.preventDefault();
+            if (info.event && info.event.extendedProps) {
+                fntMostrarDetalleEntregaModal(info.event.extendedProps);
+            }
+        }
+    });
+
+    calendarEntregas.render();
+}
+
+/**
+ * Consulta las fechas de entrega a clientes via AJAX y actualiza el calendario.
+ */
+function fntCargarCalendarioEntregas() {
+    if (!document.getElementById('calendarEntregas')) return;
+
+    var fecha_ini = $('#filtro_fecha_ini').val().trim();
+    var fecha_fin = $('#filtro_fecha_fin').val().trim();
+
+    $.ajax({
+        type: 'POST',
+        url: base_url + '/seguimiento/getCalendarioEntregasData',
+        data: {
+            fecha_ini: fecha_ini,
+            fecha_fin: fecha_fin
+        },
+        dataType: 'json',
+        success: function (resp) {
+            if (resp && resp.respuesta === 'ok') {
+                var resumen = resp.resumen || {};
+                $('#cal_count_total').text(new Intl.NumberFormat('en-US').format(resumen.total || 0));
+                $('#cal_count_entregados').text(new Intl.NumberFormat('en-US').format(resumen.entregados || 0));
+                $('#cal_count_vencidos').text(new Intl.NumberFormat('en-US').format(resumen.vencidos || 0));
+                $('#cal_count_proximos').text(new Intl.NumberFormat('en-US').format(resumen.proximos || 0));
+                $('#cal_count_en_tiempo').text(new Intl.NumberFormat('en-US').format(resumen.en_tiempo || 0));
+
+                calendarEventosData = resp.eventos || [];
+                fntAplicarFiltroCalendario();
+
+                // Navega automáticamente a la fecha del primer evento si cae fuera de la vista actual
+                if (calendarEntregas && calendarEventosData.length > 0) {
+                    var primerEvt = calendarEventosData[0];
+                    if (primerEvt && primerEvt.start) {
+                        var view = calendarEntregas.view;
+                        var evtDate = new Date(primerEvt.start + 'T00:00:00');
+                        if (evtDate < view.currentStart || evtDate >= view.currentEnd) {
+                            calendarEntregas.gotoDate(primerEvt.start);
+                        }
+                    }
+                }
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error('Error al cargar calendario de entregas:', error);
+        }
+    });
+}
+
+/**
+ * Aplica el filtro por estatus seleccionado en los eventos del calendario.
+ */
+function fntAplicarFiltroCalendario() {
+    if (!calendarEntregas) return;
+
+    calendarEntregas.removeAllEvents();
+
+    var eventosFiltrados = calendarEventosData.filter(function (evt) {
+        if (calendarFiltroEstatus === 'todos') return true;
+        return evt.extendedProps && evt.extendedProps.estatus_codigo === calendarFiltroEstatus;
+    });
+
+    calendarEntregas.addEventSource(eventosFiltrados);
+}
+
+/**
+ * Muestra el modal con los detalles completos de la fecha límite de entrega seleccionada.
+ * 
+ * @param {Object} props Propiedades extendidas del evento de FullCalendar
+ */
+function fntMostrarDetalleEntregaModal(props) {
+    if (!props) return;
+
+    var ordenText = props.num_orden_compra ? props.num_orden_compra : ('Pedido #' + props.pedido_id);
+
+    $('#mdl_pedido_id').text(ordenText);
+    $('#mdl_cliente').text(props.cliente || '—');
+    $('#mdl_titulo_venta').text(props.titulo_venta || '—');
+    $('#mdl_codigo_partida').text(props.codigo_partida || '—');
+    $('#mdl_cantidad').text(props.cantidad_pedido || '0');
+    $('#mdl_descripcion').text(props.descripcion || 'Sin descripción');
+    $('#mdl_fecha_pedido').text(props.fecha_pedido_formateada || '—');
+    $('#mdl_fecha_estimada').text(props.fecha_estimada_formateada || '—');
+
+    var tiempoRestante = props.tiempo_restante_str || '—';
+    var colorClass = 'text-success';
+    if (props.dias_restantes < 0) {
+        colorClass = 'text-danger';
+    } else if (props.dias_restantes <= 7) {
+        colorClass = 'text-warning text-dark';
+    }
+    $('#mdl_tiempo_restante').html('<span class="' + colorClass + ' fw-bold"><i class="fa-regular fa-clock me-1"></i>' + escapeHtml(tiempoRestante) + '</span>');
+
+    var badgeHtml = '<span class="badge ' + (props.badge_class || 'bg-secondary') + ' fs-12 p-2">' + escapeHtml(props.estatus_label || '—') + '</span>';
+    $('#mdl_estatus_badge').html(badgeHtml);
+
+    var modalElement = document.getElementById('modalDetalleEntrega');
+    if (modalElement) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+            modal.show();
+        } else {
+            $('#modalDetalleEntrega').modal('show');
+        }
+    }
 }
 
 /* =========================================================
@@ -569,3 +741,4 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+

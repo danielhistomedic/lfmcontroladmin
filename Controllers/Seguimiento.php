@@ -195,9 +195,10 @@ class Seguimiento extends Controllers
                 $btnDetalle = (!empty($this->permisosMod['r'])) ? $btnDetalle : '';
                 $arrData[$i]['options'] = $btnDetalle;
 
-                // Encriptar IDs
-                $arrData[$i]['venta_id']  = $venta_id_enc;
-                $arrData[$i]['pedido_id'] = $pedido_id_enc;
+                // Encriptar IDs para llamadas AJAX
+                $arrData[$i]['venta_id_enc']  = $venta_id_enc;
+                $arrData[$i]['pedido_id_enc'] = $pedido_id_enc;
+                $arrData[$i]['venta_id']      = $venta_id_enc;
             }
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
@@ -256,4 +257,166 @@ class Seguimiento extends Controllers
         [ Retorna respuesta json_encode ]*/
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
+
+    /**
+     * Obtiene los eventos de fechas estimadas de entrega a clientes para el calendario.
+     *
+     * @return json
+     */
+    public function getCalendarioEntregasData()
+    {
+        try {
+            $arrResponse = array(
+                'respuesta' => 'ok',
+                'resumen'   => array('total' => 0, 'vencidos' => 0, 'proximos' => 0, 'en_tiempo' => 0),
+                'eventos'   => array(),
+                'raw_data'  => array()
+            );
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe parámetros de fecha opcionales ]*/
+            $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
+            $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
+
+            /*-------------------------------------------
+            [ Consulta el Modelo ]*/
+            $class_model = new VentasModel;
+            $arrData = $class_model->selectFechasEntregaClientes($fecha_ini, $fecha_fin);
+
+            $hoy = date('Y-m-d');
+            $limite_proximo = date('Y-m-d', strtotime('+7 days'));
+
+            $eventos = array();
+            $raw_data = array();
+            $count_entregados = 0;
+            $count_vencidos   = 0;
+            $count_proximos   = 0;
+            $count_en_tiempo  = 0;
+            $count_cancelados = 0;
+
+            $hoy_dt = new DateTime($hoy);
+
+            foreach ($arrData as $item) {
+                $fecha_estimada = $item['fecha_estimada_entrega'];
+                $fecha_est_dt   = new DateTime($fecha_estimada);
+                $diff           = $hoy_dt->diff($fecha_est_dt);
+                $dias_restantes = (int)$diff->format('%r%a');
+
+                $entregado_val  = intval($item['entregado'] ?? 0);
+
+                if ($entregado_val === 1) {
+                    // 1 = Entregado
+                    $estatus_codigo      = 'entregado';
+                    $estatus_label       = 'Entregado';
+                    $badge_class         = 'bg-primary';
+                    $event_color         = '#0d6efd';
+                    $event_text_color    = '#ffffff';
+                    $tiempo_restante_str = 'Entregado a cliente';
+                    $count_entregados++;
+                } elseif ($entregado_val === 2) {
+                    // 2 = Entrega Cancelada
+                    $estatus_codigo      = 'cancelado';
+                    $estatus_label       = 'Entrega Cancelada';
+                    $badge_class         = 'bg-secondary';
+                    $event_color         = '#6c757d';
+                    $event_text_color    = '#ffffff';
+                    $tiempo_restante_str = 'Entrega cancelada';
+                    $count_cancelados++;
+                } else {
+                    // 0 = Pendiente de Entrega
+                    if ($dias_restantes > 0) {
+                        $tiempo_restante_str = $dias_restantes . ' día' . ($dias_restantes > 1 ? 's' : '');
+                    } elseif ($dias_restantes === 0) {
+                        $tiempo_restante_str = '0 días (Entrega hoy)';
+                    } else {
+                        $tiempo_restante_str = abs($dias_restantes) . ' día' . (abs($dias_restantes) > 1 ? 's' : '') . ' de atraso';
+                    }
+
+                    if ($fecha_estimada < $hoy) {
+                        $estatus_codigo   = 'vencido';
+                        $estatus_label    = 'Vencido (Pendiente)';
+                        $badge_class      = 'bg-danger';
+                        $event_color      = '#dc3545';
+                        $event_text_color = '#ffffff';
+                        $count_vencidos++;
+                    } elseif ($fecha_estimada <= $limite_proximo) {
+                        $estatus_codigo   = 'proximo';
+                        $estatus_label    = 'Próximo a Vencer';
+                        $badge_class      = 'bg-warning text-dark';
+                        $event_color      = '#ffc107';
+                        $event_text_color = '#212529';
+                        $count_proximos++;
+                    } else {
+                        $estatus_codigo   = 'en_tiempo';
+                        $estatus_label    = 'En Tiempo';
+                        $badge_class      = 'bg-success';
+                        $event_color      = '#198754';
+                        $event_text_color = '#ffffff';
+                        $count_en_tiempo++;
+                    }
+                }
+
+                $item['dias_restantes']      = $dias_restantes;
+                $item['tiempo_restante_str'] = $tiempo_restante_str;
+                $item['estatus_codigo']      = $estatus_codigo;
+                $item['estatus_label']       = $estatus_label;
+                $item['badge_class']         = $badge_class;
+
+                $oc_str = !empty($item['num_orden_compra']) ? $item['num_orden_compra'] : ('Pedido #' . $item['pedido_id']);
+                $partida_str = !empty($item['codigo_partida']) ? $item['codigo_partida'] : '';
+                
+                $desc_limpia = trim(preg_replace('/\s+/', ' ', $item['descripcion'] ?? ''));
+                if (mb_strlen($desc_limpia) > 60) {
+                    $desc_corta = mb_substr($desc_limpia, 0, 60) . '...';
+                } else {
+                    $desc_corta = $desc_limpia;
+                }
+
+                $title_parts = array_filter([$oc_str, $partida_str, $desc_corta]);
+                $event_title = implode(' - ', $title_parts);
+
+                $eventos[] = array(
+                    'id'              => $item['detalle_id'],
+                    'title'           => $event_title,
+                    'start'           => $fecha_estimada,
+                    'backgroundColor' => $event_color,
+                    'borderColor'     => $event_color,
+                    'textColor'       => $event_text_color,
+                    'extendedProps'   => $item
+                );
+
+                $raw_data[] = $item;
+            }
+
+            $arrResponse['resumen'] = array(
+                'total'      => count($arrData),
+                'entregados' => $count_entregados,
+                'vencidos'   => $count_vencidos,
+                'proximos'   => $count_proximos,
+                'en_tiempo'  => $count_en_tiempo,
+                'cancelados' => $count_cancelados
+            );
+            $arrResponse['eventos']  = $eventos;
+            $arrResponse['raw_data'] = $raw_data;
+
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        /*-------------------------------------------
+        [ Retorna respuesta json_encode ]*/
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
 }
+
