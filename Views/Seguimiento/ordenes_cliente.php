@@ -3,6 +3,7 @@
 <?php require_once("Template/header_01.php"); ?>
 
 <!-- Theme Custom CSS -->
+<link rel="stylesheet" type="text/css" href="<?= assets() ?>/app/css/chart.css?v=<?= version(); ?>">
 <style>
     .kpi-card {
         border-radius: 10px;
@@ -59,6 +60,95 @@
     .bg-info-lighten { background-color: rgba(13, 202, 240, 0.08) !important; }
     .bg-warning-lighten { background-color: rgba(255, 193, 7, 0.08) !important; }
     .bg-danger-lighten { background-color: rgba(220, 53, 69, 0.08) !important; }
+
+    /* Estilos personalizados DataTable idénticos a la imagen */
+    .export-table table.dataTable {
+        border-collapse: separate !important;
+        border-spacing: 0;
+        border: 1px solid #ced4da !important;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .export-table table.dataTable thead tr:first-child {
+        background-color: #00809F !important;
+    }
+    .export-table table.dataTable thead tr:first-child th {
+        color: #ffffff !important;
+        background-color: #00809F !important;
+        font-weight: 700 !important;
+        font-size: 12.5px !important;
+        vertical-align: middle !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-bottom: 1px solid #006882 !important;
+        padding: 9px 12px !important;
+        text-transform: none !important;
+    }
+    .export-table table.dataTable thead tr:first-child th:last-child {
+        border-right: none !important;
+    }
+    .export-table table.dataTable thead tr:first-child th.sorting:before,
+    .export-table table.dataTable thead tr:first-child th.sorting:after,
+    .export-table table.dataTable thead tr:first-child th.sorting_asc:before,
+    .export-table table.dataTable thead tr:first-child th.sorting_asc:after,
+    .export-table table.dataTable thead tr:first-child th.sorting_desc:before,
+    .export-table table.dataTable thead tr:first-child th.sorting_desc:after {
+        color: #ffffff !important;
+        opacity: 0.85 !important;
+    }
+    .export-table table.dataTable thead tr:nth-child(2) {
+        background-color: #f8f9fa !important;
+    }
+    .export-table table.dataTable thead tr:nth-child(2) th {
+        background-color: #f8f9fa !important;
+        padding: 4px 6px !important;
+        border-bottom: 1px solid #ced4da !important;
+        border-right: 1px solid #e9ecef !important;
+    }
+    .export-table table.dataTable thead tr:nth-child(2) input {
+        height: 25px !important;
+        max-height: 25px !important;
+        font-size: 11px !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 3px !important;
+        background-color: #ffffff !important;
+        color: #495057 !important;
+        text-align: center;
+        padding: 2px 4px;
+        box-shadow: none !important;
+    }
+    .export-table table.dataTable thead tr:nth-child(2) input::placeholder {
+        color: #adb5bd !important;
+        font-weight: 300;
+    }
+    .export-table table.dataTable tbody tr td {
+        font-size: 12px !important;
+        vertical-align: middle !important;
+        padding: 8px 10px !important;
+        border-color: #e9ecef !important;
+    }
+    .export-table table.dataTable.table-striped tbody tr:nth-of-type(odd) {
+        background-color: #ffffff !important;
+    }
+    .export-table table.dataTable.table-striped tbody tr:nth-of-type(even) {
+        background-color: #f8f9fa !important;
+    }
+    .export-table table.dataTable.table-hover tbody tr:hover > * {
+        background-color: #e8f4f8 !important;
+    }
+    .export-table table.dataTable tbody tr.selected > * {
+        background-color: #00809f26 !important;
+        color: #1d2127 !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
+        background-color: #00809F !important;
+        border-color: #00809F !important;
+        color: #ffffff !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .page-link {
+        color: #00809F;
+        border-radius: 4px;
+        margin: 0 2px;
+    }
 </style>
 
 <!-- Header Admin 02 -->
@@ -97,51 +187,36 @@
                 </div>
             </div>
 
-            <!-- Cabecera de Tarjeta e Información -->
-            <div class="mb-4">
-                <h4 class="text-primary fw-semibold mb-1 d-flex align-items-center">
-                    <?= $data['page_card_title']; ?>
-                    <i title="Info" style="cursor:pointer;"
-                       class="text-primary fa-light fa-circle-question ms-2 fs-18"
-                       data-bs-toggle="collapse"
-                       data-bs-target="#collapseInfo"
-                       aria-expanded="false"
-                       aria-controls="collapseInfo"></i>
-                </h4>
-                <div class="collapse mt-1" id="collapseInfo">
-                    <span class="text-info fw-normal"><?= $data['page_card_description']; ?></span>
-                </div>
-            </div>
-
             <!-- ========== FILTROS ========== -->
             <div class="row mb-4" id="panel_filtros">
 
-                <div class="col-12">
-                    <div class="border-bottom pb-2 mb-3">
+              
+
+               <div class="form-group col-12 mb-2">
+                    <div class="border-bottom pb-2">
                         <p class="mb-0 fw-semibold text-primary">
                             <i class="fa-regular fa-filter text-secondary me-2"></i> Filtros de Búsqueda
                         </p>
                     </div>
                 </div>
 
-                <div class="form-group col-12 col-sm-6 col-lg-3">
-                    <label class="control-label" for="filtro_fecha_ini">Fecha Inicio:</label>
-                    <input type="date" class="form-control" id="filtro_fecha_ini" name="filtro_fecha_ini">
+               
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
+                    <label class="form-label" for="filtro_fecha_ini">Fecha Inicio:</label>
+                    <!-- <input type="date" class="form-control" id="filtro_fecha_ini" name="filtro_fecha_ini"> -->
+                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                    name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" required="" maxlength="10">
+
                 </div>
 
-                <div class="form-group col-12 col-sm-6 col-lg-3">
-                    <label class="control-label" for="filtro_fecha_fin">Fecha Fin:</label>
-                    <input type="date" class="form-control" id="filtro_fecha_fin" name="filtro_fecha_fin">
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
+                    <label class="form-label" for="filtro_fecha_fin">Fecha Fin:</label>
+                     <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                    name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" required="" maxlength="10">
+                    <!-- <input type="date" class="form-control" id="filtro_fecha_fin" name="filtro_fecha_fin"> -->
                 </div>
 
-                <div class="form-group col-12 col-sm-6 col-lg-3">
-                    <label class="control-label" for="filtro_estatus">Estatus:</label>
-                    <select class="select2 custom-select" id="filtro_estatus" name="filtro_estatus" style="width: 100%;">
-                        <option value="">Todos los estatus</option>
-                    </select>
-                </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-3 d-flex align-items-end">
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 d-flex align-items-end">
                     <button type="button" class="btn btn-primary w-100 hvr-float-shadow d-flex justify-content-center align-items-center" id="btnFiltrar" style="height: 38px;">
                         <i class="fa-regular fa-magnifying-glass me-1"></i> Buscar
                     </button>
@@ -153,8 +228,16 @@
             <!-- ========== KPI CARDS ========== -->
             <div class="row mb-4" id="panel_kpis">
 
+                <div class="form-group col-12 mb-3">
+                    <div class="border-bottom pb-2">
+                        <p class="mb-0 fw-semibold text-primary">
+                            <i class="fa-regular fa-file-chart-pie me-2 text-secondary"></i> Indicadores de Rendimiento (KPIs)
+                        </p>
+                    </div>
+                </div>
+
                 <!-- KPI Card 1: Total Órdenes -->
-                <div class="col-12 col-md-4 mb-3 mb-md-0">
+                <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
                         <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-primary-lighten text-primary me-3">
@@ -170,7 +253,7 @@
                 </div>
 
                 <!-- KPI Card 2: Monto Total Acumulado -->
-                <div class="col-12 col-md-4 mb-3 mb-md-0">
+                <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
                         <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-success-lighten text-success me-3">
@@ -186,7 +269,7 @@
                 </div>
 
                 <!-- KPI Card 3: Órdenes con Seguimiento -->
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-lg-4 mb-4">
                     <div class="card kpi-card shadow-sm border-0 h-100">
                         <div class="card-body border d-flex align-items-center">
                             <div class="kpi-icon bg-info-lighten text-info me-3">
@@ -208,17 +291,15 @@
             <div class="chart-container border mb-4" id="panel_lista_registros">
 
                 <!-- Subtítulo -->
-                <div class="border-bottom pb-2 mb-3">
-                    <p class="mb-0 fw-semibold text-primary">
-                        <i class="fa-regular fa-bars-staggered text-secondary me-2"></i> Lista de Órdenes de Compra
-                    </p>
+                <div class="chart-title">
+                    <i class="fa-regular fa-bars-staggered text-primary me-2"></i> Lista de Órdenes de Compra
                 </div>
 
                 <!-- Tabla de Órdenes -->
                 <div class="table-responsive export-table">
                     <table id="tableOrdenes"
                            class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Pedido #</th>
@@ -245,15 +326,13 @@
             <div class="chart-container border mb-4" id="panel_detalle" style="display: none;">
 
                 <!-- Encabezado detalle -->
-                <div class="border-bottom pb-2 mb-3">
-                    <p class="mb-0 fw-semibold text-primary">
-                        <i class="fa-regular fa-file-lines text-secondary me-2"></i> Detalle de Orden y Seguimientos
-                    </p>
+                <div class="chart-title">
+                    <i class="fa-regular fa-file-lines text-primary me-2"></i> Detalle de Orden y Seguimientos
                 </div>
 
                 <!-- Botón regresar -->
                 <div class="mb-3">
-                    <button type="button" class="btn btn-outline-secondary btnReturnList" id="btnRegresar">
+                    <button type="button" class="btn btn-primary hvr-float-shadow d-flex justify-content-center align-items-center btnReturnList" id="btnRegresar">
                         <i class="fa-regular fa-arrow-left me-1"></i> Regresar a la lista
                     </button>
                 </div>
@@ -270,54 +349,54 @@
                             <div class="row">
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Cliente:</label>
+                                    <label class="form-label fs-12">Cliente:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_cliente">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Proyecto / Título:</label>
+                                    <label class="form-label fs-12">Proyecto / Título:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_titulo">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Vendedor:</label>
+                                    <label class="form-label fs-12">Vendedor:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_vendedor">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Estatus:</label>
+                                    <label class="form-label fs-12">Estatus:</label>
                                     <h6 class="vistadatos fs-13" id="det_estatus">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Fecha Pedido:</label>
+                                    <label class="form-label fs-12">Fecha Pedido:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_fecha_pedido">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Monto:</label>
+                                    <label class="form-label fs-12">Monto:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_monto">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">Clasificación:</label>
+                                    <label class="form-label fs-12">Clasificación:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_clasificacion">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="control-label fs-12">CLUES:</label>
+                                    <label class="form-label fs-12">CLUES:</label>
                                     <h6 class="vistadatos fs-13 text-muted" id="det_clues">
                                         <i class="fa-light fa-brake-warning"></i> —
                                     </h6>

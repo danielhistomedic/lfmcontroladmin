@@ -60,19 +60,19 @@ function fntInicializarTabla() {
         $('#tableOrdenes').empty();
 
         // Re-agrega el thead
-        $('#tableOrdenes').append('<thead class="table-light"><tr>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Opciones</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Pedido #</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Fecha Pedido</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Cliente</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Vendedor</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Monto</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Estatus</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Seguimientos</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Último Seguimiento</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Fecha Últ. Seg.</th>' +
-            '<th class="border-bottom-0 fw-semibold text-center">Usuario Últ. Seg.</th>' +
+        $('#tableOrdenes').append('<thead><tr>' +
+            '<th class="text-center">Opciones</th>' +
+            '<th class="text-center">Pedido #</th>' +
+            '<th class="text-center">Fecha Pedido</th>' +
+            '<th class="text-center">Cliente</th>' +
+            '<th class="text-center">Proyecto / Título</th>' +
+            '<th class="text-center">Vendedor</th>' +
+            '<th class="text-center">Monto</th>' +
+            '<th class="text-center">Estatus</th>' +
+            '<th class="text-center">Seguimientos</th>' +
+            '<th class="text-center">Último Seguimiento</th>' +
+            '<th class="text-center">Fecha Últ. Seg.</th>' +
+            '<th class="text-center">Usuario Últ. Seg.</th>' +
             '</tr></thead>');
     }
 
@@ -129,18 +129,48 @@ function fntInicializarTabla() {
             }
         ],
         columns: [
-            { data: 'options', orderable: false, className: 'text-center', width: '60px' },
-            { data: 'pedido_id', className: 'text-center' },
-            { data: 'fecha_pedido_formateada', className: 'text-center' },
-            { data: 'cliente', className: 'text-start' },
-            { data: 'titulo_venta', className: 'text-start' },
-            { data: 'vendedor', className: 'text-start' },
-            { data: 'monto_formateado', className: 'text-end' },
-            { data: 'estatus_badge', className: 'text-center', orderable: false },
-            { data: 'seguimientos_badge', className: 'text-center', orderable: false },
-            { data: 'ultimo_seguimiento_nota_corta', className: 'text-start' },
-            { data: 'ultimo_seguimiento_fecha', className: 'text-center' },
-            { data: 'ultimo_seguimiento_usuario', className: 'text-start' }
+            { data: 'options', orderable: false, className: 'text-center align-middle', width: '60px' },
+            { 
+                data: 'pedido_id', 
+                className: 'text-center align-middle',
+                render: function(data, type, row) {
+                    return '<span class="fw-bold text-danger">' + (data || '—') + '</span>';
+                }
+            },
+            { 
+                data: 'fecha_pedido_formateada', 
+                className: 'text-center align-middle',
+                render: function(data, type, row) {
+                    return '<span class="text-muted">' + (data || '—') + '</span>';
+                }
+            },
+            { 
+                data: 'cliente', 
+                className: 'text-start align-middle',
+                render: function(data, type, row) {
+                    return '<span class="fw-bold text-primary">' + (data || '—') + '</span>';
+                }
+            },
+            { data: 'titulo_venta', className: 'text-start align-middle' },
+            { 
+                data: 'vendedor', 
+                className: 'text-start align-middle',
+                render: function(data, type, row) {
+                    return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
+                }
+            },
+            { 
+                data: 'monto_formateado', 
+                className: 'text-end align-middle',
+                render: function(data, type, row) {
+                    return '<span class="fw-bold text-dark">' + (data || '$0.00') + '</span>';
+                }
+            },
+            { data: 'estatus_badge', className: 'text-center align-middle', orderable: false },
+            { data: 'seguimientos_badge', className: 'text-center align-middle', orderable: false },
+            { data: 'ultimo_seguimiento_nota_corta', className: 'text-start align-middle' },
+            { data: 'ultimo_seguimiento_fecha', className: 'text-center align-middle' },
+            { data: 'ultimo_seguimiento_usuario', className: 'text-start align-middle' }
         ],
         language: {
             url: base_url + '/Assets/vendor/datatables/es_mx.json'
@@ -166,7 +196,7 @@ function fntCargarTabla() {
 
     var fecha_ini = $('#filtro_fecha_ini').val().trim();
     var fecha_fin = $('#filtro_fecha_fin').val().trim();
-    var filtro_estatus = $('#filtro_estatus').val() || '';
+    var filtro_estatus = '';
     var filtro_cliente = '';
 
     // Limpia tabla
@@ -192,7 +222,7 @@ function fntCargarTabla() {
             if (tableOrdenes !== null && Array.isArray(data)) {
                 tableOrdenes.clear().rows.add(data).draw();
                 fntCalcularKPIs(data);
-                
+
                 tableOrdenes.columns.adjust().draw();
                 setTimeout(function () {
                     if (tableOrdenes) {
@@ -384,7 +414,7 @@ function fntMostrarLista() {
     $('#panel_kpis').show();
     $('#panel_detalle').hide();
     ventaIdActual = '';
-    
+
     if (tableOrdenes !== null) {
         tableOrdenes.columns.adjust().draw();
     }
