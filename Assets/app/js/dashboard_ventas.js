@@ -299,7 +299,7 @@ function loadVentasVsPipeline() {
                     }
                 },
                 legend: {
-                    data: ['Total de Ventas (Pedidos Colocados)', 'Pipeline Activo (Pedidos Cotizados)', '% de Eficacia']
+                    data: ['Pipeline Activo (Pedidos Cotizados)', 'Total de Ventas (Pedidos Colocados)', '% de Eficacia']
                 },
                 grid: {
                     left: '3%', right: '4%', bottom: '3%', containLabel: true
@@ -327,16 +327,16 @@ function loadVentasVsPipeline() {
                 ],
                 series: [
                     {
-                        name: 'Total de Ventas (Pedidos Colocados)',
-                        type: 'bar',
-                        data: ventasAmounts,
-                        itemStyle: { color: '#28a745' }
-                    },
-                    {
                         name: 'Pipeline Activo (Pedidos Cotizados)',
                         type: 'bar',
                         data: pipelineAmounts,
                         itemStyle: { color: '#00809F' }
+                    },
+                    {
+                        name: 'Total de Ventas (Pedidos Colocados)',
+                        type: 'bar',
+                        data: ventasAmounts,
+                        itemStyle: { color: '#28a745' }
                     },
                     {
                         name: '% de Eficacia',
@@ -417,11 +417,9 @@ function loadTendencia() {
                     },
                     {
                         name: 'Valor Pagado (USD)',
-                        type: 'line',
+                        type: 'bar',
                         data: pagadoAmounts,
-                        itemStyle: { color: '#198754' },
-                        lineStyle: { width: 3 },
-                        symbolSize: 6
+                        itemStyle: { color: '#198754' }
                     }
                 ]
             }, true);
@@ -807,7 +805,7 @@ function openModalPedidosColocados() {
     if (typeof $ !== 'undefined') {
         $('#table_pedidos_colocados thead').html(`
             <tr>
-                <th class="border-bottom-0 fw-semibold text-center" width="6%">ID</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="6%">No.</th>
                 <th class="border-bottom-0 fw-semibold text-center" width="10%">ID Proyecto</th>
                 <th class="border-bottom-0 fw-semibold text-center" width="11%">Fecha</th>
                 <th class="border-bottom-0 fw-semibold text-center" width="26%">Cliente</th>
@@ -859,7 +857,7 @@ function openModalPedidosColocados() {
         if (typeof $ !== 'undefined') {
             $('#table_pedidos_colocados thead').html(`
                 <tr>
-                    <th class="border-bottom-0 fw-semibold text-center" width="6%">ID</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="6%">No.</th>
                     <th class="border-bottom-0 fw-semibold text-center" width="10%">ID Proyecto</th>
                     <th class="border-bottom-0 fw-semibold text-center" width="11%">Fecha</th>
                     <th class="border-bottom-0 fw-semibold text-center" width="26%">Cliente</th>
@@ -876,7 +874,8 @@ function openModalPedidosColocados() {
             const list = responseObj.data;
             if (lblCount) lblCount.innerHTML = `${list.length} Pedidos`;
 
-            list.forEach(p => {
+            list.forEach((p, index) => {
+                const num = index + 1;
                 const id = p.id || 'N/A';
                 const proyectoId = p.proyecto_id || 'N/A';
                 const fecha = p.fecha_formateada || p.fecha || 'N/A';
@@ -889,7 +888,7 @@ function openModalPedidosColocados() {
                 const totalUSD = formatUSD(valTotalUSD);
 
                 html += `<tr>
-                    <td class="text-center fw-bold text-dark text-3">${id}</td>
+                    <td class="text-center fw-bold text-dark text-3">${num}</td>
                     <td class="text-center fw-semibold text-secondary text-3">${proyectoId}</td>
                     <td class="text-muted text-3">${fecha}</td>
                     <td class="fw-semibold text-primary text-3">${cliente}</td>
@@ -930,7 +929,7 @@ function openModalPedidosColocados() {
                     scrollX: "100%",
                     destroy: true,
                     select: true,
-                    order: [[0, "desc"]],
+                    order: [],
                     iDisplayLength: 10,
                     lengthMenu: [
                         [5, 10, 25, 50, 100, -1],
@@ -1029,7 +1028,7 @@ function openModalPedidosCotizados() {
     if (typeof $ !== 'undefined') {
         $('#table_pedidos_cotizados thead').html(`
             <tr>
-                <th class="border-bottom-0 fw-semibold text-center" width="5%">ID</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="5%">No.</th>
                 <th class="border-bottom-0 fw-semibold text-center" width="9%">ID Proyecto</th>
                 <th class="border-bottom-0 fw-semibold text-center" width="10%">Fecha</th>
                 <th class="border-bottom-0 fw-semibold text-center" width="20%">Cliente</th>
@@ -1083,7 +1082,7 @@ function openModalPedidosCotizados() {
         if (typeof $ !== 'undefined') {
             $('#table_pedidos_cotizados thead').html(`
                 <tr>
-                    <th class="border-bottom-0 fw-semibold text-center" width="5%">ID</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="5%">No.</th>
                     <th class="border-bottom-0 fw-semibold text-center" width="9%">ID Proyecto</th>
                     <th class="border-bottom-0 fw-semibold text-center" width="10%">Fecha</th>
                     <th class="border-bottom-0 fw-semibold text-center" width="20%">Cliente</th>
@@ -1102,7 +1101,8 @@ function openModalPedidosCotizados() {
             const list = responseObj.data;
             if (lblCount) lblCount.innerHTML = `${list.length} Pedidos`;
 
-            list.forEach(p => {
+            list.forEach((p, index) => {
+                const num = index + 1;
                 const id = p.id || 'N/A';
                 const proyectoId = p.proyecto_id || 'N/A';
                 const fecha = p.fecha_formateada || p.fecha || 'N/A';
@@ -1130,7 +1130,7 @@ function openModalPedidosCotizados() {
                     : `<span class="badge bg-secondary text-white px-2 py-1">No</span>`;
 
                 html += `<tr>
-                    <td class="text-center fw-bold text-dark text-3">${id}</td>
+                    <td class="text-center fw-bold text-dark text-3">${num}</td>
                     <td class="text-center fw-semibold text-secondary text-3">${proyectoId}</td>
                     <td class="text-muted text-3">${fecha}</td>
                     <td class="fw-semibold text-primary text-3">${cliente}</td>
@@ -1173,7 +1173,7 @@ function openModalPedidosCotizados() {
                     scrollX: "100%",
                     destroy: true,
                     select: true,
-                    order: [[0, "desc"]],
+                    order: [],
                     iDisplayLength: 10,
                     lengthMenu: [
                         [5, 10, 25, 50, 100, -1],
@@ -1267,6 +1267,22 @@ function openModalClientesActivos() {
     const tbody = document.getElementById('tbl_clientes_activos_body');
     const lblCount = document.getElementById('lbl_modal_clientes_count');
 
+    if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_clientes_activos')) {
+        $('#table_clientes_activos').DataTable().destroy();
+    }
+    if (typeof $ !== 'undefined') {
+        $('#table_clientes_activos thead').html(`
+            <tr>
+                <th class="border-bottom-0 fw-semibold text-center" width="6%">No.</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="34%">Cliente / Razón Social</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="15%">RFC</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="15%">Pedidos Colocados</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="15%">Monto Total (MXN)</th>
+                <th class="border-bottom-0 fw-semibold text-center" width="15%">Monto Total (USD)</th>
+            </tr>
+        `);
+    }
+
     if (tbody) {
         tbody.innerHTML = `<tr>
             <td colspan="6" class="text-center text-muted py-4">
@@ -1287,19 +1303,43 @@ function openModalClientesActivos() {
         }
     }
 
+    if (typeof $ !== 'undefined') {
+        $('#modalClientesActivos').off('shown.bs.modal').on('shown.bs.modal', function () {
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#table_clientes_activos')) {
+                $('#table_clientes_activos').DataTable().columns.adjust().draw();
+            }
+        });
+    }
+
     showLoader();
     const formData = new FormData();
     formData.append('fecha_ini', fecha_ini_send);
     formData.append('fecha_fin', fecha_fin_send);
 
     postFunctionData(formData, 'Ventas', 'getListaClientesActivos', function (responseObj) {
+        if (typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#table_clientes_activos')) {
+            $('#table_clientes_activos').DataTable().destroy();
+        }
+        if (typeof $ !== 'undefined') {
+            $('#table_clientes_activos thead').html(`
+                <tr>
+                    <th class="border-bottom-0 fw-semibold text-center" width="6%">No.</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="34%">Cliente / Razón Social</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="15%">RFC</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="15%">Pedidos Colocados</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="15%">Monto Total (MXN)</th>
+                    <th class="border-bottom-0 fw-semibold text-center" width="15%">Monto Total (USD)</th>
+                </tr>
+            `);
+        }
+
         let html = '';
         if (responseObj && responseObj.respuesta === "ok" && responseObj.data && responseObj.data.length > 0) {
             const list = responseObj.data;
             if (lblCount) lblCount.innerHTML = `${list.length} Clientes`;
 
-            list.forEach(c => {
-                const id = c.cliente_id || 'N/A';
+            list.forEach((c, index) => {
+                const num = index + 1;
                 const cliente = c.cliente || 'Sin Cliente';
                 const razonSocial = c.razon_social ? `<br><small class="text-muted">${c.razon_social}</small>` : '';
                 const rfc = c.rfc || 'N/A';
@@ -1308,14 +1348,98 @@ function openModalClientesActivos() {
                 const totalUSD = formatUSD(c.sum_combined_usd);
 
                 html += `<tr>
-                    <td class="text-center fw-bold text-dark text-3">${id}</td>
+                    <td class="text-center fw-bold text-dark text-3">${num}</td>
                     <td class="fw-semibold text-primary text-3">${cliente}${razonSocial}</td>
                     <td class="text-center text-muted font-monospace text-3">${rfc}</td>
-                    <td class="text-center fw-semibold text-dark text-3">${countPedidos}</td>
-                    <td class="text-end font-monospace fw-semibold text-3">${totalMXN}</td>
-                    <td class="text-end font-monospace fw-bold text-info text-3">${totalUSD}</td>
+                    <td class="text-center fw-semibold text-dark text-3" data-order="${c.count_pedidos || 0}">${countPedidos}</td>
+                    <td class="text-end font-monospace fw-semibold text-3" data-order="${c.sum_combined_mxn || 0}">${totalMXN}</td>
+                    <td class="text-end font-monospace fw-bold text-info text-3" data-order="${c.sum_combined_usd || 0}">${totalUSD}</td>
                 </tr>`;
             });
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
+
+            if (typeof $ !== 'undefined' && $.fn.DataTable) {
+                let tableClientes;
+
+                // Preparar la fila de inputs de filtrado antes de la inicialización de DataTable
+                const $filterRow = $('#table_clientes_activos thead tr:eq(0)').clone(false);
+                $filterRow.find('th').each(function (colIdx) {
+                    const title = $(this).text().trim();
+                    const $input = $('<input type="text" style="max-height: 24px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/>');
+
+                    $input.on('keyup change clear', function () {
+                        if (tableClientes && tableClientes.column(colIdx).search() !== this.value) {
+                            tableClientes.column(colIdx).search(this.value).draw();
+                        }
+                    });
+
+                    $(this).removeAttr('style class aria-controls aria-label aria-sort tabindex')
+                        .addClass('text-center p-1')
+                        .html($('<div class="form-group mb-0"></div>').append($input));
+                });
+                $('#table_clientes_activos thead').append($filterRow);
+
+                tableClientes = $('#table_clientes_activos').DataTable({
+                    orderCellsTop: true,
+                    scrollX: "100%",
+                    destroy: true,
+                    select: true,
+                    order: [[5, "desc"]],
+                    iDisplayLength: 10,
+                    lengthMenu: [
+                        [5, 10, 25, 50, 100, -1],
+                        [5, 10, 25, 50, 100, "Todos"]
+                    ],
+                    dom: 'Blfrtip',
+                    buttons: [
+                        {
+                            extend: 'excelHtml5',
+                            autoFilter: true,
+                            sheetName: 'Clientes Activos',
+                            messageTop: "",
+                            title: 'Listado de Clientes Activos',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'colvis',
+                            postfixButtons: ['colvisRestore']
+                        }
+                    ],
+                    columnDefs: [
+                        { className: "text-center", targets: [0, 2, 3] },
+                        { className: "text-start", targets: [1] },
+                        { className: "text-end", targets: [4, 5] }
+                    ],
+                    language: (typeof idioma_espanol !== 'undefined') ? idioma_espanol : {}
+                });
+
+                tableClientes.columns.adjust().draw();
+
+                setTimeout(function () {
+                    if (tableClientes && $.fn.DataTable.isDataTable('#table_clientes_activos')) {
+                        tableClientes.columns.adjust().draw();
+                    }
+                }, 150);
+
+                setTimeout(function () {
+                    if (tableClientes && $.fn.DataTable.isDataTable('#table_clientes_activos')) {
+                        tableClientes.columns.adjust().draw();
+                    }
+                }, 350);
+
+                // Evento delegado en el contenedor para asegurar funcionamiento con scrollX (.dataTables_scrollHead)
+                $(tableClientes.table().container()).off('keyup change clear', 'thead input').on('keyup change clear', 'thead input', function () {
+                    const colIdx = $(this).closest('th').index();
+                    if (tableClientes && tableClientes.column(colIdx).search() !== this.value) {
+                        tableClientes.column(colIdx).search(this.value).draw();
+                    }
+                });
+            }
         } else {
             if (lblCount) lblCount.innerHTML = `0 Clientes`;
             html = `<tr>
@@ -1324,11 +1448,12 @@ function openModalClientesActivos() {
                     No se encontraron clientes activos en este periodo.
                 </td>
             </tr>`;
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
         }
 
-        if (tbody) {
-            tbody.innerHTML = html;
-        }
         hideLoader();
     });
 }

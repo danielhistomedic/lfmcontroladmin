@@ -420,7 +420,7 @@
                     <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table_pedidos_colocados">
                         <thead>
                             <tr>
-                                <th class="border-bottom-0 fw-semibold text-center" width="6%">ID</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="6%">No.</th>
                                 <th class="border-bottom-0 fw-semibold text-center" width="10%">ID Proyecto</th>
                                 <th class="border-bottom-0 fw-semibold text-center" width="11%">Fecha</th>
                                 <th class="border-bottom-0 fw-semibold text-center" width="26%">Cliente</th>
@@ -467,7 +467,7 @@
                     <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table_pedidos_cotizados">
                         <thead>
                             <tr>
-                                <th class="border-bottom-0 fw-semibold text-center" width="5%">ID</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="5%">No.</th>
                                 <th class="border-bottom-0 fw-semibold text-center" width="9%">ID Proyecto</th>
                                 <th class="border-bottom-0 fw-semibold text-center" width="10%">Fecha</th>
                                 <th class="border-bottom-0 fw-semibold text-center" width="20%">Cliente</th>
@@ -513,16 +513,16 @@
                     <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1"></i> Periodo: <strong id="lbl_modal_clientes_rango" class="text-dark">--/--/---- al --/--/----</strong></span>
                     <span class="badge bg-info text-white text-3 px-3 py-2" id="lbl_modal_clientes_count">0 Clientes</span>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped table-custom align-middle w-100 mb-0" id="table_clientes_activos">
+                <div class="table-responsive export-table">
+                    <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table_clientes_activos">
                         <thead>
                             <tr>
-                                <th class="text-center" width="6%">ID</th>
-                                <th width="34%">Cliente / Razón Social</th>
-                                <th class="text-center" width="15%">RFC</th>
-                                <th class="text-center" width="15%">Pedidos Colocados</th>
-                                <th class="text-end" width="15%">Monto Total (MXN)</th>
-                                <th class="text-end" width="15%">Monto Total (USD)</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="6%">No.</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="34%">Cliente / Razón Social</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="15%">RFC</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="15%">Pedidos Colocados</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="15%">Monto Total (MXN)</th>
+                                <th class="border-bottom-0 fw-semibold text-center" width="15%">Monto Total (USD)</th>
                             </tr>
                         </thead>
                         <tbody id="tbl_clientes_activos_body">

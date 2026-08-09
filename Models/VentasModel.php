@@ -927,14 +927,14 @@ class VentasModel extends Mysql
     }
 
     /**
-     * Obtiene ventas consolidadas en tendencia diaria/mensual
+     * Obtiene ventas consolidadas en tendencia mensual
      */
     public function selectVentasTendencia(string $fecha_ini, string $fecha_fin): array
     {
         $arrResponse = array();
         try {
             $sql = "SELECT 
-                v.fecha AS fecha_grupo,
+                DATE_FORMAT(v.fecha, '%Y-%m') AS fecha_grupo,
                 COALESCE(ROUND(SUM(CASE WHEN v.estatus_proyecto_id IN (11, 12) THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2), 0) AS sum_facturado_usd,
                 COALESCE(ROUND(SUM(CASE WHEN v.estatus_proyecto_id = 12 THEN (CASE WHEN v.moneda_id = 1 THEN (v.subtotal - v.descuento) / tc.valor ELSE (v.subtotal - v.descuento) END) ELSE 0 END), 2), 0) AS sum_pagado_usd
             FROM tb_ventas v
@@ -948,8 +948,8 @@ class VentasModel extends Mysql
             WHERE v.estatus_proyecto_id >= 6
               AND v.estatus_proyecto_id IN (11, 12)
               AND v.fecha BETWEEN :fecha_ini AND :fecha_fin
-            GROUP BY v.fecha
-            ORDER BY v.fecha ASC";
+            GROUP BY DATE_FORMAT(v.fecha, '%Y-%m')
+            ORDER BY fecha_grupo ASC";
 
             $arr_values = [
                 'fecha_ini' => $fecha_ini,
@@ -1075,7 +1075,7 @@ class VentasModel extends Mysql
             ) tc ON 1=1
             WHERE v.estatus_proyecto_id >= 6
               AND DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin
-            ORDER BY clasificacion_proyecto, v.proyecto_id, v.id";
+            ORDER BY total_usd DESC";
 
             $arr_values = [
                 'fecha_ini' => $fecha_ini,
@@ -1184,7 +1184,7 @@ class VentasModel extends Mysql
                       WHERE cc2.venta_id = v.id
                   )
             )
-            ORDER BY clasificacion_proyecto, proyecto_id, id";
+            ORDER BY total_usd DESC";
 
             $arr_values = [
                 'fecha_ini_1' => $fecha_ini,
