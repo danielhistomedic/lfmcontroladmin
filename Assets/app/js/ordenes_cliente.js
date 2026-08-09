@@ -15,6 +15,9 @@
  * ========================================================= */
 var tableOrdenes = null;
 var ventaIdActual = '';
+var historialSeguimientoData = [];
+var paginaActualSeguimiento = 1;
+var registrosPorPaginaSeguimiento = 5;
 
 /* =========================================================
  * DOCUMENT READY
@@ -41,6 +44,15 @@ $(document).ready(function () {
 
     $(document).on('click', '.btnReturnList, #btnRegresar', function () {
         fntMostrarLista();
+    });
+
+    // Paginación de timeline de seguimientos
+    $(document).on('click', '.btn-pag-timeline', function (e) {
+        e.preventDefault();
+        var page = parseInt($(this).data('page'));
+        if (page && page !== paginaActualSeguimiento) {
+            fntRenderizarTimelinePagina(page);
+        }
     });
 
 });
@@ -343,62 +355,177 @@ function fntCargarHistorial(ventaId) {
             $('#loading_seguimientos').addClass('d-none');
 
             if (resp.respuesta !== 'ok' || !Array.isArray(resp.data) || resp.data.length === 0) {
+                historialSeguimientoData = [];
+                $('#badge_total_seg').text(0);
                 $('#sin_seguimientos').removeClass('d-none');
                 return;
             }
 
-            var html = '<div class="timeline-seguimiento">';
-
-            resp.data.forEach(function (seg, index) {
-
-                var colorClass = (index === 0) ? 'border-primary text-primary' : 'border-secondary text-secondary';
-                var iconClass = (index === 0) ? 'fa-comment-check text-primary' : 'fa-comment text-secondary';
-
-                html += '<div class="d-flex mb-3 seg-item" style="gap: 12px;">';
-
-                // Icono lateral
-                html += '<div class="d-flex flex-column align-items-center" style="min-width:32px;">';
-                html += '<div class="rounded-circle d-flex align-items-center justify-content-center border ' + colorClass + '" style="width:32px;height:32px;">';
-                html += '<i class="fa-regular ' + iconClass + ' fs-12"></i>';
-                html += '</div>';
-                if (index < resp.data.length - 1) {
-                    html += '<div style="flex:1;width:2px;background:#dee2e6;margin:4px auto;"></div>';
-                }
-                html += '</div>';
-
-                // Contenido
-                html += '<div class="card border p-0 flex-grow-1 mb-0 shadow-sm">';
-                html += '<div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#f8f9fa;">';
-                html += '<span class="fw-semibold fs-12 text-primary">';
-                html += '<i class="fa-regular fa-user-circle me-1"></i>';
-                html += escapeHtml(seg.nombre_usuario || 'Sistema');
-                html += '</span>';
-                html += '<span class="fs-11 text-muted">';
-                html += '<i class="fa-regular fa-calendar me-1"></i>';
-                html += escapeHtml(seg.fecha_formateada || seg.fecha || '—');
-                html += '</span>';
-                html += '</div>';
-                html += '<div class="card-body py-2 px-3">';
-                html += '<p class="mb-0 fs-13 text-muted" style="white-space:pre-wrap;">';
-                html += escapeHtml(seg.notas || 'Sin nota registrada.');
-                html += '</p>';
-                html += '</div>';
-                html += '</div>';
-
-                html += '</div>'; // .d-flex
-            });
-
-            html += '</div>'; // .timeline-seguimiento
-
-            $('#timeline_seguimientos').html(html);
-            $('#badge_total_seg').text(resp.data.length);
+            historialSeguimientoData = resp.data;
+            $('#badge_total_seg').text(historialSeguimientoData.length);
+            fntRenderizarTimelinePagina(1);
         },
         error: function (xhr, status, error) {
+            historialSeguimientoData = [];
+            $('#badge_total_seg').text(0);
             $('#loading_seguimientos').addClass('d-none');
             $('#sin_seguimientos').removeClass('d-none');
             console.error('Error al cargar historial de seguimiento:', error);
         }
     });
+}
+
+/**
+ * Renderiza una página específica del historial de seguimientos en el timeline.
+ * 
+ * @param {number} pagina  Número de página a renderizar (1-indexed).
+ */
+function fntRenderizarTimelinePagina(pagina) {
+    if (!historialSeguimientoData || historialSeguimientoData.length === 0) {
+        $('#sin_seguimientos').removeClass('d-none');
+        $('#timeline_seguimientos').empty();
+        return;
+    }
+
+    var totalRegistros = historialSeguimientoData.length;
+    var totalPaginas = Math.ceil(totalRegistros / registrosPorPaginaSeguimiento);
+
+    if (pagina < 1) pagina = 1;
+    if (pagina > totalPaginas) pagina = totalPaginas;
+
+    paginaActualSeguimiento = pagina;
+
+    var inicio = (pagina - 1) * registrosPorPaginaSeguimiento;
+    var fin = Math.min(inicio + registrosPorPaginaSeguimiento, totalRegistros);
+    var itemsPagina = historialSeguimientoData.slice(inicio, fin);
+
+    var html = '<div class="timeline-seguimiento">';
+
+    itemsPagina.forEach(function (seg, indexInPage) {
+        var globalIndex = inicio + indexInPage;
+        var colorClass = (globalIndex === 0) ? 'border-primary text-primary' : 'border-secondary text-secondary';
+        var iconClass = (globalIndex === 0) ? 'fa-comment-check text-primary' : 'fa-comment text-secondary';
+
+        html += '<div class="d-flex mb-3 seg-item" style="gap: 12px;">';
+
+        // Icono lateral
+        html += '<div class="d-flex flex-column align-items-center" style="min-width:32px;">';
+        html += '<div class="rounded-circle d-flex align-items-center justify-content-center border ' + colorClass + '" style="width:32px;height:32px;">';
+        html += '<i class="fa-regular ' + iconClass + ' fs-12"></i>';
+        html += '</div>';
+        if (indexInPage < itemsPagina.length - 1) {
+            html += '<div style="flex:1;width:2px;background:#dee2e6;margin:4px auto;"></div>';
+        }
+        html += '</div>';
+
+        // Contenido
+        html += '<div class="card border p-0 flex-grow-1 mb-0 shadow-sm">';
+        html += '<div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#f8f9fa;">';
+        html += '<span class="fw-semibold fs-12 text-primary">';
+        html += '<i class="fa-regular fa-user-circle me-1"></i>';
+        html += escapeHtml(seg.nombre_usuario || 'Sistema');
+        html += '</span>';
+        html += '<span class="fs-11 text-muted">';
+        html += '<i class="fa-regular fa-calendar me-1"></i>';
+        html += escapeHtml(seg.fecha_formateada || seg.fecha || '—');
+        html += '</span>';
+        html += '</div>';
+        html += '<div class="card-body py-2 px-3">';
+        html += '<p class="mb-0 fs-13 text-muted" style="white-space:pre-wrap;">';
+        html += escapeHtml(seg.notas || 'Sin nota registrada.');
+        html += '</p>';
+        html += '</div>';
+        html += '</div>';
+
+        html += '</div>'; // .d-flex
+    });
+
+    html += '</div>'; // .timeline-seguimiento
+
+    // Paginación si hay más de 1 página
+    if (totalPaginas > 1) {
+        html += '<div class="d-flex flex-column flex-sm-row justify-content-between align-items-center pt-3 mt-2 border-top gap-2">';
+        html += '<span class="fs-12 text-muted">';
+        html += 'Mostrando <strong>' + (inicio + 1) + '</strong> a <strong>' + fin + '</strong> de <strong>' + totalRegistros + '</strong> seguimientos';
+        html += '</span>';
+
+        html += '<nav aria-label="Navegación del timeline">';
+        html += '<ul class="pagination pagination-sm mb-0">';
+
+        // Botón Anterior
+        var prevDisabled = (pagina === 1) ? ' disabled' : '';
+        html += '<li class="page-item' + prevDisabled + '">';
+        html += '<a class="page-link btn-pag-timeline" href="javascript:void(0);" data-page="' + (pagina - 1) + '" aria-label="Anterior">';
+        html += '<i class="fa-solid fa-chevron-left"></i>';
+        html += '</a>';
+        html += '</li>';
+
+        // Rango de páginas con elipsis
+        var range = fntObtenerRangoPaginas(pagina, totalPaginas);
+        range.forEach(function (p) {
+            if (p === '...') {
+                html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            } else {
+                var activeClass = (p === pagina) ? ' active' : '';
+                html += '<li class="page-item' + activeClass + '">';
+                html += '<a class="page-link btn-pag-timeline" href="javascript:void(0);" data-page="' + p + '">' + p + '</a>';
+                html += '</li>';
+            }
+        });
+
+        // Botón Siguiente
+        var nextDisabled = (pagina === totalPaginas) ? ' disabled' : '';
+        html += '<li class="page-item' + nextDisabled + '">';
+        html += '<a class="page-link btn-pag-timeline" href="javascript:void(0);" data-page="' + (pagina + 1) + '" aria-label="Siguiente">';
+        html += '<i class="fa-solid fa-chevron-right"></i>';
+        html += '</a>';
+        html += '</li>';
+
+        html += '</ul>';
+        html += '</nav>';
+        html += '</div>';
+    } else if (totalRegistros > 0) {
+        html += '<div class="pt-2 mt-2 border-top text-center">';
+        html += '<span class="fs-12 text-muted">Mostrando los ' + totalRegistros + ' seguimientos.</span>';
+        html += '</div>';
+    }
+
+    $('#timeline_seguimientos').html(html);
+}
+
+/**
+ * Genera el rango de números de página con elipsis (...) para la paginación.
+ * 
+ * @param {number} paginaActual 
+ * @param {number} totalPaginas 
+ * @returns {Array} Array con números de página y elipsis.
+ */
+function fntObtenerRangoPaginas(paginaActual, totalPaginas) {
+    var delta = 1;
+    var range = [];
+    var rangeWithDots = [];
+    var l;
+
+    for (var i = 1; i <= totalPaginas; i++) {
+        if (i === 1 || i === totalPaginas || (i >= paginaActual - delta && i <= paginaActual + delta)) {
+            range.push(i);
+        }
+    }
+
+    for (var j = 0; j < range.length; j++) {
+        var i = range[j];
+        if (l) {
+            if (i - l === 2) {
+                rangeWithDots.push(l + 1);
+            } else if (i - l !== 1) {
+                rangeWithDots.push('...');
+            }
+        }
+        rangeWithDots.push(i);
+        l = i;
+    }
+
+    return rangeWithDots;
 }
 
 /* =========================================================
