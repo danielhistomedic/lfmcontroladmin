@@ -314,6 +314,7 @@ function fntVerDetalle(btn) {
     }
 
     // Llena el panel de detalle con los datos generales
+    $('#det_pedido_id').text(rowData.pedido_id || '—');
     $('#det_cliente').text(rowData.cliente || '—');
     $('#det_titulo').text(rowData.titulo_venta || '—');
     $('#det_vendedor').text(rowData.vendedor || '—');
@@ -321,7 +322,6 @@ function fntVerDetalle(btn) {
     $('#det_fecha_pedido').text(rowData.fecha_pedido_formateada || '—');
     $('#det_monto').text(rowData.monto_formateado || '—');
     $('#det_clasificacion').text(rowData.clasificacion_proyecto || '—');
-    $('#det_clues').text(rowData.clues || '—');
     $('#badge_total_seg').text(rowData.total_seguimientos || 0);
 
     // Guarda venta_id actual

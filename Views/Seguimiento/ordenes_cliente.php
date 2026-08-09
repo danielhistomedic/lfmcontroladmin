@@ -340,84 +340,52 @@
                 <!-- Datos generales de la orden -->
                 <div class="mb-4">
                     <div class="card border p-0 shadow-sm rounded-3">
-                        <div class="card-header bg-light border-bottom py-2.5 px-3">
-                            <span class="fw-bold fs-13 text-primary text-uppercase" style="letter-spacing: 0.5px;">
-                                <i class="fa-regular fa-receipt me-1 text-primary"></i> Datos Generales de la Orden
-                            </span>
+                        <div class="card-header bg-header-card border-bottom py-2.5 px-3">
+                            <p class="mb-0 fw-600 text-primary fs-13">
+                                <i class="fa-regular fa-receipt me-1"></i> Datos Generales de la Orden
+                            </p>
                         </div>
                         <div class="card-body p-3">
                             <div class="row g-3">
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-building me-1"></i> Cliente:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-bold text-dark" id="det_cliente">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Orden / Pedido #:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-danger mb-0" id="det_pedido_id">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-folder-open me-1"></i> Proyecto / Título:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-semibold text-dark" id="det_titulo">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Cliente:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-dark mb-0" id="det_cliente">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-user me-1"></i> Vendedor:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-semibold text-dark" id="det_vendedor">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Proyecto / Título:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_titulo">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-tag me-1"></i> Estatus:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-semibold" id="det_estatus">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Vendedor:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_vendedor">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-calendar-days me-1"></i> Fecha Pedido:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-semibold text-dark" id="det_fecha_pedido">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Estatus:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break mb-0" id="det_estatus">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-dollar-sign me-1"></i> Monto:
-                                        </label>
-                                        <div class="vistadatos fs-14 fw-bold text-success" id="det_monto">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Fecha Pedido:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_fecha_pedido">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-layer-group me-1"></i> Clasificación:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-semibold text-dark" id="det_clasificacion">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Monto:</label>
+                                    <h6 class="vistadatos fs-14 text-wrap text-break fw-bold text-success mb-0" id="det_monto">—</h6>
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-lg-3">
-                                    <div class="p-2.5 bg-light rounded border h-100">
-                                        <label class="form-label fs-11 text-uppercase fw-bold text-primary mb-1 d-block">
-                                            <i class="fa-regular fa-hashtag me-1"></i> CLUES:
-                                        </label>
-                                        <div class="vistadatos fs-13 fw-semibold text-dark" id="det_clues">—</div>
-                                    </div>
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Clasificación:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_clasificacion">—</h6>
                                 </div>
 
                             </div>
@@ -428,11 +396,11 @@
                 <!-- Historial de Seguimientos -->
                 <div>
                     <div class="card border p-0 shadow-sm rounded-3">
-                        <div class="card-header bg-light border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold fs-13 text-primary text-uppercase" style="letter-spacing: 0.5px;">
-                                <i class="fa-regular fa-timeline me-1 text-primary"></i> Historial de Seguimientos
-                                <span class="badge bg-primary rounded-pill ms-2" id="badge_total_seg">0</span>
-                            </span>
+                        <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
+                            <p class="mb-0 fw-600 text-primary fs-13">
+                                <i class="fa-regular fa-timeline me-1"></i> Historial de Seguimientos
+                                <span class="badge bg-primary ms-2" id="badge_total_seg">0</span>
+                            </p>
                         </div>
                         <div class="card-body p-0">
 
