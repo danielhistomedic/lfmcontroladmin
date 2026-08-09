@@ -377,8 +377,6 @@
 <!-- Footer Admin 01 -->
 <?php require_once("Template/footer_01.php"); ?>
 
-<!-- Modals -->
-<div id="loadModalPermisos"></div>
 
 <!-- Footer Admin 02 -->
 <?php require_once("Template/footer_02.php"); ?>
