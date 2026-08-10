@@ -177,7 +177,7 @@ function fntRenderChecklistProceso(checklist) {
     let html = "";
 
     checklist.forEach((step, index) => {
-        const numPaso = step.id;
+        const numPaso = index + 1;
         const isCompletado = step.completado === true;
         const isCancelado = step.is_cancelado === true;
 

@@ -95,51 +95,53 @@
 
 
         <!-- 1) ENCABEZADO DE FILTRO -->
-        <div class="col-12 mb-4">
+        <div class="col-12 col-lg-6 mb-4">
     
-
             <div class="form-group col-12 mb-2">
-                    <div class="border-bottom pb-2">
-                        <p class="mb-0 fw-semibold text-primary">
-                            <i class="fa-regular fa-filter text-secondary me-2"></i> Filtro de Proyecto de Venta
-                        </p>
-                    </div>
+                <div class="border-bottom pb-2">
+                    <p class="mb-0 fw-semibold text-primary">
+                        <i class="fa-regular fa-filter text-secondary me-2"></i> Filtro de Proyecto de Venta
+                    </p>
+                </div>
             </div>
 
-           <div class="form-group col-12 mb-2">
-                    <form id="formFiltroProyecto" onsubmit="fntBuscarProyecto(event)">
-                        <div class="row align-items-end g-3">
-                            <div class="col-md-7 col-lg-8">
-                                <label for="txtProyectoId" class="form-label fw-semibold text-dark">
-                                    Clave / Folio o Número de Proyecto <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group input-group-lg shadow-sm">
-                                    <span class="input-group-text bg-light border-end-0 text-primary">
-                                        <i class="fa-sharp fa-light fa-diagram-project"></i>
-                                    </span>
-                                    <input type="text" 
-                                           class="form-control border-start-0 fs-15 fw-bold" 
-                                           id="txtProyectoId" 
-                                           name="proyecto_id" 
-                                           placeholder="Ej. 18654  ó  PV-2026-18654" 
-                                           autocomplete="off" 
-                                           required>
-                                </div>
-                                <div class="form-text mt-1 text-muted fs-12">
-                                    <i class="fa-regular fa-lightbulb text-warning me-1"></i>Tip: Puede digitar sólo la parte numérica final (ej. <strong>18654</strong>).
-                                </div>
+            <div class="form-group col-12 mb-2">
+                <form id="formFiltroProyecto" onsubmit="fntBuscarProyecto(event)">
+                    <div class="row align-items-start g-2">
+                        <div class="col-md-7">
+                            <label for="txtProyectoId" class="form-label fw-semibold text-dark mb-1">
+                                Clave / Folio o Número de Proyecto <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-light border-end-0 text-primary">
+                                    <i class="fa-sharp fa-light fa-diagram-project"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control border-start-0 fs-14 fw-bold" 
+                                       id="txtProyectoId" 
+                                       name="proyecto_id" 
+                                       placeholder="Ej. 18654 ó PV-2026-18654" 
+                                       autocomplete="off" 
+                                       required>
                             </div>
-                            <div class="col-md-5 col-lg-4 d-flex gap-2">
-                                <button type="submit" id="btnBuscarProyecto" class="btn btn-primary btn-lg flex-fill shadow-sm">
-                                    <i class="fa-regular fa-magnifying-glass me-2"></i>Buscar
+                            <div class="form-text mt-1 text-muted fs-12">
+                                <i class="fa-regular fa-lightbulb text-warning me-1"></i>Tip: Puede digitar sólo la parte numérica final (ej. <strong>18654</strong>).
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label d-none d-md-block mb-1">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" id="btnBuscarProyecto" class="btn btn-primary flex-fill shadow-sm">
+                                    <i class="fa-regular fa-magnifying-glass me-1"></i>Buscar
                                 </button>
-                                <button type="button" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" class="btn btn-outline-secondary btn-lg px-3">
+                                <button type="button" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" class="btn btn-outline-secondary px-3">
                                     <i class="fa-regular fa-eraser me-1"></i>Limpiar
                                 </button>
                             </div>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
+            </div>
                 
         </div>
 
@@ -197,7 +199,7 @@
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                <small class="text-muted d-block text-uppercase fw-semibold fs-11">Fecha de Registro</small>
+                                <small class="text-muted d-block text-uppercase fw-semibold fs-11">Fecha de Proyecto</small>
                                 <span class="fw-semibold text-dark fs-14 d-block" id="lblFecha">—</span>
                             </div>
                         </div>
@@ -220,7 +222,7 @@
                         <h3 class="card-title m-0 text-dark fw-bold fs-16">
                             <i class="fa-sharp fa-regular fa-list-check text-primary me-2"></i>Checklist de Evaluación del Proceso
                         </h3>
-                        <small class="text-muted">Evaluación de las etapas principales (cat_estatus_proyecto del ID 1 al 7)</small>
+                        <small class="text-muted">Evaluación de las etapas principales del proyecto de venta</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-secondary fs-12 px-3 py-2" id="lblProgresoPorcentaje">0% Completado</span>

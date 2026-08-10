@@ -120,8 +120,8 @@ class SeguimientoModel extends Mysql
         $checklist = array();
 
         try {
-            // Obtener del catálogo de estatus del 1 al 7
-            $sqlCat = "SELECT Id, cEstatus FROM cat_estatus_proyecto WHERE Id BETWEEN 1 AND 7 ORDER BY Id ASC";
+            // Obtener del catálogo de estatus del 1 al 7 (excluyendo el Id 2 - Cancelado)
+            $sqlCat = "SELECT Id, cEstatus FROM cat_estatus_proyecto WHERE Id IN (1, 3, 4, 5, 6, 7) ORDER BY Id ASC";
             $arrCat = $this->select($sqlCat, []);
 
             foreach ($arrCat as $cat) {
@@ -149,19 +149,6 @@ class SeguimientoModel extends Mysql
                             $item['registros']  = $regVenta;
                         } else {
                             $item['mensaje']    = 'Sin registro de Oportunidad de Venta.';
-                        }
-                        break;
-
-                    case 2:
-                        // Id 2: CANCELADO - No se checa, se indica que ya está cancelado si corresponde
-                        if ($estatus_proyecto_id == 2) {
-                            $item['is_cancelado'] = true;
-                            $item['completado']   = false;
-                            $item['mensaje']      = 'PROYECTO CANCELADO: Se registró pero no se continuó con el proceso.';
-                        } else {
-                            $item['is_cancelado'] = false;
-                            $item['completado']   = true; // No estuvo cancelado
-                            $item['mensaje']      = 'Proyecto activo (No cancelado).';
                         }
                         break;
 
