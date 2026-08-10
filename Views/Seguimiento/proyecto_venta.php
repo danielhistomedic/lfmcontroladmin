@@ -90,6 +90,29 @@
     tr.selected-row {
         background-color: rgba(13, 110, 253, 0.08) !important;
     }
+    .nav-tabs-proyecto {
+        border-bottom: 2px solid #e9ecef;
+    }
+    .nav-tabs-proyecto .nav-link {
+        font-weight: 600;
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease-in-out;
+        background: transparent;
+    }
+    .nav-tabs-proyecto .nav-link:hover {
+        color: #0d6efd;
+        border-bottom-color: rgba(13, 110, 253, 0.3);
+    }
+    .nav-tabs-proyecto .nav-link.active {
+        color: #0d6efd;
+        background-color: transparent;
+        border-bottom-color: #0d6efd;
+        font-weight: 700;
+    }
 </style>
 
 <!-- Header Admin 02 -->
@@ -237,132 +260,186 @@
             </div>
             <!-- ========== FIN PRIMERA SECCIÓN ========== -->
 
-            <!-- ========== SEGUNDA SECCIÓN: DETALLE DE SEGUIMIENTO DEL PROYECTO SELECCIONADO ========== -->
+            <!-- ========== SEGUNDA SECCIÓN: TABS DE DETALLE DEL PROYECTO SELECCIONADO ========== -->
             <div id="panel_detalle_proyecto" class="row">
 
+                <!-- NAVEGACIÓN DE TABS -->
                 <div class="col-12 mb-3">
-                    <div class="border-bottom pb-2 d-flex align-items-center justify-content-between">
-                        <p class="mb-0 fw-semibold text-primary fs-16">
-                            <i class="fa-sharp fa-light fa-diagram-project me-2"></i> Detalle del Seguimiento del Proyecto Seleccionado
-                        </p>
-                    </div>
+                    <ul class="nav nav-tabs nav-tabs-proyecto border-bottom pb-0" id="tabProyectoVenta" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="evaluacion-calidad-tab" data-bs-toggle="tab" data-bs-target="#tab-evaluacion-calidad" data-toggle="tab" data-target="#tab-evaluacion-calidad" type="button" role="tab" aria-controls="tab-evaluacion-calidad" aria-selected="true">
+                                <i class="fa-sharp fa-light fa-diagram-project me-2 text-primary"></i>Evaluación de Calidad
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="detalle-seguimiento-tab" data-bs-toggle="tab" data-bs-target="#tab-detalle-seguimiento" data-toggle="tab" data-target="#tab-detalle-seguimiento" type="button" role="tab" aria-controls="tab-detalle-seguimiento" aria-selected="false">
+                                <i class="fa-regular fa-list-timeline me-2 text-info"></i>Detalle de Seguimiento
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="adjuntos-proyecto-tab" data-bs-toggle="tab" data-bs-target="#tab-adjuntos-proyecto" data-toggle="tab" data-target="#tab-adjuntos-proyecto" type="button" role="tab" aria-controls="tab-adjuntos-proyecto" aria-selected="false">
+                                <i class="fa-regular fa-paperclip me-2 text-warning"></i>Adjuntos del Proyecto
+                            </button>
+                        </li>
+                    </ul>
                 </div>
 
-                <!-- SELECTOR DE COINCIDENCIAS MULTIPLES -->
-                <div class="col-12 mb-4 d-none" id="containerCoincidencias">
-                    <div class="alert alert-info shadow-sm border-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 rounded-3">
-                        <div class="mb-2 mb-md-0">
-                            <i class="fa-regular fa-list-check me-2 fs-5"></i>
-                            <strong>Se encontraron múltiples proyectos coincidentes.</strong> Por favor seleccione uno:
-                        </div>
-                        <div class="col-md-5">
-                            <select id="selectProyectosCoincidentes" class="form-select form-select-sm fw-semibold" onchange="fntSeleccionarProyecto(this.value)">
-                                <!-- Opciones dinámicas -->
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                <!-- CONTENIDO DE LOS TABS -->
+                <div class="col-12">
+                    <div class="tab-content border-0 p-0 bg-transparent" id="tabContentProyectoVenta">
 
-                <!-- STATE: CARGANDO -->
-                <div class="col-12 d-none" id="panelLoading">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <h5 class="text-muted mt-3 fw-semibold">Consultando información del proyecto...</h5>
-                    </div>
-                </div>
+                        <!-- TAB 1: Evaluación de Calidad (Contenido actual) -->
+                        <div class="tab-pane fade show active" id="tab-evaluacion-calidad" role="tabpanel" aria-labelledby="evaluacion-calidad-tab">
 
-                <!-- RESUMEN DEL PROYECTO SELECCIONADO -->
-                <div class="col-12 mb-4 d-none" id="cardResumenProyecto">
-                    <section class="card shadow-sm border-0 overflow-hidden">
-                        <div class="card-header bg-dark text-white p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-primary fs-14 px-3 py-2" id="lblProyectoId">—</span>
-                                <h4 class="m-0 fw-bold text-white fs-16" id="lblTituloProyecto">—</h4>
-                            </div>
-                            <div>
-                                <span class="fs-12 text-uppercase text-light me-1">Estatus Actual:</span>
-                                <span id="lblEstatusBadge" class="badge bg-warning text-dark fs-12 px-3 py-2">—</span>
-                            </div>
-                        </div>
-                        <div class="card-body p-4 bg-light-subtle">
-                            <div class="row g-3">
-                                <div class="col-md-6 col-lg-3">
-                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Cliente</small>
-                                        <span class="fw-bold text-dark fs-14 d-block text-truncate" id="lblCliente" title="">—</span>
+                            <!-- SELECTOR DE COINCIDENCIAS MULTIPLES -->
+                            <div class="mb-4 d-none" id="containerCoincidencias">
+                                <div class="alert alert-info shadow-sm border-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 rounded-3">
+                                    <div class="mb-2 mb-md-0">
+                                        <i class="fa-regular fa-list-check me-2 fs-5"></i>
+                                        <strong>Se encontraron múltiples proyectos coincidentes.</strong> Por favor seleccione uno:
                                     </div>
-                                </div>
-                                <div class="col-md-6 col-lg-3">
-                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Vendedor Asignado</small>
-                                        <span class="fw-semibold text-dark fs-14 d-block text-truncate" id="lblVendedor" title="">—</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 col-lg-3">
-                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Fecha de Proyecto</small>
-                                        <span class="fw-semibold text-dark fs-14 d-block" id="lblFecha">—</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 col-lg-3">
-                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Monto Oportunidad / Venta</small>
-                                        <span class="fw-bold text-success fs-15 d-block" id="lblMontoTotal">—</span>
+                                    <div class="col-md-5">
+                                        <select id="selectProyectosCoincidentes" class="form-select form-select-sm fw-semibold" onchange="fntSeleccionarProyecto(this.value)">
+                                            <!-- Opciones dinámicas -->
+                                        </select>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </section>
-                </div>
 
-                <!-- CHECKLIST DEL PROCESO (ESTATUS ID 1 AL 7) -->
-                <div class="col-12 d-none" id="cardChecklistProceso">
-                    <section class="card card-featured shadow-sm">
-                        <header class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <div>
-                                <h3 class="card-title m-0 text-dark fw-bold fs-16">
-                                    <i class="fa-sharp fa-regular fa-list-check text-primary me-2"></i>Checklist de Evaluación del Proceso
-                                </h3>
-                                <small class="text-muted">Evaluación de las etapas principales del proyecto de venta</small>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-secondary fs-12 px-3 py-2" id="lblProgresoPorcentaje">0% Completado</span>
-                            </div>
-                        </header>
-
-                        <div class="card-body p-4">
-                            <!-- BARRA DE PROGRESO -->
-                            <div class="progress mb-4" style="height: 12px; border-radius: 6px;">
-                                <div id="barProgresoChecklist" 
-                                     class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
-                                     role="progressbar" 
-                                     style="width: 0%;" 
-                                     aria-valuenow="0" 
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100">
+                            <!-- STATE: CARGANDO -->
+                            <div class="d-none" id="panelLoading">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <h5 class="text-muted mt-3 fw-semibold">Consultando información del proyecto...</h5>
                                 </div>
                             </div>
 
-                            <!-- TIMELINE CONTENEDOR DEL CHECKLIST -->
-                            <div class="timeline-checklist mt-4" id="containerChecklistItems">
-                                <!-- Generado dinámicamente mediante JS -->
+                            <!-- RESUMEN DEL PROYECTO SELECCIONADO -->
+                            <div class="mb-4 d-none" id="cardResumenProyecto">
+                                <section class="card shadow-sm border-0 overflow-hidden">
+                                    <div class="card-header bg-dark text-white p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary fs-14 px-3 py-2" id="lblProyectoId">—</span>
+                                            <h4 class="m-0 fw-bold text-white fs-16" id="lblTituloProyecto">—</h4>
+                                        </div>
+                                        <div>
+                                            <span class="fs-12 text-uppercase text-light me-1">Estatus Actual:</span>
+                                            <span id="lblEstatusBadge" class="badge bg-warning text-dark fs-12 px-3 py-2">—</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-4 bg-light-subtle">
+                                        <div class="row g-3">
+                                            <div class="col-md-6 col-lg-3">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Cliente</small>
+                                                    <span class="fw-bold text-dark fs-14 d-block text-truncate" id="lblCliente" title="">—</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-3">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Vendedor Asignado</small>
+                                                    <span class="fw-semibold text-dark fs-14 d-block text-truncate" id="lblVendedor" title="">—</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-3">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Fecha de Proyecto</small>
+                                                    <span class="fw-semibold text-dark fs-14 d-block" id="lblFecha">—</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-3">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Monto Oportunidad / Venta</small>
+                                                    <span class="fw-bold text-success fs-15 d-block" id="lblMontoTotal">—</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <!-- CHECKLIST DEL PROCESO (ESTATUS ID 1 AL 7) -->
+                            <div class="d-none" id="cardChecklistProceso">
+                                <section class="card card-featured shadow-sm">
+                                    <header class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <h3 class="card-title m-0 text-dark fw-bold fs-16">
+                                                <i class="fa-sharp fa-regular fa-list-check text-primary me-2"></i>Checklist de Evaluación del Proceso
+                                            </h3>
+                                            <small class="text-muted">Evaluación de las etapas principales del proyecto de venta</small>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary fs-12 px-3 py-2" id="lblProgresoPorcentaje">0% Completado</span>
+                                        </div>
+                                    </header>
+
+                                    <div class="card-body p-4">
+                                        <!-- BARRA DE PROGRESO -->
+                                        <div class="progress mb-4" style="height: 12px; border-radius: 6px;">
+                                            <div id="barProgresoChecklist" 
+                                                 class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                                 role="progressbar" 
+                                                 style="width: 0%;" 
+                                                 aria-valuenow="0" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+
+                                        <!-- TIMELINE CONTENEDOR DEL CHECKLIST -->
+                                        <div class="timeline-checklist mt-4" id="containerChecklistItems">
+                                            <!-- Generado dinámicamente mediante JS -->
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <!-- PLACEHOLDER / SIN SELECCIÓN -->
+                            <div id="panelPlaceholder">
+                                <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
+                                    <div class="py-4">
+                                        <i class="fa-sharp fa-light fa-diagram-project text-muted display-4 mb-3"></i>
+                                        <h4 class="fw-bold text-dark mb-2">Consulta de Proyecto de Venta</h4>
+                                        <p class="text-muted max-w-600 mx-auto fs-14 mb-0">
+                                            Seleccione un proyecto de venta del listado superior o utilice los filtros para visualizar la información detallada y la evaluación en el checklist del proceso.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <!-- FIN TAB 1 -->
+
+                        <!-- TAB 2: Detalle de Seguimiento (Vacío por el momento) -->
+                        <div class="tab-pane fade" id="tab-detalle-seguimiento" role="tabpanel" aria-labelledby="detalle-seguimiento-tab">
+                            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
+                                <div class="py-4">
+                                    <i class="fa-regular fa-list-timeline text-muted display-4 mb-3"></i>
+                                    <h4 class="fw-bold text-dark mb-2">Detalle de Seguimiento</h4>
+                                    <p class="text-muted max-w-600 mx-auto fs-14 mb-0">
+                                        Sección en desarrollo. Aquí se mostrará la bitácora detallada de seguimiento del proyecto seleccionado.
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </section>
-                </div>
+                        <!-- FIN TAB 2 -->
 
-                <!-- PLACEHOLDER / SIN SELECCIÓN -->
-                <div class="col-12" id="panelPlaceholder">
-                    <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
-                        <div class="py-4">
-                            <i class="fa-sharp fa-light fa-diagram-project text-muted display-4 mb-3"></i>
-                            <h4 class="fw-bold text-dark mb-2">Consulta de Proyecto de Venta</h4>
-                            <p class="text-muted max-w-600 mx-auto fs-14">
-                                Seleccione un proyecto de venta del listado superior o utilice los filtros para visualizar la información detallada y la evaluación en el checklist del proceso.
-                            </p>
+                        <!-- TAB 3: Adjuntos del Proyecto (Vacío por el momento) -->
+                        <div class="tab-pane fade" id="tab-adjuntos-proyecto" role="tabpanel" aria-labelledby="adjuntos-proyecto-tab">
+                            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
+                                <div class="py-4">
+                                    <i class="fa-regular fa-paperclip text-muted display-4 mb-3"></i>
+                                    <h4 class="fw-bold text-dark mb-2">Adjuntos del Proyecto</h4>
+                                    <p class="text-muted max-w-600 mx-auto fs-14 mb-0">
+                                        Sección en desarrollo. Aquí se gestionarán los archivos y documentos adjuntos del proyecto de venta seleccionado.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
+                        <!-- FIN TAB 3 -->
+
                     </div>
                 </div>
 
