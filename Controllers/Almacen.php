@@ -198,24 +198,42 @@ class Almacen extends Controllers
             $almacenModel = new AlmacenModel();
             $arrProductos = $almacenModel->searchProductosAlmacen($busqueda);
 
-            $respuestaTextual = "";
+            $respuestaHTML = "";
             if (!empty($busqueda)) {
                 if (!empty($arrProductos)) {
-                    $respuestaTextual = "Tenemos:\n\n";
+                    $respuestaHTML = "<div class='fw-bold mb-2' style='color: #1e293b; font-size: 1rem;'>Tenemos:</div>";
+                    $respuestaHTML .= "<ul class='list-unstyled mb-0 ms-1'>";
                     $topProducts = array_slice($arrProductos, 0, 5);
                     foreach ($topProducts as $prod) {
                         $existencia = floatval($prod['existencias_almacen']) > 0 ? floatval($prod['existencias_almacen']) : floatval($prod['existencia_base']);
                         $desgloseStr = !empty($prod['desgloses_almacen']) ? " (" . $prod['desgloses_almacen'] . ")" : "";
-                        $respuestaTextual .= "• " . $prod['cDescripcion'] . "\n  Existencias: " . intval($existencia) . $desgloseStr . "\n\n";
+                        
+                        $claveStr = !empty($prod['Clave']) ? trim($prod['Clave']) : '';
+                        $ccnStr   = !empty($prod['CCN']) ? trim($prod['CCN']) : '';
+                        
+                        $infoCodigos = "";
+                        if (!empty($claveStr) && !empty($ccnStr)) {
+                            $infoCodigos = "<span class='badge bg-dark me-1' style='font-size: 0.8rem;'>Clave: " . htmlspecialchars($claveStr) . "</span> <span class='badge bg-secondary me-2' style='font-size: 0.8rem;'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
+                        } else if (!empty($claveStr)) {
+                            $infoCodigos = "<span class='badge bg-dark me-2' style='font-size: 0.8rem;'>Clave: " . htmlspecialchars($claveStr) . "</span> ";
+                        } else if (!empty($ccnStr)) {
+                            $infoCodigos = "<span class='badge bg-secondary me-2' style='font-size: 0.8rem;'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
+                        }
+
+                        $respuestaHTML .= "<li class='mb-2 pb-1'>";
+                        $respuestaHTML .= "<div class='fw-bold text-dark' style='font-size: 0.95rem;'>• " . $infoCodigos . htmlspecialchars($prod['cDescripcion']) . "</div>";
+                        $respuestaHTML .= "<div class='ms-3 mt-1' style='font-size: 0.85rem; color: #2563eb; font-weight: 500;'><span style='font-size: 0.7rem; vertical-align: middle; margin-right: 3px;'>▪</span> Existencias: <strong style='color: #1d4ed8; font-weight: 700;'>" . intval($existencia) . "</strong> <span style='color: #64748b; font-size: 0.95em;'>" . htmlspecialchars($desgloseStr) . "</span></div>";
+                        $respuestaHTML .= "</li>";
                     }
+                    $respuestaHTML .= "</ul>";
                     if (count($arrProductos) > 5) {
-                        $respuestaTextual .= "*(Y " . (count($arrProductos) - 5) . " producto(s) adicional(es) mostrado(s) en la tabla a continuación)*";
+                        $respuestaHTML .= "<div class='mt-2 text-muted fst-italic' style='font-size: 0.84rem;'><i class='fa-solid fa-circle-info me-1'></i> *(Y " . (count($arrProductos) - 5) . " producto(s) adicional(es) mostrado(s) en la tabla a continuación)*</div>";
                     }
                 } else {
-                    $respuestaTextual = "No se encontraron existencias o productos coincidentes para la búsqueda: \"" . htmlspecialchars($busqueda) . "\".";
+                    $respuestaHTML = "<div class='text-danger fw-semibold'><i class='fa-solid fa-circle-exclamation me-1'></i> No se encontraron existencias o productos coincidentes para la búsqueda: \"" . htmlspecialchars($busqueda) . "\".</div>";
                 }
             } else {
-                $respuestaTextual = "Mostrando listado general de productos activos en existencias.";
+                $respuestaHTML = "<div class='text-muted'><i class='fa-solid fa-boxes-stacked me-1'></i> Mostrando listado general de productos activos en existencias.</div>";
             }
 
             // Preparar filas con fotos preprocesadas
@@ -263,7 +281,7 @@ class Almacen extends Controllers
             $arrResponse = [
                 'status'                => true,
                 'busqueda'              => $busqueda,
-                'respuesta_inteligente' => trim($respuestaTextual),
+                'respuesta_inteligente' => trim($respuestaHTML),
                 'total_registros'       => count($arrData),
                 'data'                  => $arrData
             ];

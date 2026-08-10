@@ -193,13 +193,13 @@ function mostrarRespuestaInteligente(busqueda, respuesta, total) {
 
     if (busqueda && busqueda.trim().length > 0) {
         box.style.display = 'block';
-        content.innerText = respuesta;
+        content.innerHTML = respuesta;
         if (badge) {
             badge.innerText = `${total} Producto(s) Encontrado(s)`;
         }
     } else {
         box.style.display = 'block';
-        content.innerText = "Mostrando inventario general de productos activos en existencias.";
+        content.innerHTML = respuesta || "Mostrando inventario general de productos activos en existencias.";
         if (badge) {
             badge.innerText = `${total} Producto(s) Activo(s)`;
         }
