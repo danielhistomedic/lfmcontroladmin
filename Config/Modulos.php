@@ -25,6 +25,7 @@ const MOD_VENTAS_CLIENTES = 124;
 // [ Seguimiento ]
 // ** -----------------------------
 const MOD_SEGUIMIENTO_ORDENES_CLIENTE = 130;
+const MOD_SEGUIMIENTO_PROYECTO_VENTA = 131;
 
 // ** -----------------------------
 // [ Dashboard ]

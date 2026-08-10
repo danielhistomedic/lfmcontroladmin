@@ -121,21 +121,18 @@ class Permisos extends Controllers
                         [ Agregar al array de modulos, el array de permisos de la base de datos, correspondientes a cada modulo ]*/
                         for ($i = 0; $i < count($arrModulos); $i++) {
 
-                            $permisos_ =  $arrPermisosRol[$arrModulos[$i]['id']];
+                            $moduloId = $arrModulos[$i]['id'];
+                            $permisos_ = $arrPermisosRol[$moduloId] ?? null;
+
                             $arrPermisos = array(
-                                'r' => $permisos_['r'],
-                                'c' => $permisos_['c'],
-                                'u' => $permisos_['u'],
-                                'd' => $permisos_['d'],
-                                'e' => $permisos_['e'],
-                                'p' => $permisos_['p']
+                                'r' => $permisos_['r'] ?? 0,
+                                'c' => $permisos_['c'] ?? 0,
+                                'u' => $permisos_['u'] ?? 0,
+                                'd' => $permisos_['d'] ?? 0,
+                                'e' => $permisos_['e'] ?? 0,
+                                'p' => $permisos_['p'] ?? 0
                             );
                             $arrModulos[$i]['permisos'] = $arrPermisos;
-
-                            if (!isset($arrModulos[$i]['permisos'])) {
-                                $arrPermisos = array('r' => 0, 'c' => 0, 'u' => 0, 'd' => 0, 'e' => 0, 'p' => 0);
-                                $arrModulos[$i]['permisos'] = $arrPermisos;
-                            }
                         }
                     }
 
