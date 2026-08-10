@@ -28,6 +28,12 @@ const MOD_SEGUIMIENTO_ORDENES_CLIENTE = 130;
 const MOD_SEGUIMIENTO_PROYECTO_VENTA = 131;
 
 // ** -----------------------------
+// [ Almacén ]
+// ** -----------------------------
+const MOD_ALMACEN_PRODUCTOS = 132;
+const MOD_ALMACEN_INVENTARIO = 133;
+
+// ** -----------------------------
 // [ Dashboard ]
 // ** -----------------------------
 const MOD_DASHBOARD = 123;

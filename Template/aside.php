@@ -339,6 +339,53 @@
                         </li>
                     <?php }  ?>
 
+                    <!-- Almacén  -->
+                    <?php if (
+                        !empty($data['permisos'][MOD_ALMACEN_PRODUCTOS]['r']) ||
+                        !empty($data['permisos'][MOD_ALMACEN_INVENTARIO]['r'])
+                    ) {
+                    ?>
+
+                        <li class="nav-parent <?php if (
+                                                    $data['menu'] == MOD_ALMACEN_PRODUCTOS ||
+                                                    $data['menu'] == MOD_ALMACEN_INVENTARIO
+                                                ) {
+                                                    echo "nav-expanded nav-active";
+                                                } ?>">
+                            <a class="nav-link" href="#">
+                                <i class="fa-sharp fa-light fa-boxes-stacked"></i>
+                                <span>Almacén</span>
+                            </a>
+                            <ul class="nav nav-children ">
+
+                                <?php if (
+                                    !empty($data['permisos'][MOD_ALMACEN_PRODUCTOS]['r'])
+                                ) { ?>
+                                    <li class="<?= ($data['menu'] == MOD_ALMACEN_PRODUCTOS) ? "nav-active" : ""; ?>">
+                                        <a class="nav-link" href="<?= base_url(); ?>/almacen/productos">
+                                            Productos
+                                        </a>
+                                    </li>
+                                <?php }  ?>
+
+                                <hr class="mb-1 mt-1">
+
+                                <?php if (
+                                    !empty($data['permisos'][MOD_ALMACEN_INVENTARIO]['r'])
+                                ) { ?>
+                                    <li class="<?= ($data['menu'] == MOD_ALMACEN_INVENTARIO) ? "nav-active" : ""; ?>">
+                                        <a class="nav-link" href="<?= base_url(); ?>/almacen/inventario">
+                                            Inventario
+                                        </a>
+                                    </li>
+                                <?php }  ?>
+
+                                <hr class="mb-1 mt-1">
+
+                            </ul>
+                        </li>
+                    <?php }  ?>
+
 
 
                 </ul>
