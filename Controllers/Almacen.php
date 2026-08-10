@@ -253,6 +253,7 @@ class Almacen extends Controllers
                     'material'           => $row['material'],
                     'grupo'              => $row['grupo'],
                     'clave_sat'          => $row['clave_sat'],
+                    'clave_cliente'      => $row['clave_cliente'] ?? '',
                     'existencia'         => intval($existenciaTotal),
                     'desgloses_almacen'  => $row['desgloses_almacen'] ?? '',
                     'fotos'              => $fotos

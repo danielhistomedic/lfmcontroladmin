@@ -44,6 +44,8 @@ class AlmacenModel extends Mysql
                         IFNULL(m.material, '') AS material,
                         IFNULL(m.grupo, '') AS grupo,
                         IFNULL(m.clave_sat, '') AS clave_sat,
+                        IFNULL(sap.clave_cliente, '') AS clave_cliente,
+                        IFNULL(sap.descripcion_cliente, '') AS descripcion_cliente,
                         IFNULL(m.iExistenciaActual, 0) AS existencia_base,
                         ftp.img1, ftp.img2, ftp.img3, ftp.img4, ftp.img5,
                         (
@@ -63,6 +65,7 @@ class AlmacenModel extends Mysql
                     LEFT JOIN cat_claves cla ON (cla.icveclave = m.icveclave)
                     LEFT JOIN cat_categorias cat ON (cat.id = m.categoria_id)
                     LEFT JOIN tb_materiales_ftp ftp ON (ftp.idDocto = m.ccvematerial OR ftp.idDocto = m.icvematerial)
+                    LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = m.ccvematerial)
                     WHERE m.iBaja = 0 AND m.cClasificacion = 'PRODUCTO' ";
 
             if (!empty($busqueda)) {
@@ -84,6 +87,8 @@ class AlmacenModel extends Mysql
                             m.cDescripcion LIKE $param OR 
                             m.ccvematerial LIKE $param OR 
                             m.ccveMaterialAlmacen LIKE $param OR 
+                            sap.clave_cliente LIKE $param OR 
+                            sap.descripcion_cliente LIKE $param OR 
                             mar.cdscmarca LIKE $param OR 
                             sub.cdscsubmarca LIKE $param OR 
                             cla.cdscclave LIKE $param OR 
@@ -113,6 +118,8 @@ class AlmacenModel extends Mysql
                         $param = ":word_or_" . $i;
                         $wherePartsOr[] = "(
                             m.cDescripcion LIKE $param OR 
+                            sap.clave_cliente LIKE $param OR 
+                            sap.descripcion_cliente LIKE $param OR 
                             mar.cdscmarca LIKE $param OR 
                             sub.cdscsubmarca LIKE $param OR 
                             cla.cdscclave LIKE $param OR 
@@ -125,7 +132,7 @@ class AlmacenModel extends Mysql
                     $arrResponse = $this->select($sqlOr, $arrValuesOr);
                     return is_array($arrResponse) ? $arrResponse : [];
                 } else {
-                    $sqlFull = $sqlBase . " AND (m.cDescripcion LIKE :full_search OR m.ccvematerial LIKE :full_search) ORDER BY m.icvematerial DESC LIMIT 500";
+                    $sqlFull = $sqlBase . " AND (m.cDescripcion LIKE :full_search OR m.ccvematerial LIKE :full_search OR sap.clave_cliente LIKE :full_search) ORDER BY m.icvematerial DESC LIMIT 500";
                     $arrResponse = $this->select($sqlFull, ['full_search' => "%" . $busqueda . "%"]);
                     return is_array($arrResponse) ? $arrResponse : [];
                 }
