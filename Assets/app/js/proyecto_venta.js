@@ -28,11 +28,7 @@ function fntBuscarProyecto(e) {
     const valProyecto = inputProyecto ? inputProyecto.value.trim() : "";
 
     if (!valProyecto) {
-        if (typeof swal === "function") {
-            swal("Atención", "Por favor ingrese la clave o número del proyecto de venta.", "warning");
-        } else {
-            alert("Por favor ingrese la clave o número del proyecto de venta.");
-        }
+        fntMostrarAlerta("Por favor ingrese la clave o número del proyecto de venta.", "warning");
         return;
     }
 
@@ -52,11 +48,7 @@ function fntBuscarProyecto(e) {
         .then(data => {
             if (!data.status) {
                 fntMostrarEstadoUI("placeholder");
-                if (typeof swal === "function") {
-                    swal("Sin resultados", data.msg || "No se encontró el proyecto indicado.", "info");
-                } else {
-                    alert(data.msg || "No se encontró el proyecto indicado.");
-                }
+                fntMostrarAlerta(data.msg || "No se encontró el proyecto indicado.", "warning");
                 return;
             }
 
@@ -89,11 +81,7 @@ function fntBuscarProyecto(e) {
         .catch(err => {
             console.error("Error al buscar proyecto:", err);
             fntMostrarEstadoUI("placeholder");
-            if (typeof swal === "function") {
-                swal("Error", "Ocurrió un error en el servidor al consultar el proyecto.", "error");
-            } else {
-                alert("Ocurrió un error en el servidor al consultar el proyecto.");
-            }
+            fntMostrarAlerta("Ocurrió un error en el servidor al consultar el proyecto.", "error");
         });
 }
 
@@ -120,13 +108,45 @@ function fntSeleccionarProyecto(ventaId) {
                 fntMostrarEstadoUI("resultado");
             } else {
                 fntMostrarEstadoUI("placeholder");
-                alert(data.msg || "Error al cargar proyecto.");
+                fntMostrarAlerta(data.msg || "Error al cargar proyecto.", "error");
             }
         })
         .catch(err => {
             console.error("Error:", err);
             fntMostrarEstadoUI("placeholder");
+            fntMostrarAlerta("Error de conexión al cargar el proyecto.", "error");
         });
+}
+
+/**
+ * Muestra mensaje de alerta modal del sistema (estilo usuarios.js / alertas.js)
+ */
+function fntMostrarAlerta(mensaje, tipo = "error") {
+    var responseObj = {
+        mostrar_mensaje: true,
+        tiempo: 4000,
+        mensaje: mensaje
+    };
+
+    if (typeof alerta_error === "function" && tipo === "error") {
+        alerta_error(responseObj, "");
+    } else if (typeof alerta_warning_only === "function" && (tipo === "warning" || tipo === "info")) {
+        alerta_warning_only(responseObj, "");
+    } else if (typeof alerta_warning === "function" && (tipo === "warning" || tipo === "info")) {
+        alerta_warning(responseObj, "");
+    } else if (typeof mensajeAlertaModal === "function") {
+        mensajeAlertaModal({
+            icon: tipo,
+            timer: 4000,
+            title: "¡Atención!",
+            text: mensaje,
+            textButton: "Cerrar"
+        });
+    } else if (typeof swal === "function") {
+        swal("¡Atención!", mensaje, tipo);
+    } else {
+        alert(mensaje);
+    }
 }
 
 /**
@@ -212,6 +232,7 @@ function fntRenderChecklistProceso(checklist) {
                                 <th class="text-end">Subtotal</th>
                                 <th class="text-end">IVA</th>
                                 <th class="text-end">Total</th>
+                                <th class="text-center">Moneda</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -223,6 +244,7 @@ function fntRenderChecklistProceso(checklist) {
                 const sub = parseFloat(r.subtotal || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const iva = parseFloat(r.iva || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const tot = parseFloat(r.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const monedaDoc = r.cmoneda || (parseInt(r.moneda_id || 0) === 1 ? "MXN" : (parseInt(r.moneda_id || 0) === 3 ? "USD" : "USD"));
 
                 registrosHtml += `
                     <tr>
@@ -231,6 +253,7 @@ function fntRenderChecklistProceso(checklist) {
                         <td class="text-end">$${sub}</td>
                         <td class="text-end">$${iva}</td>
                         <td class="text-end fw-bold text-dark">$${tot}</td>
+                        <td class="text-center"><span class="badge bg-secondary px-2 py-1">${monedaDoc}</span></td>
                     </tr>
                 `;
             });

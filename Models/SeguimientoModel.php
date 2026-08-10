@@ -140,7 +140,8 @@ class SeguimientoModel extends Mysql
                 switch ($catId) {
                     case 1:
                         // Id 1: OPORTUNIDAD DE VENTA (INICIO PROCESO) - Checar si hay registro en tb_ventas
-                        $sqlVenta = "SELECT id, proyecto_id, titulo, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, total, subtotal, iva 
+                        $sqlVenta = "SELECT id, proyecto_id, titulo, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, total, subtotal, iva, moneda_id, 
+                                     CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                      FROM tb_ventas WHERE id = :vId";
                         $regVenta = $this->select($sqlVenta, ['vId' => $venta_id]);
                         if (!empty($regVenta)) {
@@ -154,7 +155,8 @@ class SeguimientoModel extends Mysql
 
                     case 3:
                         // Id 3: EN PROCESO DE COTIZACION - Checar si hay registro en tb_compras_cotizaciones (enviado = 1)
-                        $sqlCc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado 
+                        $sqlCc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_compras_cotizaciones 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
@@ -170,7 +172,8 @@ class SeguimientoModel extends Mysql
 
                     case 4:
                         // Id 4: COTIZACION INTERNA ELABORADA - Checar si hay registro en tb_compras_cotizacion_interna (enviado = 1)
-                        $sqlCi = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado 
+                        $sqlCi = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_compras_cotizacion_interna 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
@@ -186,7 +189,8 @@ class SeguimientoModel extends Mysql
 
                     case 5:
                         // Id 5: COTIZACION CLIENTE ELABORADA - Checar si hay registro en tb_ventas_cotizacion_cliente (enviado = 1)
-                        $sqlVc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado 
+                        $sqlVc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_ventas_cotizacion_cliente 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
@@ -202,7 +206,8 @@ class SeguimientoModel extends Mysql
 
                     case 6:
                         // Id 6: ORDEN COMPRA CLIENTE (PEDIDO COLOCADO) - Checar si hay registro en tb_ventas_cotizacion_cliente (enviado = 1)
-                        $sqlOc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado 
+                        $sqlOc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_ventas_cotizacion_cliente 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
@@ -218,7 +223,8 @@ class SeguimientoModel extends Mysql
 
                     case 7:
                         // Id 7: ORDEN COMPRA PROVEEDOR (PEDIDO ELABORADO) - Checar si hay registro en tb_pedidos_proveedor (enviado = 1)
-                        $sqlPp = "SELECT id, folio_ocp, fecha_pedido, DATE_FORMAT(fecha_pedido, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado 
+                        $sqlPp = "SELECT id, folio_ocp, fecha_pedido, DATE_FORMAT(fecha_pedido, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_pedidos_proveedor 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
