@@ -34,7 +34,7 @@ $(document).ready(function () {
     });
 
     // 6. Escuchar Enter en inputs de filtro
-    $("#txtProyectoId, #filtro_fecha_ini, #filtro_fecha_fin").on("keypress", function (e) {
+    $("#txtProyectoId, #filtro_fecha_ini, #filtro_fecha_fin, #filtro_titulo, #filtro_cliente, #filtro_vendedor").on("keypress", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
             fntCargarTablaProyectos();
@@ -224,6 +224,9 @@ function fntCargarTablaProyectos() {
     const fechaIni = $("#filtro_fecha_ini").val().trim();
     const fechaFin = $("#filtro_fecha_fin").val().trim();
     const busqueda = $("#txtProyectoId").val().trim();
+    const titulo   = $("#filtro_titulo").val().trim();
+    const cliente  = $("#filtro_cliente").val().trim();
+    const vendedor = $("#filtro_vendedor").val().trim();
 
     if (tableProyectosVenta !== null) {
         tableProyectosVenta.clear().draw();
@@ -237,7 +240,10 @@ function fntCargarTablaProyectos() {
         data: {
             fecha_ini: fechaIni,
             fecha_fin: fechaFin,
-            busqueda: busqueda
+            busqueda: busqueda,
+            titulo: titulo,
+            cliente: cliente,
+            vendedor: vendedor
         },
         dataType: "json",
         success: function (data) {
@@ -502,6 +508,9 @@ function fntLimpiarFiltro() {
     $("#filtro_periodo").val("este_mes");
     fntActualizarFechasPorPeriodo("este_mes");
     $("#txtProyectoId").val("");
+    $("#filtro_titulo").val("");
+    $("#filtro_cliente").val("");
+    $("#filtro_vendedor").val("");
 
     ventaIdSeleccionado = null;
     fntCargarTablaProyectos();

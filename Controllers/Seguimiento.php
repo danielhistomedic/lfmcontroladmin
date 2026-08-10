@@ -610,7 +610,10 @@ class Seguimiento extends Controllers
             [ Recibe y limpia parámetros de filtro ]*/
             $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
             $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
-            $busqueda  = strClean($_POST['busqueda'] ?? '');
+            $busqueda  = strClean($_POST['busqueda']  ?? '');
+            $titulo    = strClean($_POST['titulo']    ?? '');
+            $cliente   = strClean($_POST['cliente']   ?? '');
+            $vendedor  = strClean($_POST['vendedor']  ?? '');
 
             if (!empty($fecha_ini) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_ini)) {
                 $parts = explode('/', $fecha_ini);
@@ -625,7 +628,7 @@ class Seguimiento extends Controllers
             /*-------------------------------------------
             [ Obtiene el array de registros ]*/
             $model = new SeguimientoModel();
-            $arrData = $model->selectProyectosVentaSeguimiento($fecha_ini, $fecha_fin, $busqueda);
+            $arrData = $model->selectProyectosVentaSeguimiento($fecha_ini, $fecha_fin, $busqueda, $titulo, $cliente, $vendedor);
 
             /*-------------------------------------------
             [ Personaliza los datos del array ]*/

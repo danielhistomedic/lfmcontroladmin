@@ -255,10 +255,19 @@ class SeguimientoModel extends Mysql
      * @param string $fecha_ini
      * @param string $fecha_fin
      * @param string $busqueda
+     * @param string $titulo
+     * @param string $cliente
+     * @param string $vendedor
      * @return array
      */
-    public function selectProyectosVentaSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $busqueda = ''): array
-    {
+    public function selectProyectosVentaSeguimiento(
+        string $fecha_ini = '',
+        string $fecha_fin = '',
+        string $busqueda = '',
+        string $titulo = '',
+        string $cliente = '',
+        string $vendedor = ''
+    ): array {
         $arrResponse = array();
 
         try {
@@ -299,8 +308,23 @@ class SeguimientoModel extends Mysql
             }
 
             if (!empty($busqueda)) {
-                $sql .= " AND (v.proyecto_id LIKE :term OR v.titulo LIKE :term OR c.nombre_comercial LIKE :term OR c.razon_social LIKE :term) ";
+                $sql .= " AND (v.proyecto_id LIKE :term OR v.titulo LIKE :term OR c.nombre_comercial LIKE :term OR c.razon_social LIKE :term OR CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido) LIKE :term) ";
                 $arr_values['term'] = '%' . $busqueda . '%';
+            }
+
+            if (!empty($titulo)) {
+                $sql .= " AND v.titulo LIKE :titulo ";
+                $arr_values['titulo'] = '%' . $titulo . '%';
+            }
+
+            if (!empty($cliente)) {
+                $sql .= " AND (c.nombre_comercial LIKE :cliente OR c.razon_social LIKE :cliente) ";
+                $arr_values['cliente'] = '%' . $cliente . '%';
+            }
+
+            if (!empty($vendedor)) {
+                $sql .= " AND CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido) LIKE :vendedor ";
+                $arr_values['vendedor'] = '%' . $vendedor . '%';
             }
 
             $sql .= " ORDER BY v.id DESC";
@@ -313,4 +337,5 @@ class SeguimientoModel extends Mysql
         return $arrResponse;
     }
 }
+
 

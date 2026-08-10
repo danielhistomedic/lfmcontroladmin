@@ -139,6 +139,7 @@
                     </div>
                 </div>
 
+                <!-- Fila 1 -->
                 <!-- Filtro por Periodo -->
                 <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
                     <label class="form-label fw-semibold text-dark mb-1" for="filtro_periodo">Período:</label>
@@ -153,32 +154,51 @@
                 </div>
 
                 <!-- Fecha Inicio -->
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0 mb-2">
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
                     <label class="form-label fw-semibold text-dark mb-1" for="filtro_fecha_ini">Fecha Inicio:</label>
                     <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
                            name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" maxlength="10">
                 </div>
 
                 <!-- Fecha Fin -->
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0 mb-2">
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
                     <label class="form-label fw-semibold text-dark mb-1" for="filtro_fecha_fin">Fecha Fin:</label>
                     <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
                            name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" maxlength="10">
                 </div>
 
-                <!-- Búsqueda por Folio/Cliente -->
+                <!-- Clave / Folio -->
                 <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="txtProyectoId">Clave / Folio / Cliente:</label>
+                    <label class="form-label fw-semibold text-dark mb-1" for="txtProyectoId">Clave / Folio:</label>
                     <input type="text" class="form-control" id="txtProyectoId" name="proyecto_id" placeholder="Ej. 18654 ó PV-2026-18654" autocomplete="off">
                 </div>
 
+                <!-- Fila 2 -->
+                <!-- Título / Proyecto -->
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_titulo">Título / Proyecto:</label>
+                    <input type="text" class="form-control" id="filtro_titulo" name="filtro_titulo" placeholder="Ej. LNN MANZANILLO..." autocomplete="off">
+                </div>
+
+                <!-- Cliente -->
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_cliente">Cliente:</label>
+                    <input type="text" class="form-control" id="filtro_cliente" name="filtro_cliente" placeholder="Nombre comercial o razón social" autocomplete="off">
+                </div>
+
+                <!-- Vendedor -->
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_vendedor">Vendedor:</label>
+                    <input type="text" class="form-control" id="filtro_vendedor" name="filtro_vendedor" placeholder="Nombre del vendedor" autocomplete="off">
+                </div>
+
                 <!-- Botones Acciones -->
-                <div class="form-group col-12 col-lg-2 pt-0 mb-2 d-flex align-items-end gap-2">
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2 d-flex align-items-end gap-2">
                     <button type="button" class="btn btn-primary flex-fill hvr-float-shadow d-flex justify-content-center align-items-center" id="btnFiltrar" style="height: 38px;">
                         <i class="fa-regular fa-magnifying-glass me-1"></i> Buscar
                     </button>
-                    <button type="button" class="btn btn-outline-secondary px-3" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" style="height: 38px;" title="Limpiar Filtros">
-                        <i class="fa-regular fa-eraser"></i>
+                    <button type="button" class="btn btn-outline-secondary px-3 d-flex justify-content-center align-items-center" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" style="height: 38px;" title="Limpiar Filtros">
+                        <i class="fa-regular fa-eraser me-1"></i> Limpiar
                     </button>
                 </div>
 
