@@ -207,40 +207,89 @@ function mostrarRespuestaInteligente(busqueda, respuesta, total) {
 }
 
 /**
- * Abre el modal desplegable con la galería de imágenes del producto
+ * Abre el modal con carrusel/slide de fotografías del producto
  */
 function abrirModalFotos(jsonFotosEnc, descripcion) {
     try {
         const arrFotos = JSON.parse(decodeURIComponent(jsonFotosEnc));
-        const container = document.getElementById('containerFotosModal');
+        const indicators = document.getElementById('carouselIndicatorsFotos');
+        const inner = document.getElementById('carouselInnerFotos');
+        const caption = document.getElementById('carouselFotoCaption');
         const title = document.getElementById('modalFotoProductoTitle');
 
         if (title) {
-            title.innerHTML = `<i class="fa-solid fa-image me-2"></i>Fotos: ${descripcion}`;
+            title.innerHTML = `<i class="fa-solid fa-images me-2 text-warning"></i>Fotos: ${descripcion}`;
         }
 
-        if (container) {
-            container.innerHTML = '';
+        if (indicators && inner) {
+            indicators.innerHTML = '';
+            inner.innerHTML = '';
+
+            const total = arrFotos.length;
+
             arrFotos.forEach((url, idx) => {
-                const imgCard = document.createElement('div');
-                imgCard.className = 'card shadow-sm p-2';
-                imgCard.style.maxWidth = '260px';
-                imgCard.innerHTML = `
-                    <a href="${url}" target="_blank" title="Abrir en tamaño completo">
-                        <img src="${url}" class="img-fluid rounded" style="max-height: 220px; object-fit: contain;">
-                    </a>
-                    <small class="text-muted mt-1">Imagen ${idx + 1}</small>
+                // Indicador
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.setAttribute('data-bs-target', '#carouselFotosProducto');
+                btn.setAttribute('data-bs-slide-to', idx.toString());
+                if (idx === 0) {
+                    btn.className = 'active';
+                    btn.setAttribute('aria-current', 'true');
+                }
+                btn.setAttribute('aria-label', `Foto ${idx + 1}`);
+                indicators.appendChild(btn);
+
+                // Slide Item
+                const item = document.createElement('div');
+                item.className = `carousel-item ${idx === 0 ? 'active' : ''} h-100`;
+                item.innerHTML = `
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100 p-3" style="background-color: #0f172a;">
+                        <a href="${url}" target="_blank" title="Haz clic para ver la imagen original en pestaña nueva">
+                            <img src="${url}" class="img-fluid rounded shadow-lg" style="max-height: 400px; object-fit: contain; background-color: #ffffff; padding: 8px; border: 1px solid #334155;">
+                        </a>
+                        <small class="text-white-50 mt-2"><i class="fa-solid fa-up-right-from-square me-1"></i>Imagen ${idx + 1} de ${total} - Clic en la foto para ver en tamaño original</small>
+                    </div>
                 `;
-                container.appendChild(imgCard);
+                inner.appendChild(item);
             });
+
+            // Visibilidad de controles
+            const prevBtn = document.querySelector('#carouselFotosProducto .carousel-control-prev');
+            const nextBtn = document.querySelector('#carouselFotosProducto .carousel-control-next');
+            if (total <= 1) {
+                if (indicators) indicators.style.display = 'none';
+                if (prevBtn) prevBtn.style.display = 'none';
+                if (nextBtn) nextBtn.style.display = 'none';
+            } else {
+                if (indicators) indicators.style.display = 'flex';
+                if (prevBtn) prevBtn.style.display = 'flex';
+                if (nextBtn) nextBtn.style.display = 'flex';
+            }
+
+            if (caption) {
+                caption.innerText = `Imagen 1 de ${total}`;
+            }
+
+            // Escuchar cambio de slide
+            const carouselElem = document.getElementById('carouselFotosProducto');
+            if (carouselElem) {
+                carouselElem.removeEventListener('slid.bs.carousel', window._carouselSlideListener);
+                window._carouselSlideListener = function (e) {
+                    if (caption) {
+                        caption.innerText = `Imagen ${e.to + 1} de ${total}`;
+                    }
+                };
+                carouselElem.addEventListener('slid.bs.carousel', window._carouselSlideListener);
+            }
         }
 
         const modalElement = document.getElementById('modalFotoProducto');
         if (modalElement) {
-            const myModal = new bootstrap.Modal(modalElement);
+            const myModal = bootstrap.Modal.getOrCreateInstance(modalElement);
             myModal.show();
         }
     } catch (e) {
-        console.error("Error al abrir modal de fotos:", e);
+        console.error("Error al abrir carrusel de fotos:", e);
     }
 }

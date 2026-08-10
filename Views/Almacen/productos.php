@@ -193,21 +193,42 @@
 
 </section>
 
-<!-- Modal de Visualización de Fotografías -->
+<!-- Modal de Visualización de Fotografías en Carrusel / Slide -->
 <div class="modal fade" id="modalFotoProducto" tabindex="-1" aria-labelledby="modalFotoProductoTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg border-0">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="modalFotoProductoTitle"><i class="fa-solid fa-image me-2"></i>Fotografías del Producto</h5>
+                <h5 class="modal-title" id="modalFotoProductoTitle"><i class="fa-solid fa-images me-2 text-warning"></i>Fotografías del Producto</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center p-4">
-                <div id="containerFotosModal" class="d-flex flex-wrap justify-content-center gap-3">
-                    <!-- Fotos insertadas dinámicamente -->
+            <div class="modal-body p-0 bg-dark position-relative overflow-hidden">
+                <div id="carouselFotosProducto" class="carousel slide carousel-fade" data-bs-ride="false" data-bs-interval="false">
+                    <!-- Indicadores -->
+                    <div class="carousel-indicators" id="carouselIndicatorsFotos"></div>
+                    
+                    <!-- Diapositivas -->
+                    <div class="carousel-inner" id="carouselInnerFotos" style="height: 460px;">
+                        <!-- Insertadas dinámicamente -->
+                    </div>
+                    
+                    <!-- Control Anterior -->
+                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselFotosProducto" data-bs-slide="prev" style="width: 12%;">
+                        <span class="carousel-control-prev-icon p-3 bg-dark rounded-circle bg-opacity-75" aria-hidden="true"></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+
+                    <!-- Control Siguiente -->
+                    <button class="carousel-control-next" type="button" data-bs-target="#carouselFotosProducto" data-bs-slide="next" style="width: 12%;">
+                        <span class="carousel-control-next-icon p-3 bg-dark rounded-circle bg-opacity-75" aria-hidden="true"></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <div class="modal-footer bg-light d-flex justify-content-between align-items-center py-2 px-3">
+                <div id="carouselFotoCaption" class="fw-semibold text-secondary" style="font-size: 0.9rem;">
+                    <!-- Contador de foto -->
+                </div>
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
