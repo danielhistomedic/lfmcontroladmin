@@ -299,21 +299,27 @@ class Seguimiento extends Controllers
             if (empty($arrPermisos)) {
                 die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
-            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE] ?? ['r' => 0];
-            if (empty($this->permisosMod['r'])) {
+            $permisoOrdenes  = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r'] ?? 0;
+            $permisoProyecto = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA]['r'] ?? 0;
+            if (empty($permisoOrdenes) && empty($permisoProyecto)) {
                 die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
             /*-------------------------------------------
-            [ Recibe y desencripta venta_id ]*/
-            $venta_id_enc = strClean($_POST['venta_id'] ?? '');
-            if (empty($venta_id_enc)) {
-                die(json_encode(getResponse('Debe seleccionar una orden', 'error'), JSON_UNESCAPED_UNICODE));
+            [ Recibe y desencripta / obtiene venta_id ]*/
+            $venta_id_input = strClean($_POST['venta_id'] ?? '');
+            if (empty($venta_id_input)) {
+                die(json_encode(getResponse('Debe seleccionar una orden o proyecto', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
-            $venta_id = intval(openssl_decrypt($venta_id_enc, METHODENCRIPT, KEY));
+            if (is_numeric($venta_id_input)) {
+                $venta_id = intval($venta_id_input);
+            } else {
+                $venta_id = intval(openssl_decrypt($venta_id_input, METHODENCRIPT, KEY));
+            }
+
             if ($venta_id <= 0) {
-                die(json_encode(getResponse('ID de orden no válido', 'error'), JSON_UNESCAPED_UNICODE));
+                die(json_encode(getResponse('ID de proyecto no válido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
             /*-------------------------------------------
@@ -330,6 +336,51 @@ class Seguimiento extends Controllers
 
         /*-------------------------------------------
         [ Retorna respuesta json_encode ]*/
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Obtiene los archivos adjuntos del proyecto de venta de las 6 tablas especificadas.
+     *
+     * @return json
+     */
+    public function getAdjuntosProyecto()
+    {
+        try {
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+            $permisoProyecto = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA]['r'] ?? 0;
+            $permisoOrdenes  = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r'] ?? 0;
+            if (empty($permisoProyecto) && empty($permisoOrdenes)) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $venta_id_input = strClean($_POST['venta_id'] ?? '');
+            if (empty($venta_id_input)) {
+                die(json_encode(getResponse('Debe seleccionar un proyecto', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            if (is_numeric($venta_id_input)) {
+                $venta_id = intval($venta_id_input);
+            } else {
+                $venta_id = intval(openssl_decrypt($venta_id_input, METHODENCRIPT, KEY));
+            }
+
+            if ($venta_id <= 0) {
+                die(json_encode(getResponse('ID de proyecto no válido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $arrData = $this->model->getAdjuntosProyectoVenta($venta_id);
+
+            $arrResponse = getResponse('Datos encontrados', 'ok', false);
+            $arrResponse['data'] = $arrData;
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            die(json_encode(getResponse('Código Error: ' . self::prefijo_msj_error . '_1003. Error Desconocido'), JSON_UNESCAPED_UNICODE));
+        }
+
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
 

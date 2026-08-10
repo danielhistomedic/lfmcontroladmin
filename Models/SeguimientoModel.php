@@ -336,6 +336,151 @@ class SeguimientoModel extends Mysql
 
         return $arrResponse;
     }
+
+    /**
+     * Obtiene todos los archivos adjuntos vinculados a un proyecto de venta
+     * ordenados por las 6 tablas especificadas:
+     * 1. tb_ventas_adjuntos
+     * 2. tb_compras_cotizaciones_adjuntos
+     * 3. tb_compras_cotizacion_interna_adjuntos
+     * 4. tb_ventas_cotizacion_cliente_adjuntos
+     * 5. tb_pedidos_cliente_adjuntos
+     * 6. tb_pedidos_proveedor_adjuntos
+     *
+     * @param int $venta_id
+     * @return array
+     */
+    public function getAdjuntosProyectoVenta(int $venta_id): array
+    {
+        $arrResponse = array();
+        try {
+            // 1. tb_ventas_adjuntos
+            $sql1 = "SELECT 
+                        va.id,
+                        va.venta_id,
+                        va.archivo,
+                        COALESCE(va.comentarios, '') AS comentarios,
+                        va.fchregistro AS fecha,
+                        DATE_FORMAT(va.fchregistro, '%d/%m/%Y %H:%i') AS fecha_formateada,
+                        COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), '') AS nombre_usuario,
+                        'tb_ventas_adjuntos' AS tabla_origen,
+                        'Oportunidad / Venta' AS origen_etiqueta,
+                        'primary' AS badge_color
+                    FROM tb_ventas_adjuntos va
+                    LEFT JOIN cat_medico u ON u.ccvemedico = va.ccveusuario
+                    WHERE va.venta_id = :venta_id AND va.archivo IS NOT NULL AND TRIM(va.archivo) != ''
+                    ORDER BY va.id ASC";
+            $res1 = $this->select($sql1, ['venta_id' => $venta_id]);
+            if (!empty($res1)) {
+                $arrResponse = array_merge($arrResponse, $res1);
+            }
+
+            // 2. tb_compras_cotizaciones_adjuntos
+            $sql2 = "SELECT 
+                        ca.id,
+                        ca.venta_id,
+                        ca.archivo,
+                        '' AS comentarios,
+                        NULL AS fecha,
+                        '' AS fecha_formateada,
+                        '' AS nombre_usuario,
+                        'tb_compras_cotizaciones_adjuntos' AS tabla_origen,
+                        'Cotización de Compra' AS origen_etiqueta,
+                        'info' AS badge_color
+                    FROM tb_compras_cotizaciones_adjuntos ca
+                    WHERE ca.venta_id = :venta_id AND ca.archivo IS NOT NULL AND TRIM(ca.archivo) != ''
+                    ORDER BY ca.id ASC";
+            $res2 = $this->select($sql2, ['venta_id' => $venta_id]);
+            if (!empty($res2)) {
+                $arrResponse = array_merge($arrResponse, $res2);
+            }
+
+            // 3. tb_compras_cotizacion_interna_adjuntos
+            $sql3 = "SELECT 
+                        cia.id,
+                        cia.venta_id,
+                        cia.archivo,
+                        '' AS comentarios,
+                        NULL AS fecha,
+                        '' AS fecha_formateada,
+                        '' AS nombre_usuario,
+                        'tb_compras_cotizacion_interna_adjuntos' AS tabla_origen,
+                        'Cotización Interna' AS origen_etiqueta,
+                        'secondary' AS badge_color
+                    FROM tb_compras_cotizacion_interna_adjuntos cia
+                    WHERE cia.venta_id = :venta_id AND cia.archivo IS NOT NULL AND TRIM(cia.archivo) != ''
+                    ORDER BY cia.id ASC";
+            $res3 = $this->select($sql3, ['venta_id' => $venta_id]);
+            if (!empty($res3)) {
+                $arrResponse = array_merge($arrResponse, $res3);
+            }
+
+            // 4. tb_ventas_cotizacion_cliente_adjuntos
+            $sql4 = "SELECT 
+                        vca.id,
+                        vca.venta_id,
+                        vca.archivo,
+                        '' AS comentarios,
+                        NULL AS fecha,
+                        '' AS fecha_formateada,
+                        '' AS nombre_usuario,
+                        'tb_ventas_cotizacion_cliente_adjuntos' AS tabla_origen,
+                        'Cotización a Cliente' AS origen_etiqueta,
+                        'success' AS badge_color
+                    FROM tb_ventas_cotizacion_cliente_adjuntos vca
+                    WHERE vca.venta_id = :venta_id AND vca.archivo IS NOT NULL AND TRIM(vca.archivo) != ''
+                    ORDER BY vca.id ASC";
+            $res4 = $this->select($sql4, ['venta_id' => $venta_id]);
+            if (!empty($res4)) {
+                $arrResponse = array_merge($arrResponse, $res4);
+            }
+
+            // 5. tb_pedidos_cliente_adjuntos
+            $sql5 = "SELECT 
+                        pca.id,
+                        pca.venta_id,
+                        pca.archivo,
+                        '' AS comentarios,
+                        NULL AS fecha,
+                        '' AS fecha_formateada,
+                        '' AS nombre_usuario,
+                        'tb_pedidos_cliente_adjuntos' AS tabla_origen,
+                        'Pedido Cliente / Orden de Compra' AS origen_etiqueta,
+                        'warning' AS badge_color
+                    FROM tb_pedidos_cliente_adjuntos pca
+                    WHERE pca.venta_id = :venta_id AND pca.archivo IS NOT NULL AND TRIM(pca.archivo) != ''
+                    ORDER BY pca.id ASC";
+            $res5 = $this->select($sql5, ['venta_id' => $venta_id]);
+            if (!empty($res5)) {
+                $arrResponse = array_merge($arrResponse, $res5);
+            }
+
+            // 6. tb_pedidos_proveedor_adjuntos
+            $sql6 = "SELECT 
+                        ppa.id,
+                        ppa.venta_id,
+                        ppa.archivo,
+                        '' AS comentarios,
+                        NULL AS fecha,
+                        '' AS fecha_formateada,
+                        '' AS nombre_usuario,
+                        'tb_pedidos_proveedor_adjuntos' AS tabla_origen,
+                        'Pedido Proveedor' AS origen_etiqueta,
+                        'danger' AS badge_color
+                    FROM tb_pedidos_proveedor_adjuntos ppa
+                    WHERE ppa.venta_id = :venta_id AND ppa.archivo IS NOT NULL AND TRIM(ppa.archivo) != ''
+                    ORDER BY ppa.id ASC";
+            $res6 = $this->select($sql6, ['venta_id' => $venta_id]);
+            if (!empty($res6)) {
+                $arrResponse = array_merge($arrResponse, $res6);
+            }
+
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
 }
 
 

@@ -412,29 +412,71 @@
                         </div>
                         <!-- FIN TAB 1 -->
 
-                        <!-- TAB 2: Detalle de Seguimiento (Vacío por el momento) -->
+                        <!-- TAB 2: Detalle de Seguimiento (Historial de Seguimientos) -->
                         <div class="tab-pane fade" id="tab-detalle-seguimiento" role="tabpanel" aria-labelledby="detalle-seguimiento-tab">
-                            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
-                                <div class="py-4">
-                                    <i class="fa-regular fa-list-timeline text-muted display-4 mb-3"></i>
-                                    <h4 class="fw-bold text-dark mb-2">Detalle de Seguimiento</h4>
-                                    <p class="text-muted max-w-600 mx-auto fs-14 mb-0">
-                                        Sección en desarrollo. Aquí se mostrará la bitácora detallada de seguimiento del proyecto seleccionado.
+                            <div class="card border p-0 shadow-sm rounded-3">
+                                <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
+                                    <p class="mb-0 fw-600 text-primary fs-13">
+                                        <i class="fa-regular fa-timeline me-1"></i> Historial de Seguimientos
+                                        <span class="badge bg-primary ms-2" id="badge_total_seg">0</span>
                                     </p>
+                                </div>
+                                <div class="card-body p-0">
+
+                                    <!-- Loading seguimientos -->
+                                    <div id="loading_seguimientos" class="text-center p-4 d-none">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        <span class="ms-2 fs-13 text-muted">Cargando seguimientos...</span>
+                                    </div>
+
+                                    <!-- Sin seguimientos -->
+                                    <div id="sin_seguimientos" class="text-center p-4 d-none">
+                                        <i class="fa-light fa-inbox fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted fs-13 mb-0">Este proyecto de venta no tiene seguimientos registrados.</p>
+                                    </div>
+
+                                    <!-- Timeline de seguimientos -->
+                                    <div id="timeline_seguimientos" class="p-3">
+                                        <!-- Se llena dinámicamente con JS -->
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
                         <!-- FIN TAB 2 -->
 
-                        <!-- TAB 3: Adjuntos del Proyecto (Vacío por el momento) -->
+                        <!-- TAB 3: Adjuntos del Proyecto -->
                         <div class="tab-pane fade" id="tab-adjuntos-proyecto" role="tabpanel" aria-labelledby="adjuntos-proyecto-tab">
-                            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
-                                <div class="py-4">
-                                    <i class="fa-regular fa-paperclip text-muted display-4 mb-3"></i>
-                                    <h4 class="fw-bold text-dark mb-2">Adjuntos del Proyecto</h4>
-                                    <p class="text-muted max-w-600 mx-auto fs-14 mb-0">
-                                        Sección en desarrollo. Aquí se gestionarán los archivos y documentos adjuntos del proyecto de venta seleccionado.
+                            <div class="card border p-0 shadow-sm rounded-3">
+                                <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
+                                    <p class="mb-0 fw-600 text-warning-emphasis fs-13">
+                                        <i class="fa-regular fa-paperclip me-1 text-warning"></i> Archivos Adjuntos del Proyecto
+                                        <span class="badge bg-warning text-dark ms-2" id="badge_total_adjuntos">0</span>
                                     </p>
+                                </div>
+                                <div class="card-body p-0">
+
+                                    <!-- Loading adjuntos -->
+                                    <div id="loading_adjuntos" class="text-center p-4 d-none">
+                                        <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        <span class="ms-2 fs-13 text-muted">Cargando archivos adjuntos...</span>
+                                    </div>
+
+                                    <!-- Sin adjuntos -->
+                                    <div id="sin_adjuntos" class="text-center p-4 d-none">
+                                        <i class="fa-light fa-paperclip fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted fs-13 mb-0">Este proyecto de venta no tiene archivos adjuntos registrados en sus etapas.</p>
+                                    </div>
+
+                                    <!-- Timeline de adjuntos -->
+                                    <div id="timeline_adjuntos" class="p-3">
+                                        <!-- Se llena dinámicamente con JS -->
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
