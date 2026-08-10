@@ -453,6 +453,37 @@ function fntRenderizarTimelinePagina(pagina) {
         html += '<p class="mb-0 fs-13 text-muted" style="white-space:pre-wrap;">';
         html += escapeHtml(seg.notas || 'Sin nota registrada.');
         html += '</p>';
+
+        if (seg.archivo && seg.archivo.trim() !== '') {
+            var fileName = seg.archivo.trim();
+            var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+            var fileExt = fileName.split('.').pop().toLowerCase();
+
+            var iconClass = 'fa-file-lines text-secondary';
+            if (['pdf'].includes(fileExt)) {
+                iconClass = 'fa-file-pdf text-danger';
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt)) {
+                iconClass = 'fa-file-image text-info';
+            } else if (['doc', 'docx'].includes(fileExt)) {
+                iconClass = 'fa-file-word text-primary';
+            } else if (['xls', 'xlsx', 'csv'].includes(fileExt)) {
+                iconClass = 'fa-file-excel text-success';
+            } else if (['zip', 'rar', '7z'].includes(fileExt)) {
+                iconClass = 'fa-file-archive text-warning';
+            }
+
+            html += '<div class="mt-2 pt-2 border-top d-flex align-items-center flex-wrap gap-2">';
+            html += '<span class="fs-12 fw-semibold text-muted d-inline-flex align-items-center">';
+            html += '<i class="fa-regular fa-paperclip me-1 text-primary"></i>Adjunto:';
+            html += '</span>';
+            html += '<a href="' + fileUrl + '" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2 text-truncate" style="max-width: 100%; font-size: 12px; border-radius: 6px;" title="Abrir ' + escapeHtml(fileName) + '">';
+            html += '<i class="fa-regular ' + iconClass + ' me-1"></i>';
+            html += '<span class="text-truncate" style="max-width: 280px;">' + escapeHtml(fileName) + '</span>';
+            html += '<i class="fa-solid fa-arrow-up-right-from-square fs-10 ms-1 text-muted"></i>';
+            html += '</a>';
+            html += '</div>';
+        }
+
         html += '</div>';
         html += '</div>';
 

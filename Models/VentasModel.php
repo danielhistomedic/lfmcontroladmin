@@ -1735,6 +1735,7 @@ class VentasModel extends Mysql
                         vs.seguimiento AS notas,
                         vs.ccveusuario,
                         vs.fchregistro AS fecha,
+                        vs.archivo,
                         DATE_FORMAT(vs.fchregistro, '%d/%m/%Y %H:%i') AS fecha_formateada,
                         COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), 'Sistema') AS nombre_usuario
                     FROM tb_ventas_seguimiento vs
