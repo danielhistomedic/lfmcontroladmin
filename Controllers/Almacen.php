@@ -205,6 +205,7 @@ class Almacen extends Controllers
 
             $almacenModel = new AlmacenModel();
             $arrInventario = $almacenModel->getInventarioData($almacen, $producto);
+            $arrKpis       = $almacenModel->getKpisInventario($almacen, $producto);
 
             $arrData = [];
             foreach ($arrInventario as $key => $row) {
@@ -250,6 +251,7 @@ class Almacen extends Controllers
             echo json_encode([
                 'status'          => true,
                 'total_registros' => count($arrData),
+                'kpis'            => $arrKpis,
                 'data'            => $arrData
             ], JSON_UNESCAPED_UNICODE);
             die();

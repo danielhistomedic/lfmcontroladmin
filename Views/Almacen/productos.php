@@ -238,10 +238,6 @@
 <!-- Footer Admin 01 -->
 <?php require_once("Template/footer_01.php"); ?>
 
-<script>
-    const menu = <?= $data['menu']; ?>;
-</script>
-
 <div id="loadModalPermisos"></div>
 
 <!-- Footer Admin 02 -->

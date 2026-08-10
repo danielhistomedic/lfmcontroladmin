@@ -262,5 +262,55 @@ class AlmacenModel extends Mysql
             return [];
         }
     }
+
+    /**
+     * Obtiene los totales de inventario agrupados por almacén y moneda para las tarjetas KPI
+     * 
+     * @param string $almacen
+     * @param string $producto
+     * @return array
+     */
+    public function getKpisInventario(string $almacen = '', string $producto = ''): array
+    {
+        try {
+            $almacen  = trim($almacen);
+            $producto = trim($producto);
+
+            $sql = "SELECT 
+                        ae.ccvealmacen,
+                        IFNULL(ca.cdscalmacen, ae.ccvealmacen) AS almacen,
+                        IFNULL(tc.siglas, 'MXN') AS moneda,
+                        COUNT(DISTINCT ae.ccvematerial) AS total_productos,
+                        IFNULL(SUM(ae.iExistenciaActual), 0) AS total_existencia,
+                        IFNULL(SUM(ae.iExistenciaActual * ae.iCostoPromedio), 0) AS valor_total
+                    FROM tb_almacen_existencias ae
+                    INNER JOIN tb_materiales m ON m.ccvematerial = ae.ccvematerial
+                    LEFT JOIN cat_almacen ca ON ca.ccvealmacen = ae.ccvealmacen
+                    LEFT JOIN cat_tipos_cambio tc ON tc.id = ae.IdMoneda
+                    WHERE m.iBaja = 0 AND m.cClasificacion = 'PRODUCTO' ";
+
+            $arrValues = [];
+
+            if (!empty($almacen)) {
+                $sql .= " AND ae.ccvealmacen = :almacen ";
+                $arrValues['almacen'] = $almacen;
+            }
+
+            if (!empty($producto)) {
+                $sql .= " AND (m.ccvematerial = :producto OR m.ccveMaterialAlmacen = :producto OR m.icvematerial = :producto) ";
+                $arrValues['producto'] = $producto;
+            }
+
+            $sql .= " GROUP BY ae.ccvealmacen, IFNULL(ca.cdscalmacen, ae.ccvealmacen), IFNULL(tc.siglas, 'MXN')
+                      ORDER BY ca.cdscalmacen ASC, tc.siglas ASC ";
+
+            $arrResponse = $this->select($sql, $arrValues);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
 }
+
 

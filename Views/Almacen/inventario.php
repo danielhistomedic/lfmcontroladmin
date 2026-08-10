@@ -87,6 +87,42 @@
         min-height: 42px !important;
         padding-top: 5px !important;
     }
+    /* Estilos Tarjetas KPI (Referencia ordenesCliente) */
+    .kpi-card {
+        border-radius: 10px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+    }
+    .kpi-icon {
+        font-size: 1.8rem;
+        width: 54px;
+        height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+    .text-amount {
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .text-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    .bg-primary-lighten { background-color: rgba(13, 110, 253, 0.08) !important; }
+    .bg-success-lighten { background-color: rgba(25, 135, 84, 0.08) !important; }
+    .bg-info-lighten { background-color: rgba(13, 202, 240, 0.08) !important; }
+    .bg-warning-lighten { background-color: rgba(255, 193, 7, 0.08) !important; }
+    .bg-danger-lighten { background-color: rgba(220, 53, 69, 0.08) !important; }
+    .bg-purple-lighten { background-color: rgba(111, 66, 193, 0.08) !important; }
+    .text-purple { color: #6f42c1 !important; }
 </style>
 
 <!-- Header Admin 02 -->
@@ -164,6 +200,25 @@
                     </div>
                 </form>
             </div>
+
+            <!-- ========== TARJETAS KPI (TOTALES POR ALMACÉN Y DIVIDIDO POR MONEDA) ========== -->
+            <div class="row mb-4" id="panel_kpis" style="display: none;">
+                <div class="form-group col-12 mb-3">
+                    <div class="border-bottom pb-2 d-flex align-items-center justify-content-between">
+                        <p class="mb-0 fw-semibold text-primary" style="font-size: 1.05rem;">
+                            <i class="fa-regular fa-file-chart-pie me-2 text-secondary"></i> Totales por Almacén e Indicadores (KPIs)
+                        </p>
+                        <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.82rem;">
+                            <i class="fa-solid fa-coins text-warning me-1"></i> Totales divididos por moneda
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row g-3" id="container_kpi_cards">
+                    <!-- Tarjetas de Totales por Almacén y Moneda cargadas vía JavaScript -->
+                </div>
+            </div>
+            <!-- ========== FIN TARJETAS KPI ========== -->
 
             <!-- Tabla DataTables de Inventario Completo -->
             <section class="card card-featured card-featured-primary shadow-sm mb-4">
@@ -255,10 +310,6 @@
 
 <!-- Footer Admin 01 -->
 <?php require_once("Template/footer_01.php"); ?>
-
-<script>
-    const menu = <?= $data['menu']; ?>;
-</script>
 
 <div id="loadModalPermisos"></div>
 

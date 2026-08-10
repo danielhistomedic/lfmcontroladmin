@@ -133,8 +133,10 @@ function initDataTableInventario() {
             },
             dataSrc: function (json) {
                 if (json && json.status) {
+                    renderKpiCards(json.kpis || []);
                     return json.data || [];
                 } else {
+                    renderKpiCards([]);
                     return [];
                 }
             }
@@ -313,3 +315,75 @@ function abrirModalFotos(jsonFotosEnc, descripcion) {
         console.error("Error al abrir carrusel de fotos:", e);
     }
 }
+
+/**
+ * Renderiza dinámicamente las tarjetas KPI de Totales por Almacén y Moneda
+ */
+function renderKpiCards(kpis) {
+    const panel = document.getElementById('panel_kpis');
+    const container = document.getElementById('container_kpi_cards');
+
+    if (!panel || !container) return;
+
+    if (!kpis || kpis.length === 0) {
+        panel.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    panel.style.display = 'block';
+    container.innerHTML = '';
+
+    const colors = ['primary', 'success', 'info', 'purple', 'warning', 'danger'];
+
+    // 1. Tarjeta Resumen General (Total Stock)
+    let totalExistenciaGen = 0;
+    kpis.forEach(item => {
+        totalExistenciaGen += parseFloat(item.total_existencia) || 0;
+    });
+
+    let htmlCards = `
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="card kpi-card shadow-sm border-0 h-100">
+                <div class="card-body border d-flex align-items-center">
+                    <div class="kpi-icon bg-primary-lighten text-primary me-3">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div class="w-100">
+                        <span class="text-label text-primary d-block mb-1">Total Stock General</span>
+                        <div class="text-amount text-dark">${totalExistenciaGen.toLocaleString('es-MX')}</div>
+                        <div class="text-muted text-2"><i class="fa-solid fa-cubes me-1"></i>Piezas en existencias</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 2. Tarjetas por Almacén divididas por Moneda
+    kpis.forEach((item, index) => {
+        const color = colors[(index + 1) % colors.length];
+        const valTotal = parseFloat(item.valor_total) || 0;
+        const exist = parseFloat(item.total_existencia) || 0;
+        const valFormateado = '$' + valTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (item.moneda || 'MXN');
+
+        htmlCards += `
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card kpi-card shadow-sm border-0 h-100">
+                    <div class="card-body border d-flex align-items-center">
+                        <div class="kpi-icon bg-${color}-lighten text-${color} me-3">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </div>
+                        <div class="w-100">
+                            <span class="text-label text-${color} d-block mb-1" title="${item.almacen}">${item.almacen} (${item.ccvealmacen})</span>
+                            <div class="text-amount text-dark">${valFormateado}</div>
+                            <div class="text-muted text-2"><i class="fa-solid fa-layer-group me-1"></i>${exist.toLocaleString('es-MX')} Piezas (${item.total_productos} Prod.)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = htmlCards;
+}
+
