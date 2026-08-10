@@ -493,5 +493,96 @@ class Seguimiento extends Controllers
         [ Retorna respuesta json_encode ]*/
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
+
+    /**
+     * Busca proyecto(s) de venta por id/folio y devuelve la información general y checklist del proceso.
+     * URL / AJAX: /seguimiento/buscarProyectoVenta
+     * 
+     * @return json
+     */
+    public function buscarProyectoVenta()
+    {
+        try {
+            $arrResponse = array(
+                'status'    => false,
+                'msg'       => '',
+                'data'      => array(),
+                'proyectos' => array(),
+                'checklist' => array()
+            );
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                $arrResponse['msg'] = 'Acceso restringido';
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                $arrResponse['msg'] = 'Acceso restringido';
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Parámetros de entrada ]*/
+            $proyecto_id_input = strClean($_POST['proyecto_id'] ?? '');
+            $venta_id_select   = intval($_POST['venta_id'] ?? 0);
+
+            if (empty($proyecto_id_input) && $venta_id_select <= 0) {
+                $arrResponse['msg'] = 'Debe ingresar la clave o número de folio del proyecto de venta.';
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            $model = new SeguimientoModel();
+
+            // Si se especificó un venta_id directamente
+            if ($venta_id_select > 0) {
+                $proyectoData = $model->getProyectoVentaById($venta_id_select);
+                if (!empty($proyectoData)) {
+                    $checklist = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                    $arrResponse['status']    = true;
+                    $arrResponse['data']      = $proyectoData;
+                    $arrResponse['checklist'] = $checklist;
+                    $arrResponse['msg']       = 'Proyecto localizado correctamente';
+                } else {
+                    $arrResponse['msg'] = 'No se encontró el proyecto seleccionado.';
+                }
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            // Buscar proyectos coincidentes
+            $listaProyectos = $model->buscarProyectosVenta($proyecto_id_input);
+
+            if (empty($listaProyectos)) {
+                $arrResponse['msg'] = 'No se encontraron proyectos de venta con la clave ingresada: "' . htmlspecialchars($proyecto_id_input) . '"';
+            } elseif (count($listaProyectos) === 1) {
+                // Exactamente 1 coincidencia
+                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id']);
+                $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                $arrResponse['status']    = true;
+                $arrResponse['data']      = $proyectoData;
+                $arrResponse['proyectos'] = $listaProyectos;
+                $arrResponse['checklist'] = $checklist;
+                $arrResponse['msg']       = 'Proyecto localizado correctamente';
+            } else {
+                // Múltiples coincidencias -> Devolver lista para que el usuario elija y cargar por defecto el primero
+                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id']);
+                $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                $arrResponse['status']    = true;
+                $arrResponse['data']      = $proyectoData;
+                $arrResponse['proyectos'] = $listaProyectos;
+                $arrResponse['checklist'] = $checklist;
+                $arrResponse['msg']       = 'Se encontraron ' . count($listaProyectos) . ' proyectos coincidentes.';
+            }
+
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            $arrResponse['msg'] = 'Error al procesar la solicitud.';
+        }
+
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
 }
+
 
