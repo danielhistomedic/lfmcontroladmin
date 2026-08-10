@@ -65,6 +65,31 @@
         border-left: 4px solid #dc3545;
         background-color: #fff5f5;
     }
+    .chart-container {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        margin-bottom: 2rem;
+    }
+    .chart-title {
+        font-size: var(--font-section-title, 1.1rem);
+        font-weight: var(--font-weight-semibold, 600);
+        color: #333333;
+        margin-bottom: 1.2rem;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 0.75rem;
+    }
+    .table-custom th {
+        font-size: var(--font-table-header, 0.85rem);
+        font-weight: var(--font-weight-semibold, 600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background-color: #fcfcfc;
+    }
+    tr.selected-row {
+        background-color: rgba(13, 110, 253, 0.08) !important;
+    }
 </style>
 
 <!-- Header Admin 02 -->
@@ -83,8 +108,8 @@
                         <i class="bx bx-home-alt"></i>
                     </a>
                 </li>
-                <li><span>Inicio</span></li>
-                <li><span><?= $data['page_breadcrumb']; ?></span></li>
+                <li><span>Seguimiento</span></li>
+                <li><span>Proyecto de Venta</span></li>
             </ol>
             <div class="sidebar-right-toggle" style="cursor: default;"></div>
         </div>
@@ -93,174 +118,237 @@
     <!-- START: PAGE CONTENT -->
     <div class="row">
 
+        <div class="col-12 loading-panel-showing">
 
-        <!-- 1) ENCABEZADO DE FILTRO -->
-        <div class="col-12 col-lg-6 mb-4">
-    
-            <div class="form-group col-12 mb-2">
-                <div class="border-bottom pb-2">
-                    <p class="mb-0 fw-semibold text-primary">
-                        <i class="fa-regular fa-filter text-secondary me-2"></i> Filtro de Proyecto de Venta
-                    </p>
+            <div class="loading-panel">
+                <div class="bounce-loader">
+                    <div class="bounce1"></div>
+                    <div class="bounce2"></div>
+                    <div class="bounce3"></div>
                 </div>
             </div>
 
-            <div class="form-group col-12 mb-2">
-                <form id="formFiltroProyecto" onsubmit="fntBuscarProyecto(event)">
-                    <div class="row align-items-start g-2">
-                        <div class="col-md-7">
-                            <label for="txtProyectoId" class="form-label fw-semibold text-dark mb-1">
-                                Clave / Folio o Número de Proyecto <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-light border-end-0 text-primary">
-                                    <i class="fa-sharp fa-light fa-diagram-project"></i>
-                                </span>
-                                <input type="text" 
-                                       class="form-control border-start-0 fs-14 fw-bold" 
-                                       id="txtProyectoId" 
-                                       name="proyecto_id" 
-                                       placeholder="Ej. 18654 ó PV-2026-18654" 
-                                       autocomplete="off" 
-                                       required>
-                            </div>
-                            <div class="form-text mt-1 text-muted fs-12">
-                                <i class="fa-regular fa-lightbulb text-warning me-1"></i>Tip: Puede digitar sólo la parte numérica final (ej. <strong>18654</strong>).
-                            </div>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label d-none d-md-block mb-1">&nbsp;</label>
-                            <div class="d-flex gap-2">
-                                <button type="submit" id="btnBuscarProyecto" class="btn btn-primary flex-fill shadow-sm">
-                                    <i class="fa-regular fa-magnifying-glass me-1"></i>Buscar
-                                </button>
-                                <button type="button" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" class="btn btn-outline-secondary px-3">
-                                    <i class="fa-regular fa-eraser me-1"></i>Limpiar
-                                </button>
-                            </div>
-                        </div>
+            <!-- ========== FILTROS DE BÚSQUEDA ========== -->
+            <div class="row mb-4" id="panel_filtros">
+
+                <div class="form-group col-12 mb-2">
+                    <div class="border-bottom pb-2">
+                        <p class="mb-0 fw-semibold text-primary">
+                            <i class="fa-regular fa-filter text-secondary me-2"></i> Filtros de Búsqueda de Proyectos
+                        </p>
                     </div>
-                </form>
-            </div>
-                
-        </div>
-
-        <!-- 1.5) SELECTOR DE COINCIDENCIAS MULTIPLES (Si existen varias coincidencias parciales) -->
-        <div class="col-12 mb-4 d-none" id="containerCoincidencias">
-            <div class="alert alert-info shadow-sm border-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 rounded-3">
-                <div class="mb-2 mb-md-0">
-                    <i class="fa-regular fa-list-check me-2 fs-5"></i>
-                    <strong>Se encontraron múltiples proyectos coincidentes.</strong> Por favor seleccione uno:
                 </div>
-                <div class="col-md-5">
-                    <select id="selectProyectosCoincidentes" class="form-select form-select-sm fw-semibold" onchange="fntSeleccionarProyecto(this.value)">
-                        <!-- Opciones dinámicas -->
+
+                <!-- Filtro por Periodo -->
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_periodo">Período:</label>
+                    <select class="form-select" id="filtro_periodo" name="filtro_periodo">
+                        <option value="este_mes" selected>Este Mes</option>
+                        <option value="mes_anterior">Mes Anterior</option>
+                        <option value="ano_actual">Año Actual</option>
+                        <option value="ultimos_30">Últimos 30 días</option>
+                        <option value="personalizado">Personalizado</option>
+                        <option value="todos">Todos los Periodos</option>
                     </select>
                 </div>
-            </div>
-        </div>
 
-        <!-- STATE: CARGANDO / NO ENCONTRADO / INICIAL -->
-        <div class="col-12 d-none" id="panelLoading">
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                    <span class="visually-hidden">Cargando...</span>
+                <!-- Fecha Inicio -->
+                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_fecha_ini">Fecha Inicio:</label>
+                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                           name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" maxlength="10">
                 </div>
-                <h5 class="text-muted mt-3 fw-semibold">Consultando información del proyecto...</h5>
-            </div>
-        </div>
 
-        <!-- 2) RESUMEN DEL PROYECTO SELECCIONADO -->
-        <div class="col-12 mb-4 d-none" id="cardResumenProyecto">
-            <section class="card shadow-sm border-0 overflow-hidden">
-                <div class="card-header bg-dark text-white p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary fs-14 px-3 py-2" id="lblProyectoId">—</span>
-                        <h4 class="m-0 fw-bold text-white fs-16" id="lblTituloProyecto">—</h4>
-                    </div>
+                <!-- Fecha Fin -->
+                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_fecha_fin">Fecha Fin:</label>
+                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                           name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" maxlength="10">
+                </div>
+
+                <!-- Búsqueda por Folio/Cliente -->
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
+                    <label class="form-label fw-semibold text-dark mb-1" for="txtProyectoId">Clave / Folio / Cliente:</label>
+                    <input type="text" class="form-control" id="txtProyectoId" name="proyecto_id" placeholder="Ej. 18654 ó PV-2026-18654" autocomplete="off">
+                </div>
+
+                <!-- Botones Acciones -->
+                <div class="form-group col-12 col-lg-2 pt-0 mb-2 d-flex align-items-end gap-2">
+                    <button type="button" class="btn btn-primary flex-fill hvr-float-shadow d-flex justify-content-center align-items-center" id="btnFiltrar" style="height: 38px;">
+                        <i class="fa-regular fa-magnifying-glass me-1"></i> Buscar
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary px-3" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" style="height: 38px;" title="Limpiar Filtros">
+                        <i class="fa-regular fa-eraser"></i>
+                    </button>
+                </div>
+
+            </div>
+            <!-- ========== FIN FILTROS ========== -->
+
+            <!-- ========== PRIMERA SECCIÓN: LISTA DE PROYECTOS DE VENTA (DATATABLE) ========== -->
+            <div class="chart-container border mb-4" id="panel_lista_proyectos">
+
+                <div class="chart-title d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="fs-12 text-uppercase text-light me-1">Estatus Actual:</span>
-                        <span id="lblEstatusBadge" class="badge bg-warning text-dark fs-12 px-3 py-2">—</span>
+                        <i class="fa-regular fa-bars-staggered text-primary me-2"></i> Lista de Proyectos de Venta
                     </div>
+                    <small class="text-muted fw-normal fs-12">Haga clic en un registro de la lista para ver su detalle de seguimiento</small>
                 </div>
-                <div class="card-body p-4 bg-light-subtle">
-                    <div class="row g-3">
-                        <div class="col-md-6 col-lg-3">
-                            <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                <small class="text-muted d-block text-uppercase fw-semibold fs-11">Cliente</small>
-                                <span class="fw-bold text-dark fs-14 d-block text-truncate" id="lblCliente" title="">—</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                <small class="text-muted d-block text-uppercase fw-semibold fs-11">Vendedor Asignado</small>
-                                <span class="fw-semibold text-dark fs-14 d-block text-truncate" id="lblVendedor" title="">—</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                <small class="text-muted d-block text-uppercase fw-semibold fs-11">Fecha de Proyecto</small>
-                                <span class="fw-semibold text-dark fs-14 d-block" id="lblFecha">—</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="p-3 bg-white rounded border h-100 shadow-2xs">
-                                <small class="text-muted d-block text-uppercase fw-semibold fs-11">Monto Oportunidad / Venta</small>
-                                <span class="fw-bold text-success fs-15 d-block" id="lblMontoTotal">—</span>
-                            </div>
-                        </div>
-                    </div>
+
+                <!-- Tabla de Proyectos de Venta -->
+                <div class="table-responsive export-table">
+                    <table id="tableProyectosVenta"
+                           class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100">
+                        <thead>
+                            <tr>
+                                <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Proyecto Venta</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Fecha</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Cliente</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Vendedor</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Monto Total</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Estatus</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
-            </section>
-        </div>
 
-        <!-- 3) CHECKLIST DEL PROCESO (ESTATUS ID 1 AL 7) -->
-        <div class="col-12 d-none" id="cardChecklistProceso">
-            <section class="card card-featured shadow-sm">
-                <header class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div>
-                        <h3 class="card-title m-0 text-dark fw-bold fs-16">
-                            <i class="fa-sharp fa-regular fa-list-check text-primary me-2"></i>Checklist de Evaluación del Proceso
-                        </h3>
-                        <small class="text-muted">Evaluación de las etapas principales del proyecto de venta</small>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-secondary fs-12 px-3 py-2" id="lblProgresoPorcentaje">0% Completado</span>
-                    </div>
-                </header>
-
-                <div class="card-body p-4">
-                    <!-- BARRA DE PROGRESO -->
-                    <div class="progress mb-4" style="height: 12px; border-radius: 6px;">
-                        <div id="barProgresoChecklist" 
-                             class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
-                             role="progressbar" 
-                             style="width: 0%;" 
-                             aria-valuenow="0" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                        </div>
-                    </div>
-
-                    <!-- TIMELINE CONTENEDOR DEL CHECKLIST -->
-                    <div class="timeline-checklist mt-4" id="containerChecklistItems">
-                        <!-- Generado dinámicamente mediante JS -->
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- INICIAL / SIN SELECCIÓN PLACEHOLDER -->
-        <div class="col-12" id="panelPlaceholder">
-            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
-                <div class="py-4">
-                    <i class="fa-sharp fa-light fa-diagram-project text-muted display-4 mb-3"></i>
-                    <h4 class="fw-bold text-dark mb-2">Consulta de Proyecto de Venta</h4>
-                    <p class="text-muted max-w-600 mx-auto fs-14">
-                        Ingrese la clave o el folio numérico en el encabezado de filtro superior para visualizar la información detallada y la evaluación paso a paso en el checklist del proceso.
-                    </p>
-                </div>
             </div>
+            <!-- ========== FIN PRIMERA SECCIÓN ========== -->
+
+            <!-- ========== SEGUNDA SECCIÓN: DETALLE DE SEGUIMIENTO DEL PROYECTO SELECCIONADO ========== -->
+            <div id="panel_detalle_proyecto" class="row">
+
+                <div class="col-12 mb-3">
+                    <div class="border-bottom pb-2 d-flex align-items-center justify-content-between">
+                        <p class="mb-0 fw-semibold text-primary fs-16">
+                            <i class="fa-sharp fa-light fa-diagram-project me-2"></i> Detalle del Seguimiento del Proyecto Seleccionado
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SELECTOR DE COINCIDENCIAS MULTIPLES -->
+                <div class="col-12 mb-4 d-none" id="containerCoincidencias">
+                    <div class="alert alert-info shadow-sm border-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 rounded-3">
+                        <div class="mb-2 mb-md-0">
+                            <i class="fa-regular fa-list-check me-2 fs-5"></i>
+                            <strong>Se encontraron múltiples proyectos coincidentes.</strong> Por favor seleccione uno:
+                        </div>
+                        <div class="col-md-5">
+                            <select id="selectProyectosCoincidentes" class="form-select form-select-sm fw-semibold" onchange="fntSeleccionarProyecto(this.value)">
+                                <!-- Opciones dinámicas -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STATE: CARGANDO -->
+                <div class="col-12 d-none" id="panelLoading">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <h5 class="text-muted mt-3 fw-semibold">Consultando información del proyecto...</h5>
+                    </div>
+                </div>
+
+                <!-- RESUMEN DEL PROYECTO SELECCIONADO -->
+                <div class="col-12 mb-4 d-none" id="cardResumenProyecto">
+                    <section class="card shadow-sm border-0 overflow-hidden">
+                        <div class="card-header bg-dark text-white p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary fs-14 px-3 py-2" id="lblProyectoId">—</span>
+                                <h4 class="m-0 fw-bold text-white fs-16" id="lblTituloProyecto">—</h4>
+                            </div>
+                            <div>
+                                <span class="fs-12 text-uppercase text-light me-1">Estatus Actual:</span>
+                                <span id="lblEstatusBadge" class="badge bg-warning text-dark fs-12 px-3 py-2">—</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-4 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Cliente</small>
+                                        <span class="fw-bold text-dark fs-14 d-block text-truncate" id="lblCliente" title="">—</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Vendedor Asignado</small>
+                                        <span class="fw-semibold text-dark fs-14 d-block text-truncate" id="lblVendedor" title="">—</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Fecha de Proyecto</small>
+                                        <span class="fw-semibold text-dark fs-14 d-block" id="lblFecha">—</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                        <small class="text-muted d-block text-uppercase fw-semibold fs-11">Monto Oportunidad / Venta</small>
+                                        <span class="fw-bold text-success fs-15 d-block" id="lblMontoTotal">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- CHECKLIST DEL PROCESO (ESTATUS ID 1 AL 7) -->
+                <div class="col-12 d-none" id="cardChecklistProceso">
+                    <section class="card card-featured shadow-sm">
+                        <header class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div>
+                                <h3 class="card-title m-0 text-dark fw-bold fs-16">
+                                    <i class="fa-sharp fa-regular fa-list-check text-primary me-2"></i>Checklist de Evaluación del Proceso
+                                </h3>
+                                <small class="text-muted">Evaluación de las etapas principales del proyecto de venta</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary fs-12 px-3 py-2" id="lblProgresoPorcentaje">0% Completado</span>
+                            </div>
+                        </header>
+
+                        <div class="card-body p-4">
+                            <!-- BARRA DE PROGRESO -->
+                            <div class="progress mb-4" style="height: 12px; border-radius: 6px;">
+                                <div id="barProgresoChecklist" 
+                                     class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                     role="progressbar" 
+                                     style="width: 0%;" 
+                                     aria-valuenow="0" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+
+                            <!-- TIMELINE CONTENEDOR DEL CHECKLIST -->
+                            <div class="timeline-checklist mt-4" id="containerChecklistItems">
+                                <!-- Generado dinámicamente mediante JS -->
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- PLACEHOLDER / SIN SELECCIÓN -->
+                <div class="col-12" id="panelPlaceholder">
+                    <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
+                        <div class="py-4">
+                            <i class="fa-sharp fa-light fa-diagram-project text-muted display-4 mb-3"></i>
+                            <h4 class="fw-bold text-dark mb-2">Consulta de Proyecto de Venta</h4>
+                            <p class="text-muted max-w-600 mx-auto fs-14">
+                                Seleccione un proyecto de venta del listado superior o utilice los filtros para visualizar la información detallada y la evaluación en el checklist del proceso.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- ========== FIN SEGUNDA SECCIÓN ========== -->
+
         </div>
 
     </div>
@@ -276,4 +364,3 @@
 
 <!-- Footer Admin 02 -->
 <?php require_once("Template/footer_02.php"); ?>
-

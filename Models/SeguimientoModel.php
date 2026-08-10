@@ -248,4 +248,69 @@ class SeguimientoModel extends Mysql
 
         return $checklist;
     }
+
+    /**
+     * Obtiene la lista de proyectos de venta para el DataTable de Seguimiento
+     * 
+     * @param string $fecha_ini
+     * @param string $fecha_fin
+     * @param string $busqueda
+     * @return array
+     */
+    public function selectProyectosVentaSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $busqueda = ''): array
+    {
+        $arrResponse = array();
+
+        try {
+            $sql = "SELECT 
+                        v.id,
+                        v.proyecto_id,
+                        v.titulo,
+                        v.fecha,
+                        DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
+                        v.subtotal,
+                        v.iva,
+                        v.total,
+                        v.moneda_id,
+                        CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda,
+                        v.estatus_proyecto_id,
+                        v.motivo_cancelacion,
+                        COALESCE(c.nombre_comercial, c.razon_social, 'Sin Cliente') AS cliente,
+                        COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), 'Sin Vendedor') AS vendedor,
+                        COALESCE(e.cEstatus, 'Sin Estatus') AS estatus_proyecto
+                    FROM tb_ventas v
+                    LEFT JOIN cat_clientes c ON c.id = v.cliente_id
+                    LEFT JOIN cat_medico u ON u.ccvemedico = v.ccveusuario_vendedor
+                    LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
+                    WHERE 1=1 ";
+
+            $arr_values = [];
+
+            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+                $sql .= " AND DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+                $arr_values['fecha_fin'] = $fecha_fin;
+            } elseif (!empty($fecha_ini)) {
+                $sql .= " AND DATE(v.fecha) >= :fecha_ini ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+            } elseif (!empty($fecha_fin)) {
+                $sql .= " AND DATE(v.fecha) <= :fecha_fin ";
+                $arr_values['fecha_fin'] = $fecha_fin;
+            }
+
+            if (!empty($busqueda)) {
+                $sql .= " AND (v.proyecto_id LIKE :term OR v.titulo LIKE :term OR c.nombre_comercial LIKE :term OR c.razon_social LIKE :term) ";
+                $arr_values['term'] = '%' . $busqueda . '%';
+            }
+
+            $sql .= " ORDER BY v.id DESC";
+
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
 }
+

@@ -583,6 +583,85 @@ class Seguimiento extends Controllers
 
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
+
+    /**
+     * Obtiene la lista de proyectos de venta para llenar el DataTable.
+     * URL / AJAX: /seguimiento/getProyectosVentaDatatable
+     * 
+     * @return json
+     */
+    public function getProyectosVentaDatatable()
+    {
+        try {
+            $arrData = array();
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe y limpia parámetros de filtro ]*/
+            $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
+            $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
+            $busqueda  = strClean($_POST['busqueda'] ?? '');
+
+            if (!empty($fecha_ini) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_ini)) {
+                $parts = explode('/', $fecha_ini);
+                $fecha_ini = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            }
+
+            if (!empty($fecha_fin) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_fin)) {
+                $parts = explode('/', $fecha_fin);
+                $fecha_fin = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            }
+
+            /*-------------------------------------------
+            [ Obtiene el array de registros ]*/
+            $model = new SeguimientoModel();
+            $arrData = $model->selectProyectosVentaSeguimiento($fecha_ini, $fecha_fin, $busqueda);
+
+            /*-------------------------------------------
+            [ Personaliza los datos del array ]*/
+            for ($i = 0; $i < count($arrData); $i++) {
+                $venta_id = $arrData[$i]['id'];
+                $estatus_id = (int)$arrData[$i]['estatus_proyecto_id'];
+                $estatus_txt = $arrData[$i]['estatus_proyecto'];
+
+                if ($estatus_id === 2) {
+                    $badge_class = 'bg-danger';
+                } elseif ($estatus_id >= 7) {
+                    $badge_class = 'bg-success';
+                } elseif ($estatus_id >= 5) {
+                    $badge_class = 'bg-info text-dark';
+                } else {
+                    $badge_class = 'bg-warning text-dark';
+                }
+                $arrData[$i]['estatus_badge'] = '<span class="badge ' . $badge_class . ' fs-11">' . htmlspecialchars($estatus_txt) . '</span>';
+
+                $moneda = !empty($arrData[$i]['cmoneda']) ? $arrData[$i]['cmoneda'] : 'USD';
+                $monto  = (float)($arrData[$i]['total'] ?? 0);
+                $arrData[$i]['monto_formateado'] = $moneda . ' $' . number_format($monto, 2, '.', ',');
+
+                $btnDetalle = '<button type="button" class="btn btn-sm btn-primary px-2 py-1 btnVerDetalleProyecto" data-id="' . $venta_id . '" title="Ver Detalle de Seguimiento"><i class="fa-regular fa-eye me-1"></i>Ver Detalle</button>';
+                $arrData[$i]['options'] = $btnDetalle;
+            }
+
+            echo json_encode($arrData, JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            echo json_encode(array(), JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
 }
+
 
 
