@@ -146,4 +146,121 @@ class AlmacenModel extends Mysql
             return [];
         }
     }
+
+    /**
+     * Obtiene los almacenes activos de cat_almacen
+     * 
+     * @return array
+     */
+    public function getAlmacenes(): array
+    {
+        try {
+            $sql = "SELECT ccvealmacen, cdscalmacen FROM cat_almacen WHERE iActivo = 1 ORDER BY cdscalmacen ASC";
+            $arrResponse = $this->select($sql, []);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
+
+    /**
+     * Búsqueda ligera de productos para el filtro autocompletado (Select2)
+     * 
+     * @param string $search
+     * @return array
+     */
+    public function buscarProductosSelect(string $search = ''): array
+    {
+        try {
+            $search = trim($search);
+            $sql = "SELECT 
+                        m.ccvematerial AS id,
+                        CONCAT(IFNULL(m.cDescripcion, ''), ' [Clave: ', IFNULL(m.ccvematerial, ''), ' | CCN: ', IFNULL(m.ccveMaterialAlmacen, ''), ']') AS text
+                    FROM tb_materiales m
+                    WHERE m.iBaja = 0 AND m.cClasificacion = 'PRODUCTO' ";
+            $arrValues = [];
+            if (!empty($search)) {
+                $sql .= " AND (m.cDescripcion LIKE :search OR m.ccvematerial LIKE :search OR m.ccveMaterialAlmacen LIKE :search) ";
+                $arrValues['search'] = '%' . $search . '%';
+            }
+            $sql .= " ORDER BY m.cDescripcion ASC LIMIT 50";
+            $arrResponse = $this->select($sql, $arrValues);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene existencias e inventario completo filtrado por almacén y/o producto
+     * 
+     * @param string $almacen
+     * @param string $producto
+     * @return array
+     */
+    public function getInventarioData(string $almacen = '', string $producto = ''): array
+    {
+        try {
+            $almacen = trim($almacen);
+            $producto = trim($producto);
+
+            $sql = "SELECT 
+                        m.icvematerial,
+                        IFNULL(m.ccvematerial, '') AS Clave,
+                        IFNULL(m.ccveMaterialAlmacen, '') AS CCN,
+                        IFNULL(m.cDescripcion, '') AS cDescripcion,
+                        IFNULL(mar.cdscmarca, '') AS marca,
+                        IFNULL(m.ccveunidad, '') AS unidad_medida,
+                        IFNULL(sub.cdscsubmarca, '') AS submarca,
+                        IFNULL(cla.cdscclave, '') AS linea_producto,
+                        IFNULL(cat.categoria, '') AS categoria,
+                        IFNULL(m.modelo, '') AS modelo,
+                        IFNULL(m.num_catalogo, '') AS num_catalogo,
+                        IFNULL(m.num_parte, '') AS num_parte,
+                        IFNULL(m.serie, '') AS serie,
+                        IFNULL(m.material, '') AS material,
+                        IFNULL(m.grupo, '') AS grupo,
+                        IFNULL(m.clave_sat, '') AS clave_sat,
+                        ftp.img1, ftp.img2, ftp.img3, ftp.img4, ftp.img5,
+                        ae.ccvealmacen,
+                        IFNULL(ca.cdscalmacen, ae.ccvealmacen) AS cdscalmacen,
+                        IFNULL(ae.iExistenciaActual, 0) AS existencia,
+                        IFNULL(ae.iCostoPromedio, 0) AS costo_promedio,
+                        IFNULL(ae.iUltimoCosto, 0) AS costo_ultimo,
+                        IFNULL(tc.siglas, '') AS moneda
+                    FROM tb_almacen_existencias ae
+                    INNER JOIN tb_materiales m ON m.ccvematerial = ae.ccvematerial
+                    LEFT JOIN cat_almacen ca ON ca.ccvealmacen = ae.ccvealmacen
+                    LEFT JOIN cat_tipos_cambio tc ON tc.id = ae.IdMoneda
+                    LEFT JOIN cat_marcas mar ON mar.icvemarca = m.icvemarca
+                    LEFT JOIN cat_submarcas sub ON sub.id = m.submarca_id
+                    LEFT JOIN cat_claves cla ON cla.icveclave = m.icveclave
+                    LEFT JOIN cat_categorias cat ON cat.id = m.categoria_id
+                    LEFT JOIN tb_materiales_ftp ftp ON ftp.idDocto = m.ccvematerial
+                    WHERE m.iBaja = 0 AND m.cClasificacion = 'PRODUCTO' ";
+
+            $arrValues = [];
+
+            if (!empty($almacen)) {
+                $sql .= " AND ae.ccvealmacen = :almacen ";
+                $arrValues['almacen'] = $almacen;
+            }
+
+            if (!empty($producto)) {
+                $sql .= " AND (m.ccvematerial = :producto OR m.ccveMaterialAlmacen = :producto OR m.icvematerial = :producto) ";
+                $arrValues['producto'] = $producto;
+            }
+
+            $sql .= " ORDER BY ca.cdscalmacen ASC, m.cDescripcion ASC ";
+
+            $arrResponse = $this->select($sql, $arrValues);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
 }
+

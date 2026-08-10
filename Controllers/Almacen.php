@@ -164,17 +164,126 @@ class Almacen extends Controllers
             $data['icon_form_title']  = !empty($menu['icon_form_title']) ? $menu['icon_form_title'] : '<i class="fa-sharp fa-light fa-warehouse text-primary me-2"></i>';
             $data['page_form_title']  = $data['icon_form_title'] . (!empty($menu['form_title']) ? $menu['form_title'] : ' Inventario');
 
-            //Breadcrumb
+            // Breadcrumb
             $data['page_breadcrumb']       = 'Almacén / Inventario';
             $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Inventario de Almacenes y Subalmacenes';
             $data['page_card_description'] = $data['meta_description'];
 
-            //Call Vista
+            // JS de la página
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'almacen_inventario.js';
+
+            // Obtener lista de almacenes para el filtro
+            $almacenModel = new AlmacenModel();
+            $data['almacenes'] = $almacenModel->getAlmacenes();
+
+            // Call Vista
             $this->views->getView($this, "inventario", $data);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
         }
     }
+
+    /**
+     * Endpoint AJAX para obtener existencias de inventario filtradas por almacén y/o producto.
+     * URL: /almacen/getInventario
+     */
+    public function getInventario()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_INVENTARIO] ?? ['r' => 0];
+
+            if (empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'Acceso no permitido.', 'data' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $almacen  = $_POST['almacen']  ?? $_GET['almacen']  ?? '';
+            $producto = $_POST['producto'] ?? $_GET['producto'] ?? '';
+
+            $almacenModel = new AlmacenModel();
+            $arrInventario = $almacenModel->getInventarioData($almacen, $producto);
+
+            $arrData = [];
+            foreach ($arrInventario as $key => $row) {
+                // Fotos
+                $fotos = [];
+                for ($i = 1; $i <= 5; $i++) {
+                    $imgKey = "img" . $i;
+                    if (!empty($row[$imgKey])) {
+                        $imgFile = trim($row[$imgKey]);
+                        $imgPath = "Assets/files/productos/" . $imgFile;
+                        if (file_exists($imgPath)) {
+                            $fotos[] = base_url() . "/" . $imgPath;
+                        }
+                    }
+                }
+
+                $arrData[] = [
+                    'icvematerial'   => $row['icvematerial'],
+                    'Clave'          => $row['Clave'],
+                    'CCN'            => $row['CCN'],
+                    'cDescripcion'   => $row['cDescripcion'],
+                    'marca'          => $row['marca'],
+                    'unidad_medida'  => $row['unidad_medida'],
+                    'submarca'       => $row['submarca'],
+                    'linea_producto' => $row['linea_producto'],
+                    'categoria'      => $row['categoria'],
+                    'modelo'         => $row['modelo'],
+                    'num_catalogo'   => $row['num_catalogo'],
+                    'num_parte'      => $row['num_parte'],
+                    'serie'          => $row['serie'],
+                    'material'       => $row['material'],
+                    'grupo'          => $row['grupo'],
+                    'clave_sat'      => $row['clave_sat'],
+                    'almacen'        => $row['cdscalmacen'],
+                    'existencia'     => floatval($row['existencia']),
+                    'costo_promedio' => floatval($row['costo_promedio']),
+                    'costo_ultimo'   => floatval($row['costo_ultimo']),
+                    'moneda'         => $row['moneda'] ?? '',
+                    'fotos'          => $fotos
+                ];
+            }
+
+            echo json_encode([
+                'status'          => true,
+                'total_registros' => count($arrData),
+                'data'            => $arrData
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al procesar la solicitud.', 'data' => []], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX para alimentar el selector de producto (Select2 autocompletado).
+     * URL: /almacen/getSelectProductos
+     */
+    public function getSelectProductos()
+    {
+        try {
+            $search = $_POST['q'] ?? $_GET['q'] ?? $_POST['search'] ?? $_GET['search'] ?? '';
+
+            $almacenModel = new AlmacenModel();
+            $arrProductos = $almacenModel->buscarProductosSelect($search);
+
+            echo json_encode([
+                'status'  => true,
+                'results' => $arrProductos
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'results' => []], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
 
     /**
      * Endpoint AJAX para obtener productos y respuesta inteligente.

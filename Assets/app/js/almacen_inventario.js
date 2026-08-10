@@ -1,78 +1,116 @@
 /*==================================================================
-[ JS: Almacén - Productos y Existencias ]
+[ JS: Almacén - Inventario ]
 ==================================================================*/
 
-var tableProductos = null;
-var tableElement = '#tableProductosAlmacen';
+var tableInventario = null;
+var tableElement = '#tableInventarioAlmacen';
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Inicializar Select2 en el filtro de producto (búsqueda dinámica AJAX)
+    initSelectProducto();
+
     // Inicializar DataTable al cargar la página
-    initDataTableProductos();
+    initDataTableInventario();
 
-    // Evento submit en formulario de búsqueda
-    const formBuscador = document.getElementById('formBuscadorProductos');
-    if (formBuscador) {
-        formBuscador.addEventListener('submit', function (e) {
+    // Evento clic en aplicar filtros
+    const btnAplicar = document.getElementById('btnAplicarFiltros');
+    if (btnAplicar) {
+        btnAplicar.addEventListener('click', function (e) {
             e.preventDefault();
             ejecutarBusqueda();
         });
     }
 
-    // Evento clic en botón buscar
-    const btnBuscar = document.getElementById('btnBuscarProducto');
-    if (btnBuscar) {
-        btnBuscar.addEventListener('click', function (e) {
-            e.preventDefault();
+    // Evento cambio en select de almacén
+    const selectAlmacen = document.getElementById('selectFiltroAlmacen');
+    if (selectAlmacen) {
+        selectAlmacen.addEventListener('change', function () {
             ejecutarBusqueda();
         });
     }
 
-    // Evento clic en botón limpiar
-    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+    // Evento clic en limpiar filtros
+    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
     if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', function () {
-            document.getElementById('inputBuscarProducto').value = '';
-            btnLimpiar.style.display = 'none';
-            ejecutarBusqueda();
-        });
-    }
-
-    // Mostrar / ocultar botón de limpiar según texto
-    const inputBuscar = document.getElementById('inputBuscarProducto');
-    if (inputBuscar) {
-        inputBuscar.addEventListener('input', function () {
-            if (this.value.trim().length > 0) {
-                if (btnLimpiar) btnLimpiar.style.display = 'inline-block';
-            } else {
-                if (btnLimpiar) btnLimpiar.style.display = 'none';
-            }
+        btnLimpiar.addEventListener('click', function (e) {
+            e.preventDefault();
+            limpiarFiltros();
         });
     }
 });
 
 /**
- * Recarga la tabla con los parámetros de búsqueda actuales
+ * Inicializa el autocompletado Select2 para la selección de producto individual
  */
-function ejecutarBusqueda() {
-    if (tableProductos) {
-        tableProductos.ajax.reload();
-    } else {
-        initDataTableProductos();
+function initSelectProducto() {
+    if ($.fn.select2) {
+        $('#selectFiltroProducto').select2({
+            placeholder: '-- Todos los productos --',
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function () { return "No se encontraron productos"; },
+                searching: function () { return "Buscando..."; },
+                inputTooShort: function () { return "Ingrese clave, CCN o nombre..."; }
+            },
+            ajax: {
+                url: base_url + '/almacen/getSelectProductos',
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    return {
+                        q: params.term || ''
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: (data && data.results) ? data.results : []
+                    };
+                },
+                cache: true
+            }
+        }).on('change', function () {
+            ejecutarBusqueda();
+        });
     }
 }
 
 /**
- * Inicializa el DataTable de Productos
+ * Recarga la tabla de inventario con los filtros seleccionados
  */
-function initDataTableProductos() {
-    const urlGet = base_url + '/almacen/getProductos';
+function ejecutarBusqueda() {
+    if (tableInventario) {
+        tableInventario.ajax.reload();
+    } else {
+        initDataTableInventario();
+    }
+}
+
+/**
+ * Resetea los filtros de Almacén y Producto
+ */
+function limpiarFiltros() {
+    $('#selectFiltroAlmacen').val('');
+    if ($.fn.select2) {
+        $('#selectFiltroProducto').val(null).trigger('change');
+    } else {
+        $('#selectFiltroProducto').val('');
+        ejecutarBusqueda();
+    }
+}
+
+/**
+ * Inicializa la tabla DataTables de Inventario
+ */
+function initDataTableInventario() {
+    const urlGet = base_url + '/almacen/getInventario';
 
     if ($.fn.DataTable.isDataTable(tableElement)) {
         $(tableElement).DataTable().destroy();
         $(tableElement).find('tbody').empty();
     }
 
-    tableProductos = $(tableElement).DataTable({
+    tableInventario = $(tableElement).DataTable({
         destroy: true,
         processing: true,
         serverSide: false,
@@ -81,22 +119,22 @@ function initDataTableProductos() {
         order: [[1, "asc"]],
         iDisplayLength: 5,
         lengthMenu: [
-            [3, 5, 10, 25, 50, 100, -1],
-            [3, 5, 10, 25, 50, 100, "Todos"]
+            [5, 10, 25, 50, 100, -1],
+            [5, 10, 25, 50, 100, "Todos"]
         ],
         ajax: {
             url: urlGet,
             type: 'POST',
             data: function (d) {
-                const input = document.getElementById('inputBuscarProducto');
-                d.busqueda = input ? input.value.trim() : '';
+                const alm = document.getElementById('selectFiltroAlmacen');
+                const prod = document.getElementById('selectFiltroProducto');
+                d.almacen = alm ? alm.value : '';
+                d.producto = prod ? prod.value : '';
             },
             dataSrc: function (json) {
                 if (json && json.status) {
-                    mostrarRespuestaInteligente(json.busqueda, json.respuesta_inteligente, json.total_registros);
                     return json.data || [];
                 } else {
-                    mostrarRespuestaInteligente('', 'No fue posible realizar la consulta.', 0);
                     return [];
                 }
             }
@@ -122,6 +160,35 @@ function initDataTableProductos() {
                     }
                 }
             },
+            { data: 'almacen' },
+            {
+                data: 'existencia',
+                className: 'text-center',
+                render: function (data) {
+                    const cant = parseFloat(data) || 0;
+                    if (cant > 0) {
+                        return `<span class="badge bg-success badge-stock">${cant}</span>`;
+                    } else {
+                        return `<span class="badge bg-danger badge-stock">0</span>`;
+                    }
+                }
+            },
+            {
+                data: 'costo_promedio',
+                className: 'text-end font-mono',
+                render: function (data) {
+                    const val = parseFloat(data) || 0;
+                    return '$' + val.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            },
+            {
+                data: 'moneda',
+                className: 'text-center',
+                render: function (data) {
+                    const m = (data || 'MXN').trim();
+                    return `<span class="badge bg-secondary opacity-75">${m}</span>`;
+                }
+            },
             { data: 'Clave', className: 'fw-bold text-dark' },
             { data: 'CCN' },
             { data: 'cDescripcion', className: 'col-descripcion' },
@@ -136,31 +203,18 @@ function initDataTableProductos() {
             { data: 'serie' },
             { data: 'material' },
             { data: 'grupo' },
-            { data: 'clave_sat' },
-            {
-                data: 'existencia',
-                className: 'text-center',
-                render: function (data, type, row) {
-                    const cant = parseInt(data) || 0;
-                    const desglose = row.desgloses_almacen ? row.desgloses_almacen : 'Sin desglose de almacén';
-                    if (cant > 0) {
-                        return `<span class="badge bg-success badge-stock" title="${desglose}" data-bs-toggle="tooltip">${cant}</span>`;
-                    } else {
-                        return `<span class="badge bg-danger badge-stock" title="${desglose}" data-bs-toggle="tooltip">0</span>`;
-                    }
-                }
-            }
+            { data: 'clave_sat' }
         ],
         autoWidth: false,
         columnDefs: [
-            { targets: 3, width: "400px", className: "col-descripcion" },
+            { targets: 7, width: "400px", className: "col-descripcion" },
             { targets: "_all", defaultContent: "" }
         ],
         dom: 'Blfrtip',
         buttons: [
             {
                 extend: 'excelHtml5',
-                title: 'Productos_y_Existencias_Almacen',
+                title: 'Inventario_Almacen',
                 exportOptions: { columns: ':visible' }
             },
             {
@@ -168,40 +222,8 @@ function initDataTableProductos() {
                 postfixButtons: ['colvisRestore']
             }
         ],
-        language: idioma_espanol,
-        drawCallback: function () {
-            // Inicializar tooltips de Bootstrap
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        }
+        language: idioma_espanol
     });
-}
-
-/**
- * Renderiza la respuesta sintética inteligente del sistema
- */
-function mostrarRespuestaInteligente(busqueda, respuesta, total) {
-    const box = document.getElementById('boxRespuestaInteligente');
-    const content = document.getElementById('contentRespuestaInteligente');
-    const badge = document.getElementById('badgeTotalResultados');
-
-    if (!box || !content) return;
-
-    if (busqueda && busqueda.trim().length > 0) {
-        box.style.display = 'block';
-        content.innerHTML = respuesta;
-        if (badge) {
-            badge.innerText = `${total} Producto(s) Encontrado(s)`;
-        }
-    } else {
-        box.style.display = 'block';
-        content.innerHTML = respuesta || "Mostrando inventario general de productos activos en existencias.";
-        if (badge) {
-            badge.innerText = `${total} Producto(s) Activo(s)`;
-        }
-    }
 }
 
 /**
