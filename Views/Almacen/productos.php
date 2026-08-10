@@ -3,6 +3,93 @@
 <?php require_once("Template/header_01.php"); ?>
 
 <!-- Theme Custom CSS -->
+<style>
+    .search-box-container {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        color: #fff;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    }
+    .search-input-group .form-control {
+        border-radius: 8px 0 0 8px;
+        font-size: 1.05rem;
+        padding: 0.75rem 1.25rem;
+        border: 2px solid #334155;
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+    .search-input-group .form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        background-color: #1e293b;
+        color: #fff;
+    }
+    .btn-search-smart {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0 8px 8px 0;
+        transition: all 0.2s ease;
+    }
+    .btn-search-smart:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        transform: translateY(-1px);
+    }
+    .smart-answer-card {
+        border: none;
+        border-left: 5px solid #3b82f6;
+        background: #f8fafc;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    .smart-answer-header {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e293b;
+    }
+    .smart-answer-body {
+        white-space: pre-line;
+        font-size: 0.98rem;
+        color: #334155;
+        line-height: 1.6;
+    }
+    .product-img-thumb {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+    .product-img-thumb:hover {
+        transform: scale(1.15);
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .badge-stock {
+        font-size: 0.85rem;
+        padding: 0.35em 0.65em;
+    }
+    #tableProductosAlmacen {
+        width: 100% !important;
+    }
+    #tableProductosAlmacen th, #tableProductosAlmacen td {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    #tableProductosAlmacen th.col-descripcion, #tableProductosAlmacen td.col-descripcion {
+        min-width: 350px !important;
+        width: 400px !important;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+</style>
 
 <!-- Header Admin 02 -->
 <?php require_once("Template/header_02.php"); ?>
@@ -30,26 +117,109 @@
     <!-- start: page -->
     <div class="row">
         <div class="col-12">
-            <section class="card card-featured shadow-sm mb-4">
-                <header class="card-header">
-                    <h2 class="card-title"><?= $data['page_card_title']; ?> <i title="Info" style="cursor:pointer;" class="text-primary fa-light fa-circle-question" data-bs-toggle="collapse" data-bs-target="#collapseInfo" aria-expanded="false" aria-controls="collapseInfo"></i></h2>
-                    <div class="collapse mt-1" id="collapseInfo">
-                        <span class="text-info fw-normal"><?= $data['page_card_description']; ?></span>
+            
+            <!-- Buscador Inteligente -->
+            <div class="search-box-container mb-4">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fa-solid fa-sparkles text-warning fs-4 me-2"></i>
+                    <h4 class="m-0 text-white fw-bold">Buscador Inteligente de Productos</h4>
+                </div>
+                <p class="mb-3" style="color: #cbd5e1; font-size: 0.92rem;">
+                    Ingrese la consulta en lenguaje natural (ejemplo: <code>¿Tienen un sello para bomba Goulds?</code>) para consultar disponibilidades y existencias por almacén en tiempo real.
+                </p>
+                <form id="formBuscadorProductos" onsubmit="return false;">
+                    <div class="input-group search-input-group">
+                        <input type="text" id="inputBuscarProducto" class="form-control" placeholder="Escriba su consulta o el nombre del producto..." autocomplete="off">
+                        <button type="submit" id="btnBuscarProducto" class="btn btn-search-smart">
+                            <i class="fa-solid fa-magnifying-glass me-1"></i> Buscar
+                        </button>
+                        <button type="button" id="btnLimpiarBusqueda" class="btn btn-secondary" title="Limpiar búsqueda" style="border-radius: 0 8px 8px 0; display: none;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
                     </div>
+                </form>
+            </div>
+
+            <!-- Respuesta Inteligente del Sistema -->
+            <div id="boxRespuestaInteligente" class="smart-answer-card p-4 mb-4" style="display: none;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="smart-answer-header text-primary">
+                        <i class="fa-solid fa-robot me-2"></i>Respuesta del Sistema
+                    </div>
+                    <span id="badgeTotalResultados" class="badge bg-primary"></span>
+                </div>
+                <div id="contentRespuestaInteligente" class="smart-answer-body"></div>
+            </div>
+
+            <!-- Tabla de Productos -->
+            <section class="card card-featured card-featured-primary shadow-sm mb-4">
+                <header class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="card-title m-0"><?= $data['page_card_title']; ?></h2>
                 </header>
 
                 <div class="p-4 card-body">
-                    <!-- Contenido en blanco listo para continuar agregando código -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover width-full" id="tableProductosAlmacen">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center" style="width: 80px;">Foto(s)</th>
+                                    <th>Clave</th>
+                                    <th>CCN</th>
+                                    <th class="col-descripcion" style="min-width: 350px;">Descripción</th>
+                                    <th>Marca</th>
+                                    <th>Submarca</th>
+                                    <th>Línea Producto</th>
+                                    <th>Categoría</th>
+                                    <th>Unidad</th>
+                                    <th>Modelo</th>
+                                    <th>N° Catálogo</th>
+                                    <th>N° Parte</th>
+                                    <th>Serie</th>
+                                    <th>Material</th>
+                                    <th>Grupo</th>
+                                    <th>Clave SAT</th>
+                                    <th class="text-center">Existencias</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Cargado vía AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         </div>
     </div>
 
 </section>
+
+<!-- Modal de Visualización de Fotografías -->
+<div class="modal fade" id="modalFotoProducto" tabindex="-1" aria-labelledby="modalFotoProductoTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalFotoProductoTitle"><i class="fa-solid fa-image me-2"></i>Fotografías del Producto</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div id="containerFotosModal" class="d-flex flex-wrap justify-content-center gap-3">
+                    <!-- Fotos insertadas dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- FIN CONTENIDO VISTA -->
 
 <!-- Footer Admin 01 -->
 <?php require_once("Template/footer_01.php"); ?>
+
+<script>
+    const menu = <?= $data['menu']; ?>;
+</script>
 
 <div id="loadModalPermisos"></div>
 

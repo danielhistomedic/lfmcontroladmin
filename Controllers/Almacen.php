@@ -94,6 +94,9 @@ class Almacen extends Controllers
             $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Productos y Existencias de Almacén';
             $data['page_card_description'] = $data['meta_description'];
 
+            //JS de la página
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'almacen_productos.js';
+
             //Call Vista
             $this->views->getView($this, "productos", $data);
         } catch (\Throwable $th) {
@@ -172,4 +175,105 @@ class Almacen extends Controllers
             getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
         }
     }
+
+    /**
+     * Endpoint AJAX para obtener productos y respuesta inteligente.
+     * URL: /almacen/getProductos
+     */
+    public function getProductos()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['r' => 0];
+
+            if (empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'Acceso no permitido.', 'data' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $busqueda = $_POST['busqueda'] ?? $_GET['busqueda'] ?? '';
+
+            $almacenModel = new AlmacenModel();
+            $arrProductos = $almacenModel->searchProductosAlmacen($busqueda);
+
+            $respuestaTextual = "";
+            if (!empty($busqueda)) {
+                if (!empty($arrProductos)) {
+                    $respuestaTextual = "Tenemos:\n\n";
+                    $topProducts = array_slice($arrProductos, 0, 5);
+                    foreach ($topProducts as $prod) {
+                        $existencia = floatval($prod['existencias_almacen']) > 0 ? floatval($prod['existencias_almacen']) : floatval($prod['existencia_base']);
+                        $desgloseStr = !empty($prod['desgloses_almacen']) ? " (" . $prod['desgloses_almacen'] . ")" : "";
+                        $respuestaTextual .= "• " . $prod['cDescripcion'] . "\n  Existencias: " . intval($existencia) . $desgloseStr . "\n\n";
+                    }
+                    if (count($arrProductos) > 5) {
+                        $respuestaTextual .= "*(Y " . (count($arrProductos) - 5) . " producto(s) adicional(es) mostrado(s) en la tabla a continuación)*";
+                    }
+                } else {
+                    $respuestaTextual = "No se encontraron existencias o productos coincidentes para la búsqueda: \"" . htmlspecialchars($busqueda) . "\".";
+                }
+            } else {
+                $respuestaTextual = "Mostrando listado general de productos activos en existencias.";
+            }
+
+            // Preparar filas con fotos preprocesadas
+            $arrData = [];
+            foreach ($arrProductos as $key => $row) {
+                $existenciaTotal = floatval($row['existencias_almacen']) > 0 ? floatval($row['existencias_almacen']) : floatval($row['existencia_base']);
+
+                // Fotos
+                $fotos = [];
+                for ($i = 1; $i <= 5; $i++) {
+                    $imgKey = "img" . $i;
+                    if (!empty($row[$imgKey])) {
+                        $imgFile = trim($row[$imgKey]);
+                        $imgPath = "Assets/files/productos/" . $imgFile;
+                        if (file_exists($imgPath)) {
+                            $fotos[] = base_url() . "/" . $imgPath;
+                        }
+                    }
+                }
+
+                $arrData[$key] = [
+                    'icvematerial'       => $row['icvematerial'],
+                    'Clave'              => $row['Clave'],
+                    'CCN'                => $row['CCN'],
+                    'cDescripcion'       => $row['cDescripcion'],
+                    'marca'              => $row['marca'],
+                    'unidad_medida'      => $row['unidad_medida'],
+                    'submarca'           => $row['submarca'],
+                    'linea_producto'     => $row['linea_producto'],
+                    'categoria'          => $row['categoria'],
+                    'modelo'             => $row['modelo'],
+                    'num_catalogo'       => $row['num_catalogo'],
+                    'num_parte'          => $row['num_parte'],
+                    'serie'              => $row['serie'],
+                    'material'           => $row['material'],
+                    'grupo'              => $row['grupo'],
+                    'clave_sat'          => $row['clave_sat'],
+                    'existencia'         => intval($existenciaTotal),
+                    'desgloses_almacen'  => $row['desgloses_almacen'] ?? '',
+                    'fotos'              => $fotos
+                ];
+            }
+
+            $arrResponse = [
+                'status'                => true,
+                'busqueda'              => $busqueda,
+                'respuesta_inteligente' => trim($respuestaTextual),
+                'total_registros'       => count($arrData),
+                'data'                  => $arrData
+            ];
+
+            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al procesar la solicitud.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
 }
+
