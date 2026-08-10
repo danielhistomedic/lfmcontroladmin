@@ -1768,6 +1768,7 @@ class VentasModel extends Mysql
                 pc.num_orden_compra,
                 COALESCE(c.nombre_comercial, 'Sin Cliente')                 AS cliente,
                 v.titulo                                                    AS titulo_venta,
+                v.proyecto_id,
                 pcd.codigo_partida,
                 pcd.descripcion,
                 pcd.cantidad_pedido,

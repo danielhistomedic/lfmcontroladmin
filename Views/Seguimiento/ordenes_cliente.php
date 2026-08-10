@@ -159,7 +159,7 @@
                             <div class="w-100">
                                 <span class="text-label text-primary d-block mb-1">Total Órdenes</span>
                                 <div class="text-amount text-dark" id="kpi_total_ordenes">0</div>
-                                <div class="text-muted text-3">En el periodo</div>
+                                <div class="text-muted text-2">En el periodo</div>
                             </div>
                         </div>
                     </div>
@@ -175,7 +175,7 @@
                             <div class="w-100">
                                 <span class="text-label text-success d-block mb-1">Monto Acumulado (USD)</span>
                                 <div class="text-amount text-dark" id="kpi_monto_usd">$0.00 USD</div>
-                                <div class="text-muted text-3" id="kpi_monto_mxn">$0.00 MXN</div>
+                                <div class="text-muted text-2" id="kpi_monto_mxn">$0.00 MXN</div>
                             </div>
                         </div>
                     </div>
@@ -191,7 +191,7 @@
                             <div class="w-100">
                                 <span class="text-label text-info d-block mb-1">Con Seguimiento</span>
                                 <div class="text-amount text-dark" id="kpi_con_seguimiento">0</div>
-                                <div class="text-muted text-3">Órdenes con bitácora</div>
+                                <div class="text-muted text-2">Órdenes con bitácora</div>
                             </div>
                         </div>
                     </div>
@@ -215,6 +215,7 @@
                         <thead>
                             <tr>
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Proyecto Venta</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Orden Compra</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Fecha Pedido</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Cliente</th>
@@ -324,7 +325,7 @@
                         <div class="card-body p-3">
                             <div class="row g-3">
 
-                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                <div class="form-group col-12 col-sm-6 col-lg-3 pt-3">
                                     <label class="form-label fs-12 fw-bold text-primary mb-1">Orden de Compra:</label>
                                     <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-danger mb-0" id="det_pedido_id">—</h6>
                                 </div>
@@ -332,6 +333,11 @@
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
                                     <label class="form-label fs-12 fw-bold text-primary mb-1">Cliente:</label>
                                     <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-dark mb-0" id="det_cliente">—</h6>
+                                </div>
+
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Proyecto Venta:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-dark mb-0" id="det_proyecto_id">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
@@ -427,14 +433,18 @@
             <div class="modal-body p-4">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6">
-                        <label class="form-label fs-12 text-muted mb-0">Orden de Compra / Pedido #:</label>
+                        <label class="form-label fs-12 text-muted mb-0">Orden de Compra:</label>
                         <p class="fw-bold text-danger fs-14 mb-0" id="mdl_pedido_id">—</p>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="form-label fs-12 text-muted mb-0">Cliente:</label>
                         <p class="fw-bold text-dark fs-14 mb-0" id="mdl_cliente">—</p>
                     </div>
-                    <div class="col-12">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Proyecto Venta:</label>
+                        <p class="fw-bold text-dark fs-14 mb-0" id="mdl_proyecto_id">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
                         <label class="form-label fs-12 text-muted mb-0">Proyecto / Título:</label>
                         <p class="fw-semibold text-dark fs-13 mb-0" id="mdl_titulo_venta">—</p>
                     </div>

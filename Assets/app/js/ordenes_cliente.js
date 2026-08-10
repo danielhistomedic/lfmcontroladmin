@@ -121,7 +121,7 @@ function fntInicializarTabla() {
         destroy: true,
         select: true,
         order: [
-            [2, "desc"]
+            [3, "desc"]
         ],
         iDisplayLength: 5,
         lengthMenu: [
@@ -147,6 +147,13 @@ function fntInicializarTabla() {
         ],
         columns: [
             { data: 'options', orderable: false, className: 'text-center align-middle', width: '60px' },
+            {
+                data: 'proyecto_id',
+                className: 'text-center align-middle',
+                render: function (data, type, row) {
+                    return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
+                }
+            },
             {
                 data: 'num_orden_compra',
                 className: 'text-center align-middle',
@@ -326,6 +333,7 @@ function fntVerDetalle(btn) {
     // Llena el panel de detalle con los datos generales
     $('#det_pedido_id').text(rowData.num_orden_compra || (rowData.pedido_id ? ('Pedido #' + rowData.pedido_id) : '—'));
     $('#det_cliente').text(rowData.cliente || '—');
+    $('#det_proyecto_id').text(rowData.proyecto_id || '—');
     $('#det_titulo').text(rowData.titulo_venta || '—');
     $('#det_vendedor').text(rowData.vendedor || '—');
     $('#det_estatus').html(rowData.estatus_badge || '—').addClass('text-wrap');
@@ -692,6 +700,7 @@ function fntMostrarDetalleEntregaModal(props) {
 
     $('#mdl_pedido_id').text(ordenText);
     $('#mdl_cliente').text(props.cliente || '—');
+    $('#mdl_proyecto_id').text(props.proyecto_id || '—');
     $('#mdl_titulo_venta').text(props.titulo_venta || '—');
     $('#mdl_codigo_partida').text(props.codigo_partida || '—');
     $('#mdl_cantidad').text(props.cantidad_pedido || '0');
