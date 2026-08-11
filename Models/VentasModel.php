@@ -1624,7 +1624,7 @@ class VentasModel extends Mysql
      *
      * @return array $arrResponse
      */
-    public function selectOrdenesClienteSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $filtro_estatus = '', string $filtro_cliente = ''): array
+    public function selectOrdenesClienteSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $filtro_estatus = '', string $filtro_cliente = '', string $ccveusuario_vendedor = ''): array
     {
         $arrResponse = array();
 
@@ -1692,6 +1692,11 @@ class VentasModel extends Mysql
             [ Filtros opcionales ]*/
             $arr_values = [];
 
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+
             if (!empty($fecha_ini) && !empty($fecha_fin)) {
                 $sql .= " AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
                 $arr_values['fecha_ini'] = $fecha_ini;
@@ -1718,7 +1723,7 @@ class VentasModel extends Mysql
         }
 
         /*-------------------------------------------
-        [ Retorna array con la lista de registros o empty en caso de error ]*/
+        [ Retorna el array de la consulta ]*/
         return $arrResponse;
     }
 
@@ -1751,14 +1756,14 @@ class VentasModel extends Mysql
     }
 
     /**
-     * Obtiene las partidas/productos con fecha estimada de entrega a clientes para el calendario.
-     * Une tb_pedidos_cliente_detalle con tb_pedidos_cliente, tb_ventas y cat_clientes.
-     *
+     * Obtiene los eventos de entregas estimadas a clientes para el calendario
+     * 
      * @param string $fecha_ini
      * @param string $fecha_fin
+     * @param string $ccveusuario_vendedor
      * @return array
      */
-    public function selectFechasEntregaClientes(string $fecha_ini = '', string $fecha_fin = ''): array
+    public function selectFechasEntregaClientes(string $fecha_ini = '', string $fecha_fin = '', string $ccveusuario_vendedor = ''): array
     {
         $arrResponse = array();
         try {
@@ -1789,6 +1794,11 @@ class VentasModel extends Mysql
               AND pcd.fecha_estimada_entrega != '0000-00-00' ";
 
             $arr_values = [];
+
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
 
             if (!empty($fecha_ini) && !empty($fecha_fin)) {
                 $sql .= " AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";

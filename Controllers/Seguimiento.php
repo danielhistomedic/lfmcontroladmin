@@ -70,6 +70,7 @@ class Seguimiento extends Controllers
             $data['usuario']['email']      = $this->session->get('email');
             $data['usuario']['rol']        = $this->session->get('rol');
             $data['usuario']['rol_id']     = $this->session->get('rol_id');
+            $data['usuario']['ccveusuario'] = $this->session->get('ccveusuario');
 
             // Configuracion
             $configuracion_model = new ConfiguracionModel;
@@ -210,9 +211,17 @@ class Seguimiento extends Controllers
             $filtro_cliente = strClean($_POST['filtro_cliente'] ?? '');
 
             /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            /*-------------------------------------------
             [ Obtiene el array de registros ]*/
             $class_model = new VentasModel;
-            $arrData = $class_model->selectOrdenesClienteSeguimiento($fecha_ini, $fecha_fin, $filtro_estatus, $filtro_cliente);
+            $arrData = $class_model->selectOrdenesClienteSeguimiento($fecha_ini, $fecha_fin, $filtro_estatus, $filtro_cliente, $ccveusuario_vendedor);
 
             /*-------------------------------------------
             [ Personaliza los datos del array ]*/
@@ -417,9 +426,17 @@ class Seguimiento extends Controllers
             $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
 
             /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            /*-------------------------------------------
             [ Consulta el Modelo ]*/
             $class_model = new VentasModel;
-            $arrData = $class_model->selectFechasEntregaClientes($fecha_ini, $fecha_fin);
+            $arrData = $class_model->selectFechasEntregaClientes($fecha_ini, $fecha_fin, $ccveusuario_vendedor);
 
             $hoy = date('Y-m-d');
             $limite_proximo = date('Y-m-d', strtotime('+7 days'));
