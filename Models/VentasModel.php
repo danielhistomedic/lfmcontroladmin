@@ -1624,7 +1624,7 @@ class VentasModel extends Mysql
      *
      * @return array $arrResponse
      */
-    public function selectOrdenesClienteSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $filtro_estatus = '', string $filtro_cliente = '', string $ccveusuario_vendedor = ''): array
+    public function selectOrdenesClienteSeguimiento(string $fecha_ini = '', string $fecha_fin = '', string $filtro_estatus = '', string $filtro_cliente = '', string $ccveusuario_vendedor = '', string $filtro_num_orden = ''): array
     {
         $arrResponse = array();
 
@@ -1695,6 +1695,12 @@ class VentasModel extends Mysql
             if (!empty($ccveusuario_vendedor)) {
                 $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
                 $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+
+            if (!empty($filtro_num_orden)) {
+                $sql .= " AND (pc.num_orden_compra LIKE :num_orden_compra OR pc.id LIKE :num_orden_compra_id) ";
+                $arr_values['num_orden_compra']    = '%' . $filtro_num_orden . '%';
+                $arr_values['num_orden_compra_id'] = '%' . $filtro_num_orden . '%';
             }
 
             if (!empty($fecha_ini) && !empty($fecha_fin)) {

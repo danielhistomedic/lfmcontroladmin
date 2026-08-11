@@ -115,6 +115,11 @@
 
                
                 <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
+                    <label class="form-label" for="filtro_num_orden">Número Orden Cliente:</label>
+                    <input type="text" class="form-control" autocomplete="off" name="filtro_num_orden" id="filtro_num_orden" placeholder="Buscar por núm. orden...">
+                </div>
+
+                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
                     <label class="form-label" for="filtro_fecha_ini">Fecha Inicio:</label>
                     <!-- <input type="date" class="form-control" id="filtro_fecha_ini" name="filtro_fecha_ini"> -->
                     <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 

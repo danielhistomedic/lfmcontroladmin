@@ -155,13 +155,13 @@ class SeguimientoModel extends Mysql
                 switch ($catId) {
                     case 1:
                         // Id 1: OPORTUNIDAD DE VENTA (INICIO PROCESO) - Checar si hay registro en tb_ventas
-                        $sqlVenta = "SELECT id, proyecto_id, titulo, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, total, subtotal, iva, moneda_id, 
+                        $sqlVenta = "SELECT id, proyecto_id, titulo, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, total, subtotal, COALESCE(descuento, 0) AS descuento, iva, moneda_id, 
                                      CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                      FROM tb_ventas WHERE id = :vId";
                         $regVenta = $this->select($sqlVenta, ['vId' => $venta_id]);
                         if (!empty($regVenta)) {
                             $item['completado'] = true;
-                            $item['mensaje']    = 'Registro de Oportunidad de Venta generado en tb_ventas.';
+                            $item['mensaje']    = 'Registro de Oportunidad de Venta generado.';
                             $item['registros']  = $regVenta;
                         } else {
                             $item['mensaje']    = 'Sin registro de Oportunidad de Venta.';
@@ -170,7 +170,7 @@ class SeguimientoModel extends Mysql
 
                     case 3:
                         // Id 3: EN PROCESO DE COTIZACION - Checar si hay registro en tb_compras_cotizaciones (enviado = 1)
-                        $sqlCc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                        $sqlCc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, COALESCE(descuento, 0) AS descuento, iva, total, enviado, moneda_id, 
                                   CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_compras_cotizaciones 
                                   WHERE venta_id = :vId AND enviado = 1 
@@ -178,7 +178,7 @@ class SeguimientoModel extends Mysql
                         $regCc = $this->select($sqlCc, ['vId' => $venta_id]);
                         if (!empty($regCc)) {
                             $item['completado'] = true;
-                            $item['mensaje']    = count($regCc) . ' cotización(es) de compras finalizada(s) (enviado = 1).';
+                            $item['mensaje']    = count($regCc) . ' cotización(es) de compras finalizada(s).';
                             $item['registros']  = $regCc;
                         } else {
                             $item['mensaje']    = 'Sin cotización de compras finalizada.';
@@ -187,7 +187,7 @@ class SeguimientoModel extends Mysql
 
                     case 4:
                         // Id 4: COTIZACION INTERNA ELABORADA - Checar si hay registro en tb_compras_cotizacion_interna (enviado = 1)
-                        $sqlCi = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                        $sqlCi = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, COALESCE(descuento, 0) AS descuento, iva, total, enviado, moneda_id, 
                                   CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_compras_cotizacion_interna 
                                   WHERE venta_id = :vId AND enviado = 1 
@@ -195,7 +195,7 @@ class SeguimientoModel extends Mysql
                         $regCi = $this->select($sqlCi, ['vId' => $venta_id]);
                         if (!empty($regCi)) {
                             $item['completado'] = true;
-                            $item['mensaje']    = count($regCi) . ' cotización(es) interna(s) finalizada(s) (enviado = 1).';
+                            $item['mensaje']    = count($regCi) . ' cotización(es) interna(s) finalizada(s).';
                             $item['registros']  = $regCi;
                         } else {
                             $item['mensaje']    = 'Sin cotización interna finalizada.';
@@ -204,7 +204,7 @@ class SeguimientoModel extends Mysql
 
                     case 5:
                         // Id 5: COTIZACION CLIENTE ELABORADA - Checar si hay registro en tb_ventas_cotizacion_cliente (enviado = 1)
-                        $sqlVc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                        $sqlVc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, COALESCE(descuento, 0) AS descuento, iva, total, enviado, moneda_id, 
                                   CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_ventas_cotizacion_cliente 
                                   WHERE venta_id = :vId AND enviado = 1 
@@ -212,7 +212,7 @@ class SeguimientoModel extends Mysql
                         $regVc = $this->select($sqlVc, ['vId' => $venta_id]);
                         if (!empty($regVc)) {
                             $item['completado'] = true;
-                            $item['mensaje']    = count($regVc) . ' cotización(es) a cliente finalizada(s) (enviado = 1).';
+                            $item['mensaje']    = count($regVc) . ' cotización(es) a cliente finalizada(s).';
                             $item['registros']  = $regVc;
                         } else {
                             $item['mensaje']    = 'Sin cotización a cliente finalizada.';
@@ -226,7 +226,8 @@ class SeguimientoModel extends Mysql
                                          pc.num_orden_compra,
                                          pc.fecha_pedido AS fecha, 
                                          DATE_FORMAT(pc.fecha_pedido, '%d/%m/%Y') AS fecha_formateada, 
-                                         (COALESCE(pc.subtotal, 0) - COALESCE(pc.descuento, 0)) AS subtotal, 
+                                         COALESCE(pc.subtotal, 0) AS subtotal, 
+                                         COALESCE(pc.descuento, 0) AS descuento, 
                                          COALESCE(pc.iva, 0) AS iva, 
                                          COALESCE(pc.total, 0) AS total, 
                                          pc.enviado, 
@@ -239,7 +240,7 @@ class SeguimientoModel extends Mysql
                         $regOc = $this->select($sqlOc, ['vId' => $venta_id]);
                         if (!empty($regOc)) {
                             $item['completado'] = true;
-                            $item['mensaje']    = count($regOc) . ' orden(es) de compra / cotización cliente confirmada(s) (enviado = 1).';
+                            $item['mensaje']    = count($regOc) . ' orden(es) de compra / cotización cliente confirmada(s).';
                             $item['registros']  = $regOc;
                         } else {
                             $item['mensaje']    = 'Sin orden de compra de cliente confirmada.';
@@ -248,7 +249,7 @@ class SeguimientoModel extends Mysql
 
                     case 7:
                         // Id 7: ORDEN COMPRA PROVEEDOR (PEDIDO ELABORADO) - Checar si hay registro en tb_pedidos_proveedor (enviado = 1)
-                        $sqlPp = "SELECT id, folio_ocp, fecha_pedido, DATE_FORMAT(fecha_pedido, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
+                        $sqlPp = "SELECT id, folio_ocp, fecha_pedido, DATE_FORMAT(fecha_pedido, '%d/%m/%Y') AS fecha_formateada, subtotal, COALESCE(descuento, 0) AS descuento, iva, total, enviado, moneda_id, 
                                   CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
                                   FROM tb_pedidos_proveedor 
                                   WHERE venta_id = :vId AND enviado = 1 
@@ -256,7 +257,7 @@ class SeguimientoModel extends Mysql
                         $regPp = $this->select($sqlPp, ['vId' => $venta_id]);
                         if (!empty($regPp)) {
                             $item['completado'] = true;
-                            $item['mensaje']    = count($regPp) . ' orden(es) de compra a proveedor finalizada(s) (enviado = 1).';
+                            $item['mensaje']    = count($regPp) . ' orden(es) de compra a proveedor finalizada(s).';
                             $item['registros']  = $regPp;
                         } else {
                             $item['mensaje']    = 'Sin orden de compra a proveedor finalizada.';
@@ -509,6 +510,208 @@ class SeguimientoModel extends Mysql
 
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene la lista de partidas del proyecto de venta en orden de prioridad:
+     * 1) tb_pedidos_cliente_detalle (si tb_pedidos_cliente.enviado = 1)
+     * 2) tb_compras_cotizacion_interna_detalle (si tb_compras_cotizacion_interna.enviado = 1)
+     * 3) tb_ventas_detalle (sin importar el estatus)
+     * 
+     * @param int $venta_id
+     * @return array
+     */
+    public function getPartidasProyecto(int $venta_id): array
+    {
+        $arrResponse = array(
+            'origen_tabla'    => '',
+            'origen_etiqueta' => 'Sin partidas',
+            'partidas'        => array()
+        );
+
+        if ($venta_id <= 0) {
+            return $arrResponse;
+        }
+
+        try {
+            // Helper interno para mapear filas de resultado
+            $mapRow = function ($row, $origenTabla, $origenEtiqueta) {
+                $cant   = floatval($row['cantidad'] ?? $row['cantidad_pedido'] ?? 0);
+                $precio = floatval($row['precio_unitario'] ?? $row['precio'] ?? 0);
+                $imp    = floatval($row['importe'] ?? ($cant * $precio));
+                $cod    = !empty($row['codigo_partida']) ? $row['codigo_partida'] : (!empty($row['Clave']) ? $row['Clave'] : '');
+
+                return array(
+                    'id'                     => $row['id'] ?? 0,
+                    'folio_documento'        => $row['Folio_Documento'] ?? '',
+                    'codigo_partida'         => $cod,
+                    'descripcion'            => !empty($row['descripcion']) ? $row['descripcion'] : 'Sin descripción',
+                    'descripcion_adicional'  => $row['descripcion_adicional'] ?? '',
+                    'ccveunidad'             => $row['ccveunidad'] ?? '',
+                    'cantidad'               => $cant,
+                    'precio_unitario'        => $precio,
+                    'descuento'              => floatval($row['descuento'] ?? 0),
+                    'impuesto_tasa'          => floatval($row['impuesto_tasa'] ?? 0),
+                    'importe_impuesto'       => floatval($row['importe_impuesto'] ?? $row['impuesto_importe'] ?? 0),
+                    'subtotal'               => $imp,
+                    'importe'                => $imp,
+                    'tiempo_entrega'         => $row['tiempo_entrega'] ?? '',
+                    'fecha_estimada_entrega' => $row['fecha_estimada_entrega'] ?? '',
+                    'clave'                  => $row['Clave'] ?? '',
+                    'ccn'                    => $row['CCN'] ?? '',
+                    'codigo_cliente'         => $row['Codigo_Cliente'] ?? '',
+                    'tabla_origen'           => $origenTabla,
+                    'origen_etiqueta'        => $origenEtiqueta
+                );
+            };
+
+            // =========================================================================
+            // PRIORIDAD 1: tb_pedidos_cliente_detalle (ped.enviado = 1)
+            // =========================================================================
+            $sql1 = "SELECT
+                       pdet.id,
+                       ped.num_orden_compra AS Folio_Documento,
+                       vd.codigo_partida,
+                       IFNULL(pdet.descripcion, vd.descripcion) AS descripcion,
+                       pdet.descripcion_adicional,
+                       IFNULL(pdet.ccveunidad, vd.ccveunidad) AS ccveunidad,
+                       pdet.cantidad_pedido AS cantidad,
+                       pdet.precio_unitario,
+                       pdet.descuento,
+                       pdet.impuesto_tasa,
+                       pdet.importe_impuesto,
+                       pdet.importe,
+                       pdet.tiempo_entrega,
+                       pdet.fecha_estimada_entrega,
+                       pdet.ccvematerial as Clave,
+                       mat.ccveMaterialAlmacen AS CCN,
+                       sap.clave_cliente AS Codigo_Cliente
+                       FROM tb_pedidos_cliente_detalle pdet
+                       LEFT JOIN tb_pedidos_cliente ped ON ped.id = pdet.pedido_id
+                       LEFT JOIN tb_ventas v ON v.id = ped.venta_id
+                       LEFT JOIN tb_ventas_detalle vd ON vd.id = pdet.venta_detalle_id
+                       LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
+                       LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = v.cliente_id)
+                       WHERE v.id = :venta_id AND ped.enviado = 1
+                       ORDER BY vd.codigo_partida";
+
+            try {
+                $res1 = $this->select($sql1, ['venta_id' => $venta_id]);
+                if (!empty($res1)) {
+                    $partidas1 = array();
+                    foreach ($res1 as $row) {
+                        $partidas1[] = $mapRow($row, 'tb_pedidos_cliente_detalle', 'Pedido de Cliente');
+                    }
+                    if (!empty($partidas1)) {
+                        $arrResponse['origen_tabla']    = 'tb_pedidos_cliente_detalle';
+                        $arrResponse['origen_etiqueta'] = 'Orden de Compra Cliente';
+                        $arrResponse['partidas']        = $partidas1;
+                        return $arrResponse;
+                    }
+                }
+            } catch (\Throwable $e1) {
+                getLoggerSystem()->error('Error Prioridad 1 Partidas: ' . getMensajeError($e1));
+            }
+
+            // =========================================================================
+            // PRIORIDAD 2: tb_compras_cotizacion_interna_detalle (ped.enviado = 1)
+            // =========================================================================
+            $sql2 = "SELECT
+                       pdet.id,
+                       ped.folio_cotizacion AS Folio_Documento,
+                       vd.codigo_partida,
+                       IFNULL(pdet.descripcion_proveedor, vd.descripcion) AS descripcion,
+                       pdet.descripcion_adicional,
+                       IFNULL(pdet.ccveunidad, vd.ccveunidad) AS ccveunidad,
+                       pdet.cantidad AS cantidad,
+                       pdet.precio_unitario,
+                       0 as descuento,
+                       pdet.impuesto_tasa,
+                       pdet.impuesto_importe,
+                       pdet.importe,
+                       pdet.tiempo_entrega,
+                       pdet.fecha_estimada_entrega,
+                       pdet.ccvematerial as Clave,
+                       mat.ccveMaterialAlmacen AS CCN,
+                       sap.clave_cliente AS Codigo_Cliente
+                       FROM tb_compras_cotizacion_interna_detalle pdet
+                       LEFT JOIN tb_compras_cotizacion_interna ped ON ped.id = pdet.cotizacion_interna_id
+                       LEFT JOIN tb_ventas v ON v.id = ped.venta_id
+                       LEFT JOIN tb_ventas_detalle vd ON vd.id = pdet.venta_detalle_id_partida
+                       LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
+                       LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = v.cliente_id)
+                       WHERE v.id = :venta_id AND ped.enviado = 1
+                       ORDER BY vd.codigo_partida";
+
+            try {
+                $res2 = $this->select($sql2, ['venta_id' => $venta_id]);
+                if (!empty($res2)) {
+                    $partidas2 = array();
+                    foreach ($res2 as $row) {
+                        $partidas2[] = $mapRow($row, 'tb_compras_cotizacion_interna_detalle', 'Cotización Interna');
+                    }
+                    if (!empty($partidas2)) {
+                        $arrResponse['origen_tabla']    = 'tb_compras_cotizacion_interna_detalle';
+                        $arrResponse['origen_etiqueta'] = 'Cotización Interna';
+                        $arrResponse['partidas']        = $partidas2;
+                        return $arrResponse;
+                    }
+                }
+            } catch (\Throwable $e2) {
+                getLoggerSystem()->error('Error Prioridad 2 Partidas: ' . getMensajeError($e2));
+            }
+
+            // =========================================================================
+            // PRIORIDAD 3: tb_ventas_detalle (sin importar el estatus)
+            // =========================================================================
+            $sql3 = "SELECT
+                       pdet.id,
+                       ped.proyecto_id AS Folio_Documento,
+                       pdet.codigo_partida,
+                       pdet.descripcion AS descripcion,
+                       pdet.descripcion_adicional,
+                       pdet.ccveunidad AS ccveunidad,
+                       pdet.cantidad AS cantidad,
+                       0 as precio_unitario,
+                       0 as descuento,
+                       0 as impuesto_tasa,
+                       0 as impuesto_importe,
+                       0 as importe,
+                       '' as tiempo_entrega,
+                       '' as fecha_estimada_entrega,
+                       pdet.ccvematerial as Clave,
+                       mat.ccveMaterialAlmacen AS CCN,
+                       sap.clave_cliente AS Codigo_Cliente
+                       FROM tb_ventas_detalle pdet
+                       LEFT JOIN tb_ventas ped ON ped.id = pdet.venta_id
+                       LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
+                       LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = ped.cliente_id)
+                       WHERE ped.id = :venta_id
+                       ORDER BY pdet.codigo_partida";
+
+            try {
+                $res3 = $this->select($sql3, ['venta_id' => $venta_id]);
+                if (!empty($res3)) {
+                    $partidas3 = array();
+                    foreach ($res3 as $row) {
+                        $partidas3[] = $mapRow($row, 'tb_ventas_detalle', 'Proyecto de Venta');
+                    }
+                    if (!empty($partidas3)) {
+                        $arrResponse['origen_tabla']    = 'tb_ventas_detalle';
+                        $arrResponse['origen_etiqueta'] = 'Proyecto de Venta';
+                        $arrResponse['partidas']        = $partidas3;
+                        return $arrResponse;
+                    }
+                }
+            } catch (\Throwable $e3) {
+                getLoggerSystem()->error('Error Prioridad 3 Partidas: ' . getMensajeError($e3));
+            }
+
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error('Error getPartidasProyecto: ' . getMensajeError($th));
         }
 
         return $arrResponse;

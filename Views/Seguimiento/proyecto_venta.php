@@ -281,6 +281,11 @@
                                 <i class="fa-regular fa-paperclip me-2 text-warning"></i>Adjuntos del Proyecto
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="partidas-proyecto-tab" data-bs-toggle="tab" data-bs-target="#tab-partidas-proyecto" data-toggle="tab" data-target="#tab-partidas-proyecto" type="button" role="tab" aria-controls="tab-partidas-proyecto" aria-selected="false">
+                                <i class="fa-regular fa-boxes-stacked me-2 text-success"></i>Partidas
+                            </button>
+                        </li>
                     </ul>
                 </div>
 
@@ -481,6 +486,53 @@
                             </div>
                         </div>
                         <!-- FIN TAB 3 -->
+
+                        <!-- TAB 4: Partidas del Proyecto -->
+                        <div class="tab-pane fade" id="tab-partidas-proyecto" role="tabpanel" aria-labelledby="partidas-proyecto-tab">
+                            <div class="card border p-0 shadow-sm rounded-3">
+                                <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <p class="mb-0 fw-600 text-success fs-13">
+                                            <i class="fa-regular fa-boxes-stacked me-1 text-success"></i> Partidas del Proyecto
+                                            <span class="badge bg-success ms-2" id="badge_total_partidas">0</span>
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span class="fs-12 text-muted me-1">Origen de Datos:</span>
+                                        <span id="lblOrigenPartidasBadge" class="badge bg-light text-dark border fs-12 px-2.5 py-1">Sin partidas</span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+
+                                    <!-- Tabla de Partidas -->
+                                    <div class="table-responsive export-table">
+                                        <table id="tablePartidasProyecto" class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100">
+                                            <thead>
+                                                <tr>
+                                                    <th class="border-bottom-0 fw-semibold text-center" style="width: 50px;">#</th>
+                                                    <th class="border-bottom-0 fw-semibold text-center">Código / Partida</th>
+                                                    <th class="border-bottom-0 fw-semibold text-center">Clave</th>
+                                                    <th class="border-bottom-0 fw-semibold text-center">CCN</th>
+                                                    <th class="border-bottom-0 fw-semibold text-center">Código Cliente</th>
+                                                    <th class="border-bottom-0 fw-semibold text-start text-wrap" style="min-width: 350px;">Descripción</th>
+                                                    <th class="border-bottom-0 fw-semibold text-start text-wrap" style="min-width: 450px;">Descripción Adicional</th>
+                                                    <th class="border-bottom-0 fw-semibold text-end">Cantidad</th>
+                                                    <th class="border-bottom-0 fw-semibold text-end">Precio Unitario</th>
+                                                    <th class="border-bottom-0 fw-semibold text-end">Descuento</th>
+                                                    <th class="border-bottom-0 fw-semibold text-end">Importe Impuesto</th>
+                                                    <th class="border-bottom-0 fw-semibold text-end">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Se llena dinámicamente con JS / DataTables -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <!-- FIN TAB 4 -->
 
                     </div>
                 </div>

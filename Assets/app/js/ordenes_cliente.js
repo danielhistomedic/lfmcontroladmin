@@ -52,6 +52,14 @@ $(document).ready(function () {
         fntCargarCalendarioEntregas();
     });
 
+    $('#filtro_num_orden').on('keyup', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            fntCargarTabla();
+            fntCargarCalendarioEntregas();
+        }
+    });
+
     $(document).on('click', '.btnReturnList, #btnRegresar', function () {
         fntMostrarLista();
     });
@@ -223,10 +231,11 @@ function fntInicializarTabla() {
  */
 function fntCargarTabla() {
 
-    var fecha_ini = $('#filtro_fecha_ini').val().trim();
-    var fecha_fin = $('#filtro_fecha_fin').val().trim();
-    var filtro_estatus = '';
-    var filtro_cliente = '';
+    var fecha_ini        = $('#filtro_fecha_ini').val().trim();
+    var fecha_fin        = $('#filtro_fecha_fin').val().trim();
+    var filtro_num_orden = $('#filtro_num_orden').val() ? $('#filtro_num_orden').val().trim() : '';
+    var filtro_estatus   = '';
+    var filtro_cliente   = '';
 
     // Limpia tabla
     if (tableOrdenes !== null) {
@@ -242,6 +251,7 @@ function fntCargarTabla() {
         data: {
             fecha_ini: fecha_ini,
             fecha_fin: fecha_fin,
+            filtro_num_orden: filtro_num_orden,
             filtro_estatus: filtro_estatus,
             filtro_cliente: filtro_cliente
         },

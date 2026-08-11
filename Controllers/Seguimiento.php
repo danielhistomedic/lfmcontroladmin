@@ -205,10 +205,11 @@ class Seguimiento extends Controllers
 
             /*-------------------------------------------
             [ Recibe y limpia parámetros de filtro ]*/
-            $fecha_ini      = strClean($_POST['fecha_ini']      ?? '');
-            $fecha_fin      = strClean($_POST['fecha_fin']      ?? '');
-            $filtro_estatus = strClean($_POST['filtro_estatus'] ?? '');
-            $filtro_cliente = strClean($_POST['filtro_cliente'] ?? '');
+            $fecha_ini        = strClean($_POST['fecha_ini']        ?? '');
+            $fecha_fin        = strClean($_POST['fecha_fin']        ?? '');
+            $filtro_num_orden = strClean($_POST['filtro_num_orden']   ?? '');
+            $filtro_estatus   = strClean($_POST['filtro_estatus']   ?? '');
+            $filtro_cliente   = strClean($_POST['filtro_cliente']   ?? '');
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
@@ -221,7 +222,7 @@ class Seguimiento extends Controllers
             /*-------------------------------------------
             [ Obtiene el array de registros ]*/
             $class_model = new VentasModel;
-            $arrData = $class_model->selectOrdenesClienteSeguimiento($fecha_ini, $fecha_fin, $filtro_estatus, $filtro_cliente, $ccveusuario_vendedor);
+            $arrData = $class_model->selectOrdenesClienteSeguimiento($fecha_ini, $fecha_fin, $filtro_estatus, $filtro_cliente, $ccveusuario_vendedor, $filtro_num_orden);
 
             /*-------------------------------------------
             [ Personaliza los datos del array ]*/
@@ -577,7 +578,8 @@ class Seguimiento extends Controllers
                 'msg'       => '',
                 'data'      => array(),
                 'proyectos' => array(),
-                'checklist' => array()
+                'checklist' => array(),
+                'partidas'  => array()
             );
 
             /*-------------------------------------------
@@ -617,10 +619,12 @@ class Seguimiento extends Controllers
             if ($venta_id_select > 0) {
                 $proyectoData = $model->getProyectoVentaById($venta_id_select, $ccveusuario_vendedor);
                 if (!empty($proyectoData)) {
-                    $checklist = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                    $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                    $partidasData = $model->getPartidasProyecto($proyectoData['id']);
                     $arrResponse['status']    = true;
                     $arrResponse['data']      = $proyectoData;
                     $arrResponse['checklist'] = $checklist;
+                    $arrResponse['partidas']  = $partidasData;
                     $arrResponse['msg']       = 'Proyecto localizado correctamente';
                 } else {
                     $arrResponse['msg'] = 'No se encontró el proyecto seleccionado.';
@@ -637,19 +641,23 @@ class Seguimiento extends Controllers
                 // Exactamente 1 coincidencia
                 $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor);
                 $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                $partidasData = $model->getPartidasProyecto($proyectoData['id']);
                 $arrResponse['status']    = true;
                 $arrResponse['data']      = $proyectoData;
                 $arrResponse['proyectos'] = $listaProyectos;
                 $arrResponse['checklist'] = $checklist;
+                $arrResponse['partidas']  = $partidasData;
                 $arrResponse['msg']       = 'Proyecto localizado correctamente';
             } else {
                 // Múltiples coincidencias -> Devolver lista para que el usuario elija y cargar por defecto el primero
                 $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor);
                 $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
+                $partidasData = $model->getPartidasProyecto($proyectoData['id']);
                 $arrResponse['status']    = true;
                 $arrResponse['data']      = $proyectoData;
                 $arrResponse['proyectos'] = $listaProyectos;
                 $arrResponse['checklist'] = $checklist;
+                $arrResponse['partidas']  = $partidasData;
                 $arrResponse['msg']       = 'Se encontraron ' . count($listaProyectos) . ' proyectos coincidentes.';
             }
 
@@ -659,6 +667,28 @@ class Seguimiento extends Controllers
         }
 
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Obtiene las partidas del proyecto seleccionado vía AJAX.
+     * URL / AJAX: /seguimiento/getPartidasProyecto
+     */
+    public function getPartidasProyecto()
+    {
+        try {
+            $arrResponse = array('status' => false, 'data' => array());
+            $venta_id = intval($_POST['venta_id'] ?? 0);
+            if ($venta_id > 0) {
+                $model = new SeguimientoModel();
+                $arrData = $model->getPartidasProyecto($venta_id);
+                $arrResponse['status'] = true;
+                $arrResponse['data']   = $arrData;
+            }
+            die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            die(json_encode(array('status' => false, 'data' => array()), JSON_UNESCAPED_UNICODE));
+        }
     }
 
     /**

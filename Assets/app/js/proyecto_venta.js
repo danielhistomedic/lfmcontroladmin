@@ -7,6 +7,7 @@
 
 var controller = "Seguimiento";
 var tableProyectosVenta = null;
+var tablePartidasProyecto = null;
 var tableElement = "#tableProyectosVenta";
 var ventaIdSeleccionado = null;
 var historialSeguimientoData = [];
@@ -17,6 +18,13 @@ var paginaActualAdjuntos = 1;
 var registrosPorPaginaAdjuntos = 5;
 
 $(document).ready(function () {
+
+    // Ajustar columnas de DataTables al cambiar de pestaña
+    $('button[data-bs-toggle="tab"], a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        if (tablePartidasProyecto) {
+            tablePartidasProyecto.columns.adjust().draw();
+        }
+    });
 
     // 1. Inicializar fechas por defecto según el periodo "este_mes"
     fntActualizarFechasPorPeriodo("este_mes");
@@ -339,11 +347,12 @@ function fntCargarDetalleProyecto(ventaId, scrollTo = true) {
                     if (containerCoincidencias) containerCoincidencias.classList.add("d-none");
                 }
 
-                // Renderizar Resumen, Checklist de Evaluación, Seguimiento y Adjuntos del Proyecto
+                // Renderizar Resumen, Checklist de Evaluación, Seguimiento, Adjuntos y Partidas del Proyecto
                 fntRenderResumenProyecto(data.data);
                 fntRenderChecklistProceso(data.checklist);
                 fntCargarHistorialSeguimientos(ventaId);
                 fntCargarAdjuntosProyecto(ventaId);
+                fntRenderPartidasProyecto(data.partidas);
 
                 fntMostrarEstadoUI("resultado");
 
@@ -439,6 +448,8 @@ function fntRenderChecklistProceso(checklist) {
         // Generar HTML de registros vinculados si existen
         let registrosHtml = "";
         if (step.registros && step.registros.length > 0) {
+            const showDescuento = !(numPaso === 2 || numPaso === 3 || step.id === 3 || step.id === 4);
+
             registrosHtml = `
                 <div class="table-responsive mt-3">
                     <table class="table table-sm table-bordered align-middle bg-white mb-0 fs-12">
@@ -447,6 +458,7 @@ function fntRenderChecklistProceso(checklist) {
                                 <th>Folio / Documento</th>
                                 <th>Fecha</th>
                                 <th class="text-end">Subtotal</th>
+                                ${showDescuento ? '<th class="text-end">Descuento</th>' : ''}
                                 <th class="text-end">IVA</th>
                                 <th class="text-end">Total</th>
                                 <th class="text-center">Moneda</th>
@@ -459,6 +471,7 @@ function fntRenderChecklistProceso(checklist) {
                 const folioDoc = r.num_orden_compra || r.folio_cotizacion || r.folio_ocp || r.proyecto_id || `ID #${r.id}`;
                 const fechaDoc = r.fecha_formateada || r.fecha_pedido || r.fecha || "—";
                 const sub = parseFloat(r.subtotal || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const desc = parseFloat(r.descuento || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const iva = parseFloat(r.iva || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const tot = parseFloat(r.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const monedaDoc = r.cmoneda || (parseInt(r.moneda_id || 0) === 1 ? "MXN" : (parseInt(r.moneda_id || 0) === 3 ? "USD" : "USD"));
@@ -468,6 +481,7 @@ function fntRenderChecklistProceso(checklist) {
                         <td class="fw-bold text-primary">${folioDoc}</td>
                         <td>${fechaDoc}</td>
                         <td class="text-end">$${sub}</td>
+                        ${showDescuento ? `<td class="text-end text-danger">$${desc}</td>` : ''}
                         <td class="text-end">$${iva}</td>
                         <td class="text-end fw-bold text-dark">$${tot}</td>
                         <td class="text-center"><span class="badge bg-secondary px-2 py-1">${monedaDoc}</span></td>
@@ -1007,5 +1021,105 @@ function fntRenderizarTimelineAdjuntosPagina(pagina) {
     }
 
     $('#timeline_adjuntos').html(html);
+}
+
+/**
+ * Renderiza las partidas del proyecto en el DataTable del Tab Partidas
+ */
+function fntRenderPartidasProyecto(partidasObj) {
+    var partidas = [];
+    var origenEtiqueta = "Sin partidas";
+
+    if (partidasObj) {
+        if (Array.isArray(partidasObj)) {
+            partidas = partidasObj;
+        } else if (typeof partidasObj === "object") {
+            partidas = partidasObj.partidas || [];
+            origenEtiqueta = partidasObj.origen_etiqueta || "Sin partidas";
+        }
+    }
+
+    $("#badge_total_partidas").text(partidas.length);
+    $("#lblOrigenPartidasBadge").text(origenEtiqueta);
+
+    // Destruir DataTable previo si existe
+    if (tablePartidasProyecto !== null) {
+        tablePartidasProyecto.destroy();
+        tablePartidasProyecto = null;
+    }
+
+    // Llenar filas en el tbody
+    var tbodyHtml = "";
+    if (partidas.length > 0) {
+        partidas.forEach(function (item, index) {
+            var num = index + 1;
+            var cod = item.codigo_partida || "—";
+            var clave = item.clave || "—";
+            var ccn = item.ccn || "—";
+            var codCliente = item.codigo_cliente || "—";
+            var desc = item.descripcion ? String(item.descripcion).replace(/\r?\n/g, "<br>") : "Sin descripción";
+            var descAdic = item.descripcion_adicional ? String(item.descripcion_adicional).replace(/\r?\n/g, "<br>") : "—";
+            var cant = parseFloat(item.cantidad || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var prec = parseFloat(item.precio_unitario || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var descMonto = parseFloat(item.descuento || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var impImpuesto = parseFloat(item.importe_impuesto || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var sub = parseFloat(item.subtotal || item.importe || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            tbodyHtml += '<tr>' +
+                '<td class="text-center fw-bold text-muted">' + num + '</td>' +
+                '<td class="text-center fw-bold text-primary">' + cod + '</td>' +
+                '<td class="text-center">' + clave + '</td>' +
+                '<td class="text-center">' + ccn + '</td>' +
+                '<td class="text-center">' + codCliente + '</td>' +
+                '<td class="text-wrap" style="min-width: 350px; white-space: pre-wrap;">' + desc + '</td>' +
+                '<td class="text-wrap" style="min-width: 450px; white-space: pre-wrap;">' + descAdic + '</td>' +
+                '<td class="text-end fw-semibold">' + cant + '</td>' +
+                '<td class="text-end">$ ' + prec + '</td>' +
+                '<td class="text-end">$ ' + descMonto + '</td>' +
+                '<td class="text-end">$ ' + impImpuesto + '</td>' +
+                '<td class="text-end fw-bold text-dark">$ ' + sub + '</td>' +
+                '</tr>';
+        });
+    }
+
+    $("#tablePartidasProyecto tbody").html(tbodyHtml);
+
+    // Re-inicializar DataTables
+    tablePartidasProyecto = $("#tablePartidasProyecto").DataTable({
+        orderCellsTop: true,
+        fixedHeader: true,
+        scrollX: "100%",
+        destroy: true,
+        iDisplayLength: 10,
+        lengthMenu: [
+            [5, 10, 25, 50, 100, -1],
+            [5, 10, 25, 50, 100, "Todos"]
+        ],
+        dom: "Blfrtip",
+        buttons: [
+            {
+                extend: "excelHtml5",
+                autoFilter: true,
+                sheetName: "Partidas del Proyecto",
+                extend: "excel",
+                messageTop: "",
+                title: "Partidas del Proyecto",
+                exportOptions: {
+                    columns: ":visible"
+                }
+            },
+            {
+                extend: "colvis",
+                postfixButtons: ["colvisRestore"]
+            }
+        ],
+        language: typeof idioma_espanol !== "undefined" ? idioma_espanol : {}
+    });
+
+    setTimeout(function () {
+        if (tablePartidasProyecto) {
+            tablePartidasProyecto.columns.adjust().draw();
+        }
+    }, 150);
 }
 
