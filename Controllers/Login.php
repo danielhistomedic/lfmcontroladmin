@@ -182,6 +182,7 @@ class Login extends Controllers
             $this->session->add('nombre_solo', $arrUsuario['nombre']);
             $this->session->add('rol_id', $arrUsuario['rol_id']);
             $this->session->add('rol', $arrUsuario['rol']);
+            $this->session->add('ccveusuario', $arrUsuario['ccveusuario']);
             $this->session->add('recordarme', $recordarme_post);
 
             /*-------------------------------------------
