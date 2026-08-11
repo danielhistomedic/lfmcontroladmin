@@ -220,12 +220,22 @@ class SeguimientoModel extends Mysql
                         break;
 
                     case 6:
-                        // Id 6: ORDEN COMPRA CLIENTE (PEDIDO COLOCADO) - Checar si hay registro en tb_ventas_cotizacion_cliente (enviado = 1)
-                        $sqlOc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
-                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
-                                  FROM tb_ventas_cotizacion_cliente 
-                                  WHERE venta_id = :vId AND enviado = 1 
-                                  ORDER BY id DESC";
+                        // Id 6: ORDEN COMPRA CLIENTE (PEDIDO COLOCADO) - Checar si hay registro en tb_pedidos_cliente (enviado = 1)
+                        $sqlOc = "SELECT pc.id, 
+                                         COALESCE(NULLIF(pc.num_orden_compra, ''), CONCAT('Pedido #', pc.id)) AS folio_cotizacion,
+                                         pc.num_orden_compra,
+                                         pc.fecha_pedido AS fecha, 
+                                         DATE_FORMAT(pc.fecha_pedido, '%d/%m/%Y') AS fecha_formateada, 
+                                         (COALESCE(pc.subtotal, 0) - COALESCE(pc.descuento, 0)) AS subtotal, 
+                                         COALESCE(pc.iva, 0) AS iva, 
+                                         COALESCE(pc.total, 0) AS total, 
+                                         pc.enviado, 
+                                         COALESCE(v.moneda_id, 3) AS moneda_id, 
+                                         CASE WHEN COALESCE(v.moneda_id, 3) = 1 THEN 'MXN' WHEN COALESCE(v.moneda_id, 3) = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                  FROM tb_pedidos_cliente pc
+                                  LEFT JOIN tb_ventas v ON v.id = pc.venta_id
+                                  WHERE pc.venta_id = :vId AND pc.enviado = 1 
+                                  ORDER BY pc.id DESC";
                         $regOc = $this->select($sqlOc, ['vId' => $venta_id]);
                         if (!empty($regOc)) {
                             $item['completado'] = true;

@@ -456,7 +456,7 @@ function fntRenderChecklistProceso(checklist) {
             `;
 
             step.registros.forEach(r => {
-                const folioDoc = r.folio_cotizacion || r.folio_ocp || r.proyecto_id || `ID #${r.id}`;
+                const folioDoc = r.num_orden_compra || r.folio_cotizacion || r.folio_ocp || r.proyecto_id || `ID #${r.id}`;
                 const fechaDoc = r.fecha_formateada || r.fecha_pedido || r.fecha || "—";
                 const sub = parseFloat(r.subtotal || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const iva = parseFloat(r.iva || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
