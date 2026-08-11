@@ -267,7 +267,6 @@ class SeguimientoModel extends Mysql
 
                 $checklist[] = $item;
             }
-
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -507,7 +506,6 @@ class SeguimientoModel extends Mysql
             if (!empty($res6)) {
                 $arrResponse = array_merge($arrResponse, $res6);
             }
-
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -709,7 +707,6 @@ class SeguimientoModel extends Mysql
             } catch (\Throwable $e3) {
                 getLoggerSystem()->error('Error Prioridad 3 Partidas: ' . getMensajeError($e3));
             }
-
         } catch (\Throwable $th) {
             getLoggerSystem()->error('Error getPartidasProyecto: ' . getMensajeError($th));
         }
@@ -717,5 +714,3 @@ class SeguimientoModel extends Mysql
         return $arrResponse;
     }
 }
-
-
