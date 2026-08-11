@@ -65,7 +65,7 @@ class UsuariosModel extends Mysql
             $sql .= "u.id,  ";
             $sql .= "u.usuario,  ";
             $sql .= "u.theme,  ";
-            $sql .= "u.ccveusaurio,  ";
+            $sql .= "u.ccveusuario,  ";
             $sql .= "usr_datgen.nombre, ";
             $sql .= "usr_datgen.paterno, ";
             $sql .= "usr_datgen.materno, ";

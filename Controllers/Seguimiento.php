@@ -145,6 +145,7 @@ class Seguimiento extends Controllers
             $data['usuario']['email']      = $this->session->get('email');
             $data['usuario']['rol']        = $this->session->get('rol');
             $data['usuario']['rol_id']     = $this->session->get('rol_id');
+            $data['usuario']['ccveusuario'] = $this->session->get('ccveusuario');
 
             // Configuracion
             $configuracion_model = new ConfiguracionModel;
@@ -585,11 +586,19 @@ class Seguimiento extends Controllers
                 die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
             }
 
+            /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
             $model = new SeguimientoModel();
 
             // Si se especificó un venta_id directamente
             if ($venta_id_select > 0) {
-                $proyectoData = $model->getProyectoVentaById($venta_id_select);
+                $proyectoData = $model->getProyectoVentaById($venta_id_select, $ccveusuario_vendedor);
                 if (!empty($proyectoData)) {
                     $checklist = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
                     $arrResponse['status']    = true;
@@ -603,13 +612,13 @@ class Seguimiento extends Controllers
             }
 
             // Buscar proyectos coincidentes
-            $listaProyectos = $model->buscarProyectosVenta($proyecto_id_input);
+            $listaProyectos = $model->buscarProyectosVenta($proyecto_id_input, $ccveusuario_vendedor);
 
             if (empty($listaProyectos)) {
                 $arrResponse['msg'] = 'No se encontraron proyectos de venta con la clave ingresada: "' . htmlspecialchars($proyecto_id_input) . '"';
             } elseif (count($listaProyectos) === 1) {
                 // Exactamente 1 coincidencia
-                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id']);
+                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor);
                 $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
                 $arrResponse['status']    = true;
                 $arrResponse['data']      = $proyectoData;
@@ -618,7 +627,7 @@ class Seguimiento extends Controllers
                 $arrResponse['msg']       = 'Proyecto localizado correctamente';
             } else {
                 // Múltiples coincidencias -> Devolver lista para que el usuario elija y cargar por defecto el primero
-                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id']);
+                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor);
                 $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
                 $arrResponse['status']    = true;
                 $arrResponse['data']      = $proyectoData;
@@ -666,6 +675,14 @@ class Seguimiento extends Controllers
             $cliente   = strClean($_POST['cliente']   ?? '');
             $vendedor  = strClean($_POST['vendedor']  ?? '');
 
+            /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
             if (!empty($fecha_ini) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_ini)) {
                 $parts = explode('/', $fecha_ini);
                 $fecha_ini = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
@@ -679,7 +696,7 @@ class Seguimiento extends Controllers
             /*-------------------------------------------
             [ Obtiene el array de registros ]*/
             $model = new SeguimientoModel();
-            $arrData = $model->selectProyectosVentaSeguimiento($fecha_ini, $fecha_fin, $busqueda, $titulo, $cliente, $vendedor);
+            $arrData = $model->selectProyectosVentaSeguimiento($fecha_ini, $fecha_fin, $busqueda, $titulo, $cliente, $vendedor, $ccveusuario_vendedor);
 
             /*-------------------------------------------
             [ Personaliza los datos del array ]*/

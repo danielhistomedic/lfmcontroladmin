@@ -15,9 +15,10 @@ class SeguimientoModel extends Mysql
      * Búsqueda de proyectos de venta por folio o número de proyecto_id
      * 
      * @param string $busqueda
+     * @param string $ccveusuario_vendedor
      * @return array
      */
-    public function buscarProyectosVenta(string $busqueda): array
+    public function buscarProyectosVenta(string $busqueda, string $ccveusuario_vendedor = ''): array
     {
         $arrResponse = array();
 
@@ -28,6 +29,7 @@ class SeguimientoModel extends Mysql
             }
 
             $term = '%' . $busqueda . '%';
+            $arr_values = ['term' => $term];
 
             $sql = "SELECT 
                         v.id,
@@ -49,11 +51,16 @@ class SeguimientoModel extends Mysql
                     LEFT JOIN cat_clientes c ON c.id = v.cliente_id
                     LEFT JOIN cat_medico u ON u.ccvemedico = v.ccveusuario_vendedor
                     LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-                    WHERE v.proyecto_id LIKE :term
-                    ORDER BY v.id DESC
-                    LIMIT 20";
+                    WHERE v.proyecto_id LIKE :term ";
 
-            $arrResponse = $this->select($sql, ['term' => $term]);
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+
+            $sql .= " ORDER BY v.id DESC LIMIT 20";
+
+            $arrResponse = $this->select($sql, $arr_values);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -65,9 +72,10 @@ class SeguimientoModel extends Mysql
      * Obtiene el detalle completo de un proyecto de venta por su id (venta_id)
      * 
      * @param int $venta_id
+     * @param string $ccveusuario_vendedor
      * @return array
      */
-    public function getProyectoVentaById(int $venta_id): array
+    public function getProyectoVentaById(int $venta_id, string $ccveusuario_vendedor = ''): array
     {
         $arrResponse = array();
 
@@ -75,6 +83,8 @@ class SeguimientoModel extends Mysql
             if ($venta_id <= 0) {
                 return $arrResponse;
             }
+
+            $arr_values = ['venta_id' => $venta_id];
 
             $sql = "SELECT 
                         v.id,
@@ -98,9 +108,14 @@ class SeguimientoModel extends Mysql
                     LEFT JOIN cat_clientes c ON c.id = v.cliente_id
                     LEFT JOIN cat_medico u ON u.ccvemedico = v.ccveusuario_vendedor
                     LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-                    WHERE v.id = :venta_id";
+                    WHERE v.id = :venta_id ";
 
-            $arrResponse = $this->selectModel($sql, ['venta_id' => $venta_id]);
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+
+            $arrResponse = $this->selectModel($sql, $arr_values);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -258,6 +273,7 @@ class SeguimientoModel extends Mysql
      * @param string $titulo
      * @param string $cliente
      * @param string $vendedor
+     * @param string $ccveusuario_vendedor
      * @return array
      */
     public function selectProyectosVentaSeguimiento(
@@ -266,7 +282,8 @@ class SeguimientoModel extends Mysql
         string $busqueda = '',
         string $titulo = '',
         string $cliente = '',
-        string $vendedor = ''
+        string $vendedor = '',
+        string $ccveusuario_vendedor = ''
     ): array {
         $arrResponse = array();
 
@@ -294,6 +311,11 @@ class SeguimientoModel extends Mysql
                     WHERE 1=1 ";
 
             $arr_values = [];
+
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
 
             if (!empty($fecha_ini) && !empty($fecha_fin)) {
                 $sql .= " AND DATE(v.fecha) BETWEEN :fecha_ini AND :fecha_fin ";
