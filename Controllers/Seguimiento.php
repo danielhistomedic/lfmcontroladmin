@@ -779,7 +779,427 @@ class Seguimiento extends Controllers
             die();
         }
     }
+
+    /**
+     * Carga la Vista Ordenes de Compra Proveedores.
+     * URL: /seguimiento/ordenesProveedor
+     */
+    public function ordenesProveedor()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                $this->session->redirect('inicio');
+                return;
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_PROVEEDOR] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
+
+            // Valida si tiene acceso a la pagina.
+            if (empty($this->permisosMod['r'])) {
+                echo "<h4>Lo sentimos, Acceso restringido</h4>";
+                die();
+            }
+
+            /*-------------------------------------------
+            [ Obtener datos de Modulo ]*/
+            $menus_model = new MenusModel;
+            $menu = $menus_model->selectMenu(MOD_SEGUIMIENTO_ORDENES_PROVEEDOR);
+
+            // Asigna los permisos de Módulo y SideBar
+            $data['permisos']    = $arrPermisos;
+            $data['permisosMod'] = $this->permisosMod;
+
+            // Datos de Usuario en Sesión.
+            $data['empresa_id']             = $this->session->get('empresa_id');
+            $data['sucursal_id']            = $this->session->get('sucursal_id');
+            $data['theme']                  = $this->session->get('theme');
+            $data['usuario']['nombre_solo'] = $this->session->get('nombre_solo');
+            $data['usuario']['email']       = $this->session->get('email');
+            $data['usuario']['rol']         = $this->session->get('rol');
+            $data['usuario']['rol_id']      = $this->session->get('rol_id');
+            $data['usuario']['ccveusuario']  = $this->session->get('ccveusuario');
+
+            // Configuracion
+            $configuracion_model = new ConfiguracionModel;
+            $configuracion_model->setEmpresaId($data['empresa_id']);
+            $configuracion = $configuracion_model->selectRecord($configuracion_model);
+            $data['configuracion'] = $configuracion;
+
+            // Id de Menu para script de Permisos de Boton exportar a Excel
+            $data['menu'] = MOD_SEGUIMIENTO_ORDENES_PROVEEDOR;
+
+            // Header
+            $data['page_title']        = !empty($menu['name'])        ? $menu['name']        : 'Seguimiento Órdenes Proveedor';
+            $data['meta_description']  = !empty($menu['descripcion']) ? $menu['descripcion'] : 'Seguimiento de órdenes de compra a proveedores';
+            $data['meta_keywords']     = !empty($menu['tags'])        ? $menu['tags']        : 'seguimiento, ordenes, proveedores, compras, pedidos';
+
+            // Form Principal
+            $data['icon_form_title']  = !empty($menu['icon_form_title']) ? $menu['icon_form_title'] : '<i class="fa-regular fa-truck-ramp-box fa-fw text-primary"></i>';
+            $data['page_form_title']  = $data['icon_form_title'] . (!empty($menu['form_title']) ? (' ' . $menu['form_title']) : ' Órdenes de Compra Proveedores');
+
+            // Breadcrumb
+            $data['page_breadcrumb']       = 'Seguimiento / Órdenes de Compra Proveedores';
+            $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Órdenes de Compra Proveedores';
+            $data['page_card_description'] = $data['meta_description'];
+
+            // JS Principal
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'ordenes_proveedor.js';
+
+            // Call Vista
+            $this->views->getView($this, 'ordenes_proveedor', $data);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+    }
+
+    /**
+     * Obtiene la lista de órdenes a proveedores para llenar el DataTable.
+     * URL / AJAX: /seguimiento/getOrdenesProveedorDatatable
+     *
+     * @return json
+     */
+    public function getOrdenesProveedorDatatable()
+    {
+        try {
+            $arrData = array();
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_PROVEEDOR] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe y limpia parámetros de filtro ]*/
+            $fecha_ini        = strClean($_POST['fecha_ini']        ?? '');
+            $fecha_fin        = strClean($_POST['fecha_fin']        ?? '');
+            $filtro_num_orden = strClean($_POST['filtro_num_orden'] ?? '');
+            $filtro_estatus   = strClean($_POST['filtro_estatus']   ?? '');
+            $filtro_proveedor = strClean($_POST['filtro_proveedor'] ?? '');
+
+            /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_filtro = '';
+            if ($rol_id === 4) {
+                $ccveusuario_filtro = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            /*-------------------------------------------
+            [ Obtiene el array de registros ]*/
+            $model = new SeguimientoModel();
+            $arrData = $model->selectOrdenesProveedorSeguimiento(
+                $fecha_ini,
+                $fecha_fin,
+                $filtro_estatus,
+                $filtro_proveedor,
+                $ccveusuario_filtro,
+                $filtro_num_orden
+            );
+
+            /*-------------------------------------------
+            [ Personaliza los datos del array ]*/
+            $data_animation = "fadeIn";
+
+            for ($i = 0; $i < count($arrData); $i++) {
+                // Badge estatus
+                $estatus_id  = intval($arrData[$i]['estatus_proyecto_id']);
+                $estatus_txt = $arrData[$i]['estatus_proyecto'];
+
+                if ($estatus_id >= 11) {
+                    $badge_class = 'bg-success';
+                } elseif ($estatus_id >= 8) {
+                    $badge_class = 'bg-primary';
+                } elseif ($estatus_id >= 6) {
+                    $badge_class = 'bg-info';
+                } else {
+                    $badge_class = 'bg-warning text-dark';
+                }
+                $arrData[$i]['estatus_badge'] = '<span class="badge ' . $badge_class . ' fs-11">' . htmlspecialchars($estatus_txt) . '</span>';
+
+                // Monto formateado
+                $moneda = $arrData[$i]['cmoneda'] ?? 'USD';
+                $monto  = number_format((float)($arrData[$i]['monto_pedido'] ?? 0), 2, '.', ',');
+                $arrData[$i]['monto_formateado'] = $moneda . ' $' . $monto;
+
+                // Total seguimientos badge
+                $total_seg = intval($arrData[$i]['total_seguimientos'] ?? 0);
+                if ($total_seg > 0) {
+                    $arrData[$i]['seguimientos_badge'] = '<span class="badge bg-primary">' . $total_seg . '</span>';
+                } else {
+                    $arrData[$i]['seguimientos_badge'] = '<span class="badge bg-secondary">0</span>';
+                }
+
+                // Total partidas badge
+                $total_partidas = intval($arrData[$i]['total_partidas'] ?? 0);
+                $arrData[$i]['partidas_badge'] = '<span class="badge bg-secondary">' . $total_partidas . '</span>';
+
+                // Total adjuntos badge
+                $total_adjuntos = intval($arrData[$i]['total_adjuntos'] ?? 0);
+                $arrData[$i]['adjuntos_badge'] = '<span class="badge bg-secondary">' . $total_adjuntos . '</span>';
+
+                // Notas de último seguimiento (truncar si es muy largo)
+                $nota = $arrData[$i]['ultimo_seguimiento_nota'] ?? '';
+                if (mb_strlen($nota) > 60) {
+                    $arrData[$i]['ultimo_seguimiento_nota_corta'] = mb_substr($nota, 0, 60) . '...';
+                } else {
+                    $arrData[$i]['ultimo_seguimiento_nota_corta'] = $nota;
+                }
+
+                // Encriptar IDs para llamadas AJAX
+                $pedido_id_enc = openssl_encrypt($arrData[$i]['pedido_id'], METHODENCRIPT, KEY);
+                $venta_id_enc  = !empty($arrData[$i]['venta_id']) ? openssl_encrypt($arrData[$i]['venta_id'], METHODENCRIPT, KEY) : '';
+
+                // Botón Ver Detalle
+                $btnDetalle = '<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-outline-info" '
+                    . 'data-animation="' . $data_animation . '" '
+                    . 'onclick="fntVerDetalle(this)" '
+                    . 'data-pedido-id="' . $pedido_id_enc . '" '
+                    . 'data-venta-id="' . $venta_id_enc . '" '
+                    . 'title="Ver Detalle y Seguimiento">'
+                    . '<i class="fa-sharp fa-regular fa-magnifying-glass"></i></button>';
+
+                $btnDetalle = (!empty($this->permisosMod['r'])) ? $btnDetalle : '';
+                $arrData[$i]['options'] = $btnDetalle;
+
+                $arrData[$i]['pedido_id_enc'] = $pedido_id_enc;
+                $arrData[$i]['venta_id_enc']  = $venta_id_enc;
+            }
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        /*-------------------------------------------
+        [ Retorna respuesta json_encode ]*/
+        die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Obtiene los eventos de fechas estimadas de entrega de proveedores para el calendario.
+     * URL / AJAX: /seguimiento/getCalendarioEntregasProveedorData
+     *
+     * @return json
+     */
+    public function getCalendarioEntregasProveedorData()
+    {
+        try {
+            $arrResponse = array(
+                'respuesta' => 'ok',
+                'resumen'   => array('total' => 0, 'vencidos' => 0, 'proximos' => 0, 'en_tiempo' => 0),
+                'eventos'   => array(),
+                'raw_data'  => array()
+            );
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_PROVEEDOR] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe parámetros de fecha opcionales ]*/
+            $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
+            $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
+
+            /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_filtro = '';
+            if ($rol_id === 4) {
+                $ccveusuario_filtro = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            /*-------------------------------------------
+            [ Consulta el Modelo ]*/
+            $model = new SeguimientoModel();
+            $arrData = $model->selectFechasEntregaProveedores($fecha_ini, $fecha_fin, $ccveusuario_filtro);
+
+            $hoy = date('Y-m-d');
+            $limite_proximo = date('Y-m-d', strtotime('+7 days'));
+
+            $eventos = array();
+            $raw_data = array();
+            $count_vencidos  = 0;
+            $count_proximos  = 0;
+            $count_en_tiempo = 0;
+
+            $hoy_dt = new DateTime($hoy);
+
+            foreach ($arrData as $item) {
+                $fecha_estimada = $item['fecha_estimada_entrega'];
+                $fecha_est_dt   = new DateTime($fecha_estimada);
+                $diff           = $hoy_dt->diff($fecha_est_dt);
+                $dias_restantes = (int)$diff->format('%r%a');
+
+                if ($dias_restantes > 0) {
+                    $tiempo_restante_str = $dias_restantes . ' día' . ($dias_restantes > 1 ? 's' : '');
+                } elseif ($dias_restantes === 0) {
+                    $tiempo_restante_str = '0 días (Entrega hoy)';
+                } else {
+                    $tiempo_restante_str = abs($dias_restantes) . ' día' . (abs($dias_restantes) > 1 ? 's' : '') . ' de atraso';
+                }
+
+                if ($fecha_estimada < $hoy) {
+                    $estatus_codigo   = 'vencido';
+                    $estatus_label    = 'Vencido (Pendiente de Entrega)';
+                    $badge_class      = 'bg-danger';
+                    $event_color      = '#dc3545';
+                    $event_text_color = '#ffffff';
+                    $count_vencidos++;
+                } elseif ($fecha_estimada <= $limite_proximo) {
+                    $estatus_codigo   = 'proximo';
+                    $estatus_label    = 'Próximo a Vencer (<= 7 días)';
+                    $badge_class      = 'bg-warning text-dark';
+                    $event_color      = '#ffc107';
+                    $event_text_color = '#212529';
+                    $count_proximos++;
+                } else {
+                    $estatus_codigo   = 'en_tiempo';
+                    $estatus_label    = 'En Tiempo';
+                    $badge_class      = 'bg-success';
+                    $event_color      = '#198754';
+                    $event_text_color = '#ffffff';
+                    $count_en_tiempo++;
+                }
+
+                $item['dias_restantes']      = $dias_restantes;
+                $item['tiempo_restante_str'] = $tiempo_restante_str;
+                $item['estatus_codigo']      = $estatus_codigo;
+                $item['estatus_label']       = $estatus_label;
+                $item['badge_class']         = $badge_class;
+
+                $oc_str      = !empty($item['num_orden_compra']) ? $item['num_orden_compra'] : ('Pedido Prov. #' . $item['pedido_id']);
+                $prov_str    = !empty($item['proveedor']) ? $item['proveedor'] : '';
+                $partida_str = !empty($item['codigo_partida']) ? $item['codigo_partida'] : '';
+
+                $desc_limpia = trim(preg_replace('/\s+/', ' ', $item['descripcion'] ?? ''));
+                if (mb_strlen($desc_limpia) > 50) {
+                    $desc_corta = mb_substr($desc_limpia, 0, 50) . '...';
+                } else {
+                    $desc_corta = $desc_limpia;
+                }
+
+                $title_parts = array_filter([$oc_str, $prov_str, $partida_str, $desc_corta]);
+                $event_title = implode(' - ', $title_parts);
+
+                $eventos[] = array(
+                    'id'              => $item['detalle_id'],
+                    'title'           => $event_title,
+                    'start'           => $fecha_estimada,
+                    'backgroundColor' => $event_color,
+                    'borderColor'     => $event_color,
+                    'textColor'       => $event_text_color,
+                    'extendedProps'   => $item
+                );
+
+                $raw_data[] = $item;
+            }
+
+            $arrResponse['resumen'] = array(
+                'total'     => count($arrData),
+                'vencidos'  => $count_vencidos,
+                'proximos'  => $count_proximos,
+                'en_tiempo' => $count_en_tiempo
+            );
+            $arrResponse['eventos']  = $eventos;
+            $arrResponse['raw_data'] = $raw_data;
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        /*-------------------------------------------
+        [ Retorna respuesta json_encode ]*/
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Obtiene los datos detallados de una orden de compra a proveedor,
+     * incluyendo datos generales, partidas (tb_pedidos_proveedor_detalle),
+     * adjuntos (tb_pedidos_proveedor_adjuntos) y la bitácora de seguimiento.
+     * URL / AJAX: /seguimiento/getDetallePedidoProveedor
+     *
+     * @return json
+     */
+    public function getDetallePedidoProveedor()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_PROVEEDOR] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe y desencripta pedido_id ]*/
+            $pedido_id_input = strClean($_POST['pedido_id'] ?? '');
+            if (empty($pedido_id_input)) {
+                die(json_encode(getResponse('Debe especificar el ID de la orden a proveedor', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            if (is_numeric($pedido_id_input)) {
+                $pedido_id = intval($pedido_id_input);
+            } else {
+                $pedido_id = intval(openssl_decrypt($pedido_id_input, METHODENCRIPT, KEY));
+            }
+
+            if ($pedido_id <= 0) {
+                die(json_encode(getResponse('ID de orden a proveedor no válido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Consultas a través del Modelo ]*/
+            $model = new SeguimientoModel();
+            $detallePedido = $model->selectDetallePedidoProveedorCompleto($pedido_id);
+            if (empty($detallePedido)) {
+                die(json_encode(getResponse('No se encontró la orden de compra a proveedor especificada.', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $partidas = $model->selectPartidasPedidoProveedor($pedido_id);
+            $adjuntos = $model->selectAdjuntosPedidoProveedor($pedido_id);
+
+            // Obtener venta_id para consultar la bitácora de seguimientos
+            $venta_id = intval($detallePedido['venta_id'] ?? 0);
+            $historial = [];
+            if ($venta_id > 0) {
+                $ventasModel = new VentasModel();
+                $historial = $ventasModel->selectHistorialSeguimientoVenta($venta_id);
+            }
+
+            $arrResponse = getResponse('Datos encontrados', 'ok', false);
+            $arrResponse['data'] = array(
+                'pedido'    => $detallePedido,
+                'partidas'  => $partidas,
+                'adjuntos'  => $adjuntos,
+                'historial' => $historial
+            );
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            die(json_encode(getResponse('Código Error: ' . self::prefijo_msj_error . '_2001. Error Desconocido'), JSON_UNESCAPED_UNICODE));
+        }
+
+        /*-------------------------------------------
+        [ Retorna respuesta json_encode ]*/
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
 }
+
 
 
 

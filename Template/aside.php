@@ -295,13 +295,15 @@
                     <!-- Seguimiento  -->
                     <?php if (
                         !empty($data['permisos'][MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r']) ||
-                        !empty($data['permisos'][MOD_SEGUIMIENTO_PROYECTO_VENTA]['r'])
+                        !empty($data['permisos'][MOD_SEGUIMIENTO_PROYECTO_VENTA]['r']) ||
+                        !empty($data['permisos'][MOD_SEGUIMIENTO_ORDENES_PROVEEDOR]['r'])
                     ) {
                     ?>
 
                         <li class="nav-parent <?php if (
                                                     $data['menu'] == MOD_SEGUIMIENTO_ORDENES_CLIENTE ||
-                                                    $data['menu'] == MOD_SEGUIMIENTO_PROYECTO_VENTA
+                                                    $data['menu'] == MOD_SEGUIMIENTO_PROYECTO_VENTA ||
+                                                    $data['menu'] == MOD_SEGUIMIENTO_ORDENES_PROVEEDOR
                                                 ) {
                                                     echo "nav-expanded nav-active";
                                                 } ?>">
@@ -333,6 +335,17 @@
                                     </li>
                                 <?php }  ?>
 
+                                <hr class="mb-1 mt-1">
+
+                                <?php if (
+                                    !empty($data['permisos'][MOD_SEGUIMIENTO_ORDENES_PROVEEDOR]['r'])
+                                ) { ?>
+                                    <li class="<?= ($data['menu'] == MOD_SEGUIMIENTO_ORDENES_PROVEEDOR) ? "nav-active" : ""; ?>">
+                                        <a class="nav-link" href="<?= base_url(); ?>/seguimiento/ordenesProveedor">
+                                            Órdenes de Compra Proveedores
+                                        </a>
+                                    </li>
+                                <?php }  ?>
 
                                 <hr class="mb-1 mt-1">
 

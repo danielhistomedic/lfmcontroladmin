@@ -26,6 +26,7 @@ const MOD_VENTAS_CLIENTES = 124;
 // ** -----------------------------
 const MOD_SEGUIMIENTO_ORDENES_CLIENTE = 130;
 const MOD_SEGUIMIENTO_PROYECTO_VENTA = 131;
+const MOD_SEGUIMIENTO_ORDENES_PROVEEDOR = 134;
 
 // ** -----------------------------
 // [ Almacén ]

@@ -713,4 +713,321 @@ class SeguimientoModel extends Mysql
 
         return $arrResponse;
     }
+
+    /**
+     * Obtiene la lista completa de órdenes de compra a proveedores con su seguimiento para la vista de seguimiento.
+     * Une tb_pedidos_proveedor con tb_ventas, tb_proveedores, cat_clientes y tb_ventas_seguimiento.
+     *
+     * @param string $fecha_ini
+     * @param string $fecha_fin
+     * @param string $filtro_estatus
+     * @param string $filtro_proveedor
+     * @param string $ccveusuario
+     * @param string $filtro_num_orden
+     * @return array
+     */
+    public function selectOrdenesProveedorSeguimiento(
+        string $fecha_ini = '',
+        string $fecha_fin = '',
+        string $filtro_estatus = '',
+        string $filtro_proveedor = '',
+        string $ccveusuario = '',
+        string $filtro_num_orden = ''
+    ): array {
+        $arrResponse = array();
+
+        try {
+            $sql = "SELECT
+                pp.id                                                       AS pedido_id,
+                pp.folio_ocp,
+                pp.oa_proveedor,
+                pp.oe_proveedor,
+                pp.num_revision,
+                pp.tipo_pedido,
+                pp.incoterm,
+                pp.venta_id,
+                v.titulo                                                    AS titulo_venta,
+                v.proyecto_id,
+                v.clues,
+                COALESCE(c.nombre_comercial, 'Sin Cliente')                 AS cliente,
+                COALESCE(prov.cDatGenRazonSocial, prov.cDatGenNombreAbreviado, 'Sin Proveedor') AS proveedor,
+                prov.cDatGenRFC                                             AS proveedor_rfc,
+                prov.cContactoNombre                                        AS proveedor_contacto,
+                prov.cContactoeMail                                         AS proveedor_email,
+                prov.cContactoTel                                           AS proveedor_telefono,
+                CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS comprador,
+                COALESCE(e.cEstatus, 'Sin Estatus')                         AS estatus_proyecto,
+                COALESCE(v.estatus_proyecto_id, 0)                          AS estatus_proyecto_id,
+                COALESCE(cl.clasificacion, 'Sin Clasificación')             AS clasificacion_proyecto,
+                pp.fecha_pedido,
+                DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
+                CASE WHEN pp.moneda_id = 1 THEN 'MXN' WHEN pp.moneda_id = 3 THEN 'USD' ELSE 'MXN' END AS cmoneda,
+                pp.moneda_id,
+                COALESCE(pp.subtotal, 0)                                    AS subtotal_pedido,
+                COALESCE(pp.iva, 0)                                         AS iva_pedido,
+                COALESCE(pp.total, 0)                                       AS monto_pedido,
+                ROUND(
+                    CASE
+                        WHEN pp.moneda_id = 1 THEN COALESCE(pp.total, 0) / COALESCE(NULLIF(tc.valor, 0), 1)
+                        ELSE COALESCE(pp.total, 0)
+                    END, 2
+                )                                                           AS monto_pedido_usd,
+                pp.enviado,
+                pp.fchregistro                                              AS fecha_registro_pedido,
+                DATE_FORMAT(pp.fchregistro, '%d/%m/%Y')                     AS fecha_registro_formateada,
+                /* Último seguimiento */
+                (SELECT vs.seguimiento
+                 FROM tb_ventas_seguimiento vs
+                 WHERE vs.venta_id = pp.venta_id
+                 ORDER BY vs.id DESC LIMIT 1)                               AS ultimo_seguimiento_nota,
+                (SELECT DATE_FORMAT(vs2.fchregistro, '%d/%m/%Y')
+                 FROM tb_ventas_seguimiento vs2
+                 WHERE vs2.venta_id = pp.venta_id
+                 ORDER BY vs2.id DESC LIMIT 1)                              AS ultimo_seguimiento_fecha,
+                (SELECT COALESCE(CONCAT_WS(' ', u2.cnombre, u2.cpriapellido, u2.csegapellido), '')
+                 FROM tb_ventas_seguimiento vs3
+                 LEFT JOIN cat_medico u2 ON u2.ccvemedico = vs3.ccveusuario
+                 WHERE vs3.venta_id = pp.venta_id
+                 ORDER BY vs3.id DESC LIMIT 1)                              AS ultimo_seguimiento_usuario,
+                (SELECT COUNT(*) FROM tb_ventas_seguimiento vs4
+                 WHERE vs4.venta_id = pp.venta_id)                         AS total_seguimientos,
+                /* Total partidas */
+                (SELECT COUNT(*) FROM tb_pedidos_proveedor_detalle ppd
+                 WHERE ppd.pedido_proveedor_id = pp.id)                     AS total_partidas,
+                /* Total adjuntos */
+                (SELECT COUNT(*) FROM tb_pedidos_proveedor_adjuntos ppa
+                 WHERE ppa.pedido_proveedor_id = pp.id)                     AS total_adjuntos
+            FROM tb_pedidos_proveedor pp
+            LEFT JOIN tb_ventas v                  ON v.id = pp.venta_id
+            LEFT JOIN cat_clientes c               ON (c.id = pp.cliente_id OR c.id = v.cliente_id)
+            LEFT JOIN tb_proveedores prov          ON prov.icveProveedor = pp.proveedor_id
+            LEFT JOIN cat_medico vd                ON vd.ccvemedico = pp.ccveusuario
+            LEFT JOIN cat_estatus_proyecto e       ON e.Id = v.estatus_proyecto_id
+            LEFT JOIN cat_clasificacion_proyectos cl ON cl.id = v.clasificacion_proyecto_id
+            LEFT JOIN (
+                SELECT valor FROM tb_historial_tipos_cambio
+                WHERE idMoneda = 3
+                ORDER BY fecha DESC, id DESC
+                LIMIT 1
+            ) tc ON 1=1
+            WHERE 1=1 ";
+
+            $arr_values = [];
+
+            if (!empty($ccveusuario)) {
+                $sql .= " AND (pp.ccveusuario = :ccveusuario OR v.ccveusuario_vendedor = :ccveusuario_vendedor) ";
+                $arr_values['ccveusuario'] = $ccveusuario;
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario;
+            }
+
+            if (!empty($filtro_num_orden)) {
+                $sql .= " AND (pp.folio_ocp LIKE :filtro_num_orden OR pp.id LIKE :filtro_num_orden_id OR pp.oa_proveedor LIKE :filtro_oa) ";
+                $arr_values['filtro_num_orden']    = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_num_orden_id'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_oa']           = '%' . $filtro_num_orden . '%';
+            }
+
+            if (!empty($filtro_proveedor)) {
+                $sql .= " AND (prov.cDatGenRazonSocial LIKE :filtro_proveedor OR prov.cDatGenNombreAbreviado LIKE :filtro_proveedor_abr) ";
+                $arr_values['filtro_proveedor']     = '%' . $filtro_proveedor . '%';
+                $arr_values['filtro_proveedor_abr'] = '%' . $filtro_proveedor . '%';
+            }
+
+            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+                $sql .= " AND DATE(pp.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+                $arr_values['fecha_fin'] = $fecha_fin;
+            }
+
+            if (!empty($filtro_estatus)) {
+                $sql .= " AND v.estatus_proyecto_id = :estatus_id ";
+                $arr_values['estatus_id'] = $filtro_estatus;
+            }
+
+            $sql .= " ORDER BY pp.fecha_pedido DESC, pp.id DESC ";
+
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene los eventos de entregas estimadas de proveedores para el calendario.
+     * Consulta tb_pedidos_proveedor_detalle unida a tb_pedidos_proveedor.
+     *
+     * @param string $fecha_ini
+     * @param string $fecha_fin
+     * @param string $ccveusuario
+     * @return array
+     */
+    public function selectFechasEntregaProveedores(string $fecha_ini = '', string $fecha_fin = '', string $ccveusuario = ''): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                ppd.id                                                      AS detalle_id,
+                ppd.pedido_proveedor_id                                     AS pedido_id,
+                pp.venta_id,
+                pp.folio_ocp                                                AS num_orden_compra,
+                COALESCE(prov.cDatGenRazonSocial, prov.cDatGenNombreAbreviado, 'Sin Proveedor') AS proveedor,
+                COALESCE(c.nombre_comercial, 'Sin Cliente')                 AS cliente,
+                COALESCE(v.titulo, 'Sin Título')                           AS titulo_venta,
+                COALESCE(v.proyecto_id, '')                                 AS proyecto_id,
+                ppd.codigo_partida,
+                ppd.descripcion,
+                ppd.descripcion_adicional,
+                ppd.cantidad_pedido,
+                ppd.precio_unitario,
+                ppd.tiempo_entrega,
+                ppd.fecha_estimada_entrega,
+                DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y')         AS fecha_estimada_formateada,
+                pp.fecha_pedido,
+                DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
+                0                                                           AS entregado
+            FROM tb_pedidos_proveedor_detalle ppd
+            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id
+            LEFT  JOIN tb_ventas v             ON v.id  = pp.venta_id
+            LEFT  JOIN cat_clientes c          ON (c.id = pp.cliente_id OR c.id = v.cliente_id)
+            LEFT  JOIN tb_proveedores prov     ON prov.icveProveedor = pp.proveedor_id
+            WHERE ppd.fecha_estimada_entrega IS NOT NULL
+              AND ppd.fecha_estimada_entrega != '0000-00-00' ";
+
+            $arr_values = [];
+
+            if (!empty($ccveusuario)) {
+                $sql .= " AND (pp.ccveusuario = :ccveusuario OR v.ccveusuario_vendedor = :ccveusuario_vendedor) ";
+                $arr_values['ccveusuario'] = $ccveusuario;
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario;
+            }
+
+            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+                $sql .= " AND (
+                    DATE(ppd.fecha_estimada_entrega) BETWEEN :fecha_ini AND :fecha_fin
+                    OR DATE(pp.fecha_pedido) BETWEEN :fecha_ini2 AND :fecha_fin2
+                ) ";
+                $arr_values['fecha_ini']  = $fecha_ini;
+                $arr_values['fecha_fin']  = $fecha_fin;
+                $arr_values['fecha_ini2'] = $fecha_ini;
+                $arr_values['fecha_fin2'] = $fecha_fin;
+            }
+
+            $sql .= " ORDER BY ppd.fecha_estimada_entrega ASC ";
+
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene el detalle completo del encabezado de una orden de compra a proveedor.
+     *
+     * @param int $pedido_proveedor_id
+     * @return array
+     */
+    public function selectDetallePedidoProveedorCompleto(int $pedido_proveedor_id): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                pp.*,
+                DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
+                DATE_FORMAT(pp.fecha_revision, '%d/%m/%Y')                  AS fecha_revision_formateada,
+                DATE_FORMAT(pp.fchregistro, '%d/%m/%Y %H:%i')               AS fecha_registro_formateada,
+                CASE WHEN pp.moneda_id = 1 THEN 'MXN' WHEN pp.moneda_id = 3 THEN 'USD' ELSE 'MXN' END AS cmoneda,
+                COALESCE(prov.cDatGenRazonSocial, prov.cDatGenNombreAbreviado, 'Sin Proveedor') AS proveedor_nombre,
+                prov.cDatGenRFC                                             AS proveedor_rfc,
+                prov.cContactoNombre                                        AS proveedor_contacto,
+                prov.cContactoeMail                                         AS proveedor_email,
+                prov.cContactoTel                                           AS proveedor_telefono,
+                prov.cDatGenCalleNumero                                     AS proveedor_direccion,
+                prov.cDatGenColonia                                         AS proveedor_colonia,
+                prov.cDatGenMunicipio                                       AS proveedor_municipio,
+                prov.cDatEntidad                                            AS proveedor_estado,
+                prov.cDatGenCP                                              AS proveedor_cp,
+                COALESCE(c.nombre_comercial, 'Sin Cliente')                 AS cliente_nombre,
+                v.proyecto_id                                               AS proyecto_id,
+                v.titulo                                                    AS titulo_venta,
+                COALESCE(e.cEstatus, 'Sin Estatus')                         AS estatus_proyecto,
+                v.estatus_proyecto_id,
+                CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS comprador_nombre
+            FROM tb_pedidos_proveedor pp
+            LEFT JOIN tb_proveedores prov    ON prov.icveProveedor = pp.proveedor_id
+            LEFT JOIN cat_clientes c         ON (c.id = pp.cliente_id)
+            LEFT JOIN tb_ventas v            ON v.id = pp.venta_id
+            LEFT JOIN cat_medico vd          ON vd.ccvemedico = pp.ccveusuario
+            LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
+            WHERE pp.id = :pedido_id
+            LIMIT 1";
+
+            $arrResponse = $this->selectModel($sql, ['pedido_id' => $pedido_proveedor_id]);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene las partidas de una orden de compra a proveedor (tb_pedidos_proveedor_detalle).
+     *
+     * @param int $pedido_proveedor_id
+     * @return array
+     */
+    public function selectPartidasPedidoProveedor(int $pedido_proveedor_id): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                ppd.*,
+                DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y') AS fecha_estimada_formateada,
+                UPPER(COALESCE(NULLIF(TRIM(ppd.ccveunidad), ''), 'PZA')) AS unidad_medida
+            FROM tb_pedidos_proveedor_detalle ppd
+            WHERE ppd.pedido_proveedor_id = :pedido_id
+            ORDER BY ppd.codigo_partida ASC, ppd.id ASC";
+
+            $arrResponse = $this->select($sql, ['pedido_id' => $pedido_proveedor_id]);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene los archivos adjuntos de una orden de compra a proveedor (tb_pedidos_proveedor_adjuntos).
+     *
+     * @param int $pedido_proveedor_id
+     * @return array
+     */
+    public function selectAdjuntosPedidoProveedor(int $pedido_proveedor_id): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                ppa.id,
+                ppa.venta_id,
+                ppa.pedido_proveedor_id,
+                ppa.archivo,
+                'tb_pedidos_proveedor_adjuntos' AS tabla_origen,
+                'Pedido Proveedor' AS origen_etiqueta
+            FROM tb_pedidos_proveedor_adjuntos ppa
+            WHERE ppa.pedido_proveedor_id = :pedido_id
+              AND ppa.archivo IS NOT NULL
+              AND TRIM(ppa.archivo) != ''
+            ORDER BY ppa.id ASC";
+
+            $arrResponse = $this->select($sql, ['pedido_id' => $pedido_proveedor_id]);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
 }
+
