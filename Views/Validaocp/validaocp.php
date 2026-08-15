@@ -273,7 +273,7 @@
                 <img src="<?= assets(); ?>/img/logo-light.png" alt="LFM CONTROL" class="header-logo" onerror="this.src='<?= assets(); ?>/img/logo.png';">
             </a>
             <span class="badge bg-danger text-uppercase px-2 py-1 font-weight-semibold" style="font-size: 0.75rem; letter-spacing: 0.5px;">
-                Módulo de Verificación
+                Módulo de Verificación OCP
             </span>
         </div>
     </header>
@@ -285,7 +285,7 @@
             <?php
             $val = $data['validacion'];
             $status = $val['status'];
-            $cotizacion = $data['cotizacion_bd'];
+            $pedido = $data['pedido_bd'];
             $qr = $data['qr_params'];
 
             // Configuración del Header según el estado
@@ -296,7 +296,7 @@
             if ($status === "VALIDO") {
                 $headerClass = "status-valid";
                 $iconClass = "bx bx-check-shield";
-                $titleText = "Cotización de Cliente Válida";
+                $titleText = "Orden de Compra Válida";
             } elseif ($status === "DISCREPANCIA") {
                 $headerClass = "status-discrepancy";
                 $iconClass = "bx bx-error";
@@ -320,7 +320,7 @@
             <!-- Cuerpo de la tarjeta -->
             <div class="card-body-custom">
 
-                <?php if (!empty($cotizacion)): ?>
+                <?php if (!empty($pedido)): ?>
                     
                     <!-- Sección Datos del Registro en Base de Datos -->
                     <div class="section-title">
@@ -329,42 +329,45 @@
 
                     <div class="info-grid">
                         <div class="info-box">
-                            <div class="info-label">Folio de Cotización</div>
+                            <div class="info-label">Folio de Orden de Compra</div>
                             <div class="info-value">
-                                <?= !empty($cotizacion['folio_cotizacion']) ? htmlspecialchars($cotizacion['folio_cotizacion']) : (!empty($cotizacion['folio']) ? htmlspecialchars($cotizacion['folio']) : htmlspecialchars($qr['folio'])); ?>
+                                <?= !empty($pedido['folio_ocp']) ? htmlspecialchars($pedido['folio_ocp']) : htmlspecialchars($qr['folio']); ?>
                             </div>
                         </div>
 
-                        <?php if (!empty($cotizacion['cliente_razon_social'])): ?>
-                            <div class="info-box">
-                                <div class="info-label">Cliente / Razón Social</div>
-                                <div class="info-value">
-                                    <?= htmlspecialchars($cotizacion['cliente_razon_social']); ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-
                         <div class="info-box">
-                            <div class="info-label">Fecha Cotización</div>
+                            <div class="info-label">Fecha de Orden / Pedido</div>
                             <div class="info-value">
                                 <?php 
-                                $fechaBD = $cotizacion['fecha'];
+                                $fechaBD = $pedido['fecha_pedido'] ?? $pedido['fecha_db'] ?? null;
                                 echo !empty($fechaBD) ? date('d/m/Y', strtotime($fechaBD)) : 'N/A';
                                 ?>
                             </div>
                         </div>
 
                         <div class="info-box">
-                            <div class="info-label">Total SIN IVA</div>
-                            <div class="info-value highlight-total">
+                            <div class="info-label">Proveedor</div>
+                            <div class="info-value">
                                 <?php 
-                                $montoBD = (float)($cotizacion['subtotal'] ?? 0) - (float)($cotizacion['descuento'] ?? 0);
-                                echo !empty($montoBD) ? '$' . number_format((float)$montoBD, 2, '.', ',') . ' MXN' : 'N/A';
+                                $nombreProveedor = !empty($pedido['proveedor']) ? $pedido['proveedor'] :
+                                                  (!empty($pedido['proveedor_nombre']) ? $pedido['proveedor_nombre'] :
+                                                  (!empty($pedido['nombre_proveedor']) ? $pedido['nombre_proveedor'] :
+                                                  (!empty($pedido['razon_social']) ? $pedido['razon_social'] :
+                                                  (!empty($pedido['proveedor_razon_social']) ? $pedido['proveedor_razon_social'] : 'N/A'))));
+                                echo htmlspecialchars($nombreProveedor);
                                 ?>
                             </div>
                         </div>
 
-                      
+                        <div class="info-box">
+                            <div class="info-label">Total de la Orden</div>
+                            <div class="info-value highlight-total">
+                                <?php 
+                                $montoTotalBD = (float)($pedido['total'] ?? 0);
+                                echo '$' . number_format($montoTotalBD, 2, '.', ',') . ' ' . htmlspecialchars($pedido['cmoneda'] ?? 'MXN');
+                                ?>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Sección Cotejo de Integridad -->
@@ -400,17 +403,17 @@
                             </tr>
                             <?php endif; ?>
 
-                            <?php if (!empty($qr['subtotal'])): ?>
+                            <?php if (!empty($qr['total'])): ?>
                             <tr>
-                                <td><i class="bx bx-dollar-circle me-1 text-muted"></i> Subtotal / Monto impreso (QR)</td>
+                                <td><i class="bx bx-dollar-circle me-1 text-muted"></i> Total / Monto impreso (QR)</td>
                                 <td>
                                     <?php 
-                                    $subtotalCoincide = $val['detalles']['subtotal_coincide'] ?? $val['detalles']['total_coincide'] ?? null;
-                                    if ($subtotalCoincide === true): 
+                                    $totalCoincide = $val['detalles']['total_coincide'] ?? null;
+                                    if ($totalCoincide === true): 
                                     ?>
-                                        <span class="badge-check badge-check-success"><i class="bx bx-check"></i> Coincide ($<?= number_format((float)$qr['subtotal'], 2, '.', ','); ?>)</span>
-                                    <?php elseif ($subtotalCoincide === false): ?>
-                                        <span class="badge-check badge-check-warning"><i class="bx bx-error"></i> Difiere de BD ($<?= number_format((float)$qr['subtotal'], 2, '.', ','); ?>)</span>
+                                        <span class="badge-check badge-check-success"><i class="bx bx-check"></i> Coincide ($<?= number_format((float)$qr['total'], 2, '.', ','); ?>)</span>
+                                    <?php elseif ($totalCoincide === false): ?>
+                                        <span class="badge-check badge-check-warning"><i class="bx bx-error"></i> Difiere de BD ($<?= number_format((float)$qr['total'], 2, '.', ','); ?>)</span>
                                     <?php else: ?>
                                         <span class="badge-check badge-check-warning">No proporcionado en BD</span>
                                     <?php endif; ?>
@@ -450,9 +453,9 @@
                         <div class="mb-3">
                             <i class="bx bx-search-alt text-muted" style="font-size: 4rem;"></i>
                         </div>
-                        <h5 class="fw-bold mb-2">Consulta de Cotización por Código QR</h5>
+                        <h5 class="fw-bold mb-2">Consulta de Orden de Compra por Código QR</h5>
                         <p class="text-muted mb-4" style="max-width: 450px; margin: 0 auto; font-size: 0.9rem;">
-                            <?= !empty($qr['folio']) ? 'El folio <strong>' . htmlspecialchars($qr['folio']) . '</strong> no fue localizado en nuestro sistema. Reportelo en <a href="https://lfmcontrol.com.mx/contactanos">https://lfmcontrol.com.mx/contactanos</a>.' : 'Ingrese o escanee un código QR válido impreso en su documento de cotización.'; ?>
+                            <?= !empty($qr['folio']) ? 'La orden de compra con folio <strong>' . htmlspecialchars($qr['folio']) . '</strong> no fue localizada en nuestro sistema. Reportelo en <a href="https://lfmcontrol.com.mx/contactanos" target="_blank">https://lfmcontrol.com.mx/contactanos</a>.' : 'Ingrese o escanee un código QR válido impreso en su orden de compra.'; ?>
                         </p>
 
                         <?php if (!empty($qr['folio'])): ?>
@@ -463,9 +466,9 @@
                                     <div class="info-label mt-2">Fecha Escaneada:</div>
                                     <div class="info-value text-muted"><?= htmlspecialchars($qr['fecha']); ?></div>
                                 <?php endif; ?>
-                                <?php if (!empty($qr['subtotal'])): ?>
-                                    <div class="info-label mt-2">Subtotal Escaneado:</div>
-                                    <div class="info-value text-muted">$<?= number_format((float)$qr['subtotal'], 2, '.', ','); ?></div>
+                                <?php if (!empty($qr['total'])): ?>
+                                    <div class="info-label mt-2">Total Escaneado:</div>
+                                    <div class="info-value text-muted">$<?= number_format((float)$qr['total'], 2, '.', ','); ?></div>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -479,7 +482,7 @@
             <div class="security-footer">
                 <div>
                     <i class="bx bx-lock-alt text-success me-1"></i>
-                    <span>Verificación de Integridad LFM CONTROL</span>
+                    <span>Verificación de Integridad OCP - LFM CONTROL</span>
                 </div>
                 <div>
                     <span>Fecha de consulta: <?= date('d/m/Y H:i:s'); ?></span>
@@ -493,7 +496,7 @@
     <footer class="footer-brand">
         <div class="container">
             <p class="mb-1">&copy; <?= date('Y'); ?> LFM CONTROL. Todos los derechos reservados.</p>
-            <p class="mb-0 text-muted" style="font-size: 0.8rem;">Sistema de Validación de Documentos y Cotizaciones de Cliente</p>
+            <p class="mb-0 text-muted" style="font-size: 0.8rem;">Sistema de Validación de Orden de Compra de Proveedor</p>
         </div>
     </footer>
 

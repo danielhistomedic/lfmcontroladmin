@@ -1,10 +1,10 @@
 <?php
 
 /**
- * Controlador Validacotizacion
- * Permite la validación pública (sin sesión) de cotizaciones de cliente mediante lectura de código QR.
+ * Controlador Validaocp
+ * Permite la validación pública (sin sesión) de órdenes de compra a proveedor mediante lectura de código QR.
  */
-class Validacotizacion extends Controllers
+class Validaocp extends Controllers
 {
     public function __construct()
     {
@@ -13,40 +13,43 @@ class Validacotizacion extends Controllers
     }
 
     /**
-     * Vista principal de validación de cotización
+     * Vista principal de validación de orden de compra a proveedor
      */
-    public function Validacotizacion()
+    public function Validaocp()
     {
         try {
             /*-------------------------------------------
             [ Obtención y sanitización de parámetros GET ]*/
             $folio = isset($_GET['folio']) ? trim(strClean($_GET['folio'])) : '';
             $fecha = isset($_GET['fecha']) ? trim(strClean($_GET['fecha'])) : '';
-            $subtotal = isset($_GET['subtotal']) ? trim(strClean($_GET['subtotal'])) : '';
             
-            $cotizacionBD = array();
+            // Se soporta parámetro 'total' (según QR especificado) o 'subtotal' como alternativa
+            $total = isset($_GET['total']) ? trim(strClean($_GET['total'])) : (isset($_GET['subtotal']) ? trim(strClean($_GET['subtotal'])) : '');
+            
+            $pedidoBD = array();
             $statusValidacion = "NO_ENCONTRADO";
             $mensajeValidacion = "";
             $detallesCotejo = array(
                 'folio_coincide' => false,
                 'fecha_coincide' => null,
-                'subtotal_coincide' => null
+                'total_coincide' => null
             );
             
             if (!empty($folio)) {
                 /*-------------------------------------------
                 [ Consulta a la base de datos ]*/
-                $cotizacionBD = $this->model->getCotizacionCliente($folio);
+                $pedidoBD = $this->model->getPedidoProveedor($folio);
 
-                if (!empty($cotizacionBD)) {
+                if (!empty($pedidoBD)) {
                     $detallesCotejo['folio_coincide'] = true;
                     $statusValidacion = "VALIDO";
                     $mensajeValidacion = "Compare la información mostrada contra el documento recibido para verificar su autenticidad.";
 
                     // Obtener valores de BD
-                    $fechaBD = $cotizacionBD['fecha'] ;
-                    $subtotalBD = (float)($cotizacionBD['subtotal'] ?? 0) - (float)($cotizacionBD['descuento'] ?? 0);
-                  
+                    $fechaBD = $pedidoBD['fecha_pedido'] ?? $pedidoBD['fecha_db'] ?? null;
+                    $totalBD = (float)($pedidoBD['total'] ?? 0);
+                    $subtotalBD = (float)($pedidoBD['subtotal'] ?? 0);
+
                     // Formatear fechas para comparación (si la fecha viene en el QR)
                     if (!empty($fecha) && !empty($fechaBD)) {
                         $fechaQRGen = date('Y-m-d', strtotime($fecha));
@@ -54,17 +57,23 @@ class Validacotizacion extends Controllers
                         $detallesCotejo['fecha_coincide'] = ($fechaQRGen === $fechaBDGen);
                     }
 
-                    // Comparar montos (si el subtotal o total viene en el QR)
-                    if (!empty($subtotal) && $subtotalBD !== null) {
-                        $numSubTotalQR = round((float)$subtotal, 2);
+                    // Comparar montos (si el total o subtotal viene en el QR)
+                    if (!empty($total)) {
+                        $numTotalQR = round((float)$total, 2);
+                        $numTotalBD = round((float)$totalBD, 2);
                         $numSubTotalBD = round((float)$subtotalBD, 2);
-                        $detallesCotejo['subtotal_coincide'] = (abs($numSubTotalQR - $numSubTotalBD) < 0.01);
+
+                        // Coincide si el total del QR es igual al total o al subtotal registrado en BD
+                        $coincideTotal = (abs($numTotalQR - $numTotalBD) < 0.01);
+                        $coincideSubtotal = (abs($numTotalQR - $numSubTotalBD) < 0.01);
+
+                        $detallesCotejo['total_coincide'] = ($coincideTotal || $coincideSubtotal);
                     }
 
                     // Evaluar si existe alguna discrepancia
-                    if ($detallesCotejo['fecha_coincide'] === false || $detallesCotejo['subtotal_coincide'] === false) {
+                    if ($detallesCotejo['fecha_coincide'] === false || $detallesCotejo['total_coincide'] === false) {
                         $statusValidacion = "DISCREPANCIA";
-                        $mensajeValidacion = "Atención: La cotización existe en la base de datos, pero los datos del QR difieren del registro original.";
+                        $mensajeValidacion = "Atención: La orden de compra existe en la base de datos, pero los datos del QR difieren del registro original.";
                     }
                 } else {
                     $statusValidacion = "NO_ENCONTRADO";
@@ -79,21 +88,19 @@ class Validacotizacion extends Controllers
             [ Obtención / Generación de Cadena Original y Sello Digital ]*/
             $selloDigital = "";
             $cadenaOriginal = "";
-            if (!empty($cotizacionBD)) {
-                // Priorizar campo cadena_original de la BD
-                if (!empty($cotizacionBD['cadena_original'])) {
-                    $cadenaOriginal = $cotizacionBD['cadena_original'];
+            if (!empty($pedidoBD)) {
+                if (!empty($pedidoBD['cadena_original'])) {
+                    $cadenaOriginal = $pedidoBD['cadena_original'];
                 } else {
-                    $subtotalNeto = (float)($cotizacionBD['subtotal'] ?? 0) - (float)($cotizacionBD['descuento'] ?? 0);
-                    $cadenaOriginal = "||1.0|" . ($cotizacionBD['folio_cotizacion'] ?? $folio) . "|" . ($cotizacionBD['fecha'] ?? '') . "|" . ($cotizacionBD['cliente_id'] ?? '') . "|" . $subtotalNeto . "||";
+                    $montoTotalBD = (float)($pedidoBD['total'] ?? 0);
+                    $cadenaOriginal = "||1.0|" . ($pedidoBD['folio_ocp'] ?? $folio) . "|" . ($pedidoBD['fecha_pedido'] ?? '') . "|" . ($pedidoBD['proveedor_id'] ?? '') . "|" . $montoTotalBD . "||";
                 }
 
-                // Priorizar campo de sello de la BD o generar a partir de la cadena original
-                $selloBD = $cotizacionBD['sello_digital'] 
-                    ?? $cotizacionBD['sello'] 
-                    ?? $cotizacionBD['token'] 
-                    ?? $cotizacionBD['hash'] 
-                    ?? $cotizacionBD['uuid'] 
+                $selloBD = $pedidoBD['sello_digital'] 
+                    ?? $pedidoBD['sello'] 
+                    ?? $pedidoBD['token'] 
+                    ?? $pedidoBD['hash'] 
+                    ?? $pedidoBD['uuid'] 
                     ?? null;
 
                 if (!empty($selloBD)) {
@@ -105,17 +112,17 @@ class Validacotizacion extends Controllers
 
             /*-------------------------------------------
             [ Preparación de datos para la vista ]*/
-            $data['page_title'] = "Validación de Cotización | LFM CONTROL";
-            $data['meta_keywords'] = "validación, cotización, cliente, lfm control, veracidad, comprobante";
-            $data['meta_description'] = "Verificación de autenticidad de cotizaciones emitidas por LFM Control.";
+            $data['page_title'] = "Validación de Orden de Compra | LFM CONTROL";
+            $data['meta_keywords'] = "validación, orden de compra, proveedor, ocp, lfm control, veracidad, comprobante";
+            $data['meta_description'] = "Verificación de autenticidad de órdenes de compra a proveedor emitidas por LFM Control.";
             
             $data['qr_params'] = array(
                 'folio' => $folio,
                 'fecha' => $fecha,
-                'subtotal' => $subtotal
+                'total' => $total
             );
 
-            $data['cotizacion_bd'] = $cotizacionBD;
+            $data['pedido_bd'] = $pedidoBD;
             $data['sello_digital'] = $selloDigital;
             $data['cadena_original'] = $cadenaOriginal;
             $data['validacion'] = array(
@@ -126,7 +133,7 @@ class Validacotizacion extends Controllers
 
             /*-------------------------------------------
             [ Carga de la vista ]*/
-            $this->views->getView($this, "validacotizacion", $data);
+            $this->views->getView($this, "validaocp", $data);
 
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
