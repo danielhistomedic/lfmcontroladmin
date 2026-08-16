@@ -54,6 +54,16 @@ class AlmacenModel extends Mysql
                             WHERE ae.ccvematerial = m.ccvematerial
                         ) AS existencias_almacen,
                         (
+                            SELECT IFNULL(SUM(ae.iExistenciaReservado), 0)
+                            FROM tb_almacen_existencias ae
+                            WHERE ae.ccvematerial = m.ccvematerial
+                        ) AS reservadas_almacen,
+                        (
+                            SELECT IFNULL(SUM(ae.iExistenciaActual - ae.iExistenciaReservado), 0)
+                            FROM tb_almacen_existencias ae
+                            WHERE ae.ccvematerial = m.ccvematerial
+                        ) AS disponibles_almacen,
+                        (
                             SELECT GROUP_CONCAT(CONCAT(IFNULL(ca.cdscalmacen, ae.ccvealmacen), ': ', ROUND(ae.iExistenciaActual, 0)) SEPARATOR ' | ')
                             FROM tb_almacen_existencias ae
                             LEFT JOIN cat_almacen ca ON ca.ccvealmacen = ae.ccvealmacen

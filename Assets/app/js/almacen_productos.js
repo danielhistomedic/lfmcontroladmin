@@ -142,11 +142,16 @@ function initDataTableProductos() {
                 className: 'text-center',
                 render: function (data, type, row) {
                     const cant = parseInt(data) || 0;
-                    const desglose = row.desgloses_almacen ? row.desgloses_almacen : 'Sin desglose de almacén';
-                    if (cant > 0) {
-                        return `<span class="badge bg-success badge-stock" title="${desglose}" data-bs-toggle="tooltip">${cant}</span>`;
+                    const res = parseInt(row.reservadas) || 0;
+                    const disp = row.disponibles !== undefined ? parseInt(row.disponibles) : (cant - res);
+                    const desglose = row.desgloses_almacen ? ` (${row.desgloses_almacen})` : '';
+                    const tooltip = `Existencias: ${cant} | Reservadas: ${res} | Disponibles: ${disp}${desglose}`;
+                    if (disp > 0) {
+                        return `<span class="badge bg-success badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${cant}</span>`;
+                    } else if (cant > 0) {
+                        return `<span class="badge bg-warning text-dark badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${cant}</span>`;
                     } else {
-                        return `<span class="badge bg-danger badge-stock" title="${desglose}" data-bs-toggle="tooltip">0</span>`;
+                        return `<span class="badge bg-danger badge-stock" title="${tooltip}" data-bs-toggle="tooltip">0</span>`;
                     }
                 }
             }

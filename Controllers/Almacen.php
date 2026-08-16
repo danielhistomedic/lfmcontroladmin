@@ -317,7 +317,9 @@ class Almacen extends Controllers
                     $topProducts = array_slice($arrProductos, 0, 5);
                     foreach ($topProducts as $prod) {
                         $existencia = floatval($prod['existencias_almacen']) > 0 ? floatval($prod['existencias_almacen']) : floatval($prod['existencia_base']);
-                        $desgloseStr = !empty($prod['desgloses_almacen']) ? " (" . $prod['desgloses_almacen'] . ")" : "";
+                        $reservadas = floatval($prod['reservadas_almacen'] ?? 0);
+                        $disponibles = $existencia - $reservadas;
+                        $desgloseStr = !empty($prod['desgloses_almacen']) ? "(" . $prod['desgloses_almacen'] . ")" : "";
                         
                         $claveStr = !empty($prod['Clave']) ? trim($prod['Clave']) : '';
                         $ccnStr   = !empty($prod['CCN']) ? trim($prod['CCN']) : '';
@@ -331,9 +333,19 @@ class Almacen extends Controllers
                             $infoCodigos = "<span class='badge bg-secondary me-2' style='font-size: 0.8rem;'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
                         }
 
+                        $colorDisponibles = $disponibles > 0 ? '#16a34a' : ($existencia > 0 ? '#dc2626' : '#2563eb');
+
                         $respuestaHTML .= "<li class='mb-2 pb-1'>";
                         $respuestaHTML .= "<div class='fw-bold text-dark' style='font-size: 0.95rem;'>• " . $infoCodigos . htmlspecialchars($prod['cDescripcion']) . "</div>";
-                        $respuestaHTML .= "<div class='ms-3 mt-1' style='font-size: 0.85rem; color: #2563eb; font-weight: 500;'><span style='font-size: 0.7rem; vertical-align: middle; margin-right: 3px;'>▪</span> Existencias: <strong style='color: #1d4ed8; font-weight: 700;'>" . intval($existencia) . "</strong> <span style='color: #64748b; font-size: 0.95em;'>" . htmlspecialchars($desgloseStr) . "</span></div>";
+                        $respuestaHTML .= "<div class='ms-3 mt-1' style='font-size: 0.85rem; color: #2563eb; font-weight: 500;'>";
+                        $respuestaHTML .= "<span style='font-size: 0.7rem; vertical-align: middle; margin-right: 3px;'>▪</span> ";
+                        $respuestaHTML .= "Existencias: <strong style='color: #1d4ed8; font-weight: 700;'>" . intval($existencia) . "</strong>, ";
+                        $respuestaHTML .= "Reservadas: <strong style='color: #d97706; font-weight: 700;'>" . intval($reservadas) . "</strong> y ";
+                        $respuestaHTML .= "Disponibles: <strong style='color: " . $colorDisponibles . "; font-weight: 700;'>" . intval($disponibles) . "</strong>";
+                        if (!empty($desgloseStr)) {
+                            $respuestaHTML .= " <span style='color: #64748b; font-size: 0.95em;'>" . htmlspecialchars($desgloseStr) . "</span>";
+                        }
+                        $respuestaHTML .= "</div>";
                         $respuestaHTML .= "</li>";
                     }
                     $respuestaHTML .= "</ul>";
@@ -351,6 +363,8 @@ class Almacen extends Controllers
             $arrData = [];
             foreach ($arrProductos as $key => $row) {
                 $existenciaTotal = floatval($row['existencias_almacen']) > 0 ? floatval($row['existencias_almacen']) : floatval($row['existencia_base']);
+                $reservadasTotal = floatval($row['reservadas_almacen'] ?? 0);
+                $disponiblesTotal = $existenciaTotal - $reservadasTotal;
 
                 // Fotos
                 $fotos = [];
@@ -384,6 +398,8 @@ class Almacen extends Controllers
                     'clave_sat'          => $row['clave_sat'],
                     'clave_cliente'      => $row['clave_cliente'] ?? '',
                     'existencia'         => intval($existenciaTotal),
+                    'reservadas'         => intval($reservadasTotal),
+                    'disponibles'        => intval($disponiblesTotal),
                     'desgloses_almacen'  => $row['desgloses_almacen'] ?? '',
                     'fotos'              => $fotos
                 ];

@@ -1,0 +1,2 @@
+[2026-08-16T17:39:34.213439-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Conexion.php, linea: 18, codigo: 2002 [] []
+[2026-08-16T17:39:43.913031-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Conexion.php, linea: 18, codigo: 2002 [] []
