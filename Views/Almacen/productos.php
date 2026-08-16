@@ -89,6 +89,31 @@
         white-space: normal !important;
         word-break: break-word;
     }
+    .filters-row th {
+        padding: 4px 6px !important;
+        background-color: #f1f5f9 !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        vertical-align: middle !important;
+    }
+    .filters-row input {
+        width: 100%;
+        font-size: 0.8rem;
+        padding: 3px 6px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        background-color: #ffffff;
+        color: #1e293b;
+        font-weight: normal;
+    }
+    .filters-row input:focus {
+        border-color: #3b82f6;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .filters-row input::placeholder {
+        color: #94a3b8;
+        font-size: 0.75rem;
+    }
 </style>
 
 <!-- Header Admin 02 -->
@@ -163,6 +188,7 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="text-center" style="width: 80px;">Foto(s)</th>
+                                    <th class="text-center" style="width: 95px;">Existencias</th>
                                     <th>Clave</th>
                                     <th>CCN</th>
                                     <th class="col-descripcion" style="min-width: 350px;">Descripción</th>
@@ -178,7 +204,25 @@
                                     <th>Material</th>
                                     <th>Grupo</th>
                                     <th>Clave SAT</th>
-                                    <th class="text-center">Existencias</th>
+                                </tr>
+                                <tr class="filters-row bg-light">
+                                    <th class="p-1 text-center"><button type="button" id="btnResetColFilters" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Limpiar filtros de columna" style="font-size: 0.75rem;"><i class="fa-solid fa-filter-circle-xmark"></i></button></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Filtrar..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Clave..." style="min-width: 80px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="CCN..." style="min-width: 80px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Descripción..." style="min-width: 150px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Marca..." style="min-width: 80px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Submarca..." style="min-width: 80px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Línea..." style="min-width: 80px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Categoría..." style="min-width: 80px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Unidad..." style="min-width: 60px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Modelo..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Catálogo..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Parte..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Serie..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Material..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="Grupo..." style="min-width: 70px;"></th>
+                                    <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" placeholder="SAT..." style="min-width: 70px;"></th>
                                 </tr>
                             </thead>
                             <tbody>

@@ -78,7 +78,8 @@ function initDataTableProductos() {
         serverSide: false,
         responsive: false,
         scrollX: true,
-        order: [[1, "asc"]],
+        orderCellsTop: true,
+        order: [[2, "asc"]],
         iDisplayLength: 5,
         lengthMenu: [
             [3, 5, 10, 25, 50, 100, -1],
@@ -122,6 +123,24 @@ function initDataTableProductos() {
                     }
                 }
             },
+            {
+                data: 'disponibles',
+                className: 'text-center',
+                render: function (data, type, row) {
+                    const cant = parseInt(row.existencia) || 0;
+                    const res = parseInt(row.reservadas) || 0;
+                    const disp = (data !== undefined && data !== null) ? (parseInt(data) || 0) : (cant - res);
+                    const desglose = row.desgloses_almacen ? ` (${row.desgloses_almacen})` : '';
+                    const tooltip = `Existencias: ${cant} | Reservadas: ${res} | Disponibles: ${disp}${desglose}`;
+                    if (disp > 0) {
+                        return `<span class="badge bg-success badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${disp}</span>`;
+                    } else if (cant > 0) {
+                        return `<span class="badge bg-warning text-dark badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${disp}</span>`;
+                    } else {
+                        return `<span class="badge bg-danger badge-stock" title="${tooltip}" data-bs-toggle="tooltip">0</span>`;
+                    }
+                }
+            },
             { data: 'Clave', className: 'fw-bold text-dark' },
             { data: 'CCN' },
             { data: 'cDescripcion', className: 'col-descripcion' },
@@ -136,29 +155,11 @@ function initDataTableProductos() {
             { data: 'serie' },
             { data: 'material' },
             { data: 'grupo' },
-            { data: 'clave_sat' },
-            {
-                data: 'existencia',
-                className: 'text-center',
-                render: function (data, type, row) {
-                    const cant = parseInt(data) || 0;
-                    const res = parseInt(row.reservadas) || 0;
-                    const disp = row.disponibles !== undefined ? parseInt(row.disponibles) : (cant - res);
-                    const desglose = row.desgloses_almacen ? ` (${row.desgloses_almacen})` : '';
-                    const tooltip = `Existencias: ${cant} | Reservadas: ${res} | Disponibles: ${disp}${desglose}`;
-                    if (disp > 0) {
-                        return `<span class="badge bg-success badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${cant}</span>`;
-                    } else if (cant > 0) {
-                        return `<span class="badge bg-warning text-dark badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${cant}</span>`;
-                    } else {
-                        return `<span class="badge bg-danger badge-stock" title="${tooltip}" data-bs-toggle="tooltip">0</span>`;
-                    }
-                }
-            }
+            { data: 'clave_sat' }
         ],
         autoWidth: false,
         columnDefs: [
-            { targets: 3, width: "400px", className: "col-descripcion" },
+            { targets: 4, width: "400px", className: "col-descripcion" },
             { targets: "_all", defaultContent: "" }
         ],
         dom: 'Blfrtip',
@@ -174,6 +175,41 @@ function initDataTableProductos() {
             }
         ],
         language: idioma_espanol,
+        initComplete: function () {
+            const api = this.api();
+            const wrapper = $(tableElement).closest('.dataTables_wrapper');
+
+            // Asignar eventos de búsqueda por columna a los inputs en la cabecera
+            wrapper.find('thead tr.filters-row th').each(function (colIdx) {
+                const input = $(this).find('input');
+                if (input.length > 0) {
+                    // Evitar que el clic en el input dispare la ordenación
+                    input.on('click', function (e) {
+                        e.stopPropagation();
+                    });
+
+                    // Filtrado en tiempo real con debounce
+                    let timeout = null;
+                    input.on('keyup input change clear', function () {
+                        const val = this.value;
+                        clearTimeout(timeout);
+                        timeout = setTimeout(function () {
+                            if (api.column(colIdx).search() !== val) {
+                                api.column(colIdx).search(val).draw();
+                            }
+                        }, 250);
+                    });
+                }
+            });
+
+            // Botón para resetear todos los filtros de columna
+            wrapper.find('#btnResetColFilters').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                wrapper.find('thead tr.filters-row input').val('');
+                api.columns().search('').draw();
+            });
+        },
         drawCallback: function () {
             // Inicializar tooltips de Bootstrap
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
