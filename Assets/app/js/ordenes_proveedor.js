@@ -910,7 +910,27 @@ function fntMostrarDetalleEntregaModal(props) {
 
     var tiempoRestante = props.tiempo_restante_str || '—';
     var colorClass = 'text-success';
-    if (props.dias_restantes < 0) {
+    var diasRetraso = parseInt(props.dias_retraso_entrega || 0);
+
+    // Fallback de cálculo en frontend si fecha_recibo y fecha_estimada_entrega están disponibles
+    if (!diasRetraso && props.fecha_recibo && props.fecha_estimada_entrega && props.fecha_recibo !== '0000-00-00') {
+        var fReciboStr = String(props.fecha_recibo).substring(0, 10);
+        var fEstStr    = String(props.fecha_estimada_entrega).substring(0, 10);
+        var fReciboDt  = new Date(fReciboStr + 'T00:00:00');
+        var fEstDt     = new Date(fEstStr + 'T00:00:00');
+        var diffMs     = fReciboDt.getTime() - fEstDt.getTime();
+        var diffDays   = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) {
+            diasRetraso = diffDays;
+            tiempoRestante = 'Entregado con ' + diasRetraso + ' día' + (diasRetraso > 1 ? 's' : '') + ' de retraso';
+        }
+    }
+
+    if (diasRetraso > 0) {
+        colorClass = 'text-danger';
+    } else if (props.entregado == 1) {
+        colorClass = 'text-primary';
+    } else if (props.dias_restantes < 0) {
         colorClass = 'text-danger';
     } else if (props.dias_restantes <= 7) {
         colorClass = 'text-warning text-dark';

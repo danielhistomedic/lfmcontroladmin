@@ -1059,6 +1059,19 @@ class Seguimiento extends Controllers
 
                 $entregado_val  = intval($item['entregado'] ?? 0);
 
+                // Cálculo de retraso real respecto a la fecha de entrega en almacén (tb_recibos.fchRecibo)
+                $dias_retraso_entrega = 0;
+                if (!empty($item['fecha_recibo']) && $item['fecha_recibo'] != '0000-00-00' && $item['fecha_recibo'] != '0000-00-00 00:00:00') {
+                    $fecha_recibo_str = substr($item['fecha_recibo'], 0, 10);
+                    $fecha_recibo_dt  = new DateTime($fecha_recibo_str);
+                    $diff_recibo      = $fecha_est_dt->diff($fecha_recibo_dt);
+                    $dias_diff_recibo = (int)$diff_recibo->format('%r%a'); // > 0 indica que fchRecibo es posterior a fecha_estimada
+
+                    if ($dias_diff_recibo > 0) {
+                        $dias_retraso_entrega = $dias_diff_recibo;
+                    }
+                }
+
                 if ($entregado_val === 1) {
                     // 1 = Entregado
                     $estatus_codigo      = 'entregado';
@@ -1066,7 +1079,14 @@ class Seguimiento extends Controllers
                     $badge_class         = 'bg-primary';
                     $event_color         = '#0d6efd';
                     $event_text_color    = '#ffffff';
-                    $tiempo_restante_str = 'Entregado por proveedor';
+
+                    if ($dias_retraso_entrega > 0) {
+                        $tiempo_restante_str = 'Entregado con ' . $dias_retraso_entrega . ' día' . ($dias_retraso_entrega > 1 ? 's' : '') . ' de retraso';
+                    } elseif (!empty($item['fecha_recibo']) && $item['fecha_recibo'] != '0000-00-00') {
+                        $tiempo_restante_str = 'Entregado a tiempo en almacén';
+                    } else {
+                        $tiempo_restante_str = 'Entregado por proveedor';
+                    }
                     $count_entregados++;
                 } elseif ($entregado_val === 2) {
                     // 2 = Entrega Cancelada
@@ -1079,12 +1099,16 @@ class Seguimiento extends Controllers
                     $count_cancelados++;
                 } else {
                     // 0 = Pendiente de Entrega
-                    if ($dias_restantes > 0) {
-                        $tiempo_restante_str = $dias_restantes . ' día' . ($dias_restantes > 1 ? 's' : '');
-                    } elseif ($dias_restantes === 0) {
-                        $tiempo_restante_str = '0 días (Entrega hoy)';
+                    if ($dias_retraso_entrega > 0) {
+                        $tiempo_restante_str = 'Entregado con ' . $dias_retraso_entrega . ' día' . ($dias_retraso_entrega > 1 ? 's' : '') . ' de retraso';
                     } else {
-                        $tiempo_restante_str = abs($dias_restantes) . ' día' . (abs($dias_restantes) > 1 ? 's' : '') . ' de atraso';
+                        if ($dias_restantes > 0) {
+                            $tiempo_restante_str = $dias_restantes . ' día' . ($dias_restantes > 1 ? 's' : '');
+                        } elseif ($dias_restantes === 0) {
+                            $tiempo_restante_str = '0 días (Entrega hoy)';
+                        } else {
+                            $tiempo_restante_str = abs($dias_restantes) . ' día' . (abs($dias_restantes) > 1 ? 's' : '') . ' de atraso';
+                        }
                     }
 
                     if ($fecha_estimada < $hoy) {
@@ -1111,6 +1135,7 @@ class Seguimiento extends Controllers
                     }
                 }
 
+                $item['dias_retraso_entrega'] = $dias_retraso_entrega;
                 $item['dias_restantes']      = $dias_restantes;
                 $item['tiempo_restante_str'] = $tiempo_restante_str;
                 $item['estatus_codigo']      = $estatus_codigo;
