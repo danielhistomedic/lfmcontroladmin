@@ -109,7 +109,7 @@
                     </div>
                 </div>
 
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
+                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
                     <label class="form-label" for="filtro_num_orden">Número Orden / Folio OCP:</label>
                     <input type="text" class="form-control" autocomplete="off" name="filtro_num_orden" id="filtro_num_orden" placeholder="Buscar por núm. orden / OCP...">
                 </div>
@@ -117,6 +117,15 @@
                 <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
                     <label class="form-label" for="filtro_proveedor">Proveedor:</label>
                     <input type="text" class="form-control" autocomplete="off" name="filtro_proveedor" id="filtro_proveedor" placeholder="Buscar por proveedor...">
+                </div>
+
+                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
+                    <label class="form-label" for="filtro_estatus_orden">Estatus Orden:</label>
+                    <select class="form-control form-select selectpicker" name="filtro_estatus_orden" id="filtro_estatus_orden">
+                        <option value="">Todos los Estatus</option>
+                        <option value="1">Orden Activa</option>
+                        <option value="2">Orden Cancelada</option>
+                    </select>
                 </div>
 
                 <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
@@ -131,7 +140,7 @@
                            name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" required="" maxlength="10">
                 </div>
 
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0 d-flex align-items-end">
+                <div class="form-group col-12 col-sm-6 col-lg-1 pt-0 d-flex align-items-end">
                     <button type="button" class="btn btn-primary w-100 hvr-float-shadow d-flex justify-content-center align-items-center" id="btnFiltrar" style="height: 38px;">
                         <i class="fa-regular fa-magnifying-glass me-1"></i> Buscar
                     </button>
@@ -225,7 +234,8 @@
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Comprador</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Monto</th>
-                                <th class="border-bottom-0 fw-semibold text-center">Estatus</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Estatus Orden</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Estatus Proyecto</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Partidas</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Adjuntos</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Seguimientos</th>
@@ -373,8 +383,13 @@
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Estatus:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break mb-0" id="det_estatus">—</h6>
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Estatus Orden:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break mb-0" id="det_estatus_orden">—</h6>
+                                </div>
+
+                                <div class="form-group col-12 col-sm-6 col-lg-3">
+                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Estatus Proyecto:</label>
+                                    <h6 class="vistadatos fs-13 text-wrap text-break mb-0" id="det_estatus_proyecto">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">

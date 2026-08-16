@@ -724,6 +724,7 @@ class SeguimientoModel extends Mysql
      * @param string $filtro_proveedor
      * @param string $ccveusuario
      * @param string $filtro_num_orden
+     * @param string $filtro_estatus_orden
      * @return array
      */
     public function selectOrdenesProveedorSeguimiento(
@@ -732,7 +733,8 @@ class SeguimientoModel extends Mysql
         string $filtro_estatus = '',
         string $filtro_proveedor = '',
         string $ccveusuario = '',
-        string $filtro_num_orden = ''
+        string $filtro_num_orden = '',
+        string $filtro_estatus_orden = ''
     ): array {
         $arrResponse = array();
 
@@ -816,9 +818,14 @@ class SeguimientoModel extends Mysql
                 ORDER BY fecha DESC, id DESC
                 LIMIT 1
             ) tc ON 1=1
-            WHERE 1=1 ";
+            WHERE pp.enviado > 0 ";
 
             $arr_values = [];
+
+            if (!empty($filtro_estatus_orden)) {
+                $sql .= " AND pp.enviado = :filtro_estatus_orden ";
+                $arr_values['filtro_estatus_orden'] = intval($filtro_estatus_orden);
+            }
 
             if (!empty($ccveusuario)) {
                 $sql .= " AND (pp.ccveusuario = :ccveusuario OR v.ccveusuario_vendedor = :ccveusuario_vendedor) ";
@@ -893,6 +900,7 @@ class SeguimientoModel extends Mysql
                 pp.fecha_pedido,
                 DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
                 COALESCE(ppd.entregado, 0)                                  AS entregado,
+                pp.enviado                                                  AS pedido_enviado,
                 /* Datos de Entrada a Almacén y Facturación */
                 COALESCE(r.cNumRecibo, '')                                  AS num_recibo,
                 r.fchRecibo                                                 AS fecha_recibo,
@@ -907,7 +915,8 @@ class SeguimientoModel extends Mysql
             LEFT  JOIN tb_recibos_detalle rd   ON rd.pedido_proveedor_detalle_id = ppd.id
             LEFT  JOIN tb_recibos r            ON r.cNumRecibo = rd.cNumRecibo
             WHERE ppd.fecha_estimada_entrega IS NOT NULL
-              AND ppd.fecha_estimada_entrega != '0000-00-00' ";
+              AND ppd.fecha_estimada_entrega != '0000-00-00'
+              AND pp.enviado > 0 ";
 
             $arr_values = [];
 

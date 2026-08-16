@@ -878,11 +878,12 @@ class Seguimiento extends Controllers
 
             /*-------------------------------------------
             [ Recibe y limpia parámetros de filtro ]*/
-            $fecha_ini        = strClean($_POST['fecha_ini']        ?? '');
-            $fecha_fin        = strClean($_POST['fecha_fin']        ?? '');
-            $filtro_num_orden = strClean($_POST['filtro_num_orden'] ?? '');
-            $filtro_estatus   = strClean($_POST['filtro_estatus']   ?? '');
-            $filtro_proveedor = strClean($_POST['filtro_proveedor'] ?? '');
+            $fecha_ini            = strClean($_POST['fecha_ini']            ?? '');
+            $fecha_fin            = strClean($_POST['fecha_fin']            ?? '');
+            $filtro_num_orden     = strClean($_POST['filtro_num_orden']     ?? '');
+            $filtro_estatus       = strClean($_POST['filtro_estatus']       ?? '');
+            $filtro_proveedor     = strClean($_POST['filtro_proveedor']     ?? '');
+            $filtro_estatus_orden = strClean($_POST['filtro_estatus_orden'] ?? '');
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
@@ -901,7 +902,8 @@ class Seguimiento extends Controllers
                 $filtro_estatus,
                 $filtro_proveedor,
                 $ccveusuario_filtro,
-                $filtro_num_orden
+                $filtro_num_orden,
+                $filtro_estatus_orden
             );
 
             /*-------------------------------------------
@@ -909,7 +911,20 @@ class Seguimiento extends Controllers
             $data_animation = "fadeIn";
 
             for ($i = 0; $i < count($arrData); $i++) {
-                // Badge estatus
+                // Badge estatus de la orden a proveedor (tb_pedidos_proveedor.enviado)
+                $enviado = intval($arrData[$i]['enviado'] ?? 0);
+                if ($enviado === 1) {
+                    $arrData[$i]['estatus_orden_badge'] = '<span class="badge bg-success fs-11"><i class="fa-regular fa-circle-check me-1"></i>Orden Activa</span>';
+                    $arrData[$i]['estatus_orden_txt']   = 'Orden Activa';
+                } elseif ($enviado === 2) {
+                    $arrData[$i]['estatus_orden_badge'] = '<span class="badge bg-danger fs-11"><i class="fa-regular fa-ban me-1"></i>Orden Cancelada</span>';
+                    $arrData[$i]['estatus_orden_txt']   = 'Orden Cancelada';
+                } else {
+                    $arrData[$i]['estatus_orden_badge'] = '<span class="badge bg-secondary fs-11">Borrador</span>';
+                    $arrData[$i]['estatus_orden_txt']   = 'Borrador';
+                }
+
+                // Badge estatus de proyecto
                 $estatus_id  = intval($arrData[$i]['estatus_proyecto_id']);
                 $estatus_txt = $arrData[$i]['estatus_proyecto'];
 
@@ -922,7 +937,8 @@ class Seguimiento extends Controllers
                 } else {
                     $badge_class = 'bg-warning text-dark';
                 }
-                $arrData[$i]['estatus_badge'] = '<span class="badge ' . $badge_class . ' fs-11">' . htmlspecialchars($estatus_txt) . '</span>';
+                $arrData[$i]['estatus_badge']          = '<span class="badge ' . $badge_class . ' fs-11">' . htmlspecialchars($estatus_txt) . '</span>';
+                $arrData[$i]['estatus_proyecto_badge'] = $arrData[$i]['estatus_badge'];
 
                 // Monto formateado
                 $moneda = $arrData[$i]['cmoneda'] ?? 'USD';

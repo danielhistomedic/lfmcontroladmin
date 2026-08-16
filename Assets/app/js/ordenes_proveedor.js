@@ -55,6 +55,10 @@ $(document).ready(function () {
         fntCargarCalendarioEntregas();
     });
 
+    $('#filtro_estatus_orden').on('change', function () {
+        fntCargarTabla();
+    });
+
     $('#filtro_num_orden, #filtro_proveedor').on('keyup', function (e) {
         if (e.key === 'Enter' || e.keyCode === 13) {
             e.preventDefault();
@@ -209,6 +213,7 @@ function fntInicializarTabla() {
                     return '<span class="fw-bold text-dark">' + (data || '$0.00') + '</span>';
                 }
             },
+            { data: 'estatus_orden_badge', className: 'text-center align-middle', orderable: false },
             { data: 'estatus_badge', className: 'text-center align-middle', orderable: false },
             { data: 'partidas_badge', className: 'text-center align-middle', orderable: false },
             { data: 'adjuntos_badge', className: 'text-center align-middle', orderable: false },
@@ -243,11 +248,12 @@ function fntInicializarTabla() {
  */
 function fntCargarTabla() {
 
-    var fecha_ini        = $('#filtro_fecha_ini').val().trim();
-    var fecha_fin        = $('#filtro_fecha_fin').val().trim();
-    var filtro_num_orden = $('#filtro_num_orden').val() ? $('#filtro_num_orden').val().trim() : '';
-    var filtro_proveedor = $('#filtro_proveedor').val() ? $('#filtro_proveedor').val().trim() : '';
-    var filtro_estatus   = '';
+    var fecha_ini            = $('#filtro_fecha_ini').val().trim();
+    var fecha_fin            = $('#filtro_fecha_fin').val().trim();
+    var filtro_num_orden     = $('#filtro_num_orden').val() ? $('#filtro_num_orden').val().trim() : '';
+    var filtro_proveedor     = $('#filtro_proveedor').val() ? $('#filtro_proveedor').val().trim() : '';
+    var filtro_estatus_orden = $('#filtro_estatus_orden').val() ? $('#filtro_estatus_orden').val().trim() : '';
+    var filtro_estatus       = '';
 
     // Limpia tabla
     if (tableOrdenes !== null) {
@@ -265,6 +271,7 @@ function fntCargarTabla() {
             fecha_fin: fecha_fin,
             filtro_num_orden: filtro_num_orden,
             filtro_proveedor: filtro_proveedor,
+            filtro_estatus_orden: filtro_estatus_orden,
             filtro_estatus: filtro_estatus
         },
         dataType: 'json',
@@ -356,8 +363,10 @@ function fntVerDetalle(btn) {
         $('#det_cliente').text(rowData.cliente || '—');
         $('#det_titulo').text(rowData.titulo_venta || '—');
         $('#det_comprador').text(rowData.comprador || '—');
-        $('#det_estatus').html(rowData.estatus_badge || '—').addClass('text-wrap');
-        $('#det_estatus').find('span, .badge').addClass('text-wrap');
+        $('#det_estatus_orden').html(rowData.estatus_orden_badge || '—').addClass('text-wrap');
+        $('#det_estatus_orden').find('span, .badge').addClass('text-wrap');
+        $('#det_estatus_proyecto').html(rowData.estatus_badge || '—').addClass('text-wrap');
+        $('#det_estatus_proyecto').find('span, .badge').addClass('text-wrap');
         $('#det_fecha_pedido').text(rowData.fecha_pedido_formateada || '—');
         $('#det_tipo_pedido').text(rowData.tipo_pedido || '—');
         $('#det_incoterm').text(rowData.incoterm || '—');
@@ -420,6 +429,25 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
             if (detalle.fecha_pedido_formateada) $('#det_fecha_pedido').text(detalle.fecha_pedido_formateada);
             if (detalle.tipo_pedido) $('#det_tipo_pedido').text(detalle.tipo_pedido);
             if (detalle.incoterm) $('#det_incoterm').text(detalle.incoterm);
+
+            // Estatus de la orden a proveedor (1 = Orden Activa, 2 = Orden Cancelada)
+            var enviadoVal = parseInt(detalle.enviado || 0);
+            var badgeOrden = '';
+            if (enviadoVal === 1) {
+                badgeOrden = '<span class="badge bg-success fs-11"><i class="fa-regular fa-circle-check me-1"></i>Orden Activa</span>';
+            } else if (enviadoVal === 2) {
+                badgeOrden = '<span class="badge bg-danger fs-11"><i class="fa-regular fa-ban me-1"></i>Orden Cancelada</span>';
+            } else {
+                badgeOrden = '<span class="badge bg-secondary fs-11">Borrador</span>';
+            }
+            $('#det_estatus_orden').html(badgeOrden);
+
+            // Estatus del proyecto
+            if (detalle.estatus_proyecto) {
+                var estId = parseInt(detalle.estatus_proyecto_id || 0);
+                var badgeProyClass = (estId >= 11) ? 'bg-success' : (estId >= 8 ? 'bg-primary' : (estId >= 6 ? 'bg-info' : 'bg-warning text-dark'));
+                $('#det_estatus_proyecto').html('<span class="badge ' + badgeProyClass + ' fs-11">' + escapeHtml(detalle.estatus_proyecto) + '</span>');
+            }
 
             var moneda = detalle.cmoneda || 'USD';
             var subtotalNum = parseFloat(detalle.subtotal || 0);
