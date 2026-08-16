@@ -383,7 +383,7 @@ function fntVerDetalle(btn) {
  */
 function fntCargarDetalleCompleto(pedidoIdEnc) {
 
-    $('#tbody_partidas_proveedor').html('<tr><td colspan="9" class="text-center p-3 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando partidas...</td></tr>');
+    $('#tbody_partidas_proveedor').html('<tr><td colspan="10" class="text-center p-3 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando partidas...</td></tr>');
     $('#contenedor_adjuntos_proveedor').html('<div class="text-muted fs-12 p-2"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando adjuntos...</div>');
     $('#timeline_seguimientos').empty();
     $('#sin_seguimientos').addClass('d-none');
@@ -447,7 +447,7 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
         error: function (xhr, status, error) {
             console.error('Error al cargar detalle:', error);
             $('#loading_seguimientos').addClass('d-none');
-            $('#tbody_partidas_proveedor').html('<tr><td colspan="9" class="text-center p-3 text-danger"><i class="fa-regular fa-circle-exclamation me-1"></i>Error al cargar partidas</td></tr>');
+            $('#tbody_partidas_proveedor').html('<tr><td colspan="10" class="text-center p-3 text-danger"><i class="fa-regular fa-circle-exclamation me-1"></i>Error al cargar partidas</td></tr>');
             $('#contenedor_adjuntos_proveedor').html('<div class="text-muted fs-12 p-2">Sin adjuntos</div>');
             $('#sin_seguimientos').removeClass('d-none');
         }
@@ -464,7 +464,7 @@ function fntRenderizarPartidas(partidas, moneda) {
     $('#badge_total_partidas').text(partidas.length);
 
     if (!Array.isArray(partidas) || partidas.length === 0) {
-        $('#tbody_partidas_proveedor').html('<tr><td colspan="9" class="text-center p-3 text-muted"><i class="fa-light fa-inbox me-1"></i>Esta orden no tiene partidas registradas.</td></tr>');
+        $('#tbody_partidas_proveedor').html('<tr><td colspan="10" class="text-center p-3 text-muted"><i class="fa-light fa-inbox me-1"></i>Esta orden no tiene partidas registradas.</td></tr>');
         return;
     }
 
@@ -484,6 +484,17 @@ function fntRenderizarPartidas(partidas, moneda) {
         }
         descHtml += '</div>';
 
+        // Estatus de entrega (tb_pedidos_proveedor_detalle.entregado)
+        var entregadoVal = parseInt(item.entregado !== undefined ? item.entregado : 0);
+        var badgeEntregado = '';
+        if (entregadoVal === 1) {
+            badgeEntregado = '<span class="badge bg-primary fs-11"><i class="fa-regular fa-box-check me-1"></i>Entregado</span>';
+        } else if (entregadoVal === 2) {
+            badgeEntregado = '<span class="badge bg-secondary fs-11"><i class="fa-regular fa-ban me-1"></i>Entrega Cancelada</span>';
+        } else {
+            badgeEntregado = '<span class="badge bg-warning text-dark fs-11"><i class="fa-regular fa-clock me-1"></i>Pendiente de Entrega</span>';
+        }
+
         html += '<tr>';
         html += '<td class="text-center align-middle fw-bold text-dark">' + escapeHtml(item.codigo_partida || '—') + '</td>';
         html += '<td class="text-center align-middle"><span class="badge bg-light text-dark border">' + escapeHtml(claveMat) + '</span></td>';
@@ -494,6 +505,7 @@ function fntRenderizarPartidas(partidas, moneda) {
         html += '<td class="text-end align-middle fw-bold text-dark">' + moneda + ' $' + imp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
         html += '<td class="text-center align-middle"><span class="badge bg-light text-dark border">' + escapeHtml(item.tiempo_entrega || '—') + '</span></td>';
         html += '<td class="text-center align-middle fw-semibold text-primary">' + escapeHtml(item.fecha_estimada_formateada || '—') + '</td>';
+        html += '<td class="text-center align-middle">' + badgeEntregado + '</td>';
         html += '</tr>';
     });
 
@@ -827,6 +839,7 @@ function fntCargarCalendarioEntregas() {
             if (resp && resp.respuesta === 'ok') {
                 var resumen = resp.resumen || {};
                 $('#cal_count_total').text(new Intl.NumberFormat('en-US').format(resumen.total || 0));
+                $('#cal_count_entregados').text(new Intl.NumberFormat('en-US').format(resumen.entregados || 0));
                 $('#cal_count_vencidos').text(new Intl.NumberFormat('en-US').format(resumen.vencidos || 0));
                 $('#cal_count_proximos').text(new Intl.NumberFormat('en-US').format(resumen.proximos || 0));
                 $('#cal_count_en_tiempo').text(new Intl.NumberFormat('en-US').format(resumen.en_tiempo || 0));
@@ -906,6 +919,18 @@ function fntMostrarDetalleEntregaModal(props) {
 
     var badgeHtml = '<span class="badge ' + (props.badge_class || 'bg-secondary') + ' fs-12 p-2">' + escapeHtml(props.estatus_label || '—') + '</span>';
     $('#mdl_estatus_badge').html(badgeHtml);
+
+    // Estatus de entrega (tb_pedidos_proveedor_detalle.entregado)
+    var entregadoVal = parseInt(props.entregado !== undefined ? props.entregado : 0);
+    var entregadoBadge = '';
+    if (entregadoVal === 1) {
+        entregadoBadge = '<span class="badge bg-primary fs-12 p-2"><i class="fa-regular fa-box-check me-1"></i> Entregado</span>';
+    } else if (entregadoVal === 2) {
+        entregadoBadge = '<span class="badge bg-secondary fs-12 p-2"><i class="fa-regular fa-ban me-1"></i> Entrega Cancelada</span>';
+    } else {
+        entregadoBadge = '<span class="badge bg-warning text-dark fs-12 p-2"><i class="fa-regular fa-clock me-1"></i> Pendiente de Entrega</span>';
+    }
+    $('#mdl_entregado_badge').html(entregadoBadge);
 
     var modalElement = document.getElementById('modalDetalleEntrega');
     if (modalElement) {

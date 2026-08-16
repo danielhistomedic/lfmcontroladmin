@@ -264,6 +264,9 @@
                         <span class="badge bg-success p-2 fs-12 d-flex align-items-center" title="Partidas de proveedor con entrega en tiempo">
                             <i class="fa-regular fa-circle-check me-1"></i> En Tiempo: <strong id="cal_count_en_tiempo" class="ms-1">0</strong>
                         </span>
+                        <span class="badge bg-primary p-2 fs-12 d-flex align-items-center" title="Partidas ya entregadas por el proveedor (entregado = 1)">
+                            <i class="fa-regular fa-box-check me-1"></i> Entregadas: <strong id="cal_count_entregados" class="ms-1">0</strong>
+                        </span>
                         <span class="badge bg-secondary p-2 fs-12 d-flex align-items-center" title="Total de partidas con fecha de entrega de proveedor">
                             Total: <strong id="cal_count_total" class="ms-1">0</strong>
                         </span>
@@ -284,6 +287,12 @@
                     </button>
                     <button type="button" class="btn btn-xs btn-outline-success btn-filter-cal" data-filter="en_tiempo">
                         <i class="fa-regular fa-circle-check me-1"></i> En Tiempo
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-primary btn-filter-cal" data-filter="entregado">
+                        <i class="fa-regular fa-box-check me-1"></i> Entregadas
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary btn-filter-cal" data-filter="cancelado">
+                        <i class="fa-regular fa-ban me-1"></i> Canceladas
                     </button>
                 </div>
 
@@ -417,15 +426,16 @@
                                 <table class="table table-bordered table-striped table-hover mb-0 fs-12" id="tabla_partidas_proveedor">
                                     <thead class="bg-light">
                                         <tr>
-                                            <th class="text-center" style="width: 100px;">Partida</th>
-                                            <th class="text-center" style="width: 120px;">Clave</th>
-                                            <th class="text-start" style="min-width: 320px;">Descripción</th>
-                                            <th class="text-center" style="width: 80px;">Cant.</th>
-                                            <th class="text-center" style="width: 70px;">U.M.</th>
-                                            <th class="text-end" style="width: 110px;">P. Unitario</th>
-                                            <th class="text-end" style="width: 110px;">Importe</th>
-                                            <th class="text-center" style="width: 120px;">Tiempo Entrega</th>
-                                            <th class="text-center" style="width: 120px;">Fecha Estimada</th>
+                                            <th class="text-center" style="width: 80px;">Partida</th>
+                                            <th class="text-center" style="width: 110px;">Clave</th>
+                                            <th class="text-start" style="min-width: 300px;">Descripción</th>
+                                            <th class="text-center" style="width: 70px;">Cant.</th>
+                                            <th class="text-center" style="width: 60px;">U.M.</th>
+                                            <th class="text-end" style="width: 100px;">P. Unitario</th>
+                                            <th class="text-end" style="width: 100px;">Importe</th>
+                                            <th class="text-center" style="width: 110px;">Tiempo Entrega</th>
+                                            <th class="text-center" style="width: 110px;">Fecha Estimada</th>
+                                            <th class="text-center" style="width: 150px;">Estatus Entrega</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tbody_partidas_proveedor">
@@ -558,6 +568,10 @@
                     <div class="col-12 col-sm-6">
                         <label class="form-label fs-12 text-muted mb-0">Tiempo Restante para la Entrega:</label>
                         <p class="fw-bold fs-13 mb-0" id="mdl_tiempo_restante">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Estatus de Entrega (Producto):</label>
+                        <div id="mdl_entregado_badge">—</div>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="form-label fs-12 text-muted mb-0">Estatus de Cumplimiento:</label>

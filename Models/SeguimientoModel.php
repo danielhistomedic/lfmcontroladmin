@@ -794,6 +794,12 @@ class SeguimientoModel extends Mysql
                 /* Total partidas */
                 (SELECT COUNT(*) FROM tb_pedidos_proveedor_detalle ppd
                  WHERE ppd.pedido_proveedor_id = pp.id)                     AS total_partidas,
+                (SELECT COUNT(*) FROM tb_pedidos_proveedor_detalle ppd
+                 WHERE ppd.pedido_proveedor_id = pp.id AND ppd.entregado = 1) AS total_partidas_entregadas,
+                (SELECT COUNT(*) FROM tb_pedidos_proveedor_detalle ppd
+                 WHERE ppd.pedido_proveedor_id = pp.id AND (ppd.entregado = 0 OR ppd.entregado IS NULL)) AS total_partidas_pendientes,
+                (SELECT COUNT(*) FROM tb_pedidos_proveedor_detalle ppd
+                 WHERE ppd.pedido_proveedor_id = pp.id AND ppd.entregado = 2) AS total_partidas_canceladas,
                 /* Total adjuntos */
                 (SELECT COUNT(*) FROM tb_pedidos_proveedor_adjuntos ppa
                  WHERE ppa.pedido_proveedor_id = pp.id)                     AS total_adjuntos
@@ -886,7 +892,7 @@ class SeguimientoModel extends Mysql
                 DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y')         AS fecha_estimada_formateada,
                 pp.fecha_pedido,
                 DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
-                0                                                           AS entregado
+                COALESCE(ppd.entregado, 0)                                  AS entregado
             FROM tb_pedidos_proveedor_detalle ppd
             INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id
             LEFT  JOIN tb_ventas v             ON v.id  = pp.venta_id
@@ -985,6 +991,7 @@ class SeguimientoModel extends Mysql
         try {
             $sql = "SELECT
                 ppd.*,
+                COALESCE(ppd.entregado, 0) AS entregado,
                 DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y') AS fecha_estimada_formateada,
                 UPPER(COALESCE(NULLIF(TRIM(ppd.ccveunidad), ''), 'PZA')) AS unidad_medida
             FROM tb_pedidos_proveedor_detalle ppd
