@@ -577,6 +577,29 @@
                         <label class="form-label fs-12 text-muted mb-0">Estatus de Cumplimiento:</label>
                         <div id="mdl_estatus_badge">—</div>
                     </div>
+
+                    <!-- Información de Entrada a Almacén y Facturación -->
+                    <div class="col-12 mt-3 pt-2 border-top">
+                        <p class="fs-12 fw-bold text-primary mb-0">
+                            <i class="fa-regular fa-warehouse me-1"></i> Información de Entrada a Almacén y Facturación:
+                        </p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Num Entrada Almacén:</label>
+                        <p class="fw-bold text-dark fs-13 mb-0" id="mdl_num_recibo">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Fecha de Entrega (Almacén):</label>
+                        <p class="fw-semibold text-dark fs-13 mb-0" id="mdl_fecha_entrega_almacen">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Factura (Serie y Folio):</label>
+                        <p class="fw-bold text-primary fs-13 mb-0" id="mdl_factura_serie_folio">—</p>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-12 text-muted mb-0">Folio Fiscal (UUID):</label>
+                        <p class="fw-semibold text-break fs-12 text-muted mb-0 font-monospace" id="mdl_factura_folio_fiscal">—</p>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer bg-light py-2">

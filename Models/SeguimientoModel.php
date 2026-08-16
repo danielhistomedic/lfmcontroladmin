@@ -892,12 +892,20 @@ class SeguimientoModel extends Mysql
                 DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y')         AS fecha_estimada_formateada,
                 pp.fecha_pedido,
                 DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y')                    AS fecha_pedido_formateada,
-                COALESCE(ppd.entregado, 0)                                  AS entregado
+                COALESCE(ppd.entregado, 0)                                  AS entregado,
+                /* Datos de Entrada a Almacén y Facturación */
+                COALESCE(r.cNumRecibo, '')                                  AS num_recibo,
+                r.fchRecibo                                                 AS fecha_recibo,
+                DATE_FORMAT(r.fchRecibo, '%d/%m/%Y')                        AS fecha_recibo_formateada,
+                COALESCE(r.cNumFactura, '')                                 AS factura_serie_folio,
+                COALESCE(r.FolioFiscal, '')                                 AS factura_folio_fiscal
             FROM tb_pedidos_proveedor_detalle ppd
             INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id
             LEFT  JOIN tb_ventas v             ON v.id  = pp.venta_id
             LEFT  JOIN cat_clientes c          ON (c.id = pp.cliente_id OR c.id = v.cliente_id)
             LEFT  JOIN tb_proveedores prov     ON prov.icveProveedor = pp.proveedor_id
+            LEFT  JOIN tb_recibos_detalle rd   ON rd.pedido_proveedor_detalle_id = ppd.id
+            LEFT  JOIN tb_recibos r            ON r.cNumRecibo = rd.cNumRecibo
             WHERE ppd.fecha_estimada_entrega IS NOT NULL
               AND ppd.fecha_estimada_entrega != '0000-00-00' ";
 
@@ -993,8 +1001,16 @@ class SeguimientoModel extends Mysql
                 ppd.*,
                 COALESCE(ppd.entregado, 0) AS entregado,
                 DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y') AS fecha_estimada_formateada,
-                UPPER(COALESCE(NULLIF(TRIM(ppd.ccveunidad), ''), 'PZA')) AS unidad_medida
+                UPPER(COALESCE(NULLIF(TRIM(ppd.ccveunidad), ''), 'PZA')) AS unidad_medida,
+                /* Datos de Entrada a Almacén y Facturación */
+                COALESCE(r.cNumRecibo, '') AS num_recibo,
+                r.fchRecibo AS fecha_recibo,
+                DATE_FORMAT(r.fchRecibo, '%d/%m/%Y') AS fecha_recibo_formateada,
+                COALESCE(r.cNumFactura, '') AS factura_serie_folio,
+                COALESCE(r.FolioFiscal, '') AS factura_folio_fiscal
             FROM tb_pedidos_proveedor_detalle ppd
+            LEFT JOIN tb_recibos_detalle rd ON rd.pedido_proveedor_detalle_id = ppd.id
+            LEFT JOIN tb_recibos r ON r.cNumRecibo = rd.cNumRecibo
             WHERE ppd.pedido_proveedor_id = :pedido_id
             ORDER BY ppd.codigo_partida ASC, ppd.id ASC";
 

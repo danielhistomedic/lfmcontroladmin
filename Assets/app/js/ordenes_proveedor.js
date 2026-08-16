@@ -932,6 +932,17 @@ function fntMostrarDetalleEntregaModal(props) {
     }
     $('#mdl_entregado_badge').html(entregadoBadge);
 
+    // Información de Entrada a Almacén y Facturación (tb_recibos)
+    var numRecibo   = (props.num_recibo && String(props.num_recibo).trim() !== '') ? props.num_recibo : '—';
+    var fchRecibo   = (props.fecha_recibo_formateada && String(props.fecha_recibo_formateada).trim() !== '') ? props.fecha_recibo_formateada : '—';
+    var factura     = (props.factura_serie_folio && String(props.factura_serie_folio).trim() !== '') ? props.factura_serie_folio : '—';
+    var folioFiscal = (props.factura_folio_fiscal && String(props.factura_folio_fiscal).trim() !== '') ? props.factura_folio_fiscal : '—';
+
+    $('#mdl_num_recibo').text(numRecibo);
+    $('#mdl_fecha_entrega_almacen').text(fchRecibo);
+    $('#mdl_factura_serie_folio').text(factura);
+    $('#mdl_factura_folio_fiscal').text(folioFiscal);
+
     var modalElement = document.getElementById('modalDetalleEntrega');
     if (modalElement) {
         if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
