@@ -423,5 +423,203 @@ class Almacen extends Controllers
             die();
         }
     }
+
+    /**
+     * Carga la Vista Control de Productos Reservados. 
+     * URL: /almacen/reservados
+     */
+    public function reservados()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                $this->session->redirect('inicio');
+                return;
+            }
+            $this->permisosMod = $arrPermisos[MOD_ALMACEN_RESERVADOS] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
+
+            // Valida si tiene acceso a la pagina.
+            if (empty($this->permisosMod['r'])) {
+                echo "<h4>Lo sentimos, Acceso restringido</h4>";
+                die();
+            }
+
+            /*-------------------------------------------
+            [ Obtener datos de Modulo ]*/
+            $menus_model = new MenusModel;
+            $menu = $menus_model->selectMenu(MOD_ALMACEN_RESERVADOS);
+
+            // Asigna los permisos de Módulo y SideBar
+            $data['permisos']    = $arrPermisos;
+            $data['permisosMod'] = $this->permisosMod;
+
+            //Datos de Usuario en Sesión.
+            $data['empresa_id']            = $this->session->get('empresa_id');
+            $data['sucursal_id']           = $this->session->get('sucursal_id');
+            $data['theme']                 = $this->session->get('theme');
+            $data['usuario']['nombre_solo'] = $this->session->get('nombre_solo');
+            $data['usuario']['email']      = $this->session->get('email');
+            $data['usuario']['rol']        = $this->session->get('rol');
+            $data['usuario']['rol_id']     = $this->session->get('rol_id');
+
+            // Configuracion
+            $configuracion_model = new ConfiguracionModel;
+            $configuracion_model->setEmpresaId($data['empresa_id']);
+            $configuracion = $configuracion_model->selectRecord($configuracion_model);
+            $data['configuracion'] = $configuracion;
+
+            //Id de Menu para script de Permisos
+            $data['menu'] = MOD_ALMACEN_RESERVADOS;
+
+            //Header
+            $data['page_title']        = !empty($menu['name'])        ? $menu['name']        : 'Control de Productos Reservados';
+            $data['meta_description']  = !empty($menu['descripcion']) ? $menu['descripcion'] : 'Control y consulta de productos reservados por cliente en almacén';
+            $data['meta_keywords']     = !empty($menu['tags'])        ? $menu['tags']        : 'almacen, reservas, reservados, apartados, clientes, stock';
+
+            //Form Principal
+            $data['icon_form_title']  = !empty($menu['icon_form_title']) ? $menu['icon_form_title'] : '<i class="fa-sharp fa-light fa-box-archive text-primary me-2"></i>';
+            $data['page_form_title']  = $data['icon_form_title'] . (!empty($menu['form_title']) ? $menu['form_title'] : ' Control de Productos Reservados');
+
+            // Breadcrumb
+            $data['page_breadcrumb']       = 'Almacén / Control de Productos Reservados';
+            $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Lista de Productos Reservados por Cliente';
+            $data['page_card_description'] = $data['meta_description'];
+
+            // JS de la página
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'almacen_reservados.js';
+
+            // Obtener lista de almacenes y clientes para filtros
+            $almacenModel = new AlmacenModel();
+            $data['almacenes'] = $almacenModel->getAlmacenes();
+            $data['clientes']  = $almacenModel->getClientesConReservas();
+
+            // Call Vista
+            $this->views->getView($this, "reservados", $data);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+        }
+    }
+
+    /**
+     * Endpoint AJAX para obtener productos reservados filtrados por cliente, almacén o antigüedad.
+     * URL: /almacen/getReservados
+     */
+    public function getReservados()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_RESERVADOS] ?? ['r' => 0];
+
+            if (empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'Acceso no permitido.', 'data' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $clienteId  = $_POST['cliente_id'] ?? $_GET['cliente_id'] ?? '';
+            $almacen    = $_POST['almacen']    ?? $_GET['almacen']    ?? '';
+            $antiguedad = $_POST['antiguedad'] ?? $_GET['antiguedad'] ?? '';
+
+            $almacenModel = new AlmacenModel();
+            $arrReservas = $almacenModel->getReservadosData($clienteId, $almacen, $antiguedad);
+            $arrKpis     = $almacenModel->getKpisReservados($clienteId, $almacen);
+
+            $arrData = [];
+            foreach ($arrReservas as $row) {
+                // Fotos
+                $fotos = [];
+                for ($i = 1; $i <= 5; $i++) {
+                    $imgKey = "img" . $i;
+                    if (!empty($row[$imgKey])) {
+                        $imgFile = trim($row[$imgKey]);
+                        $imgPath = "Assets/files/productos/" . $imgFile;
+                        if (file_exists($imgPath)) {
+                            $fotos[] = base_url() . "/" . $imgPath;
+                        }
+                    }
+                }
+
+                // Cálculo textual amigable del tiempo que lleva reservado
+                $min  = intval($row['minutos_transcurridos'] ?? 0);
+                $hrs  = intval($row['horas_transcurridas'] ?? 0);
+                $dias = intval($row['dias_transcurridos'] ?? 0);
+
+                if ($dias >= 1) {
+                    $remHrs = $hrs % 24;
+                    $tiempoTexto = $dias == 1 ? "1 día" : "{$dias} días";
+                    if ($remHrs > 0) $tiempoTexto .= ", {$remHrs} h";
+                } else if ($hrs >= 1) {
+                    $remMin = $min % 60;
+                    $tiempoTexto = $hrs == 1 ? "1 hora" : "{$hrs} horas";
+                    if ($remMin > 0) $tiempoTexto .= ", {$remMin} min";
+                } else {
+                    $tiempoTexto = $min <= 1 ? "Menos de 1 min" : "{$min} minutos";
+                }
+
+                // Nivel de antigüedad para alertas y colores
+                $nivelAntiguedad = 'reciente'; // < 7 días
+                if ($dias > 30) {
+                    $nivelAntiguedad = 'critica'; // > 30 días
+                } else if ($dias > 15) {
+                    $nivelAntiguedad = 'urgente'; // 16 - 30 días
+                } else if ($dias >= 7) {
+                    $nivelAntiguedad = 'atencion'; // 7 - 15 días
+                }
+
+                // Fecha formateada
+                $fechaFmt = !empty($row['fchregistro']) ? date('d/m/Y H:i', strtotime($row['fchregistro'])) : 'N/D';
+
+                $arrData[] = [
+                    'id'                   => $row['id'],
+                    'cliente_id'           => intval($row['cliente_id'] ?? 0),
+                    'cliente_nombre'       => !empty($row['cliente_nombre']) ? $row['cliente_nombre'] : 'Sin cliente asignado',
+                    'cliente_razon_social' => $row['cliente_razon_social'] ?? '',
+                    'tiempo_texto'         => $tiempoTexto,
+                    'dias_transcurridos'   => $dias,
+                    'horas_transcurridas'  => $hrs,
+                    'nivel_antiguedad'     => $nivelAntiguedad,
+                    'fecha_registro'       => $fechaFmt,
+                    'fecha_registro_raw'   => $row['fchregistro'],
+                    'cantidad'             => floatval($row['cantidad']),
+                    'unidad_medida'        => $row['unidad_medida'] ?: 'pza',
+                    'clave'                => $row['clave'],
+                    'ccn'                  => $row['ccn'],
+                    'material_descripcion' => $row['material_descripcion'],
+                    'almacen'              => $row['almacen'],
+                    'ccvealmacen'          => $row['ccvealmacen'],
+                    'pedido_id'            => !empty($row['pedido_id']) ? intval($row['pedido_id']) : 0,
+                    'orden_compra'         => (!empty($row['orden_compra']) && $row['orden_compra'] !== 'S/N' && $row['orden_compra'] !== 'NA') ? $row['orden_compra'] : '',
+                    'marca'                => $row['marca'],
+                    'submarca'             => $row['submarca'],
+                    'linea_producto'       => $row['linea_producto'],
+                    'categoria'            => $row['categoria'],
+                    'modelo'               => $row['modelo'] ?? '',
+                    'num_catalogo'         => $row['num_catalogo'] ?? '',
+                    'num_parte'            => $row['num_parte'] ?? '',
+                    'serie'                => $row['serie'] ?? '',
+                    'material'             => $row['material'] ?? '',
+                    'grupo'                => $row['grupo'] ?? '',
+                    'clave_sat'            => $row['clave_sat'] ?? '',
+                    'usuario_reserva'      => $row['ccveusuario'] ?: 'Sistema',
+                    'fotos'                => $fotos
+                ];
+            }
+
+            echo json_encode([
+                'status'          => true,
+                'total_registros' => count($arrData),
+                'kpis'            => $arrKpis,
+                'data'            => $arrData
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al procesar la solicitud.', 'data' => []], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
 }
 

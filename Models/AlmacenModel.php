@@ -323,6 +323,178 @@ class AlmacenModel extends Mysql
             return [];
         }
     }
+
+    /**
+     * Obtiene el listado de productos reservados activos con cliente, pedido y tiempo de reserva
+     * 
+     * @param string $clienteId
+     * @param string $almacen
+     * @param string $antiguedad
+     * @return array
+     */
+    public function getReservadosData(string $clienteId = '', string $almacen = '', string $antiguedad = ''): array
+    {
+        try {
+            $clienteId  = trim($clienteId);
+            $almacen    = trim($almacen);
+            $antiguedad = trim($antiguedad);
+
+            $sql = "SELECT 
+                        r.id,
+                        r.ccvematerial,
+                        r.ccvealmacen,
+                        IFNULL(ca.cdscalmacen, r.ccvealmacen) AS almacen,
+                        IFNULL(r.cantidad, 0) AS cantidad,
+                        r.fchregistro,
+                        r.iActivo,
+                        IFNULL(r.ccveusuario, '') AS ccveusuario,
+                        TIMESTAMPDIFF(MINUTE, r.fchregistro, NOW()) AS minutos_transcurridos,
+                        TIMESTAMPDIFF(HOUR, r.fchregistro, NOW()) AS horas_transcurridas,
+                        DATEDIFF(NOW(), r.fchregistro) AS dias_transcurridos,
+                        c.id AS cliente_id,
+                        IFNULL(c.nombre_comercial, IFNULL(c.razon_social, 'Sin cliente asignado')) AS cliente_nombre,
+                        IFNULL(c.razon_social, '') AS cliente_razon_social,
+                        p.id AS pedido_id,
+                        IFNULL(p.num_orden_compra, 'S/N') AS orden_compra,
+                        p.fecha_pedido,
+                        IFNULL(m.cDescripcion, '') AS material_descripcion,
+                        IFNULL(m.ccveMaterialAlmacen, '') AS ccn,
+                        IFNULL(m.ccvematerial, r.ccvematerial) AS clave,
+                        IFNULL(m.ccveunidad, 'pza') AS unidad_medida,
+                        IFNULL(mar.cdscmarca, '') AS marca,
+                        IFNULL(sub.cdscsubmarca, '') AS submarca,
+                        IFNULL(cla.cdscclave, '') AS linea_producto,
+                        IFNULL(cat.categoria, '') AS categoria,
+                        IFNULL(m.modelo, '') AS modelo,
+                        IFNULL(m.num_catalogo, '') AS num_catalogo,
+                        IFNULL(m.num_parte, '') AS num_parte,
+                        IFNULL(m.serie, '') AS serie,
+                        IFNULL(m.material, '') AS material,
+                        IFNULL(m.grupo, '') AS grupo,
+                        IFNULL(m.clave_sat, '') AS clave_sat,
+                        ftp.img1, ftp.img2, ftp.img3, ftp.img4, ftp.img5
+                    FROM tb_almacen_existencias_reservas r
+                    LEFT JOIN cat_almacen ca ON ca.ccvealmacen = r.ccvealmacen
+                    LEFT JOIN cat_clientes c ON c.id = r.cliente_id
+                    LEFT JOIN tb_pedidos_cliente p ON p.id = r.pedido_cliente_id
+                    LEFT JOIN tb_materiales m ON m.ccvematerial = r.ccvematerial
+                    LEFT JOIN cat_marcas mar ON mar.icvemarca = m.icvemarca
+                    LEFT JOIN cat_submarcas sub ON sub.id = m.submarca_id
+                    LEFT JOIN cat_claves cla ON cla.icveclave = m.icveclave
+                    LEFT JOIN cat_categorias cat ON cat.id = m.categoria_id
+                    LEFT JOIN tb_materiales_ftp ftp ON ftp.idDocto = m.ccvematerial
+                    WHERE r.iActivo = 1 ";
+
+            $arrValues = [];
+
+            if ($clienteId !== '') {
+                if ($clienteId === '0' || $clienteId === 'sin_cliente') {
+                    $sql .= " AND (r.cliente_id = 0 OR r.cliente_id IS NULL) ";
+                } else {
+                    $sql .= " AND r.cliente_id = :cliente_id ";
+                    $arrValues['cliente_id'] = $clienteId;
+                }
+            }
+
+            if (!empty($almacen)) {
+                $sql .= " AND r.ccvealmacen = :almacen ";
+                $arrValues['almacen'] = $almacen;
+            }
+
+            if (!empty($antiguedad)) {
+                if ($antiguedad === 'menos7') {
+                    $sql .= " AND DATEDIFF(NOW(), r.fchregistro) < 7 ";
+                } else if ($antiguedad === '7a15') {
+                    $sql .= " AND DATEDIFF(NOW(), r.fchregistro) >= 7 AND DATEDIFF(NOW(), r.fchregistro) <= 15 ";
+                } else if ($antiguedad === '15a30') {
+                    $sql .= " AND DATEDIFF(NOW(), r.fchregistro) > 15 AND DATEDIFF(NOW(), r.fchregistro) <= 30 ";
+                } else if ($antiguedad === 'mas30') {
+                    $sql .= " AND DATEDIFF(NOW(), r.fchregistro) > 30 ";
+                }
+            }
+
+            $sql .= " ORDER BY r.fchregistro DESC ";
+
+            $arrResponse = $this->select($sql, $arrValues);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene estadísticas/indicadores KPI de productos reservados
+     * 
+     * @param string $clienteId
+     * @param string $almacen
+     * @return array
+     */
+    public function getKpisReservados(string $clienteId = '', string $almacen = ''): array
+    {
+        try {
+            $clienteId = trim($clienteId);
+            $almacen   = trim($almacen);
+
+            $sql = "SELECT 
+                        COUNT(r.id) AS total_partidas,
+                        IFNULL(SUM(r.cantidad), 0) AS total_unidades,
+                        COUNT(DISTINCT CASE WHEN r.cliente_id > 0 THEN r.cliente_id ELSE NULL END) AS total_clientes,
+                        COUNT(DISTINCT r.ccvematerial) AS total_productos_distintos,
+                        SUM(CASE WHEN DATEDIFF(NOW(), r.fchregistro) < 7 THEN 1 ELSE 0 END) AS recientes_7d,
+                        SUM(CASE WHEN DATEDIFF(NOW(), r.fchregistro) >= 7 AND DATEDIFF(NOW(), r.fchregistro) <= 15 THEN 1 ELSE 0 END) AS atencion_7_15d,
+                        SUM(CASE WHEN DATEDIFF(NOW(), r.fchregistro) > 15 THEN 1 ELSE 0 END) AS criticas_mas15d
+                    FROM tb_almacen_existencias_reservas r
+                    WHERE r.iActivo = 1 ";
+
+            $arrValues = [];
+
+            if ($clienteId !== '') {
+                if ($clienteId === '0' || $clienteId === 'sin_cliente') {
+                    $sql .= " AND (r.cliente_id = 0 OR r.cliente_id IS NULL) ";
+                } else {
+                    $sql .= " AND r.cliente_id = :cliente_id ";
+                    $arrValues['cliente_id'] = $clienteId;
+                }
+            }
+
+            if (!empty($almacen)) {
+                $sql .= " AND r.ccvealmacen = :almacen ";
+                $arrValues['almacen'] = $almacen;
+            }
+
+            $arrResponse = $this->selectModel($sql, $arrValues);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene la lista de clientes que tienen reservas activas
+     * 
+     * @return array
+     */
+    public function getClientesConReservas(): array
+    {
+        try {
+            $sql = "SELECT DISTINCT 
+                        IFNULL(c.id, 0) AS id, 
+                        IFNULL(c.nombre_comercial, IFNULL(c.razon_social, 'Sin cliente específico / Reserva general')) AS nombre_cliente,
+                        COUNT(r.id) AS total_reservas
+                    FROM tb_almacen_existencias_reservas r
+                    LEFT JOIN cat_clientes c ON c.id = r.cliente_id
+                    WHERE r.iActivo = 1
+                    GROUP BY IFNULL(c.id, 0), IFNULL(c.nombre_comercial, IFNULL(c.razon_social, 'Sin cliente específico / Reserva general'))
+                    ORDER BY (CASE WHEN IFNULL(c.id, 0) = 0 THEN 1 ELSE 0 END) ASC, nombre_cliente ASC";
+            $arrResponse = $this->select($sql, []);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            return [];
+        }
+    }
 }
 
 

@@ -33,6 +33,7 @@ const MOD_SEGUIMIENTO_ORDENES_PROVEEDOR = 134;
 // ** -----------------------------
 const MOD_ALMACEN_PRODUCTOS = 132;
 const MOD_ALMACEN_INVENTARIO = 133;
+const MOD_ALMACEN_RESERVADOS = 135;
 
 // ** -----------------------------
 // [ Dashboard ]

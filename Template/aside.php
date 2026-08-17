@@ -356,13 +356,15 @@
                     <!-- Almacén  -->
                     <?php if (
                         !empty($data['permisos'][MOD_ALMACEN_PRODUCTOS]['r']) ||
-                        !empty($data['permisos'][MOD_ALMACEN_INVENTARIO]['r'])
+                        !empty($data['permisos'][MOD_ALMACEN_INVENTARIO]['r']) ||
+                        !empty($data['permisos'][MOD_ALMACEN_RESERVADOS]['r'])
                     ) {
                     ?>
 
                         <li class="nav-parent <?php if (
                                                     $data['menu'] == MOD_ALMACEN_PRODUCTOS ||
-                                                    $data['menu'] == MOD_ALMACEN_INVENTARIO
+                                                    $data['menu'] == MOD_ALMACEN_INVENTARIO ||
+                                                    $data['menu'] == MOD_ALMACEN_RESERVADOS
                                                 ) {
                                                     echo "nav-expanded nav-active";
                                                 } ?>">
@@ -390,6 +392,18 @@
                                     <li class="<?= ($data['menu'] == MOD_ALMACEN_INVENTARIO) ? "nav-active" : ""; ?>">
                                         <a class="nav-link" href="<?= base_url(); ?>/almacen/inventario">
                                             Inventario
+                                        </a>
+                                    </li>
+                                <?php }  ?>
+
+                                <hr class="mb-1 mt-1">
+
+                                <?php if (
+                                    !empty($data['permisos'][MOD_ALMACEN_RESERVADOS]['r'])
+                                ) { ?>
+                                    <li class="<?= ($data['menu'] == MOD_ALMACEN_RESERVADOS) ? "nav-active" : ""; ?>">
+                                        <a class="nav-link" href="<?= base_url(); ?>/almacen/reservados">
+                                            Control de Productos Reservados
                                         </a>
                                     </li>
                                 <?php }  ?>
