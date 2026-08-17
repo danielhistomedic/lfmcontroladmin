@@ -116,6 +116,7 @@ function initDataTableInventario() {
         serverSide: false,
         responsive: false,
         scrollX: true,
+        orderCellsTop: true,
         order: [[1, "asc"]],
         iDisplayLength: 5,
         lengthMenu: [
@@ -166,12 +167,18 @@ function initDataTableInventario() {
             {
                 data: 'existencia',
                 className: 'text-center',
-                render: function (data) {
+                render: function (data, type, row) {
                     const cant = parseFloat(data) || 0;
-                    if (cant > 0) {
-                        return `<span class="badge bg-success badge-stock">${cant}</span>`;
+                    const res = parseFloat(row.reservadas) || 0;
+                    const disp = row.disponibles !== undefined ? (parseFloat(row.disponibles) || 0) : (cant - res);
+                    const alm = row.almacen ? ` (${row.almacen})` : '';
+                    const tooltip = `Existencias: ${cant} | Reservadas: ${res} | Disponibles: ${disp}${alm}`;
+                    if (disp > 0) {
+                        return `<span class="badge bg-success badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${cant}</span>`;
+                    } else if (cant > 0) {
+                        return `<span class="badge bg-warning text-dark badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${cant}</span>`;
                     } else {
-                        return `<span class="badge bg-danger badge-stock">0</span>`;
+                        return `<span class="badge bg-danger badge-stock" title="${tooltip}" data-bs-toggle="tooltip">0</span>`;
                     }
                 }
             },
@@ -224,7 +231,49 @@ function initDataTableInventario() {
                 postfixButtons: ['colvisRestore']
             }
         ],
-        language: idioma_espanol
+        language: idioma_espanol,
+        initComplete: function () {
+            const api = this.api();
+            const wrapper = $(tableElement).closest('.dataTables_wrapper');
+
+            // Asignar eventos de búsqueda por columna a los inputs en la cabecera
+            wrapper.find('thead tr.filters-row th').each(function (colIdx) {
+                const input = $(this).find('input');
+                if (input.length > 0) {
+                    // Evitar que el clic en el input dispare la ordenación
+                    input.on('click', function (e) {
+                        e.stopPropagation();
+                    });
+
+                    // Filtrado en tiempo real con debounce
+                    let timeout = null;
+                    input.on('keyup input change clear', function () {
+                        const val = this.value;
+                        clearTimeout(timeout);
+                        timeout = setTimeout(function () {
+                            if (api.column(colIdx).search() !== val) {
+                                api.column(colIdx).search(val).draw();
+                            }
+                        }, 250);
+                    });
+                }
+            });
+
+            // Botón para resetear todos los filtros de columna
+            wrapper.find('#btnResetColFiltersInventario').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                wrapper.find('thead tr.filters-row input').val('');
+                api.columns().search('').draw();
+            });
+        },
+        drawCallback: function () {
+            // Inicializar tooltips de Bootstrap
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
     });
 }
 

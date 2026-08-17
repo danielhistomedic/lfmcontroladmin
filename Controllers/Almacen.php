@@ -241,6 +241,8 @@ class Almacen extends Controllers
                     'clave_sat'      => $row['clave_sat'],
                     'almacen'        => $row['cdscalmacen'],
                     'existencia'     => floatval($row['existencia']),
+                    'reservadas'     => floatval($row['reservadas'] ?? 0),
+                    'disponibles'    => floatval($row['disponibles'] ?? ($row['existencia'] - ($row['reservadas'] ?? 0))),
                     'costo_promedio' => floatval($row['costo_promedio']),
                     'costo_ultimo'   => floatval($row['costo_ultimo']),
                     'moneda'         => $row['moneda'] ?? '',

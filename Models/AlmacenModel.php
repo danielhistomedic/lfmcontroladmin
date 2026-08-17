@@ -237,6 +237,8 @@ class AlmacenModel extends Mysql
                         ae.ccvealmacen,
                         IFNULL(ca.cdscalmacen, ae.ccvealmacen) AS cdscalmacen,
                         IFNULL(ae.iExistenciaActual, 0) AS existencia,
+                        IFNULL(ae.iExistenciaReservado, 0) AS reservadas,
+                        IFNULL(ae.iExistenciaActual - ae.iExistenciaReservado, 0) AS disponibles,
                         IFNULL(ae.iCostoPromedio, 0) AS costo_promedio,
                         IFNULL(ae.iUltimoCosto, 0) AS costo_ultimo,
                         IFNULL(tc.siglas, '') AS moneda
