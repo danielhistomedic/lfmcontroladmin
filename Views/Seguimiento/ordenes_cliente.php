@@ -380,12 +380,67 @@
                     </div>
                 </div>
 
+                <!-- Partidas de la Orden de Compra Cliente (tb_pedidos_cliente_detalle) -->
+                <div class="mb-4">
+                    <div class="card border p-0 shadow-sm rounded-3">
+                        <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
+                            <p class="mb-0 fw-600 text-primary fs-13">
+                                <i class="fa-regular fa-boxes-stacked me-1"></i> Partidas de la Orden de Compra del Cliente (tb_pedidos_cliente_detalle)
+                                <span class="badge bg-secondary ms-2" id="badge_total_partidas">0</span>
+                            </p>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped table-hover mb-0 fs-12" id="tabla_partidas_cliente">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="text-center" style="width: 80px;">Partida</th>
+                                            <th class="text-center" style="width: 110px;">Clave</th>
+                                            <th class="text-center" style="width: 110px;">CCN</th>
+                                            <th class="text-start" style="min-width: 280px;">Descripción</th>
+                                            <th class="text-center" style="width: 70px;">Cant.</th>
+                                            <th class="text-center" style="width: 60px;">U.M.</th>
+                                            <th class="text-end" style="width: 100px;">P. Unitario</th>
+                                            <th class="text-end" style="width: 95px;">Descuento</th>
+                                            <th class="text-end" style="width: 110px;">Impuesto</th>
+                                            <th class="text-end" style="width: 105px;">Total</th>
+                                            <th class="text-center" style="width: 110px;">Tiempo Entrega</th>
+                                            <th class="text-center" style="width: 110px;">Fecha Estimada</th>
+                                            <th class="text-center" style="width: 150px;">Estatus Entrega</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody_partidas_cliente">
+                                        <!-- Se llena dinámicamente con JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Archivos Adjuntos de la Orden de Compra Cliente (tb_pedidos_cliente_adjuntos) -->
+                <div class="mb-4">
+                    <div class="card border p-0 shadow-sm rounded-3">
+                        <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
+                            <p class="mb-0 fw-600 text-primary fs-13">
+                                <i class="fa-regular fa-paperclip me-1"></i> Archivos Adjuntos de la Orden (tb_pedidos_cliente_adjuntos)
+                                <span class="badge bg-secondary ms-2" id="badge_total_adjuntos">0</span>
+                            </p>
+                        </div>
+                        <div class="card-body p-3">
+                            <div id="contenedor_adjuntos_cliente" class="d-flex flex-wrap gap-2">
+                                <!-- Se llena dinámicamente con JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Historial de Seguimientos -->
                 <div>
                     <div class="card border p-0 shadow-sm rounded-3">
                         <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
                             <p class="mb-0 fw-600 text-primary fs-13">
-                                <i class="fa-regular fa-timeline me-1"></i> Historial de Seguimientos
+                                <i class="fa-regular fa-timeline me-1"></i> Historial de Seguimientos (Bitácora de Proyecto)
                                 <span class="badge bg-primary ms-2" id="badge_total_seg">0</span>
                             </p>
                         </div>

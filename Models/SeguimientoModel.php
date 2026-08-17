@@ -1061,5 +1061,87 @@ class SeguimientoModel extends Mysql
 
         return $arrResponse;
     }
+
+    /**
+     * Obtiene las partidas de una orden de compra de cliente (tb_pedidos_cliente_detalle).
+     *
+     * @param int $pedido_cliente_id
+     * @param int $venta_id
+     * @return array
+     */
+    public function selectPartidasPedidoCliente(int $pedido_cliente_id, int $venta_id = 0): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                pcd.*,
+                COALESCE(pcd.entregado, 0) AS entregado,
+                DATE_FORMAT(pcd.fecha_estimada_entrega, '%d/%m/%Y') AS fecha_estimada_formateada,
+                UPPER(COALESCE(NULLIF(TRIM(pcd.ccveunidad), ''), 'PZA')) AS unidad_medida,
+                pcd.ccvematerial AS clave,
+                mat.ccveMaterialAlmacen AS ccn,
+                sap.clave_cliente AS codigo_cliente,
+                ped.num_orden_compra
+            FROM tb_pedidos_cliente_detalle pcd
+            LEFT JOIN tb_pedidos_cliente ped ON ped.id = pcd.pedido_id
+            LEFT JOIN tb_ventas v ON v.id = ped.venta_id
+            LEFT JOIN tb_materiales mat ON mat.ccvematerial = pcd.ccvematerial
+            LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pcd.ccvematerial AND sap.cliente_id = ped.cliente_id)
+            WHERE (pcd.pedido_id = :pedido_id OR (:pedido_id = 0 AND ped.venta_id = :venta_id))
+            ORDER BY pcd.codigo_partida ASC, pcd.id ASC";
+
+            $arrResponse = $this->select($sql, [
+                'pedido_id' => $pedido_cliente_id,
+                'venta_id'  => $venta_id
+            ]);
+
+            // Si no se encontraron partidas por pedido_id, buscar por venta_id usando getPartidasProyecto
+            if (empty($arrResponse) && $venta_id > 0) {
+                $partidasProy = $this->getPartidasProyecto($venta_id);
+                if (!empty($partidasProy['partidas'])) {
+                    return $partidasProy['partidas'];
+                }
+            }
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene los archivos adjuntos de una orden de compra de cliente (tb_pedidos_cliente_adjuntos).
+     *
+     * @param int $pedido_cliente_id
+     * @param int $venta_id
+     * @return array
+     */
+    public function selectAdjuntosPedidoCliente(int $pedido_cliente_id, int $venta_id = 0): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT
+                pca.id,
+                pca.venta_id,
+                pca.pedidos_cliente_id AS pedido_cliente_id,
+                pca.archivo,
+                'tb_pedidos_cliente_adjuntos' AS tabla_origen,
+                'Pedido Cliente' AS origen_etiqueta
+            FROM tb_pedidos_cliente_adjuntos pca
+            WHERE (pca.pedidos_cliente_id = :pedido_id OR (:pedido_id = 0 AND pca.venta_id = :venta_id))
+              AND pca.archivo IS NOT NULL
+              AND TRIM(pca.archivo) != ''
+            ORDER BY pca.id ASC";
+
+            $arrResponse = $this->select($sql, [
+                'pedido_id' => $pedido_cliente_id,
+                'venta_id'  => $venta_id
+            ]);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
 }
 

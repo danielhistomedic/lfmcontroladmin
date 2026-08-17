@@ -1278,6 +1278,84 @@ class Seguimiento extends Controllers
         [ Retorna respuesta json_encode ]*/
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
+
+    /**
+     * Obtiene el detalle completo de una orden de compra de cliente:
+     * partidas (tb_pedidos_cliente_detalle), adjuntos (tb_pedidos_cliente_adjuntos)
+     * e historial de seguimiento (tb_ventas_seguimiento).
+     * URL / AJAX: /seguimiento/getDetallePedidoCliente
+     *
+     * @return json
+     */
+    public function getDetallePedidoCliente()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe y desencripta pedido_id y venta_id ]*/
+            $pedido_id_input = strClean($_POST['pedido_id'] ?? '');
+            $venta_id_input  = strClean($_POST['venta_id']  ?? '');
+
+            $pedido_id = 0;
+            if (!empty($pedido_id_input)) {
+                if (is_numeric($pedido_id_input)) {
+                    $pedido_id = intval($pedido_id_input);
+                } else {
+                    $pedido_id = intval(openssl_decrypt($pedido_id_input, METHODENCRIPT, KEY));
+                }
+            }
+
+            $venta_id = 0;
+            if (!empty($venta_id_input)) {
+                if (is_numeric($venta_id_input)) {
+                    $venta_id = intval($venta_id_input);
+                } else {
+                    $venta_id = intval(openssl_decrypt($venta_id_input, METHODENCRIPT, KEY));
+                }
+            }
+
+            if ($pedido_id <= 0 && $venta_id <= 0) {
+                die(json_encode(getResponse('Debe especificar el ID de la orden o venta.', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Consultas a través del Modelo ]*/
+            $model = new SeguimientoModel();
+            $partidas = $model->selectPartidasPedidoCliente($pedido_id, $venta_id);
+            $adjuntos = $model->selectAdjuntosPedidoCliente($pedido_id, $venta_id);
+
+            // Obtener bitácora de seguimientos
+            $historial = [];
+            if ($venta_id > 0) {
+                $ventasModel = new VentasModel();
+                $historial = $ventasModel->selectHistorialSeguimientoVenta($venta_id);
+            }
+
+            $arrResponse = getResponse('Datos encontrados', 'ok', false);
+            $arrResponse['data'] = array(
+                'partidas'  => $partidas,
+                'adjuntos'  => $adjuntos,
+                'historial' => $historial
+            );
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            die(json_encode(getResponse('Código Error: ' . self::prefijo_msj_error . '_2002. Error Desconocido'), JSON_UNESCAPED_UNICODE));
+        }
+
+        /*-------------------------------------------
+        [ Retorna respuesta json_encode ]*/
+        die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
 }
 
 

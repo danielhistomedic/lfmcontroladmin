@@ -318,7 +318,7 @@ function fntCalcularKPIs(data) {
  * ========================================================= */
 
 /**
- * Muestra el panel de detalle con historial de seguimientos.
+ * Muestra el panel de detalle con datos generales, partidas, adjuntos e historial de seguimientos.
  * Llamado desde el botón de opciones en cada fila de la tabla.
  * 
  * @param {HTMLElement} btn  Botón que disparó el evento.
@@ -328,80 +328,242 @@ function fntVerDetalle(btn) {
     var ventaId = $(btn).data('venta-id');
     var pedidoId = $(btn).data('pedido-id');
 
-    if (!ventaId) {
+    if (!ventaId && !pedidoId) {
         alertify.error('No se pudo obtener el ID de la orden.', 3);
         return;
     }
 
     // Recupera datos de la fila del DataTable
     var rowData = tableOrdenes.row($(btn).closest('tr')).data();
-    if (!rowData) {
-        alertify.error('No se pudieron obtener los datos de la orden.', 3);
-        return;
+    if (rowData) {
+        // Llena el panel de detalle con los datos generales
+        $('#det_pedido_id').text(rowData.num_orden_compra || (rowData.pedido_id ? ('Pedido #' + rowData.pedido_id) : '—'));
+        $('#det_cliente').text(rowData.cliente || '—');
+        $('#det_proyecto_id').text(rowData.proyecto_id || '—');
+        $('#det_titulo').text(rowData.titulo_venta || '—');
+        $('#det_vendedor').text(rowData.vendedor || '—');
+        $('#det_estatus').html(rowData.estatus_badge || '—').addClass('text-wrap');
+        $('#det_estatus').find('span, .badge').addClass('text-wrap');
+        $('#det_fecha_pedido').text(rowData.fecha_pedido_formateada || '—');
+        $('#det_monto').text(rowData.monto_formateado || '—');
+        $('#det_clasificacion').text(rowData.clasificacion_proyecto || '—');
+        $('#badge_total_seg').text(rowData.total_seguimientos || 0);
     }
-
-    // Llena el panel de detalle con los datos generales
-    $('#det_pedido_id').text(rowData.num_orden_compra || (rowData.pedido_id ? ('Pedido #' + rowData.pedido_id) : '—'));
-    $('#det_cliente').text(rowData.cliente || '—');
-    $('#det_proyecto_id').text(rowData.proyecto_id || '—');
-    $('#det_titulo').text(rowData.titulo_venta || '—');
-    $('#det_vendedor').text(rowData.vendedor || '—');
-    $('#det_estatus').html(rowData.estatus_badge || '—').addClass('text-wrap');
-    $('#det_estatus').find('span, .badge').addClass('text-wrap');
-    $('#det_fecha_pedido').text(rowData.fecha_pedido_formateada || '—');
-    $('#det_monto').text(rowData.monto_formateado || '—');
-    $('#det_clasificacion').text(rowData.clasificacion_proyecto || '—');
-    $('#badge_total_seg').text(rowData.total_seguimientos || 0);
 
     // Guarda venta_id actual
     ventaIdActual = ventaId;
 
-    // Carga historial
-    fntCargarHistorial(ventaId);
+    // Carga detalle completo (partidas, adjuntos y bitácora de seguimiento)
+    var moneda = (rowData && rowData.cmoneda) ? rowData.cmoneda : 'USD';
+    fntCargarDetalleCompleto(pedidoId, ventaId, moneda);
 
     // Muestra el panel de detalle
     fntMostrarDetalle();
 }
 
 /**
- * Carga el historial de seguimientos de la venta seleccionada.
+ * Carga vía AJAX las partidas de la orden de compra cliente, archivos adjuntos y bitácora de seguimiento.
  * 
- * @param {string} ventaId  ID de venta encriptado.
+ * @param {string} pedidoId ID o hash de pedido_id
+ * @param {string} ventaId  ID o hash de venta_id
+ * @param {string} moneda   Moneda de la orden (USD / MXN)
  */
-function fntCargarHistorial(ventaId) {
+function fntCargarDetalleCompleto(pedidoId, ventaId, moneda) {
 
+    $('#tbody_partidas_cliente').html('<tr><td colspan="13" class="text-center p-3 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando partidas...</td></tr>');
+    $('#contenedor_adjuntos_cliente').html('<div class="text-muted fs-12 p-2"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando adjuntos...</div>');
     $('#timeline_seguimientos').empty();
     $('#sin_seguimientos').addClass('d-none');
     $('#loading_seguimientos').removeClass('d-none');
 
     $.ajax({
         type: 'POST',
-        url: base_url + '/seguimiento/getHistorialSeguimiento',
-        data: { venta_id: ventaId },
+        url: base_url + '/seguimiento/getDetallePedidoCliente',
+        data: {
+            pedido_id: pedidoId,
+            venta_id: ventaId
+        },
         dataType: 'json',
         success: function (resp) {
 
             $('#loading_seguimientos').addClass('d-none');
 
-            if (resp.respuesta !== 'ok' || !Array.isArray(resp.data) || resp.data.length === 0) {
+            if (!resp || resp.respuesta !== 'ok' || !resp.data) {
                 historialSeguimientoData = [];
+                $('#badge_total_partidas').text(0);
+                $('#badge_total_adjuntos').text(0);
                 $('#badge_total_seg').text(0);
+                $('#tbody_partidas_cliente').html('<tr><td colspan="13" class="text-center text-muted p-3">No se encontraron partidas para esta orden de compra.</td></tr>');
+                $('#contenedor_adjuntos_cliente').html('<div class="text-muted fs-12 p-2">No hay archivos adjuntos para esta orden de compra.</div>');
                 $('#sin_seguimientos').removeClass('d-none');
                 return;
             }
 
-            historialSeguimientoData = resp.data;
+            var partidas = resp.data.partidas || [];
+            var adjuntos = resp.data.adjuntos || [];
+            var historial = resp.data.historial || [];
+
+            // 1. Renderiza Partidas
+            fntRenderizarPartidas(partidas, moneda);
+
+            // 2. Renderiza Adjuntos
+            fntRenderizarAdjuntos(adjuntos);
+
+            // 3. Renderiza Seguimiento
+            historialSeguimientoData = historial;
             $('#badge_total_seg').text(historialSeguimientoData.length);
-            fntRenderizarTimelinePagina(1);
+            if (historialSeguimientoData.length > 0) {
+                fntRenderizarTimelinePagina(1);
+            } else {
+                $('#sin_seguimientos').removeClass('d-none');
+            }
         },
         error: function (xhr, status, error) {
             historialSeguimientoData = [];
+            $('#badge_total_partidas').text(0);
+            $('#badge_total_adjuntos').text(0);
             $('#badge_total_seg').text(0);
             $('#loading_seguimientos').addClass('d-none');
             $('#sin_seguimientos').removeClass('d-none');
-            console.error('Error al cargar historial de seguimiento:', error);
+            $('#tbody_partidas_cliente').html('<tr><td colspan="13" class="text-center text-danger p-3">Error al cargar partidas.</td></tr>');
+            $('#contenedor_adjuntos_cliente').html('<div class="text-danger fs-12 p-2">Error al cargar adjuntos.</div>');
+            console.error('Error al cargar detalle completo:', error);
         }
     });
+}
+
+/**
+ * Renderiza la lista de partidas de la orden de compra cliente en la tabla de detalle.
+ * 
+ * @param {Array} partidas
+ * @param {string} moneda
+ */
+function fntRenderizarPartidas(partidas, moneda) {
+    $('#badge_total_partidas').text(partidas.length);
+
+    if (!Array.isArray(partidas) || partidas.length === 0) {
+        $('#tbody_partidas_cliente').html('<tr><td colspan="13" class="text-center text-muted p-3"><i class="fa-light fa-inbox me-1"></i>No hay partidas registradas para esta orden de compra.</td></tr>');
+        return;
+    }
+
+    var html = '';
+    partidas.forEach(function (item) {
+        var cant = parseFloat(item.cantidad || item.cantidad_pedido || 0);
+        var pu = parseFloat(item.precio_unitario || 0);
+        var descVal = parseFloat(item.descuento || 0);
+        var impImpuesto = parseFloat(item.importe_impuesto || 0);
+        var imp = parseFloat(item.importe || (cant * pu - descVal + impImpuesto) || 0);
+        var claveMat = item.clave || item.ccvematerial || '—';
+        var ccnMat = item.ccn || item.codigo_cliente || '—';
+
+        var descPrincipal = escapeHtml(item.descripcion || 'Sin descripción');
+        var descAdicional = (item.descripcion_adicional && item.descripcion_adicional.trim() !== '') ? escapeHtml(item.descripcion_adicional) : '';
+
+        var descHtml = '<div class="text-wrap" style="white-space: pre-wrap; word-break: break-word; line-height: 1.4;">' + descPrincipal;
+        if (descAdicional !== '') {
+            descHtml += '<div class="text-muted mt-1 text-wrap" style="white-space: pre-wrap; word-break: break-word; font-size: 11.5px; line-height: 1.35;">' + descAdicional + '</div>';
+        }
+        descHtml += '</div>';
+
+        // Tasa de impuesto para badge informativo opcional
+        var tasaImp = parseFloat(item.impuesto_tasa || 0);
+        var tasaPct = (tasaImp > 0 && tasaImp <= 1) ? Math.round(tasaImp * 100) : (tasaImp > 1 ? Math.round(tasaImp) : 0);
+        var impImpuestoHtml = moneda + ' $' + impImpuesto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (tasaPct > 0) {
+            impImpuestoHtml += '<br><small class="text-muted fs-10">(' + tasaPct + '% IVA)</small>';
+        }
+
+        // Estatus de entrega
+        var entregadoVal = parseInt(item.entregado !== undefined ? item.entregado : 0);
+        var badgeEntregado = '';
+        if (entregadoVal === 1) {
+            badgeEntregado = '<span class="badge bg-primary fs-11"><i class="fa-regular fa-box-check me-1"></i>Entregado</span>';
+        } else if (entregadoVal === 2) {
+            badgeEntregado = '<span class="badge bg-secondary fs-11"><i class="fa-regular fa-ban me-1"></i>Cancelada</span>';
+        } else {
+            badgeEntregado = '<span class="badge bg-warning text-dark fs-11"><i class="fa-regular fa-clock me-1"></i>Pendiente de Entrega</span>';
+        }
+
+        var fechaEstFmt = item.fecha_estimada_formateada || item.fecha_estimada_entrega || '—';
+
+        html += '<tr>';
+        html += '<td class="text-center align-middle fw-bold text-dark">' + escapeHtml(item.codigo_partida || '—') + '</td>';
+        html += '<td class="text-center align-middle"><span class="badge bg-light text-dark border">' + escapeHtml(claveMat) + '</span></td>';
+        html += '<td class="text-center align-middle"><span class="badge bg-light text-secondary border">' + escapeHtml(ccnMat) + '</span></td>';
+        html += '<td class="align-middle text-start text-wrap" style="white-space: pre-wrap; word-break: break-word; min-width: 280px;">' + descHtml + '</td>';
+        html += '<td class="text-center align-middle fw-bold text-primary">' + cant.toLocaleString('en-US') + '</td>';
+        html += '<td class="text-center align-middle">' + escapeHtml(item.unidad_medida || item.ccveunidad || 'PZA') + '</td>';
+        html += '<td class="text-end align-middle">' + moneda + ' $' + pu.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
+        html += '<td class="text-end align-middle text-muted">' + moneda + ' $' + descVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
+        html += '<td class="text-end align-middle">' + impImpuestoHtml + '</td>';
+        html += '<td class="text-end align-middle fw-bold text-dark">' + moneda + ' $' + imp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
+        html += '<td class="text-center align-middle"><span class="badge bg-light text-dark border">' + escapeHtml(item.tiempo_entrega || '—') + '</span></td>';
+        html += '<td class="text-center align-middle fw-semibold text-primary">' + escapeHtml(fechaEstFmt) + '</td>';
+        html += '<td class="text-center align-middle">' + badgeEntregado + '</td>';
+        html += '</tr>';
+    });
+
+    $('#tbody_partidas_cliente').html(html);
+}
+
+/**
+ * Renderiza la lista de archivos adjuntos de la orden de compra cliente.
+ * 
+ * @param {Array} adjuntos
+ */
+function fntRenderizarAdjuntos(adjuntos) {
+    $('#badge_total_adjuntos').text(adjuntos.length);
+
+    if (!Array.isArray(adjuntos) || adjuntos.length === 0) {
+        $('#contenedor_adjuntos_cliente').html('<div class="text-muted fs-12 p-2"><i class="fa-light fa-file me-1"></i>No hay archivos adjuntos para esta orden de compra.</div>');
+        return;
+    }
+
+    var html = '';
+    adjuntos.forEach(function (adj) {
+        var fileName = (adj.archivo || '').trim();
+        if (!fileName) return;
+
+        var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+        var fileExt = fileName.split('.').pop().toLowerCase();
+
+        var iconClass = 'fa-file-lines text-secondary';
+        if (['pdf'].includes(fileExt)) {
+            iconClass = 'fa-file-pdf text-danger';
+        } else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt)) {
+            iconClass = 'fa-file-image text-info';
+        } else if (['doc', 'docx'].includes(fileExt)) {
+            iconClass = 'fa-file-word text-primary';
+        } else if (['xls', 'xlsx', 'csv'].includes(fileExt)) {
+            iconClass = 'fa-file-excel text-success';
+        } else if (['zip', 'rar', '7z'].includes(fileExt)) {
+            iconClass = 'fa-file-archive text-warning';
+        }
+
+        html += '<a href="' + fileUrl + '" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2 py-2 px-3 shadow-sm" style="border-radius: 8px; max-width: 320px;" title="Abrir ' + escapeHtml(fileName) + '">';
+        html += '<i class="fa-regular ' + iconClass + ' fs-16"></i>';
+        html += '<span class="text-truncate fs-12 fw-semibold" style="max-width: 230px;">' + escapeHtml(fileName) + '</span>';
+        html += '<i class="fa-solid fa-arrow-up-right-from-square fs-10 text-muted"></i>';
+        html += '</a>';
+    });
+
+    $('#contenedor_adjuntos_cliente').html(html);
+}
+
+/**
+ * Escapa caracteres HTML para evitar XSS
+ * 
+ * @param {string} str
+ * @return {string}
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 /**
