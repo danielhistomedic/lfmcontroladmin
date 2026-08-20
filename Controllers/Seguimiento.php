@@ -1356,6 +1356,375 @@ class Seguimiento extends Controllers
         [ Retorna respuesta json_encode ]*/
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
+
+    /**
+     * =========================================================================
+     * MÓDULO: PARTIDAS PENDIENTES DE COTIZAR
+     * =========================================================================
+     */
+
+    /**
+     * Carga la Vista Partidas Pendiente de Cotizar.
+     * URL: /seguimiento/partidasPendientesCotizar
+     */
+    public function partidasPendientesCotizar()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                $this->session->redirect('inicio');
+                return;
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PARTIDAS_COTIZAR] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
+
+            // Valida si tiene acceso a la pagina.
+            if (empty($this->permisosMod['r'])) {
+                echo "<h4>Lo sentimos, Acceso restringido</h4>";
+                die();
+            }
+
+            /*-------------------------------------------
+            [ Obtener datos de Modulo ]*/
+            $menus_model = new MenusModel;
+            $menu = $menus_model->selectMenu(MOD_SEGUIMIENTO_PARTIDAS_COTIZAR);
+
+            // Asigna los permisos de Módulo y SideBar
+            $data['permisos']    = $arrPermisos;
+            $data['permisosMod'] = $this->permisosMod;
+
+            // Datos de Usuario en Sesión.
+            $data['empresa_id']             = $this->session->get('empresa_id');
+            $data['sucursal_id']            = $this->session->get('sucursal_id');
+            $data['theme']                  = $this->session->get('theme');
+            $data['usuario']['nombre_solo'] = $this->session->get('nombre_solo');
+            $data['usuario']['email']       = $this->session->get('email');
+            $data['usuario']['rol']         = $this->session->get('rol');
+            $data['usuario']['rol_id']      = $this->session->get('rol_id');
+            $data['usuario']['ccveusuario']  = $this->session->get('ccveusuario');
+
+            // Configuracion
+            $configuracion_model = new ConfiguracionModel;
+            $configuracion_model->setEmpresaId($data['empresa_id']);
+            $configuracion = $configuracion_model->selectRecord($configuracion_model);
+            $data['configuracion'] = $configuracion;
+
+            // Id de Menu
+            $data['menu'] = MOD_SEGUIMIENTO_PARTIDAS_COTIZAR;
+
+            // Header
+            $data['page_title']        = !empty($menu['name'])        ? $menu['name']        : 'Partidas Pendiente de Cotizar';
+            $data['meta_description']  = !empty($menu['descripcion']) ? $menu['descripcion'] : 'Seguimiento de partidas pendientes de cotizar por proveedor y proyecto de venta';
+            $data['meta_keywords']     = !empty($menu['tags'])        ? $menu['tags']        : 'seguimiento, partidas, pendientes, cotizar, proveedores, cotizaciones';
+
+            // Form Principal
+            $data['icon_form_title']  = !empty($menu['icon_form_title']) ? $menu['icon_form_title'] : '<i class="fa-regular fa-clipboard-question fa-fw text-primary"></i>';
+            $data['page_form_title']  = $data['icon_form_title'] . (!empty($menu['form_title']) ? (' ' . $menu['form_title']) : ' Partidas Pendiente de Cotizar');
+
+            // Breadcrumb
+            $data['page_breadcrumb']       = 'Seguimiento / Partidas Pendiente de Cotizar';
+            $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Partidas Pendiente de Cotizar';
+            $data['page_card_description'] = $data['meta_description'];
+
+            // JS Principal
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'partidas_pendientes_cotizar.js';
+
+            // Call Vista
+            $this->views->getView($this, 'partidas_pendientes_cotizar', $data);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+    }
+
+    /**
+     * Obtiene la lista de partidas pendientes de cotizar para el DataTable.
+     * URL / AJAX: /seguimiento/getPartidasPendientesCotizarDatatable
+     *
+     * @return json
+     */
+    public function getPartidasPendientesCotizarDatatable()
+    {
+        try {
+            $arrData = array();
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PARTIDAS_COTIZAR] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Recibe y limpia parámetros de filtro ]*/
+            $fecha_ini         = strClean($_POST['fecha_ini']         ?? '');
+            $fecha_fin         = strClean($_POST['fecha_fin']         ?? '');
+            $filtro_proveedor  = strClean($_POST['filtro_proveedor']  ?? '');
+            $filtro_proyecto   = strClean($_POST['filtro_proyecto']   ?? '');
+            $filtro_solicitud  = strClean($_POST['filtro_solicitud']  ?? '');
+            $filtro_antiguedad = strClean($_POST['filtro_antiguedad'] ?? '');
+            $filtro_busqueda   = strClean($_POST['filtro_busqueda']   ?? '');
+
+            // Formateo de fechas si vienen en DD/MM/YYYY
+            if (!empty($fecha_ini) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_ini)) {
+                $parts = explode('/', $fecha_ini);
+                $fecha_ini = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            }
+            if (!empty($fecha_fin) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_fin)) {
+                $parts = explode('/', $fecha_fin);
+                $fecha_fin = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            }
+
+            /*-------------------------------------------
+            [ Filtro Vendedor (rol_id = 4) ]*/
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            /*-------------------------------------------
+            [ Consulta el Modelo ]*/
+            $model = new SeguimientoModel();
+            $arrData = $model->selectPartidasPendientesCotizar(
+                $fecha_ini,
+                $fecha_fin,
+                $filtro_proveedor,
+                $filtro_proyecto,
+                $filtro_solicitud,
+                $filtro_antiguedad,
+                $ccveusuario_vendedor,
+                $filtro_busqueda
+            );
+
+            /*-------------------------------------------
+            [ Personaliza y formatea los datos del array ]*/
+            $data_animation = "fadeIn";
+
+            for ($i = 0; $i < count($arrData); $i++) {
+                $dias = (int)($arrData[$i]['dias_transcurridos'] ?? 0);
+                $horas = (int)($arrData[$i]['horas_transcurridas'] ?? 0);
+
+                // 1. Semáforo / Badge de Tiempo Transcurrido
+                if ($dias == 0) {
+                    $badge_tiempo = '<span class="badge bg-success fs-11" title="Enviado hoy hace ' . $horas . ' horas"><i class="fa-regular fa-clock me-1"></i>Hoy (' . $horas . 'h)</span>';
+                } elseif ($dias <= 2) {
+                    $badge_tiempo = '<span class="badge bg-success fs-11" title="En tiempo: ' . $dias . ' días"><i class="fa-regular fa-circle-check me-1"></i>' . $dias . ' días</span>';
+                } elseif ($dias <= 5) {
+                    $badge_tiempo = '<span class="badge bg-warning text-dark fs-11" title="En espera: ' . $dias . ' días"><i class="fa-regular fa-hourglass-half me-1"></i>' . $dias . ' días</span>';
+                } elseif ($dias <= 10) {
+                    $badge_tiempo = '<span class="badge bg-danger fs-11" title="Demorado: ' . $dias . ' días"><i class="fa-solid fa-triangle-exclamation me-1"></i>' . $dias . ' días</span>';
+                } else {
+                    $badge_tiempo = '<span class="badge bg-dark text-danger border border-danger fs-11" title="Crítico: ' . $dias . ' días"><i class="fa-solid fa-fire me-1 text-danger"></i>' . $dias . ' días</span>';
+                }
+                $arrData[$i]['tiempo_transcurrido_badge'] = $badge_tiempo;
+
+                // 2. Badge Estatus Cotización
+                $arrData[$i]['estatus_cotizacion_badge'] = '<span class="badge bg-warning text-dark fs-11"><i class="fa-regular fa-clock me-1"></i>Pendiente</span>';
+
+                // 3. Cantidad formateada
+                $cant = number_format((float)($arrData[$i]['cantidad'] ?? 0), 2, '.', ',');
+                $um = htmlspecialchars($arrData[$i]['unidad_medida'] ?? 'PZA');
+                $arrData[$i]['cantidad_formateada'] = $cant . ' ' . $um;
+
+                // 4. Botón Ver Detalle
+                $cotizacion_id = intval($arrData[$i]['cotizacion_id']);
+                $btnDetalle = '<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-outline-info" '
+                    . 'data-animation="' . $data_animation . '" '
+                    . 'onclick="fntVerDetalleSolicitud(' . $cotizacion_id . ')" '
+                    . 'title="Ver Detalle de Solicitud">'
+                    . '<i class="fa-sharp fa-regular fa-magnifying-glass"></i></button>';
+
+                $btnDetalle = (!empty($this->permisosMod['r'])) ? $btnDetalle : '';
+                $arrData[$i]['options'] = $btnDetalle;
+            }
+
+            echo json_encode($arrData, JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            echo json_encode(array(), JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Obtiene los KPIs de resumen para las tarjetas superiores.
+     * URL / AJAX: /seguimiento/getPartidasPendientesKPIs
+     *
+     * @return json
+     */
+    public function getPartidasPendientesKPIs()
+    {
+        try {
+            $arrResponse = array(
+                'respuesta' => 'error',
+                'mensaje'   => 'Error al cargar KPIs',
+                'data'      => array()
+            );
+
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PARTIDAS_COTIZAR] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            /*-------------------------------------------
+            [ Parámetros de Filtro ]*/
+            $fecha_ini         = strClean($_POST['fecha_ini']         ?? '');
+            $fecha_fin         = strClean($_POST['fecha_fin']         ?? '');
+            $filtro_proveedor  = strClean($_POST['filtro_proveedor']  ?? '');
+            $filtro_proyecto   = strClean($_POST['filtro_proyecto']   ?? '');
+            $filtro_solicitud  = strClean($_POST['filtro_solicitud']  ?? '');
+            $filtro_antiguedad = strClean($_POST['filtro_antiguedad'] ?? '');
+            $filtro_busqueda   = strClean($_POST['filtro_busqueda']   ?? '');
+
+            if (!empty($fecha_ini) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_ini)) {
+                $parts = explode('/', $fecha_ini);
+                $fecha_ini = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            }
+            if (!empty($fecha_fin) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_fin)) {
+                $parts = explode('/', $fecha_fin);
+                $fecha_fin = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            }
+
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            $model = new SeguimientoModel();
+            $kpis = $model->getKPIsPartidasPendientesCotizar(
+                $fecha_ini,
+                $fecha_fin,
+                $filtro_proveedor,
+                $filtro_proyecto,
+                $filtro_solicitud,
+                $filtro_antiguedad,
+                $ccveusuario_vendedor,
+                $filtro_busqueda
+            );
+
+            $arrResponse['respuesta'] = 'ok';
+            $arrResponse['mensaje']   = 'KPIs obtenidos correctamente';
+            $arrResponse['data']      = $kpis;
+
+            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            echo json_encode(getResponse('Error al calcular KPIs', 'error'), JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Obtiene los catálogos de Proveedores y Proyectos para alimentar los selects de filtro.
+     * URL / AJAX: /seguimiento/getFiltrosPendientesCotizar
+     *
+     * @return json
+     */
+    public function getFiltrosPendientesCotizar()
+    {
+        try {
+            $arrResponse = array(
+                'respuesta'   => 'error',
+                'proveedores' => array(),
+                'proyectos'   => array()
+            );
+
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PARTIDAS_COTIZAR] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
+
+            $rol_id = intval($this->session->get('rol_id') ?? 0);
+            $ccveusuario_vendedor = '';
+            if ($rol_id === 4) {
+                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            }
+
+            $model = new SeguimientoModel();
+            $proveedores = $model->getProveedoresConPendientesCotizar();
+            $proyectos   = $model->getProyectosConPendientesCotizar($ccveusuario_vendedor);
+
+            $arrResponse['respuesta']   = 'ok';
+            $arrResponse['proveedores'] = $proveedores;
+            $arrResponse['proyectos']   = $proyectos;
+
+            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Obtiene el detalle de una solicitud de cotización para mostrar en modal.
+     * URL / AJAX: /seguimiento/getDetalleSolicitudModal
+     *
+     * @return json
+     */
+    public function getDetalleSolicitudModal()
+    {
+        try {
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+            $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PARTIDAS_COTIZAR] ?? ['r' => 0];
+            if (empty($this->permisosMod['r'])) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $cotizacion_id_input = strClean($_POST['cotizacion_id'] ?? '');
+            if (empty($cotizacion_id_input)) {
+                die(json_encode(getResponse('Debe seleccionar una solicitud de cotización', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            if (is_numeric($cotizacion_id_input)) {
+                $cotizacion_id = intval($cotizacion_id_input);
+            } else {
+                $cotizacion_id = intval(openssl_decrypt($cotizacion_id_input, METHODENCRIPT, KEY));
+            }
+
+            if ($cotizacion_id <= 0) {
+                die(json_encode(getResponse('ID de cotización no válido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $model = new SeguimientoModel();
+            $detalle = $model->getDetalleSolicitudCotizacionCompleta($cotizacion_id);
+
+            if (empty($detalle['cabecera'])) {
+                die(json_encode(getResponse('No se encontró la solicitud de cotización solicitada', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            $arrResponse = getResponse('Datos encontrados', 'ok', false);
+            $arrResponse['data'] = $detalle;
+
+            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+            die(json_encode(getResponse('Código Error: ' . self::prefijo_msj_error . '_3001. Error Desconocido'), JSON_UNESCAPED_UNICODE));
+        }
+    }
 }
 
 

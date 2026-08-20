@@ -1143,5 +1143,506 @@ class SeguimientoModel extends Mysql
 
         return $arrResponse;
     }
+
+    /**
+     * =========================================================================
+     * MÓDULO: PARTIDAS PENDIENTES DE COTIZAR
+     * =========================================================================
+     */
+
+    /**
+     * Obtiene la lista de partidas pendientes de cotizar (precio_unitario <= 0 o NULL)
+     * vinculando tb_ventas_detalle y tb_compras_cotizaciones_detalle.
+     *
+     * @param string $fecha_ini
+     * @param string $fecha_fin
+     * @param string $filtro_proveedor
+     * @param string $filtro_proyecto
+     * @param string $filtro_solicitud
+     * @param string $filtro_antiguedad
+     * @param string $ccveusuario_vendedor
+     * @param string $filtro_busqueda
+     * @return array
+     */
+    public function selectPartidasPendientesCotizar(
+        string $fecha_ini = '',
+        string $fecha_fin = '',
+        string $filtro_proveedor = '',
+        string $filtro_proyecto = '',
+        string $filtro_solicitud = '',
+        string $filtro_antiguedad = '',
+        string $ccveusuario_vendedor = '',
+        string $filtro_busqueda = ''
+    ): array {
+        $arrResponse = array();
+
+        try {
+            $arr_values = array();
+
+            $sql = "SELECT 
+                        cd.id AS cotizacion_detalle_id,
+                        cd.cotizacion_id,
+                        cd.venta_id,
+                        cd.venta_detalle_id_partida,
+                        cd.cantidad,
+                        COALESCE(cd.precio_unitario, 0) AS precio_unitario,
+                        COALESCE(cd.importe, 0) AS importe,
+                        COALESCE(cd.codigo_proveedor, '') AS codigo_proveedor,
+                        COALESCE(cd.tiempo_entrega, 'NO REGISTRADO') AS tiempo_entrega,
+                        COALESCE(NULLIF(TRIM(cd.descripcion_proveedor), ''), cd.descripcion_adicional, vd.descripcion, 'Sin descripción') AS descripcion_partida,
+                        COALESCE(NULLIF(TRIM(cd.ccveunidad), ''), vd.ccveunidad, 'PZA') AS unidad_medida,
+                        COALESCE(NULLIF(TRIM(cd.ccvematerial), ''), vd.ccvematerial, '') AS clave_material,
+                        
+                        -- Datos de la solicitud de cotización
+                        COALESCE(cc.folio_solicitud, CONCAT('SC-', cc.id)) AS folio_solicitud,
+                        COALESCE(cc.folio_cotizacion, '') AS folio_cotizacion,
+                        cc.fecha AS fecha_solicitud,
+                        DATE_FORMAT(cc.fecha, '%d/%m/%Y') AS fecha_solicitud_formateada,
+                        cc.fchregistro AS fecha_solicitud_registro,
+                        DATE_FORMAT(cc.fchregistro, '%d/%m/%Y %H:%i') AS fecha_registro_formateada,
+                        COALESCE(cc.enviado, 0) AS solicitud_enviada,
+                        
+                        -- Proveedor
+                        p.icveProveedor AS proveedor_id,
+                        COALESCE(NULLIF(TRIM(p.cDatGenNombreAbreviado), ''), p.cDatGenRazonSocial, 'Sin Proveedor') AS proveedor_nombre,
+                        COALESCE(p.cDatGenRazonSocial, '') AS proveedor_razon_social,
+                        COALESCE(p.cContactoNombre, '') AS proveedor_contacto,
+                        COALESCE(p.cContactoeMail, '') AS proveedor_email,
+                        COALESCE(p.cDatGenTelefono, '') AS proveedor_telefono,
+                        
+                        -- Proyecto de Venta
+                        v.proyecto_id,
+                        COALESCE(v.titulo, 'Sin título') AS proyecto_titulo,
+                        v.fecha AS proyecto_fecha,
+                        DATE_FORMAT(v.fecha, '%d/%m/%Y') AS proyecto_fecha_formateada,
+                        v.estatus_proyecto_id,
+                        COALESCE(ep.cEstatus, 'Sin Estatus') AS estatus_proyecto,
+                        v.ccveusuario_vendedor,
+                        COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), 'Sin Vendedor') AS vendedor_nombre,
+                        
+                        -- Cliente
+                        COALESCE(cl.nombre_comercial, cl.razon_social, 'Sin Cliente') AS cliente_nombre,
+                        
+                        -- Partida de Venta
+                        COALESCE(vd.codigo_partida, '') AS codigo_partida,
+                        COALESCE(vd.clave_sap, '') AS clave_sap,
+                        
+                        -- Cálculo de tiempo transcurrido (en días y horas)
+                        DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) AS dias_transcurridos,
+                        TIMESTAMPDIFF(HOUR, COALESCE(cc.fchregistro, cc.fecha), NOW()) AS horas_transcurridas
+
+                    FROM tb_compras_cotizaciones_detalle cd
+                    INNER JOIN tb_compras_cotizaciones cc ON cc.id = cd.cotizacion_id
+                    LEFT JOIN tb_proveedores p ON p.icveProveedor = cc.proveedor_id
+                    LEFT JOIN tb_ventas_detalle vd ON vd.id = cd.venta_detalle_id_partida
+                    LEFT JOIN tb_ventas v ON v.id = cd.venta_id
+                    LEFT JOIN cat_clientes cl ON cl.id = v.cliente_id
+                    LEFT JOIN cat_medico u ON u.ccvemedico = v.ccveusuario_vendedor
+                    LEFT JOIN cat_estatus_proyecto ep ON ep.Id = v.estatus_proyecto_id
+                    WHERE (cd.precio_unitario <= 0 OR cd.precio_unitario IS NULL) ";
+
+            // Filtro Rango de Fechas
+            if (!empty($fecha_ini)) {
+                $sql .= " AND DATE(COALESCE(cc.fchregistro, cc.fecha)) >= :fecha_ini ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+            }
+            if (!empty($fecha_fin)) {
+                $sql .= " AND DATE(COALESCE(cc.fchregistro, cc.fecha)) <= :fecha_fin ";
+                $arr_values['fecha_fin'] = $fecha_fin;
+            }
+
+            // Filtro Proveedor
+            if (!empty($filtro_proveedor)) {
+                if (is_numeric($filtro_proveedor)) {
+                    $sql .= " AND cc.proveedor_id = :proveedor_id ";
+                    $arr_values['proveedor_id'] = intval($filtro_proveedor);
+                } else {
+                    $sql .= " AND (p.cDatGenRazonSocial LIKE :prov_str OR p.cDatGenNombreAbreviado LIKE :prov_str) ";
+                    $arr_values['prov_str'] = '%' . trim($filtro_proveedor) . '%';
+                }
+            }
+
+            // Filtro Proyecto
+            if (!empty($filtro_proyecto)) {
+                if (is_numeric($filtro_proyecto)) {
+                    $sql .= " AND (v.id = :proy_id OR v.proyecto_id LIKE :proy_term) ";
+                    $arr_values['proy_id'] = intval($filtro_proyecto);
+                    $arr_values['proy_term'] = '%' . trim($filtro_proyecto) . '%';
+                } else {
+                    $sql .= " AND (v.proyecto_id LIKE :proy_term OR v.titulo LIKE :proy_term) ";
+                    $arr_values['proy_term'] = '%' . trim($filtro_proyecto) . '%';
+                }
+            }
+
+            // Filtro Solicitud
+            if (!empty($filtro_solicitud)) {
+                $sql .= " AND (cc.folio_solicitud LIKE :sol_term OR cc.folio_cotizacion LIKE :sol_term) ";
+                $arr_values['sol_term'] = '%' . trim($filtro_solicitud) . '%';
+            }
+
+            // Filtro Semáforo de Antigüedad
+            if (!empty($filtro_antiguedad)) {
+                switch ($filtro_antiguedad) {
+                    case 'recientes': // <= 2 días
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) <= 2 ";
+                        break;
+                    case 'espera': // 3 a 5 días
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) BETWEEN 3 AND 5 ";
+                        break;
+                    case 'demoradas': // > 5 días
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) > 5 ";
+                        break;
+                    case 'criticas': // > 10 días
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) > 10 ";
+                        break;
+                }
+            }
+
+            // Filtro Vendedor (rol_id = 4)
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+
+            // Filtro Búsqueda General
+            if (!empty($filtro_busqueda)) {
+                $sql .= " AND (
+                            vd.codigo_partida LIKE :busq_term OR 
+                            cd.codigo_proveedor LIKE :busq_term OR 
+                            cd.descripcion_proveedor LIKE :busq_term OR 
+                            vd.descripcion LIKE :busq_term OR 
+                            cd.descripcion_adicional LIKE :busq_term OR 
+                            vd.clave_sap LIKE :busq_term OR 
+                            cd.ccvematerial LIKE :busq_term OR 
+                            cl.nombre_comercial LIKE :busq_term OR 
+                            cl.razon_social LIKE :busq_term OR
+                            v.titulo LIKE :busq_term OR
+                            v.proyecto_id LIKE :busq_term
+                        ) ";
+                $arr_values['busq_term'] = '%' . trim($filtro_busqueda) . '%';
+            }
+
+            $sql .= " ORDER BY dias_transcurridos DESC, cc.id DESC, cd.id ASC";
+
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene el resumen de KPIs para las partidas pendientes de cotizar
+     *
+     * @param string $fecha_ini
+     * @param string $fecha_fin
+     * @param string $filtro_proveedor
+     * @param string $filtro_proyecto
+     * @param string $filtro_solicitud
+     * @param string $filtro_antiguedad
+     * @param string $ccveusuario_vendedor
+     * @param string $filtro_busqueda
+     * @return array
+     */
+    public function getKPIsPartidasPendientesCotizar(
+        string $fecha_ini = '',
+        string $fecha_fin = '',
+        string $filtro_proveedor = '',
+        string $filtro_proyecto = '',
+        string $filtro_solicitud = '',
+        string $filtro_antiguedad = '',
+        string $ccveusuario_vendedor = '',
+        string $filtro_busqueda = ''
+    ): array {
+        $arrDefault = [
+            'total_partidas_pendientes' => 0,
+            'total_proveedores'         => 0,
+            'total_solicitudes'         => 0,
+            'total_proyectos'           => 0,
+            'total_recientes'           => 0,
+            'total_en_espera'           => 0,
+            'total_demoradas'           => 0,
+            'total_criticas'            => 0,
+            'promedio_dias_espera'      => 0
+        ];
+
+        try {
+            $arr_values = array();
+
+            $sql = "SELECT 
+                        COUNT(cd.id) AS total_partidas_pendientes,
+                        COUNT(DISTINCT cc.proveedor_id) AS total_proveedores,
+                        COUNT(DISTINCT cc.id) AS total_solicitudes,
+                        COUNT(DISTINCT cd.venta_id) AS total_proyectos,
+                        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) <= 2 THEN 1 ELSE 0 END) AS total_recientes,
+                        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) BETWEEN 3 AND 5 THEN 1 ELSE 0 END) AS total_en_espera,
+                        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) > 5 THEN 1 ELSE 0 END) AS total_demoradas,
+                        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) > 10 THEN 1 ELSE 0 END) AS total_criticas,
+                        COALESCE(ROUND(AVG(DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha))), 1), 0) AS promedio_dias_espera
+                    FROM tb_compras_cotizaciones_detalle cd
+                    INNER JOIN tb_compras_cotizaciones cc ON cc.id = cd.cotizacion_id
+                    LEFT JOIN tb_proveedores p ON p.icveProveedor = cc.proveedor_id
+                    LEFT JOIN tb_ventas_detalle vd ON vd.id = cd.venta_detalle_id_partida
+                    LEFT JOIN tb_ventas v ON v.id = cd.venta_id
+                    LEFT JOIN cat_clientes cl ON cl.id = v.cliente_id
+                    WHERE (cd.precio_unitario <= 0 OR cd.precio_unitario IS NULL) ";
+
+            if (!empty($fecha_ini)) {
+                $sql .= " AND DATE(COALESCE(cc.fchregistro, cc.fecha)) >= :fecha_ini ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+            }
+            if (!empty($fecha_fin)) {
+                $sql .= " AND DATE(COALESCE(cc.fchregistro, cc.fecha)) <= :fecha_fin ";
+                $arr_values['fecha_fin'] = $fecha_fin;
+            }
+            if (!empty($filtro_proveedor)) {
+                if (is_numeric($filtro_proveedor)) {
+                    $sql .= " AND cc.proveedor_id = :proveedor_id ";
+                    $arr_values['proveedor_id'] = intval($filtro_proveedor);
+                } else {
+                    $sql .= " AND (p.cDatGenRazonSocial LIKE :prov_str OR p.cDatGenNombreAbreviado LIKE :prov_str) ";
+                    $arr_values['prov_str'] = '%' . trim($filtro_proveedor) . '%';
+                }
+            }
+            if (!empty($filtro_proyecto)) {
+                if (is_numeric($filtro_proyecto)) {
+                    $sql .= " AND (v.id = :proy_id OR v.proyecto_id LIKE :proy_term) ";
+                    $arr_values['proy_id'] = intval($filtro_proyecto);
+                    $arr_values['proy_term'] = '%' . trim($filtro_proyecto) . '%';
+                } else {
+                    $sql .= " AND (v.proyecto_id LIKE :proy_term OR v.titulo LIKE :proy_term) ";
+                    $arr_values['proy_term'] = '%' . trim($filtro_proyecto) . '%';
+                }
+            }
+            if (!empty($filtro_solicitud)) {
+                $sql .= " AND (cc.folio_solicitud LIKE :sol_term OR cc.folio_cotizacion LIKE :sol_term) ";
+                $arr_values['sol_term'] = '%' . trim($filtro_solicitud) . '%';
+            }
+            if (!empty($filtro_antiguedad)) {
+                switch ($filtro_antiguedad) {
+                    case 'recientes':
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) <= 2 ";
+                        break;
+                    case 'espera':
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) BETWEEN 3 AND 5 ";
+                        break;
+                    case 'demoradas':
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) > 5 ";
+                        break;
+                    case 'criticas':
+                        $sql .= " AND DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) > 10 ";
+                        break;
+                }
+            }
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+            if (!empty($filtro_busqueda)) {
+                $sql .= " AND (
+                            vd.codigo_partida LIKE :busq_term OR 
+                            cd.codigo_proveedor LIKE :busq_term OR 
+                            cd.descripcion_proveedor LIKE :busq_term OR 
+                            vd.descripcion LIKE :busq_term OR 
+                            cd.descripcion_adicional LIKE :busq_term OR 
+                            vd.clave_sap LIKE :busq_term OR 
+                            cd.ccvematerial LIKE :busq_term OR 
+                            cl.nombre_comercial LIKE :busq_term OR 
+                            cl.razon_social LIKE :busq_term OR
+                            v.titulo LIKE :busq_term OR
+                            v.proyecto_id LIKE :busq_term
+                        ) ";
+                $arr_values['busq_term'] = '%' . trim($filtro_busqueda) . '%';
+            }
+
+            $res = $this->select($sql, $arr_values);
+            if (!empty($res) && isset($res[0])) {
+                return $res[0];
+            }
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrDefault;
+    }
+
+    /**
+     * Obtiene el catálogo de proveedores que tienen solicitudes con partidas pendientes de cotizar.
+     *
+     * @return array
+     */
+    public function getProveedoresConPendientesCotizar(): array
+    {
+        $arrResponse = array();
+        try {
+            $sql = "SELECT DISTINCT 
+                        p.icveProveedor AS id,
+                        COALESCE(NULLIF(TRIM(p.cDatGenNombreAbreviado), ''), p.cDatGenRazonSocial, 'Sin Nombre') AS nombre,
+                        COALESCE(p.cDatGenRazonSocial, '') AS razon_social,
+                        COUNT(cd.id) AS total_pendientes
+                    FROM tb_compras_cotizaciones_detalle cd
+                    INNER JOIN tb_compras_cotizaciones cc ON cc.id = cd.cotizacion_id
+                    INNER JOIN tb_proveedores p ON p.icveProveedor = cc.proveedor_id
+                    WHERE (cd.precio_unitario <= 0 OR cd.precio_unitario IS NULL)
+                    GROUP BY p.icveProveedor, p.cDatGenNombreAbreviado, p.cDatGenRazonSocial
+                    ORDER BY total_pendientes DESC, nombre ASC";
+
+            $arrResponse = $this->select($sql, []);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene el catálogo de proyectos de venta que tienen partidas pendientes de cotizar.
+     *
+     * @param string $ccveusuario_vendedor
+     * @return array
+     */
+    public function getProyectosConPendientesCotizar(string $ccveusuario_vendedor = ''): array
+    {
+        $arrResponse = array();
+        try {
+            $arr_values = [];
+            $sql = "SELECT DISTINCT 
+                        v.id,
+                        v.proyecto_id,
+                        COALESCE(v.titulo, 'Sin título') AS titulo,
+                        COUNT(cd.id) AS total_pendientes
+                    FROM tb_compras_cotizaciones_detalle cd
+                    INNER JOIN tb_compras_cotizaciones cc ON cc.id = cd.cotizacion_id
+                    INNER JOIN tb_ventas v ON v.id = cd.venta_id
+                    WHERE (cd.precio_unitario <= 0 OR cd.precio_unitario IS NULL) ";
+
+            if (!empty($ccveusuario_vendedor)) {
+                $sql .= " AND v.ccveusuario_vendedor = :ccveusuario_vendedor ";
+                $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
+            }
+
+            $sql .= " GROUP BY v.id, v.proyecto_id, v.titulo
+                      ORDER BY v.id DESC";
+
+            $arrResponse = $this->select($sql, $arr_values);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
+
+    /**
+     * Obtiene el detalle completo de una Solicitud de Cotización,
+     * incluyendo todas sus partidas (cotizadas y pendientes) y adjuntos.
+     *
+     * @param int $cotizacion_id
+     * @return array
+     */
+    public function getDetalleSolicitudCotizacionCompleta(int $cotizacion_id): array
+    {
+        $arrResponse = [
+            'cabecera'  => null,
+            'partidas'  => [],
+            'adjuntos'  => []
+        ];
+
+        try {
+            if ($cotizacion_id <= 0) {
+                return $arrResponse;
+            }
+
+            // 1. Cabecera
+            $sqlCab = "SELECT 
+                        cc.id AS cotizacion_id,
+                        COALESCE(cc.folio_solicitud, CONCAT('SC-', cc.id)) AS folio_solicitud,
+                        COALESCE(cc.folio_cotizacion, '') AS folio_cotizacion,
+                        cc.fecha AS fecha_solicitud,
+                        DATE_FORMAT(cc.fecha, '%d/%m/%Y') AS fecha_solicitud_formateada,
+                        cc.fchregistro AS fecha_solicitud_registro,
+                        DATE_FORMAT(cc.fchregistro, '%d/%m/%Y %H:%i') AS fecha_registro_formateada,
+                        COALESCE(cc.enviado, 0) AS solicitud_enviada,
+                        cc.subtotal,
+                        cc.iva,
+                        cc.total,
+                        cc.moneda_id,
+                        CASE WHEN cc.moneda_id = 1 THEN 'MXN' WHEN cc.moneda_id = 3 THEN 'USD' ELSE 'USD' END AS moneda,
+                        cc.texto_personalizado_compras,
+                        
+                        -- Proveedor
+                        p.icveProveedor AS proveedor_id,
+                        COALESCE(NULLIF(TRIM(p.cDatGenNombreAbreviado), ''), p.cDatGenRazonSocial, 'Sin Proveedor') AS proveedor_nombre,
+                        COALESCE(p.cDatGenRazonSocial, '') AS proveedor_razon_social,
+                        COALESCE(p.cContactoNombre, '') AS proveedor_contacto,
+                        COALESCE(p.cContactoeMail, '') AS proveedor_email,
+                        COALESCE(p.cDatGenTelefono, '') AS proveedor_telefono,
+                        
+                        -- Proyecto y Cliente
+                        v.id AS venta_id,
+                        v.proyecto_id,
+                        COALESCE(v.titulo, 'Sin título') AS proyecto_titulo,
+                        DATE_FORMAT(v.fecha, '%d/%m/%Y') AS proyecto_fecha_formateada,
+                        COALESCE(cl.nombre_comercial, cl.razon_social, 'Sin Cliente') AS cliente_nombre,
+                        COALESCE(CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido), 'Sin Vendedor') AS vendedor_nombre,
+                        
+                        -- Días transcurridos
+                        DATEDIFF(NOW(), COALESCE(cc.fchregistro, cc.fecha)) AS dias_transcurridos,
+                        TIMESTAMPDIFF(HOUR, COALESCE(cc.fchregistro, cc.fecha), NOW()) AS horas_transcurridas
+
+                    FROM tb_compras_cotizaciones cc
+                    LEFT JOIN tb_proveedores p ON p.icveProveedor = cc.proveedor_id
+                    LEFT JOIN tb_ventas v ON v.id = cc.venta_id
+                    LEFT JOIN cat_clientes cl ON cl.id = v.cliente_id
+                    LEFT JOIN cat_medico u ON u.ccvemedico = v.ccveusuario_vendedor
+                    WHERE cc.id = :cotizacion_id";
+
+            $arrCab = $this->select($sqlCab, ['cotizacion_id' => $cotizacion_id]);
+            if (!empty($arrCab) && isset($arrCab[0])) {
+                $arrResponse['cabecera'] = $arrCab[0];
+            }
+
+            // 2. Partidas
+            $sqlPartidas = "SELECT 
+                                cd.id AS cotizacion_detalle_id,
+                                cd.cotizacion_id,
+                                cd.venta_id,
+                                cd.venta_detalle_id_partida,
+                                cd.cantidad,
+                                COALESCE(cd.precio_unitario, 0) AS precio_unitario,
+                                COALESCE(cd.importe, 0) AS importe,
+                                COALESCE(cd.codigo_proveedor, '') AS codigo_proveedor,
+                                COALESCE(cd.tiempo_entrega, 'NO REGISTRADO') AS tiempo_entrega,
+                                COALESCE(NULLIF(TRIM(cd.descripcion_proveedor), ''), cd.descripcion_adicional, vd.descripcion, 'Sin descripción') AS descripcion_partida,
+                                COALESCE(NULLIF(TRIM(cd.ccveunidad), ''), vd.ccveunidad, 'PZA') AS unidad_medida,
+                                COALESCE(NULLIF(TRIM(cd.ccvematerial), ''), vd.ccvematerial, '') AS clave_material,
+                                COALESCE(vd.codigo_partida, '') AS codigo_partida,
+                                COALESCE(vd.clave_sap, '') AS clave_sap,
+                                CASE WHEN cd.precio_unitario > 0 THEN 1 ELSE 0 END AS esta_cotizada
+                            FROM tb_compras_cotizaciones_detalle cd
+                            LEFT JOIN tb_ventas_detalle vd ON vd.id = cd.venta_detalle_id_partida
+                            WHERE cd.cotizacion_id = :cotizacion_id
+                            ORDER BY cd.id ASC";
+
+            $arrResponse['partidas'] = $this->select($sqlPartidas, ['cotizacion_id' => $cotizacion_id]);
+
+            // 3. Adjuntos
+            $sqlAdjuntos = "SELECT 
+                                ca.id,
+                                ca.archivo,
+                                'tb_compras_cotizaciones_adjuntos' AS tabla_origen
+                            FROM tb_compras_cotizaciones_adjuntos ca
+                            WHERE ca.cotizacion_id = :cotizacion_id
+                              AND ca.archivo IS NOT NULL
+                              AND TRIM(ca.archivo) != ''
+                            ORDER BY ca.id ASC";
+
+            $arrResponse['adjuntos'] = $this->select($sqlAdjuntos, ['cotizacion_id' => $cotizacion_id]);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th));
+        }
+
+        return $arrResponse;
+    }
 }
 
