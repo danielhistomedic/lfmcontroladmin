@@ -130,7 +130,7 @@ function initDataTableReservados() {
                     if (data && data.length > 0) {
                         const firstImg = data[0];
                         const count = data.length;
-                        const descEscaped = (row.material_descripcion || '').replace(/'/g, "\\'");
+                        const descEscaped = encodeURIComponent(row.material_descripcion || '');
                         const jsonFotos = encodeURIComponent(JSON.stringify(data));
                         return `
                             <div class="position-relative d-inline-block">
@@ -311,16 +311,26 @@ function renderKpiCards(kpis) {
 /**
  * Abre el modal con carrusel/slide de fotografías del producto
  */
-function abrirModalFotos(jsonFotosEnc, descripcion) {
+function abrirModalFotos(jsonFotosEnc, descripcionEnc) {
     try {
         const arrFotos = JSON.parse(decodeURIComponent(jsonFotosEnc));
+        let descripcion = '';
+        try {
+            descripcion = decodeURIComponent(descripcionEnc || '');
+        } catch (e) {
+            descripcion = descripcionEnc || '';
+        }
         const indicators = document.getElementById('carouselIndicatorsFotos');
         const inner = document.getElementById('carouselInnerFotos');
         const caption = document.getElementById('carouselFotoCaption');
         const title = document.getElementById('modalFotoProductoTitle');
 
         if (title) {
-            title.innerHTML = `<i class="fa-solid fa-images me-2 text-warning"></i>Fotos: ${descripcion}`;
+            title.innerHTML = `<i class="fa-solid fa-images me-2 text-warning"></i>Fotos: <span id="modalFotoProdTitleText"></span>`;
+            const titleSpan = document.getElementById('modalFotoProdTitleText');
+            if (titleSpan) {
+                titleSpan.textContent = descripcion;
+            }
         }
 
         if (indicators && inner) {
