@@ -60,6 +60,19 @@
     .bg-info-lighten { background-color: rgba(13, 202, 240, 0.08) !important; }
     .bg-warning-lighten { background-color: rgba(255, 193, 7, 0.08) !important; }
     .bg-danger-lighten { background-color: rgba(220, 53, 69, 0.08) !important; }
+
+    /* Estilos columna descripción de partida */
+    .col-desc-partida {
+        max-width: 450px;
+        min-width: 250px;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+    #tablePartidasPendientes td:nth-child(10),
+    #tablePartidasPendientes th:nth-child(10) {
+        max-width: 450px !important;
+        white-space: normal !important;
+    }
 </style>
 
 <!-- Header Admin 02 -->
@@ -271,7 +284,7 @@
                                 <th class="border-bottom-0 fw-semibold text-center">Cliente</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Código Partida</th>
-                                <th class="border-bottom-0 fw-semibold text-center">Descripción de Partida</th>
+                                <th class="border-bottom-0 fw-semibold text-center" style="max-width: 450px;">Descripción de Partida</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Cantidad</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Estatus Cotización</th>
                             </tr>

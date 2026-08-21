@@ -1189,7 +1189,8 @@ class SeguimientoModel extends Mysql
                         COALESCE(cd.importe, 0) AS importe,
                         COALESCE(cd.codigo_proveedor, '') AS codigo_proveedor,
                         COALESCE(cd.tiempo_entrega, 'NO REGISTRADO') AS tiempo_entrega,
-                        COALESCE(NULLIF(TRIM(cd.descripcion_proveedor), ''), cd.descripcion_adicional, vd.descripcion, 'Sin descripción') AS descripcion_partida,
+                        COALESCE(NULLIF(TRIM(cd.descripcion_proveedor), ''), NULLIF(TRIM(vd.descripcion), ''), cd.descripcion_adicional, vd.descripcion_adicional, 'Sin descripción') AS descripcion_partida,
+                        COALESCE(NULLIF(TRIM(cd.descripcion_adicional), ''), NULLIF(TRIM(vd.descripcion_adicional), ''), '') AS descripcion_adicional,
                         COALESCE(NULLIF(TRIM(cd.ccveunidad), ''), vd.ccveunidad, 'PZA') AS unidad_medida,
                         COALESCE(NULLIF(TRIM(cd.ccvematerial), ''), vd.ccvematerial, '') AS clave_material,
                         
@@ -1312,6 +1313,7 @@ class SeguimientoModel extends Mysql
                             cd.descripcion_proveedor LIKE :busq_term OR 
                             vd.descripcion LIKE :busq_term OR 
                             cd.descripcion_adicional LIKE :busq_term OR 
+                            vd.descripcion_adicional LIKE :busq_term OR 
                             vd.clave_sap LIKE :busq_term OR 
                             cd.ccvematerial LIKE :busq_term OR 
                             cl.nombre_comercial LIKE :busq_term OR 
@@ -1446,6 +1448,7 @@ class SeguimientoModel extends Mysql
                             cd.descripcion_proveedor LIKE :busq_term OR 
                             vd.descripcion LIKE :busq_term OR 
                             cd.descripcion_adicional LIKE :busq_term OR 
+                            vd.descripcion_adicional LIKE :busq_term OR 
                             vd.clave_sap LIKE :busq_term OR 
                             cd.ccvematerial LIKE :busq_term OR 
                             cl.nombre_comercial LIKE :busq_term OR 
@@ -1613,7 +1616,8 @@ class SeguimientoModel extends Mysql
                                 COALESCE(cd.importe, 0) AS importe,
                                 COALESCE(cd.codigo_proveedor, '') AS codigo_proveedor,
                                 COALESCE(cd.tiempo_entrega, 'NO REGISTRADO') AS tiempo_entrega,
-                                COALESCE(NULLIF(TRIM(cd.descripcion_proveedor), ''), cd.descripcion_adicional, vd.descripcion, 'Sin descripción') AS descripcion_partida,
+                                COALESCE(NULLIF(TRIM(cd.descripcion_proveedor), ''), NULLIF(TRIM(vd.descripcion), ''), cd.descripcion_adicional, vd.descripcion_adicional, 'Sin descripción') AS descripcion_partida,
+                                COALESCE(NULLIF(TRIM(cd.descripcion_adicional), ''), NULLIF(TRIM(vd.descripcion_adicional), ''), '') AS descripcion_adicional,
                                 COALESCE(NULLIF(TRIM(cd.ccveunidad), ''), vd.ccveunidad, 'PZA') AS unidad_medida,
                                 COALESCE(NULLIF(TRIM(cd.ccvematerial), ''), vd.ccvematerial, '') AS clave_material,
                                 COALESCE(vd.codigo_partida, '') AS codigo_partida,

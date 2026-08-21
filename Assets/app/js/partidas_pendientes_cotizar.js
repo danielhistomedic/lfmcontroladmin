@@ -235,7 +235,37 @@ function fntInicializarTabla() {
                     return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
                 }
             },
-            { data: 'descripcion_partida', className: 'text-start align-middle' },
+            {
+                data: 'descripcion_partida',
+                className: 'text-start align-middle',
+                width: '450px',
+                render: function (data, type, row) {
+                    var descPrincipal = escapeHtml(data || 'Sin descripción');
+                    var descAdic = (row.descripcion_adicional && row.descripcion_adicional.trim() !== '') ? escapeHtml(row.descripcion_adicional.trim()) : '';
+
+                    if (type === 'filter' || type === 'sort' || type === 'type') {
+                        return (data || '') + ' ' + (row.descripcion_adicional || '');
+                    }
+                    if (type === 'export' || type === 'csv' || type === 'excel') {
+                        var textoExport = (data || '');
+                        if (descAdic !== '' && descAdic !== descPrincipal) {
+                            textoExport += ' \n[Adicional: ' + (row.descripcion_adicional ? row.descripcion_adicional.trim() : '') + ']';
+                        }
+                        return textoExport;
+                    }
+
+                    var html = '<div class="col-desc-partida" style="max-width: 450px; min-width: 250px; white-space: normal; word-break: break-word; line-height: 1.35;">';
+                    html += '<div class="fw-semibold text-dark">' + descPrincipal + '</div>';
+
+                    if (descAdic !== '' && descAdic !== descPrincipal) {
+                        html += '<div class="text-muted mt-1" style="text-align: justify; white-space: pre-wrap; word-break: break-word; line-height: 1.35;">' +
+                                descAdic +
+                                '</div>';
+                    }
+                    html += '</div>';
+                    return html;
+                }
+            },
             {
                 data: 'cantidad_formateada',
                 className: 'text-center align-middle',
@@ -514,10 +544,22 @@ function fntVerDetalleSolicitud(cotizacionId) {
 
                     var rowBg = isCotizada ? 'table-success bg-opacity-10' : '';
 
+                    var descPrincipalMdl = escapeHtml(part.descripcion_partida || 'Sin descripción');
+                    var descAdicMdl = (part.descripcion_adicional && part.descripcion_adicional.trim() !== '') ? escapeHtml(part.descripcion_adicional.trim()) : '';
+
+                    var htmlDescMdl = '<div style="max-width: 450px; min-width: 200px; white-space: normal; word-break: break-word; line-height: 1.35;">';
+                    htmlDescMdl += '<div class="fw-semibold text-dark fs-12">' + descPrincipalMdl + '</div>';
+                    if (descAdicMdl !== '' && descAdicMdl !== descPrincipalMdl) {
+                        htmlDescMdl += '<div class="text-muted mt-1 fs-12" style="text-align: justify; white-space: pre-wrap; word-break: break-word; line-height: 1.35;">' +
+                                       descAdicMdl +
+                                       '</div>';
+                    }
+                    htmlDescMdl += '</div>';
+
                     htmlPartidas += '<tr class="' + rowBg + '">';
                     htmlPartidas += '<td class="text-center fw-bold text-muted">' + (idx + 1) + '</td>';
                     htmlPartidas += '<td><span class="fw-bold text-primary">' + (part.codigo_partida || part.codigo_proveedor || '—') + '</span></td>';
-                    htmlPartidas += '<td><div class="fs-12">' + (part.descripcion_partida || '—') + '</div></td>';
+                    htmlPartidas += '<td>' + htmlDescMdl + '</td>';
                     htmlPartidas += '<td class="text-center fw-semibold">' + (part.cantidad || 0) + ' ' + (part.unidad_medida || 'PZA') + '</td>';
                     htmlPartidas += '<td class="text-end fw-bold">' + (pu > 0 ? (mon + ' $' + pu.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '<span class="text-muted fst-italic">$0.00</span>') + '</td>';
                     htmlPartidas += '<td class="text-end fw-bold">' + (imp > 0 ? (mon + ' $' + imp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '<span class="text-muted fst-italic">$0.00</span>') + '</td>';
@@ -573,4 +615,19 @@ function fntVerDetalleSolicitud(cotizacionId) {
             }
         }
     });
+}
+
+/**
+ * Escapa caracteres HTML especiales para evitar XSS
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
