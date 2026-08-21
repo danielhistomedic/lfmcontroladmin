@@ -327,13 +327,17 @@ function abrirModalFotos(jsonFotosEnc, descripcionEnc) {
                 item.innerHTML = `
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 p-3" style="background-color: #0f172a;">
                         <a href="${url}" target="_blank" title="Haz clic para ver la imagen original en pestaña nueva">
-                            <img src="${url}" class="img-fluid rounded shadow-lg" style="max-height: 400px; object-fit: contain; background-color: #ffffff; padding: 8px; border: 1px solid #334155;">
+                            <img src="${url}" data-original-src="${url}" class="img-fluid rounded shadow-lg" style="max-height: 400px; object-fit: contain; background-color: #ffffff; padding: 8px; border: 1px solid #334155;">
                         </a>
                         <small class="text-white-50 mt-2"><i class="fa-solid fa-up-right-from-square me-1"></i>Imagen ${idx + 1} de ${total} - Clic en la foto para ver en tamaño original</small>
                     </div>
                 `;
                 inner.appendChild(item);
             });
+
+            // Ocultar mensaje de estado de rotación previo
+            const msgEstado = document.getElementById('msgRotacionEstado');
+            if (msgEstado) msgEstado.style.display = 'none';
 
             // Visibilidad de controles
             const prevBtn = document.querySelector('#carouselFotosProducto .carousel-control-prev');
@@ -360,6 +364,8 @@ function abrirModalFotos(jsonFotosEnc, descripcionEnc) {
                     if (caption) {
                         caption.innerText = `Imagen ${e.to + 1} de ${total}`;
                     }
+                    const msg = document.getElementById('msgRotacionEstado');
+                    if (msg) msg.style.display = 'none';
                 };
                 carouselElem.addEventListener('slid.bs.carousel', window._carouselSlideListener);
             }
@@ -374,6 +380,88 @@ function abrirModalFotos(jsonFotosEnc, descripcionEnc) {
         console.error("Error al abrir carrusel de fotos:", e);
     }
 }
+
+/**
+ * Rota la fotografía activa en el modal y actualiza el archivo en el servidor.
+ * @param {string} direccion 'izq' o 'der'
+ */
+function rotarFotoModal(direccion) {
+    const activeItem = document.querySelector('#carouselFotosProducto .carousel-item.active');
+    if (!activeItem) return;
+
+    const img = activeItem.querySelector('img');
+    if (!img) return;
+
+    const btnIzq = document.getElementById('btnGirarFotoIzq');
+    const btnDer = document.getElementById('btnGirarFotoDer');
+    const btnTarget = (direccion === 'izq' || direccion === 'left') ? btnIzq : btnDer;
+    const iconBtn = btnTarget ? btnTarget.querySelector('i') : null;
+    const originalIconClass = iconBtn ? iconBtn.className : '';
+
+    if (btnIzq) btnIzq.disabled = true;
+    if (btnDer) btnDer.disabled = true;
+    if (iconBtn) iconBtn.className = 'fa-solid fa-spinner fa-spin me-1';
+
+    const msgEstado = document.getElementById('msgRotacionEstado');
+    if (msgEstado) msgEstado.style.display = 'none';
+
+    const fotoSrc = img.getAttribute('data-original-src') || img.src;
+
+    const formData = new FormData();
+    formData.append('foto', fotoSrc);
+    formData.append('direccion', direccion);
+
+    fetch(base_url + '/almacen/rotarFoto', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.status) {
+            const timestamp = data.timestamp || Date.now();
+            const cleanUrl = fotoSrc.split('?')[0];
+            const updatedUrl = cleanUrl + '?v=' + timestamp;
+
+            // Actualizar imagen y enlace en el modal
+            img.src = updatedUrl;
+            img.setAttribute('data-original-src', cleanUrl);
+            const parentLink = img.closest('a');
+            if (parentLink) parentLink.href = updatedUrl;
+
+            // Actualizar cualquier miniatura en la tabla con este archivo
+            if (data.filename) {
+                document.querySelectorAll(`img[src*="${data.filename}"]`).forEach(thumb => {
+                    const thumbClean = thumb.src.split('?')[0];
+                    thumb.src = thumbClean + '?v=' + timestamp;
+                });
+            }
+
+            // Notificación visual de éxito en el modal
+            if (msgEstado) {
+                msgEstado.style.display = 'inline-block';
+                setTimeout(() => {
+                    if (typeof $ !== 'undefined' && $(msgEstado).length) {
+                        $(msgEstado).fadeOut();
+                    } else {
+                        msgEstado.style.display = 'none';
+                    }
+                }, 2500);
+            }
+        } else {
+            alert(data.msg || 'No fue posible rotar la fotografía.');
+        }
+    })
+    .catch(err => {
+        console.error('Error al solicitar rotación:', err);
+        alert('Ocurrió un error de conexión al rotar la fotografía.');
+    })
+    .finally(() => {
+        if (btnIzq) btnIzq.disabled = false;
+        if (btnDer) btnDer.disabled = false;
+        if (iconBtn) iconBtn.className = originalIconClass;
+    });
+}
+
 
 /**
  * Renderiza dinámicamente las tarjetas KPI de Totales por Almacén y Moneda

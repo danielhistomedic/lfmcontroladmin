@@ -424,6 +424,17 @@
                 <div id="carouselFotoCaption" class="fw-semibold text-secondary" style="font-size: 0.9rem;">
                     <!-- Contador de foto -->
                 </div>
+                <div class="d-flex align-items-center gap-2" id="boxRotarFotos">
+                    <button type="button" class="btn btn-outline-dark btn-sm px-3 shadow-sm" id="btnGirarFotoIzq" onclick="rotarFotoModal('izq')" title="Girar 90° a la izquierda">
+                        <i class="fa-solid fa-rotate-left me-1 text-primary"></i> Girar Izquierda
+                    </button>
+                    <button type="button" class="btn btn-outline-dark btn-sm px-3 shadow-sm" id="btnGirarFotoDer" onclick="rotarFotoModal('der')" title="Girar 90° a la derecha">
+                        <i class="fa-solid fa-rotate-right me-1 text-primary"></i> Girar Derecha
+                    </button>
+                    <span id="msgRotacionEstado" class="text-success fw-bold small ms-1" style="display: none;">
+                        <i class="fa-solid fa-circle-check me-1"></i>Guardado
+                    </span>
+                </div>
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>

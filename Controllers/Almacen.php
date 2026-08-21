@@ -621,5 +621,111 @@ class Almacen extends Controllers
             die();
         }
     }
+
+    /**
+     * Endpoint AJAX para rotar una fotografía de producto y persistir los cambios en el archivo físico.
+     * URL: /almacen/rotarFoto
+     */
+    public function rotarFoto()
+    {
+        try {
+            if (!$this->session->getStatus()) {
+                echo json_encode(['status' => false, 'msg' => 'Sesión no válida o expirada.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $fotoUrl = $_POST['foto'] ?? '';
+            $direccion = $_POST['direccion'] ?? 'der'; // 'izq' (antihorario 90°) o 'der' (horario 90°)
+
+            if (empty($fotoUrl)) {
+                echo json_encode(['status' => false, 'msg' => 'No se especificó la imagen a rotar.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            // Obtener solo el nombre del archivo para prevenir Directory Traversal
+            $parsedPath = parse_url($fotoUrl, PHP_URL_PATH);
+            $fileName = basename($parsedPath);
+            $filePath = "Assets/files/productos/" . $fileName;
+
+            if (!file_exists($filePath) || !is_file($filePath)) {
+                echo json_encode(['status' => false, 'msg' => 'El archivo de imagen no fue encontrado: ' . $fileName], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            // Validar extensión
+            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                echo json_encode(['status' => false, 'msg' => 'Formato no compatible para rotación (' . $ext . ').'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            // En PHP GD: imagerotate rota en sentido ANTIHORARIO (counter-clockwise)
+            // Girar Izquierda (counter-clockwise 90°): $degrees = 90
+            // Girar Derecha (clockwise 90° = 270° counter-clockwise): $degrees = 270
+            $degrees = ($direccion === 'izq' || $direccion === 'left') ? 90 : 270;
+
+            $sourceImage = null;
+            switch ($ext) {
+                case 'jpg':
+                case 'jpeg':
+                    $sourceImage = @imagecreatefromjpeg($filePath);
+                    break;
+                case 'png':
+                    $sourceImage = @imagecreatefrompng($filePath);
+                    break;
+                case 'webp':
+                    if (function_exists('imagecreatefromwebp')) {
+                        $sourceImage = @imagecreatefromwebp($filePath);
+                    }
+                    break;
+            }
+
+            if (!$sourceImage) {
+                echo json_encode(['status' => false, 'msg' => 'No se pudo procesar la imagen seleccionada.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            // Rotar preservando transparencias o formato original
+            if ($ext === 'png') {
+                imagealphablending($sourceImage, false);
+                imagesavealpha($sourceImage, true);
+                $transparent = imagecolorallocatealpha($sourceImage, 0, 0, 0, 127);
+                $rotatedImage = imagerotate($sourceImage, $degrees, $transparent);
+                if ($rotatedImage) {
+                    imagealphablending($rotatedImage, false);
+                    imagesavealpha($rotatedImage, true);
+                    imagepng($rotatedImage, $filePath, 9);
+                    imagedestroy($rotatedImage);
+                }
+            } elseif ($ext === 'webp') {
+                $rotatedImage = imagerotate($sourceImage, $degrees, 0);
+                if ($rotatedImage) {
+                    imagewebp($rotatedImage, $filePath, 95);
+                    imagedestroy($rotatedImage);
+                }
+            } else {
+                $rotatedImage = imagerotate($sourceImage, $degrees, 0);
+                if ($rotatedImage) {
+                    imagejpeg($rotatedImage, $filePath, 95);
+                    imagedestroy($rotatedImage);
+                }
+            }
+
+            imagedestroy($sourceImage);
+
+            echo json_encode([
+                'status'    => true,
+                'msg'       => 'Fotografía girada y guardada correctamente.',
+                'filename'  => $fileName,
+                'timestamp' => time()
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error inesperado al rotar la imagen.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
 }
+
 
