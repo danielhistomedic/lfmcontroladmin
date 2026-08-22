@@ -1008,6 +1008,9 @@ class SeguimientoModel extends Mysql
         try {
             $sql = "SELECT
                 ppd.*,
+                COALESCE(ppd.cantidad_orden_compra_cliente, ppd.cantidad_pedido, 0) AS cantidad_orden_compra_cliente,
+                COALESCE(ppd.cantidad_pedido, 0) AS cantidad_pedido,
+                COALESCE(ppd.cantidad_pedido_almacen, 0) AS cantidad_pedido_almacen,
                 COALESCE(ppd.entregado, 0) AS entregado,
                 DATE_FORMAT(ppd.fecha_estimada_entrega, '%d/%m/%Y') AS fecha_estimada_formateada,
                 UPPER(COALESCE(NULLIF(TRIM(ppd.ccveunidad), ''), 'PZA')) AS unidad_medida,

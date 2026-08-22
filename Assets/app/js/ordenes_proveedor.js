@@ -392,7 +392,7 @@ function fntVerDetalle(btn) {
  */
 function fntCargarDetalleCompleto(pedidoIdEnc) {
 
-    $('#tbody_partidas_proveedor').html('<tr><td colspan="10" class="text-center p-3 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando partidas...</td></tr>');
+    $('#tbody_partidas_proveedor').html('<tr><td colspan="12" class="text-center p-3 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando partidas...</td></tr>');
     $('#contenedor_adjuntos_proveedor').html('<div class="text-muted fs-12 p-2"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando adjuntos...</div>');
     $('#timeline_seguimientos').empty();
     $('#sin_seguimientos').addClass('d-none');
@@ -475,7 +475,7 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
         error: function (xhr, status, error) {
             console.error('Error al cargar detalle:', error);
             $('#loading_seguimientos').addClass('d-none');
-            $('#tbody_partidas_proveedor').html('<tr><td colspan="10" class="text-center p-3 text-danger"><i class="fa-regular fa-circle-exclamation me-1"></i>Error al cargar partidas</td></tr>');
+            $('#tbody_partidas_proveedor').html('<tr><td colspan="12" class="text-center p-3 text-danger"><i class="fa-regular fa-circle-exclamation me-1"></i>Error al cargar partidas</td></tr>');
             $('#contenedor_adjuntos_proveedor').html('<div class="text-muted fs-12 p-2">Sin adjuntos</div>');
             $('#sin_seguimientos').removeClass('d-none');
         }
@@ -492,13 +492,15 @@ function fntRenderizarPartidas(partidas, moneda) {
     $('#badge_total_partidas').text(partidas.length);
 
     if (!Array.isArray(partidas) || partidas.length === 0) {
-        $('#tbody_partidas_proveedor').html('<tr><td colspan="10" class="text-center p-3 text-muted"><i class="fa-light fa-inbox me-1"></i>Esta orden no tiene partidas registradas.</td></tr>');
+        $('#tbody_partidas_proveedor').html('<tr><td colspan="12" class="text-center p-3 text-muted"><i class="fa-light fa-inbox me-1"></i>Esta orden no tiene partidas registradas.</td></tr>');
         return;
     }
 
     var html = '';
     partidas.forEach(function (item) {
-        var cant = parseFloat(item.cantidad_pedido || 0);
+        var cantOcCliente = parseFloat(item.cantidad_orden_compra_cliente !== null && item.cantidad_orden_compra_cliente !== undefined ? item.cantidad_orden_compra_cliente : (item.cantidad_pedido || 0));
+        var cantPedidoProv = parseFloat(item.cantidad_pedido !== null && item.cantidad_pedido !== undefined ? item.cantidad_pedido : 0);
+        var cantPedidoAlm = parseFloat(item.cantidad_pedido_almacen !== null && item.cantidad_pedido_almacen !== undefined ? item.cantidad_pedido_almacen : 0);
         var pu = parseFloat(item.precio_unitario || 0);
         var imp = parseFloat(item.importe || 0);
         var claveMat = item.clave_sap || item.ccvematerial || '—';
@@ -527,7 +529,9 @@ function fntRenderizarPartidas(partidas, moneda) {
         html += '<td class="text-center align-middle fw-bold text-dark">' + escapeHtml(item.codigo_partida || '—') + '</td>';
         html += '<td class="text-center align-middle"><span class="badge bg-light text-dark border">' + escapeHtml(claveMat) + '</span></td>';
         html += '<td class="align-middle text-start text-wrap" style="white-space: pre-wrap; word-break: break-word; min-width: 280px;">' + descHtml + '</td>';
-        html += '<td class="text-center align-middle fw-bold text-primary">' + cant.toLocaleString('en-US') + '</td>';
+        html += '<td class="text-center align-middle fw-bold text-dark">' + cantOcCliente.toLocaleString('en-US') + '</td>';
+        html += '<td class="text-center align-middle fw-bold text-primary">' + cantPedidoProv.toLocaleString('en-US') + '</td>';
+        html += '<td class="text-center align-middle fw-bold text-info">' + cantPedidoAlm.toLocaleString('en-US') + '</td>';
         html += '<td class="text-center align-middle">' + escapeHtml(item.unidad_medida || 'PZA') + '</td>';
         html += '<td class="text-end align-middle">' + moneda + ' $' + pu.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
         html += '<td class="text-end align-middle fw-bold text-dark">' + moneda + ' $' + imp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';

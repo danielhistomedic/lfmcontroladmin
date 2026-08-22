@@ -444,7 +444,9 @@
                                             <th class="text-center" style="width: 80px;">Partida</th>
                                             <th class="text-center" style="width: 110px;">Clave</th>
                                             <th class="text-start" style="min-width: 300px;">Descripción</th>
-                                            <th class="text-center" style="width: 70px;">Cant.</th>
+                                            <th class="text-center" style="width: 85px;" title="Cantidad de Orden de Compra Cliente">Cant. OC Cliente</th>
+                                            <th class="text-center" style="width: 85px;" title="Cantidad Pedido Proveedor">Cant. Pedido Prov.</th>
+                                            <th class="text-center" style="width: 85px;" title="Cantidad Pedido Almacén">Cant. Pedido Alm.</th>
                                             <th class="text-center" style="width: 60px;">U.M.</th>
                                             <th class="text-end" style="width: 100px;">P. Unitario</th>
                                             <th class="text-end" style="width: 100px;">Importe</th>
