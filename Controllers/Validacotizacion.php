@@ -18,6 +18,12 @@ class Validacotizacion extends Controllers
     public function Validacotizacion()
     {
         try {
+            // Evitar almacenamiento en caché para respuestas de validación en tiempo real
+            header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+            header("Cache-Control: post-check=0, pre-check=0", false);
+            header("Pragma: no-cache");
+            header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+
             /*-------------------------------------------
             [ Obtención y sanitización de parámetros GET ]*/
             $folio = isset($_GET['folio']) ? trim(strClean($_GET['folio'])) : '';
