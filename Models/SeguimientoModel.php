@@ -516,8 +516,9 @@ class SeguimientoModel extends Mysql
     /**
      * Obtiene la lista de partidas del proyecto de venta en orden de prioridad:
      * 1) tb_pedidos_cliente_detalle (si tb_pedidos_cliente.enviado = 1)
-     * 2) tb_compras_cotizacion_interna_detalle (si tb_compras_cotizacion_interna.enviado = 1)
-     * 3) tb_ventas_detalle (sin importar el estatus)
+     * 2) tb_ventas_cotizacion_cliente_detalle (si tb_ventas_cotizacion_cliente.enviado IN (1, 0))
+     * 3) tb_compras_cotizacion_interna_detalle (si tb_compras_cotizacion_interna.enviado = 1)
+     * 4) tb_ventas_detalle (sin importar el estatus)
      * 
      * @param int $venta_id
      * @return array
@@ -593,15 +594,19 @@ class SeguimientoModel extends Mysql
                        LEFT JOIN tb_ventas_detalle vd ON vd.id = pdet.venta_detalle_id
                        LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
                        LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = v.cliente_id)
-                       WHERE v.id = :venta_id AND ped.enviado = 1
-                       ORDER BY vd.codigo_partida";
+                       WHERE ped.id = (
+                           SELECT id FROM tb_pedidos_cliente 
+                           WHERE venta_id = :venta_id AND enviado = 1 
+                           ORDER BY id DESC LIMIT 1
+                       )
+                       ORDER BY vd.codigo_partida ASC, pdet.id ASC";
 
             try {
                 $res1 = $this->select($sql1, ['venta_id' => $venta_id]);
                 if (!empty($res1)) {
                     $partidas1 = array();
                     foreach ($res1 as $row) {
-                        $partidas1[] = $mapRow($row, 'tb_pedidos_cliente_detalle', 'Pedido de Cliente');
+                        $partidas1[] = $mapRow($row, 'tb_pedidos_cliente_detalle', 'Orden de Compra Cliente');
                     }
                     if (!empty($partidas1)) {
                         $arrResponse['origen_tabla']    = 'tb_pedidos_cliente_detalle';
@@ -615,9 +620,61 @@ class SeguimientoModel extends Mysql
             }
 
             // =========================================================================
-            // PRIORIDAD 2: tb_compras_cotizacion_interna_detalle (ped.enviado = 1)
+            // PRIORIDAD 2: tb_ventas_cotizacion_cliente_detalle (ped.enviado IN (1, 0))
             // =========================================================================
             $sql2 = "SELECT
+                       pdet.id,
+                       ped.folio_cotizacion AS Folio_Documento,
+                       vd.codigo_partida,
+                       IFNULL(pdet.descripcion_proveedor, vd.descripcion) AS descripcion,
+                       pdet.descripcion_adicional,
+                       IFNULL(pdet.ccveunidad, vd.ccveunidad) AS ccveunidad,
+                       pdet.cantidad AS cantidad,
+                       pdet.precio_unitario,
+                       pdet.descuento,
+                       pdet.impuesto_tasa,
+                       pdet.impuesto_importe,
+                       pdet.importe,
+                       pdet.tiempo_entrega,
+                       pdet.fecha_estimada_entrega,
+                       pdet.ccvematerial as Clave,
+                       mat.ccveMaterialAlmacen AS CCN,
+                       sap.clave_cliente AS Codigo_Cliente
+                       FROM tb_ventas_cotizacion_cliente_detalle pdet
+                       LEFT JOIN tb_ventas_cotizacion_cliente ped ON ped.id = pdet.cotizacion_cliente_id
+                       LEFT JOIN tb_ventas v ON v.id = ped.venta_id
+                       LEFT JOIN tb_ventas_detalle vd ON vd.id = pdet.venta_detalle_id_partida
+                       LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
+                       LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = v.cliente_id)
+                       WHERE ped.id = (
+                           SELECT id FROM tb_ventas_cotizacion_cliente 
+                           WHERE venta_id = :venta_id AND enviado IN (1, 0) 
+                           ORDER BY enviado = 1 DESC, id DESC LIMIT 1
+                       )
+                       ORDER BY vd.codigo_partida ASC, pdet.id ASC";
+
+            try {
+                $res2 = $this->select($sql2, ['venta_id' => $venta_id]);
+                if (!empty($res2)) {
+                    $partidas2 = array();
+                    foreach ($res2 as $row) {
+                        $partidas2[] = $mapRow($row, 'tb_ventas_cotizacion_cliente_detalle', 'Cotización de Cliente');
+                    }
+                    if (!empty($partidas2)) {
+                        $arrResponse['origen_tabla']    = 'tb_ventas_cotizacion_cliente_detalle';
+                        $arrResponse['origen_etiqueta'] = 'Cotización de Cliente';
+                        $arrResponse['partidas']        = $partidas2;
+                        return $arrResponse;
+                    }
+                }
+            } catch (\Throwable $e2) {
+                getLoggerSystem()->error('Error Prioridad 2 Partidas: ' . getMensajeError($e2));
+            }
+
+            // =========================================================================
+            // PRIORIDAD 3: tb_compras_cotizacion_interna_detalle (ped.enviado = 1)
+            // =========================================================================
+            $sql3 = "SELECT
                        pdet.id,
                        ped.folio_cotizacion AS Folio_Documento,
                        vd.codigo_partida,
@@ -641,31 +698,35 @@ class SeguimientoModel extends Mysql
                        LEFT JOIN tb_ventas_detalle vd ON vd.id = pdet.venta_detalle_id_partida
                        LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
                        LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = v.cliente_id)
-                       WHERE v.id = :venta_id AND ped.enviado = 1
-                       ORDER BY vd.codigo_partida";
+                       WHERE ped.id = (
+                           SELECT id FROM tb_compras_cotizacion_interna 
+                           WHERE venta_id = :venta_id AND enviado = 1 
+                           ORDER BY id DESC LIMIT 1
+                       )
+                       ORDER BY vd.codigo_partida ASC, pdet.id ASC";
 
             try {
-                $res2 = $this->select($sql2, ['venta_id' => $venta_id]);
-                if (!empty($res2)) {
-                    $partidas2 = array();
-                    foreach ($res2 as $row) {
-                        $partidas2[] = $mapRow($row, 'tb_compras_cotizacion_interna_detalle', 'Cotización Interna');
+                $res3 = $this->select($sql3, ['venta_id' => $venta_id]);
+                if (!empty($res3)) {
+                    $partidas3 = array();
+                    foreach ($res3 as $row) {
+                        $partidas3[] = $mapRow($row, 'tb_compras_cotizacion_interna_detalle', 'Cotización Interna');
                     }
-                    if (!empty($partidas2)) {
+                    if (!empty($partidas3)) {
                         $arrResponse['origen_tabla']    = 'tb_compras_cotizacion_interna_detalle';
                         $arrResponse['origen_etiqueta'] = 'Cotización Interna';
-                        $arrResponse['partidas']        = $partidas2;
+                        $arrResponse['partidas']        = $partidas3;
                         return $arrResponse;
                     }
                 }
-            } catch (\Throwable $e2) {
-                getLoggerSystem()->error('Error Prioridad 2 Partidas: ' . getMensajeError($e2));
+            } catch (\Throwable $e3) {
+                getLoggerSystem()->error('Error Prioridad 3 Partidas: ' . getMensajeError($e3));
             }
 
             // =========================================================================
-            // PRIORIDAD 3: tb_ventas_detalle (sin importar el estatus)
+            // PRIORIDAD 4: tb_ventas_detalle (sin importar el estatus)
             // =========================================================================
-            $sql3 = "SELECT
+            $sql4 = "SELECT
                        pdet.id,
                        ped.proyecto_id AS Folio_Documento,
                        pdet.codigo_partida,
@@ -688,24 +749,24 @@ class SeguimientoModel extends Mysql
                        LEFT JOIN tb_materiales mat ON mat.ccvematerial = pdet.ccvematerial
                        LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pdet.ccvematerial AND sap.cliente_id = ped.cliente_id)
                        WHERE ped.id = :venta_id
-                       ORDER BY pdet.codigo_partida";
+                       ORDER BY pdet.codigo_partida ASC, pdet.id ASC";
 
             try {
-                $res3 = $this->select($sql3, ['venta_id' => $venta_id]);
-                if (!empty($res3)) {
-                    $partidas3 = array();
-                    foreach ($res3 as $row) {
-                        $partidas3[] = $mapRow($row, 'tb_ventas_detalle', 'Proyecto de Venta');
+                $res4 = $this->select($sql4, ['venta_id' => $venta_id]);
+                if (!empty($res4)) {
+                    $partidas4 = array();
+                    foreach ($res4 as $row) {
+                        $partidas4[] = $mapRow($row, 'tb_ventas_detalle', 'Proyecto de Venta');
                     }
-                    if (!empty($partidas3)) {
+                    if (!empty($partidas4)) {
                         $arrResponse['origen_tabla']    = 'tb_ventas_detalle';
                         $arrResponse['origen_etiqueta'] = 'Proyecto de Venta';
-                        $arrResponse['partidas']        = $partidas3;
+                        $arrResponse['partidas']        = $partidas4;
                         return $arrResponse;
                     }
                 }
-            } catch (\Throwable $e3) {
-                getLoggerSystem()->error('Error Prioridad 3 Partidas: ' . getMensajeError($e3));
+            } catch (\Throwable $e4) {
+                getLoggerSystem()->error('Error Prioridad 4 Partidas: ' . getMensajeError($e4));
             }
         } catch (\Throwable $th) {
             getLoggerSystem()->error('Error getPartidasProyecto: ' . getMensajeError($th));

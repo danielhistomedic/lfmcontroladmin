@@ -1040,7 +1040,17 @@ function fntRenderPartidasProyecto(partidasObj) {
     }
 
     $("#badge_total_partidas").text(partidas.length);
-    $("#lblOrigenPartidasBadge").text(origenEtiqueta);
+    var badgeClass = "badge bg-light text-dark border fs-12 px-2.5 py-1";
+    if (origenEtiqueta.indexOf("Orden de Compra") !== -1 || origenEtiqueta.indexOf("Pedido") !== -1) {
+        badgeClass = "badge bg-success fs-12 px-2.5 py-1";
+    } else if (origenEtiqueta.indexOf("Cotización de Cliente") !== -1 || origenEtiqueta.indexOf("Cotización Cliente") !== -1) {
+        badgeClass = "badge bg-info text-dark fs-12 px-2.5 py-1";
+    } else if (origenEtiqueta.indexOf("Cotización Interna") !== -1) {
+        badgeClass = "badge bg-warning text-dark fs-12 px-2.5 py-1";
+    } else if (origenEtiqueta.indexOf("Proyecto") !== -1) {
+        badgeClass = "badge bg-secondary fs-12 px-2.5 py-1";
+    }
+    $("#lblOrigenPartidasBadge").attr("class", badgeClass).text(origenEtiqueta);
 
     // Destruir DataTable previo si existe
     if (tablePartidasProyecto !== null) {
