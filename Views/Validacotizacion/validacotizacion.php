@@ -359,7 +359,9 @@
                             <div class="info-value highlight-total">
                                 <?php 
                                 $montoBD = (float)($cotizacion['subtotal'] ?? 0) - (float)($cotizacion['descuento'] ?? 0);
-                                echo !empty($montoBD) ? '$' . number_format((float)$montoBD, 2, '.', ',') . ' MXN' : 'N/A';
+                                $monedaCotizacion = !empty($cotizacion['cmoneda']) ? $cotizacion['cmoneda'] : 
+                                                    ((isset($cotizacion['moneda_id']) && $cotizacion['moneda_id'] == 1) ? 'MXN' : 'USD');
+                                echo !empty($montoBD) ? '$' . number_format((float)$montoBD, 2, '.', ',') . ' ' . htmlspecialchars($monedaCotizacion) : 'N/A';
                                 ?>
                             </div>
                         </div>

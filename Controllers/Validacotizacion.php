@@ -66,6 +66,12 @@ class Validacotizacion extends Controllers
                         $statusValidacion = "DISCREPANCIA";
                         $mensajeValidacion = "Atención: La cotización existe en la base de datos, pero los datos del QR difieren del registro original.";
                     }
+
+                    // Garantizar moneda definida
+                    if (empty($cotizacionBD['cmoneda'])) {
+                        $monedaId = $cotizacionBD['moneda_id'] ?? $cotizacionBD['id_moneda'] ?? null;
+                        $cotizacionBD['cmoneda'] = ($monedaId == 1) ? 'MXN' : 'USD';
+                    }
                 } else {
                     $statusValidacion = "NO_ENCONTRADO";
                     $mensajeValidacion = "No se encontró ningún registro correspondiente al folio especificado en la base de datos.";
