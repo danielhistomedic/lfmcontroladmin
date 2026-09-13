@@ -726,6 +726,352 @@ class Almacen extends Controllers
             die();
         }
     }
+
+    // ==================================================================
+    // [ MÓDULO: PASES DE SALIDA ]
+    // ==================================================================
+
+    /**
+     * Carga la vista principal de Pases de Salida
+     * URL: /almacen/pases_salida
+     */
+    public function pases_salida()
+    {
+        try {
+            /*-------------------------------------------
+            [ Validación de Permisos ]*/
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                $this->session->redirect('inicio');
+                return;
+            }
+
+            // Permisos del módulo con fallback a almacén general
+            $this->permisosMod = $arrPermisos[MOD_ALMACEN_PASES_SALIDA] ?? (
+                $arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['r' => 1, 'c' => 1, 'u' => 1, 'd' => 0]
+            );
+
+            // Valida si tiene acceso a la página
+            if (empty($this->permisosMod['r'])) {
+                echo "<h4>Lo sentimos, Acceso restringido</h4>";
+                die();
+            }
+
+            /*-------------------------------------------
+            [ Obtener datos de Modulo ]*/
+            $menus_model = new MenusModel;
+            $menu = $menus_model->selectMenu(MOD_ALMACEN_PASES_SALIDA);
+
+            // Asigna los permisos de Módulo y SideBar
+            $data['permisos']    = $arrPermisos;
+            $data['permisosMod'] = $this->permisosMod;
+
+            // Datos de Usuario en Sesión
+            $data['empresa_id']             = $this->session->get('empresa_id');
+            $data['sucursal_id']            = $this->session->get('sucursal_id');
+            $data['theme']                  = $this->session->get('theme');
+            $data['usuario']['nombre_solo'] = $this->session->get('nombre_solo');
+            $data['usuario']['email']       = $this->session->get('email');
+            $data['usuario']['rol']         = $this->session->get('rol');
+            $data['usuario']['rol_id']      = $this->session->get('rol_id');
+            $data['usuario']['ccveusuario']  = $this->session->get('ccveusuario') ?? $this->session->get('usuario');
+
+            // Configuración
+            $configuracion_model = new ConfiguracionModel;
+            $configuracion_model->setEmpresaId($data['empresa_id']);
+            $configuracion = $configuracion_model->selectRecord($configuracion_model);
+            $data['configuracion'] = $configuracion;
+
+            // Id de Menú para script de Permisos
+            $data['menu'] = MOD_ALMACEN_PASES_SALIDA;
+
+            // Header
+            $data['page_title']        = !empty($menu['name'])        ? $menu['name']        : 'Pases de Salida';
+            $data['meta_description']  = !empty($menu['descripcion']) ? $menu['descripcion'] : 'Control, seguimiento y entrega de Pases de Salida de Almacén';
+            $data['meta_keywords']     = !empty($menu['tags'])        ? $menu['tags']        : 'almacen, pases, salida, prestamos, entregas, firmas';
+
+            // Form Principal
+            $data['icon_form_title']  = !empty($menu['icon_form_title']) ? $menu['icon_form_title'] : '<i class="fa-sharp fa-light fa-file-invoice text-primary me-2"></i>';
+            $data['page_form_title']  = $data['icon_form_title'] . (!empty($menu['form_title']) ? $menu['form_title'] : ' Pases de Salida');
+
+            // Breadcrumb
+            $data['page_breadcrumb']       = 'Almacén / Pases de Salida';
+            $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Control y Seguimiento de Pases de Salida';
+            $data['page_card_description'] = $data['meta_description'];
+
+            // JS de la página
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'almacen_pases_salida.js';
+
+            // Catálogos para filtros
+            $almacenModel = new AlmacenModel();
+            $data['almacenes']  = $almacenModel->getAlmacenes();
+            $data['clientes']   = $almacenModel->getClientesPases();
+            $data['vendedores'] = $almacenModel->getVendedoresPases();
+            $data['motivos']    = $almacenModel->getMotivosPases();
+            $data['usuarios_sistema'] = $almacenModel->getUsuariosSistema();
+
+            // Call Vista
+            $this->views->getView($this, "pases_salida", $data);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+        }
+    }
+
+    /**
+     * Endpoint AJAX para listar pases de salida, KPIs y análisis ejecutivo con filtros
+     * URL: /almacen/getPasesSalida
+     */
+    public function getPasesSalida()
+    {
+        try {
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_PASES_SALIDA] ?? ($arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['r' => 1]);
+
+            if (empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'Acceso no permitido.', 'data' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $filtros = [
+                'cliente_id'    => $_POST['cliente_id']    ?? $_GET['cliente_id']    ?? '',
+                'estatus'       => $_POST['estatus']       ?? $_GET['estatus']       ?? '',
+                'vendedor'      => $_POST['vendedor']      ?? $_GET['vendedor']      ?? '',
+                'motivo_salida' => $_POST['motivo_salida'] ?? $_GET['motivo_salida'] ?? '',
+                'almacen'       => $_POST['almacen']       ?? $_GET['almacen']       ?? '',
+                'fecha_inicio'  => $_POST['fecha_inicio']  ?? $_GET['fecha_inicio']  ?? '',
+                'fecha_fin'     => $_POST['fecha_fin']     ?? $_GET['fecha_fin']     ?? '',
+                'busqueda'      => $_POST['busqueda']      ?? $_GET['busqueda']      ?? ''
+            ];
+
+            $almacenModel = new AlmacenModel();
+            $arrPases     = $almacenModel->getPasesSalidaData($filtros);
+            $arrKpis      = $almacenModel->getKpisPasesSalida($filtros);
+            $arrAnalisis  = $almacenModel->getAnalisisEjecutivo($filtros);
+
+            echo json_encode([
+                'status'          => true,
+                'total_registros' => count($arrPases),
+                'kpis'            => $arrKpis,
+                'analisis'        => $arrAnalisis,
+                'data'            => $arrPases
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al procesar la consulta.', 'data' => []], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX para consultar detalle completo de un pase
+     * URL: /almacen/getPaseSalidaDetalle
+     */
+    public function getPaseSalidaDetalle()
+    {
+        try {
+            $id = intval($_POST['id'] ?? $_GET['id'] ?? 0);
+            if ($id <= 0) {
+                echo json_encode(['status' => false, 'msg' => 'Identificador de pase inválido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $almacenModel = new AlmacenModel();
+            $header   = $almacenModel->getPaseSalidaById($id);
+            if (empty($header)) {
+                echo json_encode(['status' => false, 'msg' => 'Pase de salida no encontrado.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $partidas = $almacenModel->getPaseSalidaDetalleItems($id);
+            $adjuntos = $almacenModel->getPaseSalidaAdjuntos($id);
+
+            // Preparar URLs de archivos adjuntos
+            foreach ($adjuntos as &$adj) {
+                $file = trim($adj['archivo']);
+                if (filter_var($file, FILTER_VALIDATE_URL)) {
+                    $adj['url'] = $file;
+                } elseif (file_exists("Assets/files/pases_salida/" . $file)) {
+                    $adj['url'] = base_url() . "/Assets/files/pases_salida/" . $file;
+                } else {
+                    $adj['url'] = base_url() . "/Assets/files/pases_salida/" . $file;
+                }
+            }
+            unset($adj);
+
+            echo json_encode([
+                'status'   => true,
+                'header'   => $header,
+                'partidas' => $partidas,
+                'adjuntos' => $adjuntos
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al obtener el detalle del pase.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX POST para registrar entrega con firma digital en BASE64
+     * URL: /almacen/registrarEntregaPase
+     */
+    public function registrarEntregaPase()
+    {
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode(['status' => false, 'msg' => 'Método no permitido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_PASES_SALIDA] ?? ($arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['u' => 1]);
+            if (empty($permisosMod['u']) && empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'No cuenta con permisos para registrar entregas.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $paseId        = intval($_POST['pase_id'] ?? 0);
+            $nombreRecibe  = trim($_POST['nombre_recibe'] ?? '');
+            $usuarioRecibe = trim($_POST['usuario_recibe'] ?? '');
+            $firmaBase64   = trim($_POST['firma_base64'] ?? '');
+
+            if ($paseId <= 0) {
+                echo json_encode(['status' => false, 'msg' => 'Identificador de pase inválido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if (empty($usuarioRecibe) && empty($nombreRecibe)) {
+                echo json_encode(['status' => false, 'msg' => 'Debe seleccionar o ingresar el usuario o persona que recibe la mercancía.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            // Si uno de los dos viene vacío, asignar el otro
+            if (empty($nombreRecibe)) {
+                $nombreRecibe = $usuarioRecibe;
+            }
+            if (empty($usuarioRecibe)) {
+                $usuarioRecibe = $nombreRecibe;
+            }
+
+            if (empty($firmaBase64) || strlen($firmaBase64) < 100 || strpos($firmaBase64, 'data:image') !== 0) {
+                echo json_encode(['status' => false, 'msg' => 'La firma digital es obligatoria. Dibuje su firma en el recuadro correspondiente antes de guardar.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $almacenModel = new AlmacenModel();
+            $pase = $almacenModel->getPaseSalidaById($paseId);
+            if (empty($pase)) {
+                echo json_encode(['status' => false, 'msg' => 'El pase de salida no existe en el sistema.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if ($pase['estatus'] === 'CANCELADO') {
+                echo json_encode(['status' => false, 'msg' => 'No es posible registrar entrega en un pase cancelado.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if ($pase['estatus'] === 'ENTREGADO' && !empty($pase['firma_recibe'])) {
+                echo json_encode(['status' => false, 'msg' => 'Este pase de salida ya fue registrado como entregado previamente.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $ok = $almacenModel->saveEntregaFirma($paseId, $firmaBase64, $nombreRecibe, $usuarioRecibe);
+            if ($ok) {
+                echo json_encode([
+                    'status' => true,
+                    'msg'    => '¡Entrega y firma digital registradas con éxito!'
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode([
+                    'status' => false,
+                    'msg'    => 'No se pudo guardar la entrega del pase. Inténtelo nuevamente.'
+                ], JSON_UNESCAPED_UNICODE);
+            }
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error inesperado al registrar la entrega.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX para consultar adjuntos / evidencias de un pase
+     * URL: /almacen/getAdjuntosPase
+     */
+    public function getAdjuntosPase()
+    {
+        try {
+            $paseId = intval($_POST['pase_id'] ?? $_GET['pase_id'] ?? 0);
+            if ($paseId <= 0) {
+                echo json_encode(['status' => false, 'msg' => 'ID de pase inválido.', 'adjuntos' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $almacenModel = new AlmacenModel();
+            $adjuntos = $almacenModel->getPaseSalidaAdjuntos($paseId);
+            $partidas = $almacenModel->getPaseSalidaDetalleItems($paseId);
+
+            foreach ($adjuntos as &$adj) {
+                $file = trim($adj['archivo']);
+                if (filter_var($file, FILTER_VALIDATE_URL)) {
+                    $adj['url'] = $file;
+                } else {
+                    $adj['url'] = base_url() . "/Assets/files/pases_salida/" . $file;
+                }
+            }
+            unset($adj);
+
+            echo json_encode([
+                'status'   => true,
+                'adjuntos' => $adjuntos,
+                'partidas' => $partidas
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al consultar adjuntos.', 'adjuntos' => []], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX para obtener los reportes por cliente y vendedor
+     * URL: /almacen/getReportePases
+     */
+    public function getReportePases()
+    {
+        try {
+            $filtros = [
+                'cliente_id'    => $_POST['cliente_id']    ?? $_GET['cliente_id']    ?? '',
+                'estatus'       => $_POST['estatus']       ?? $_GET['estatus']       ?? '',
+                'vendedor'      => $_POST['vendedor']      ?? $_GET['vendedor']      ?? '',
+                'motivo_salida' => $_POST['motivo_salida'] ?? $_GET['motivo_salida'] ?? '',
+                'almacen'       => $_POST['almacen']       ?? $_GET['almacen']       ?? '',
+                'fecha_inicio'  => $_POST['fecha_inicio']  ?? $_GET['fecha_inicio']  ?? '',
+                'fecha_fin'     => $_POST['fecha_fin']     ?? $_GET['fecha_fin']     ?? '',
+                'busqueda'      => $_POST['busqueda']      ?? $_GET['busqueda']      ?? ''
+            ];
+
+            $almacenModel = new AlmacenModel();
+            $repCliente   = $almacenModel->getReportePorCliente($filtros);
+            $repVendedor  = $almacenModel->getReportePorVendedor($filtros);
+
+            echo json_encode([
+                'status'       => true,
+                'por_cliente'  => $repCliente,
+                'por_vendedor' => $repVendedor
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al generar los reportes.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
 }
+
 
 

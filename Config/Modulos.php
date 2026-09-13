@@ -35,6 +35,7 @@ const MOD_SEGUIMIENTO_PARTIDAS_COTIZAR = 136;
 const MOD_ALMACEN_PRODUCTOS = 132;
 const MOD_ALMACEN_INVENTARIO = 133;
 const MOD_ALMACEN_RESERVADOS = 135;
+const MOD_ALMACEN_PASES_SALIDA = 137;
 
 // ** -----------------------------
 // [ Dashboard ]

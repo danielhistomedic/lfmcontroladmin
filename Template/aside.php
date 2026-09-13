@@ -371,14 +371,16 @@
                     <?php if (
                         !empty($data['permisos'][MOD_ALMACEN_PRODUCTOS]['r']) ||
                         !empty($data['permisos'][MOD_ALMACEN_INVENTARIO]['r']) ||
-                        !empty($data['permisos'][MOD_ALMACEN_RESERVADOS]['r'])
+                        !empty($data['permisos'][MOD_ALMACEN_RESERVADOS]['r']) ||
+                        !empty($data['permisos'][MOD_ALMACEN_PASES_SALIDA]['r'])
                     ) {
                     ?>
 
                         <li class="nav-parent <?php if (
                                                     $data['menu'] == MOD_ALMACEN_PRODUCTOS ||
                                                     $data['menu'] == MOD_ALMACEN_INVENTARIO ||
-                                                    $data['menu'] == MOD_ALMACEN_RESERVADOS
+                                                    $data['menu'] == MOD_ALMACEN_RESERVADOS ||
+                                                    $data['menu'] == MOD_ALMACEN_PASES_SALIDA
                                                 ) {
                                                     echo "nav-expanded nav-active";
                                                 } ?>">
@@ -418,6 +420,18 @@
                                     <li class="<?= ($data['menu'] == MOD_ALMACEN_RESERVADOS) ? "nav-active" : ""; ?>">
                                         <a class="nav-link" href="<?= base_url(); ?>/almacen/reservados">
                                             Control de Productos Reservados
+                                        </a>
+                                    </li>
+                                <?php }  ?>
+
+                                <hr class="mb-1 mt-1">
+
+                                <?php if (
+                                    !empty($data['permisos'][MOD_ALMACEN_PASES_SALIDA]['r'])
+                                ) { ?>
+                                    <li class="<?= ($data['menu'] == MOD_ALMACEN_PASES_SALIDA) ? "nav-active" : ""; ?>">
+                                        <a class="nav-link" href="<?= base_url(); ?>/almacen/pases_salida">
+                                            Pases de Salida
                                         </a>
                                     </li>
                                 <?php }  ?>
