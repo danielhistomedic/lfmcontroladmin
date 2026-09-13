@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Pase de Salida de Almacén | LFM</title>
+    <meta name="description" content="Guía práctica y manual de usuario para el registro, consulta y gestión de Pases de Salida de Almacén (frmPasesSalidaAlmacen).">
+    <meta name="author" content="HistoMedic / LFM Sistemas">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="../Assets/img/favicon.ico">
+
+    <!-- Fuentes Tipográficas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos Vendor del Portal -->
+    <link rel="stylesheet" href="../Assets/vendor/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="../Assets/vendor/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="../Assets/vendor/boxicons/css/boxicons.min.css">
+
+    <!-- Estilos Personalizados del Manual -->
+    <style>
+        :root {
+            --brand-primary: #0f0a4a;
+            --brand-primary-light: #1b1668;
+            --brand-secondary: #0284c7;
+            --brand-accent: #0ea5e9;
+            --brand-success: #10b981;
+            --brand-warning: #f59e0b;
+            --brand-danger: #ef4444;
+            --brand-dark: #0f172a;
+            --brand-light: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-main: #334155;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--brand-primary);
+        }
+
+        /* Top Header */
+        .manual-topbar {
+            background: linear-gradient(135deg, var(--brand-primary) 0%, #1e1b4b 100%);
+            color: #ffffff;
+            padding: 18px 0;
+            border-bottom: 3px solid var(--brand-secondary);
+            box-shadow: 0 4px 20px rgba(15, 10, 74, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+
+        .manual-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .manual-brand i {
+            color: var(--brand-accent);
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+
+        .badge-version {
+            background: rgba(14, 165, 233, 0.2);
+            border: 1px solid rgba(14, 165, 233, 0.4);
+            color: #38bdf8;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 12px;
+            font-weight: 600;
+        }
+
+        /* Hero Banner */
+        .manual-hero {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 40px 0 30px 0;
+            margin-bottom: 30px;
+        }
+
+        .hero-title {
+            font-size: 2.2rem;
+            color: var(--brand-primary);
+            margin-bottom: 10px;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 850px;
+        }
+
+        /* Sidebar Navigation */
+        .manual-sidebar {
+            position: sticky;
+            top: 90px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+            max-height: calc(100vh - 110px);
+            overflow-y: auto;
+        }
+
+        .sidebar-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .nav-manual {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-manual li {
+            margin-bottom: 6px;
+        }
+
+        .nav-manual a {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-manual a i {
+            margin-right: 9px;
+            font-size: 1.05rem;
+            color: #94a3b8;
+            width: 18px;
+            text-align: center;
+        }
+
+        .nav-manual a:hover {
+            background-color: #f1f5f9;
+            color: var(--brand-secondary);
+            transform: translateX(3px);
+        }
+
+        .nav-manual a:hover i {
+            color: var(--brand-secondary);
+        }
+
+        /* Content Cards */
+        .doc-section {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            scroll-margin-top: 100px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .section-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(14, 165, 233, 0.15) 100%);
+            color: var(--brand-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin-right: 14px;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.45rem;
+            margin: 0;
+            color: var(--brand-primary);
+        }
+
+        /* Quick Flow Steps */
+        .flow-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .flow-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.25s ease;
+            border-top: 4px solid var(--brand-secondary);
+        }
+
+        .flow-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            background: #ffffff;
+        }
+
+        .flow-step-number {
+            width: 34px;
+            height: 34px;
+            background: var(--brand-primary);
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+
+        .flow-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--brand-primary);
+            margin-bottom: 8px;
+        }
+
+        .flow-card-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Callouts / Alerts */
+        .callout {
+            border-left: 4px solid;
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 20px 0;
+            font-size: 0.92rem;
+        }
+
+        .callout-info {
+            background-color: #f0f9ff;
+            border-color: var(--brand-accent);
+            color: #0369a1;
+        }
+
+        .callout-warning {
+            background-color: #fffbeb;
+            border-color: var(--brand-warning);
+            color: #b45309;
+        }
+
+        .callout-success {
+            background-color: #f0fdf4;
+            border-color: var(--brand-success);
+            color: #15803d;
+        }
+
+        .callout-danger {
+            background-color: #fef2f2;
+            border-color: var(--brand-danger);
+            color: #b91c1c;
+        }
+
+        .callout-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .callout-title i {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        /* Screenshots and Image Annotations */
+        .img-container {
+            background: #0f172a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #334155;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .img-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .img-caption {
+            background: #1e293b;
+            color: #94a3b8;
+            font-size: 0.82rem;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Tables */
+        .table-custom {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-custom th {
+            background-color: #f8fafc;
+            color: var(--brand-primary);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 12px 16px;
+            border-bottom: 2px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table-custom td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.88rem;
+            vertical-align: middle;
+        }
+
+        .table-custom tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-custom tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        /* Badges */
+        .badge-pill-custom {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .badge-status-activo {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-status-cancelado {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .badge-status-entregado {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+
+        .btn-action-label {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--brand-primary);
+        }
+
+        .btn-action-label i {
+            margin-right: 5px;
+            color: var(--brand-secondary);
+        }
+
+        /* Keyboard Shortcut */
+        kbd {
+            background-color: #f1f5f9;
+            color: var(--brand-primary);
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            font-family: monospace;
+            font-size: 0.82rem;
+            padding: 2px 6px;
+        }
+
+        /* Footer */
+        .manual-footer {
+            background: #ffffff;
+            border-top: 1px solid var(--border-color);
+            padding: 30px 0;
+            margin-top: 50px;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        @media print {
+            .manual-topbar, .manual-sidebar, .no-print {
+                display: none !important;
+            }
+            .manual-hero {
+                padding: 10px 0;
+                margin-bottom: 20px;
+            }
+            .col-lg-9 {
+                width: 100% !important;
+            }
+            .doc-section {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar de Navegación -->
+    <header class="manual-topbar">
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="../" class="manual-brand">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                    <span>LFM Sistemas</span>
+                    <span class="d-none d-sm-inline ms-2 text-white-50">| Manuales Administrativos</span>
+                    <span class="badge-version">frmPasesSalidaAlmacen v2026</span>
+                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="../inicio" class="btn btn-sm btn-outline-light d-none d-md-inline-flex align-items-center">
+                        <i class="fa-solid fa-house me-1"></i> Portal LFM
+                    </a>
+                    <button onclick="window.print()" class="btn btn-sm btn-info text-white d-inline-flex align-items-center">
+                        <i class="fa-solid fa-print me-1"></i> Imprimir Guía
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Header -->
+    <div class="manual-hero">
+        <div class="container-fluid px-4">
+            <div class="row">
+                <div class="col-lg-12">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2" style="font-size: 0.85rem;">
+                            <li class="breadcrumb-item"><a href="../inicio" class="text-decoration-none">Portal Administrativo</a></li>
+                            <li class="breadcrumb-item"><a href="#" class="text-decoration-none">Almacén</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Pases de Salida de Almacén</li>
+                        </ol>
+                    </nav>
+                    <h1 class="hero-title">Manual de Usuario: Pases de Salida de Almacén</h1>
+                    <p class="hero-subtitle">
+                        Guía de operación básica para el registro de salidas de almacén, captura de partidas, gestión de evidencias documentales (PDF, imágenes y videos) y consulta histórica en <strong>frmPasesSalidaAlmacen</strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal y Menú Lateral -->
+    <div class="container-fluid px-4 pb-5">
+        <div class="row">
+
+            <!-- Sidebar / Índice de Navegación -->
+            <div class="col-lg-3 d-none d-lg-block">
+                <aside class="manual-sidebar">
+                    <div class="sidebar-title">Índice del Manual</div>
+                    <ul class="nav-manual">
+                        <li><a href="#flujo-rapido"><i class="fa-solid fa-bolt text-warning"></i> Flujo Rápido (6 Pasos)</a></li>
+                        <li><a href="#objetivo"><i class="fa-solid fa-bullseye"></i> 1. Objetivo y Utilidad</a></li>
+                        <li><a href="#acceso"><i class="fa-solid fa-door-open"></i> 2. Acceso y Estructura</a></li>
+                        <li><a href="#nuevo-pase"><i class="fa-solid fa-file-circle-plus"></i> 3. Datos Generales</a></li>
+                        <li><a href="#partidas"><i class="fa-solid fa-dolly"></i> 4. Materiales / Partidas</a></li>
+                        <li><a href="#adjuntos"><i class="fa-solid fa-paperclip"></i> 5. Documentos y Videos</a></li>
+                        <li><a href="#guardar"><i class="fa-solid fa-floppy-disk"></i> 6. Guardado y Folios</a></li>
+                        <li><a href="#busqueda"><i class="fa-solid fa-magnifying-glass"></i> 7. Consulta e Historial</a></li>
+                        <li><a href="#cancelacion"><i class="fa-solid fa-ban"></i> 8. Cancelación de Pases</a></li>
+                        <li><a href="#estados"><i class="fa-solid fa-tags"></i> 9. Estados del Pase</a></li>
+                        <li><a href="#problemas"><i class="fa-solid fa-circle-question"></i> 10. Problemas Frecuentes</a></li>
+                        <li><a href="#buenas-practicas"><i class="fa-solid fa-shield-heart"></i> 11. Buenas Prácticas</a></li>
+                    </ul>
+                </aside>
+            </div>
+
+            <!-- Contenido Principal -->
+            <div class="col-lg-9 col-12">
+
+                <!-- SECCIÓN: FLUJO RÁPIDO EN 6 PASOS -->
+                <section id="flujo-rapido" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon" style="background: rgba(245, 158, 11, 0.12); color: #d97706;">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div>
+                            <h2 class="section-title">Crear un Pase de Salida en 6 Pasos</h2>
+                            <small class="text-muted">Flujo operativo rápido para despachar mercancía y generar el comprobante oficial.</small>
+                        </div>
+                    </div>
+
+                    <p>Siga estos 6 pasos ordenados conforme a la operación real del sistema:</p>
+
+                    <div class="flow-grid">
+                        <div class="flow-card">
+                            <div class="flow-step-number">1</div>
+                            <div class="flow-card-title">Iniciar Nuevo Pase</div>
+                            <p class="flow-card-desc">Haga clic en el botón <span class="btn-action-label"><i class="fa-solid fa-file"></i> Nuevo</span> de la barra superior para limpiar la pantalla e inicializar el registro.</p>
+                        </div>
+
+                        <div class="flow-card">
+                            <div class="flow-step-number">2</div>
+                            <div class="flow-card-title">Capturar Datos Generales</div>
+                            <p class="flow-card-desc">Seleccione la fecha, motivo de salida, cliente/destino y el nombre de quien recibe. El usuario de entrega se carga automáticamente.</p>
+                        </div>
+
+                        <div class="flow-card">
+                            <div class="flow-step-number">3</div>
+                            <div class="flow-card-title">Agregar Materiales</div>
+                            <p class="flow-card-desc">Busque los materiales en el catálogo, ingrese cantidad, lote y caducidad, y presione <span class="btn-action-label"><i class="fa-solid fa-plus"></i> Agregar Partida</span>.</p>
+                        </div>
+
+                        <div class="flow-card" style="border-top-color: var(--brand-success);">
+                            <div class="flow-step-number" style="background: var(--brand-success);">4</div>
+                            <div class="flow-card-title">Guardar el Pase Oficial</div>
+                            <p class="flow-card-desc">Presione <span class="btn-action-label"><i class="fa-solid fa-floppy-disk"></i> Guardar</span> en la barra principal. El sistema asignará el <strong>Folio oficial</strong> y registrará la salida en base de datos.</p>
+                        </div>
+
+                        <div class="flow-card">
+                            <div class="flow-step-number">5</div>
+                            <div class="flow-card-title">Adjuntar Documentación</div>
+                            <p class="flow-card-desc">Vaya a la pestaña <em>Documentos Adjuntos</em>, cargue remisiones firmadas (PDF), fotos o videos de entrega (máx 30s) y presione <span class="btn-action-label"><i class="fa-solid fa-save"></i> Guardar Archivo</span>.</p>
+                        </div>
+
+                        <div class="flow-card">
+                            <div class="flow-step-number">6</div>
+                            <div class="flow-card-title">Verificar y Concluir</div>
+                            <p class="flow-card-desc">Compruebe las evidencias en el visor integrado o localice el registro en la pestaña <em>Búsqueda</em> para imprimir o consultar posteriormente.</p>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-info mt-4">
+                        <div class="callout-title"><i class="fa-solid fa-circle-info"></i> Nota sobre Documentos Adjuntos:</div>
+                        Para adjuntar archivos o videos es necesario haber realizado primero el <strong>Paso 4 (Guardar el pase)</strong>, ya que el sistema vincula las evidencias al Folio/ID numérico generado.
+                    </div>
+                </section>
+
+
+                <!-- SECCIÓN 1: OBJETIVO Y UTILIDAD -->
+                <section id="objetivo" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-bullseye"></i></div>
+                        <div>
+                            <h2 class="section-title">1. Objetivo y Utilidad</h2>
+                            <small class="text-muted">Finalidad y control administrativo de los movimientos de almacén.</small>
+                        </div>
+                    </div>
+
+                    <p>El módulo <strong>Pases de Salida de Almacén (frmPasesSalidaAlmacen)</strong> es el componente central de control para documentar formalmente la salida de mercancías, medicamentos, reactivos e insumos hospitalarios desde el almacén central hacia cualquier destino.</p>
+
+                    <h5 class="mt-4 mb-3 text-primary"><i class="fa-solid fa-circle-check me-2"></i>¿Para qué sirve un Pase de Salida?</h5>
+                    <ul>
+                        <li><strong>Control de Inventario:</strong> Disminuye legal y físicamente las existencias del almacén, vinculando clave, lote y fecha de vencimiento de cada lote despachado.</li>
+                        <li><strong>Seguridad y Trazabilidad:</strong> Asocia un responsable interno de entrega (usuario del sistema autenticado) y una persona receptora (nombre, firma o evidencia visual).</li>
+                        <li><strong>Evidencia Documental Completa:</strong> Permite anexar remisiones físicas digitalizadas (PDF), fotografías de entrega y videos de recepción directamente en el expediente digital del pase.</li>
+                        <li><strong>Soporte en Auditorías:</strong> Permite demostrar qué insumos salieron, en qué fecha, con qué orden de compra o licitación y quién autorizó el movimiento.</li>
+                    </ul>
+                </section>
+
+
+                <!-- SECCIÓN 2: ACCESO Y ESTRUCTURA -->
+                <section id="acceso" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-door-open"></i></div>
+                        <div>
+                            <h2 class="section-title">2. Acceso y Estructura de la Pantalla</h2>
+                            <small class="text-muted">Ruta de apertura y componentes visuales del formulario.</small>
+                        </div>
+                    </div>
+
+                    <p>Para ingresar al módulo desde el menú principal de la aplicación:</p>
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <span class="fw-bold text-primary"><i class="fa-solid fa-folder-tree me-1"></i> Menú Principal:</span>
+                        <span class="mx-2">&gt;</span>
+                        <span class="badge bg-secondary">Módulo de Almacén</span>
+                        <span class="mx-2">&gt;</span>
+                        <span class="badge bg-secondary">Salidas</span>
+                        <span class="mx-2">&gt;</span>
+                        <span class="badge bg-primary">Pases de Salida de Almacén</span>
+                    </div>
+
+                    <div class="img-container">
+                        <img src="img/pase_salida_formulario_principal.png" alt="Pantalla Principal de Pases de Salida">
+                        <div class="img-caption">
+                            <span><i class="fa-solid fa-image me-1"></i> Figura 1: Interfaz principal de frmPasesSalidaAlmacen.</span>
+                            <span class="badge bg-dark">Resolución completa</span>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-3 text-primary"><i class="fa-solid fa-layer-group me-2"></i>Estructura de Pestañas y Bloques</h5>
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Área</th>
+                                <th>Nombre en Pantalla</th>
+                                <th>Función Principal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-primary">Barra Superior</span></td>
+                                <td>Barra de Acciones Global</td>
+                                <td>Contiene los botones <span class="btn-action-label">Nuevo</span>, <span class="btn-action-label">Guardar</span>, <span class="btn-action-label">Cancelar Pase</span> y <span class="btn-action-label">Cerrar</span>.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-info text-dark">Pestaña 1</span></td>
+                                <td><strong>Registro del Pase de Salida</strong></td>
+                                <td>Área de trabajo donde se captura el encabezado (datos generales), la lista de materiales y los documentos anexos.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">Pestaña 2</span></td>
+                                <td><strong>Búsqueda y Consulta</strong></td>
+                                <td>Permite localizar pases anteriores por rango de fecha, folio, usuario o receptor para ver su estado o reimprimir.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+
+                <!-- SECCIÓN 3: DATOS GENERALES -->
+                <section id="nuevo-pase" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-file-lines"></i></div>
+                        <div>
+                            <h2 class="section-title">3. Captura de Datos Generales (Encabezado)</h2>
+                            <small class="text-muted">Información básica requerida para validar la salida.</small>
+                        </div>
+                    </div>
+
+                    <p>En la parte superior de la pestaña <strong>Registro del Pase de Salida</strong> se ubica el panel de datos generales:</p>
+
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Obligatorio</th>
+                                <th>Descripción y Comportamiento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Folio</strong></td>
+                                <td><span class="badge bg-secondary">Automático</span></td>
+                                <td>Identificador único asignado por el sistema una vez que se guarda el pase. En un pase nuevo se muestra en blanco o con folio temporal.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fecha Salida</strong></td>
+                                <td><span class="badge bg-danger">Sí</span></td>
+                                <td>Fecha oficial de retiro de mercancía. Por defecto tiene la fecha actual del sistema.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Usuario Entrega</strong></td>
+                                <td><span class="badge bg-danger">Sí</span></td>
+                                <td>Se autocompleta con el nombre del usuario con sesión activa. Cuenta con botón de búsqueda (<i class="fa-solid fa-magnifying-glass"></i>) en caso de asignar a otro responsable autorizado.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Motivo de Salida</strong></td>
+                                <td><span class="badge bg-danger">Sí</span></td>
+                                <td>Lista desplegable: <code>VENTA</code>, <code>TRASPASO</code>, <code>MERMA</code>, <code>GARANTÍA</code>, <code>CONSUMO INTERNO</code>, <code>DEMOSTRACIÓN</code>, etc.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Nombre Recibió</strong></td>
+                                <td><span class="badge bg-danger">Sí</span></td>
+                                <td>Nombre de la persona que recoge o recibe la mercancía física.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Destino</strong></td>
+                                <td><span class="badge bg-warning text-dark">Recomendado</span></td>
+                                <td>Sucursal, área médica, cliente o proveedor al que se envía la mercancía.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Referencias Opcionales</strong></td>
+                                <td><span class="badge bg-secondary">Opcional</span></td>
+                                <td>Orden de Compra de Cliente, No. de Requisición y No. de Licitación para trazabilidad contable.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Observaciones</strong></td>
+                                <td><span class="badge bg-secondary">Opcional</span></td>
+                                <td>Notas especiales, detalles del transporte o justificación del movimiento.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+
+                <!-- SECCIÓN 4: MATERIALES / PARTIDAS -->
+                <section id="partidas" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-dolly"></i></div>
+                        <div>
+                            <h2 class="section-title">4. Registro de Materiales / Partidas</h2>
+                            <small class="text-muted">Carga individual de artículos, cantidades, lotes y fechas de vencimiento.</small>
+                        </div>
+                    </div>
+
+                    <p>Debajo del encabezado, en la sub-pestaña <strong>Materiales / Partidas de Salida</strong>, se realiza el despacho producto por producto:</p>
+
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-7">
+                            <ol class="ps-3">
+                                <li class="mb-2"><strong>Buscar Material:</strong> Ingrese la clave directa o presione el botón <span class="btn-action-label"><i class="fa-solid fa-search"></i> Catálogo</span> para abrir la lista de búsqueda de materiales de consumo.</li>
+                                <li class="mb-2"><strong>Indicar Cantidad:</strong> Especifique el número exacto de piezas o empaques que se entregan físicamente.</li>
+                                <li class="mb-2"><strong>Lote y Caducidad:</strong> Ingrese el número de lote del fabricante y verifique la fecha de caducidad.</li>
+                                <li class="mb-2"><strong>Agregar a la Grilla:</strong> Presione el botón <span class="btn-action-label text-success"><i class="fa-solid fa-check"></i> Agregar Partida</span>. El insumo aparecerá en la tabla inferior.</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="card bg-light border p-3">
+                                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-tools me-1"></i> Botones de Partida</h6>
+                                <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
+                                    <li class="mb-2"><span class="btn-action-label me-1"><i class="fa-solid fa-plus"></i> Agregar</span> Guarda la partida en la grilla.</li>
+                                    <li class="mb-2"><span class="btn-action-label me-1"><i class="fa-solid fa-eraser"></i> Limpiar</span> Limpia las cajas de texto de captura.</li>
+                                    <li class="mb-2"><span class="btn-action-label me-1"><i class="fa-solid fa-trash text-danger"></i> Eliminar</span> Quita el artículo seleccionado de la grilla.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-warning">
+                        <div class="callout-title"><i class="fa-solid fa-triangle-exclamation"></i> Para editar una partida ya agregada:</div>
+                        Haga un solo clic sobre la fila en la tabla de materiales. Los datos se cargarán nuevamente en las cajas de captura y el botón cambiará automáticamente a <strong>"Actualizar"</strong>. Realice los ajustes y presione guardar.
+                    </div>
+                </section>
+
+
+                <!-- SECCIÓN 5: DOCUMENTOS Y VIDEOS ADJUNTOS -->
+                <section id="adjuntos" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </div>
+                        <div>
+                            <h2 class="section-title">5. Documentos Adjuntos y Videos de Evidencia</h2>
+                            <small class="text-muted">Carga, visualización, reproducción de video y respaldo digital en FTP.</small>
+                        </div>
+                    </div>
+
+                    <p>La sub-pestaña <strong>Documentos Adjuntos</strong> permite asociar evidencias digitales que respaldan la entrega de los materiales.</p>
+
+                    <div class="img-container">
+                        <img src="img/pase_salida_barra_adjuntos.png" alt="Barra de herramientas de documentos adjuntos">
+                        <div class="img-caption">
+                            <span><i class="fa-solid fa-image me-1"></i> Figura 2: Barra de acciones de adjuntos y lista de archivos registrados.</span>
+                            <span class="badge bg-dark">Módulo Adjuntos</span>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-3 text-primary"><i class="fa-solid fa-bars-staggered me-2"></i>Botones de la Barra de Adjuntos</h5>
+                    <table class="table-custom mb-4">
+                        <thead>
+                            <tr>
+                                <th>Botón</th>
+                                <th>Acción</th>
+                                <th>Condición de Uso</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="btn-action-label"><i class="fa-solid fa-file"></i> Nuevo</span></td>
+                                <td>Limpia la selección para adjuntar un nuevo archivo.</td>
+                                <td>Siempre disponible.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="btn-action-label text-success"><i class="fa-solid fa-floppy-disk"></i> Guardar Archivo</span></td>
+                                <td>Sube el archivo al servidor FTP y lo registra en la base de datos vinculado al pase.</td>
+                                <td>Habilitado al seleccionar un archivo local o para actualizar.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="btn-action-label text-danger"><i class="fa-solid fa-trash"></i> Eliminar Archivo</span></td>
+                                <td>Elimina el adjunto del registro y del servidor.</td>
+                                <td>Activo al seleccionar un adjunto de la lista.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="btn-action-label"><i class="fa-solid fa-eye"></i> Ver Adjunto</span></td>
+                                <td>Abre la vista ampliada a pantalla completa (para documentos PDF e imágenes).</td>
+                                <td>Activo al seleccionar cualquier archivo. Si es video, abre el reproductor.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="btn-action-label text-primary"><i class="fa-solid fa-video"></i> Reproducir Video</span></td>
+                                <td>Abre el reproductor multimedia independiente con controles de Play, Pausa, Tiempo y Pantalla Completa.</td>
+                                <td><strong>Se activa automáticamente</strong> sólo cuando el archivo seleccionado es un video.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h5 class="mt-4 mb-3 text-primary"><i class="fa-solid fa-film me-2"></i>Reproducción de Videos Adjuntos (MP4 / MOV / AVI)</h5>
+                    <p>Cuando se adjuntan videos de prueba de entrega (por ejemplo, mostrando el desempaque, estado de sellos o firma del receptor):</p>
+
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="img-container">
+                                <img src="img/pase_salida_visor_video.png" alt="Visor de video en pase de salida">
+                                <div class="img-caption">
+                                    <span><i class="fa-solid fa-image me-1"></i> Figura 3: Tarjeta de previsualización de video.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <h6 class="fw-bold text-dark"><i class="fa-solid fa-play-circle text-primary me-1"></i> Formas de Reproducir:</h6>
+                                <ul class="mb-3 ps-3" style="font-size: 0.9rem;">
+                                    <li class="mb-2"><strong>Botón en Barra:</strong> Clic en <span class="btn-action-label"><i class="fa-solid fa-video"></i> Reproducir Video</span>.</li>
+                                    <li class="mb-2"><strong>Doble Clic:</strong> Haga doble clic directo sobre la fila del video en la grilla de registros.</li>
+                                    <li class="mb-2"><strong>Botón Ver Adjunto:</strong> Si presiona "Ver Adjunto" teniendo un video seleccionado, el sistema lo canalizará automáticamente al reproductor.</li>
+                                </ul>
+                                <div class="callout callout-info py-2 my-0">
+                                    <small><i class="fa-solid fa-clock me-1"></i> <strong>Límite de Duración:</strong> Los videos deben tener un máximo de <strong>30 segundos</strong> de duración para evitar saturar la red y optimizar la carga.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- SECCIÓN 6: GUARDADO Y ACTUALIZACIÓN -->
+                <section id="guardar" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-floppy-disk"></i></div>
+                        <div>
+                            <h2 class="section-title">6. Guardado, Actualización y Folios</h2>
+                            <small class="text-muted">Proceso de confirmación en base de datos y emisión del número de pase.</small>
+                        </div>
+                    </div>
+
+                    <h5 class="text-primary mb-3"><i class="fa-solid fa-circle-check me-2"></i>Guardar por Primera Vez:</h5>
+                    <ol class="ps-3 mb-4">
+                        <li class="mb-2">Verifique que todos los datos generales (motivo, receptor, fecha) y al menos <strong>una partida de material</strong> estén capturados.</li>
+                        <li class="mb-2">Presione el botón <span class="btn-action-label text-success"><i class="fa-solid fa-floppy-disk"></i> Guardar</span> ubicado en la barra superior del formulario.</li>
+                        <li class="mb-2">El sistema validará los datos, guardará en MySQL y generará el <strong>Folio de Salida</strong> correspondiente.</li>
+                        <li class="mb-2">Aparecerá un mensaje confirmando: <em>"El Pase de Salida se guardó con éxito con el Folio: [XXXXX]"</em>.</li>
+                    </ol>
+
+                    <h5 class="text-primary mb-3"><i class="fa-solid fa-pen-to-square me-2"></i>Actualización de un Pase Existente:</h5>
+                    <p>Si abre un pase ya existente desde la pestaña de Búsqueda:</p>
+                    <ul>
+                        <li>Puede modificar el destino, observaciones, persona que recibió o agregar más partidas de material.</li>
+                        <li><strong>Actualización de Usuario:</strong> Si un usuario distinto al que creó el pase realiza modificaciones y guarda, el sistema actualiza automáticamente el campo <em>Usuario Entrega</em> con los datos del operador que efectuó la última actualización.</li>
+                        <li>Presione nuevamente <span class="btn-action-label text-success"><i class="fa-solid fa-floppy-disk"></i> Guardar</span> para almacenar los cambios.</li>
+                    </ul>
+                </section>
+
+
+                <!-- SECCIÓN 7: BÚSQUEDA Y CONSULTA -->
+                <section id="busqueda" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <div>
+                            <h2 class="section-title">7. Historial y Búsqueda de Pases</h2>
+                            <small class="text-muted">Localización de registros anteriores por fechas y criterios múltiples.</small>
+                        </div>
+                    </div>
+
+                    <p>La pestaña <strong>Búsqueda y Consulta de Pases</strong> permite auditar y revisar todos los movimientos registrados históricamente:</p>
+
+                    <div class="card p-3 bg-light border mb-3">
+                        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-filter me-1"></i> Filtros Disponibles:</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-muted small">Rango de Fechas:</label>
+                                <div class="small">Permite filtrar por Fecha Inicial y Fecha Final para consultar períodos específicos.</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold text-muted small">Filtro de Texto:</label>
+                                <div class="small">Búsqueda rápida por Folio, Usuario que entregó, Quien recibió, Motivo de salida o Destino.</div>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-center">
+                                <span class="btn-action-label w-100 justify-content-center"><i class="fa-solid fa-search"></i> Buscar Pases</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-2 text-primary"><i class="fa-solid fa-arrow-pointer me-2"></i>¿Cómo cargar un pase para ver o editar?</h5>
+                    <p>Ubique el registro en la grilla de resultados y:</p>
+                    <ul>
+                        <li>Haga <strong>doble clic</strong> sobre la fila, o bien</li>
+                        <li>Seleccione la fila y presione el botón <span class="btn-action-label"><i class="fa-solid fa-edit"></i> Editar Pase</span> de la barra superior.</li>
+                    </ul>
+                    <p>El sistema se trasladará automáticamente a la <strong>Pestaña 1</strong> cargando el encabezado, todas las partidas y el listado de documentos adjuntos asociados.</p>
+                </section>
+
+
+                <!-- SECCIÓN 8: CANCELACIÓN DE PASES -->
+                <section id="cancelacion" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon" style="background: rgba(239, 68, 68, 0.12); color: #dc2626;">
+                            <i class="fa-solid fa-ban"></i>
+                        </div>
+                        <div>
+                            <h2 class="section-title">8. Cancelación de Pases de Salida</h2>
+                            <small class="text-muted">Procedimiento de anulación y restricciones del sistema.</small>
+                        </div>
+                    </div>
+
+                    <p>En caso de que una salida haya sido capturada por error o el material no haya salido de las instalaciones, el operador autorizado puede anular el pase:</p>
+
+                    <ol class="ps-3 mb-3">
+                        <li class="mb-2">Abra el pase de salida en pantalla (debe contar con un folio válido y estar en estado <em>ACTIVO</em>).</li>
+                        <li class="mb-2">Presione el botón <span class="btn-action-label text-danger"><i class="fa-solid fa-ban text-danger"></i> Cancelar Pase</span> en la barra de herramientas principal.</li>
+                        <li class="mb-2">El sistema mostrará una advertencia de confirmación: <em>"¿Está seguro de cancelar el Pase de Salida actual?"</em>.</li>
+                        <li class="mb-2">Al confirmar, el estado cambiará a <span class="badge-pill-custom badge-status-cancelado">CANCELADO</span> y el movimiento quedará inhabilitado para futuras modificaciones, preservando el registro para efectos de auditoría.</li>
+                    </ol>
+
+                    <div class="callout callout-danger">
+                        <div class="callout-title"><i class="fa-solid fa-shield-halved"></i> Importante:</div>
+                        Los pases cancelados no se eliminan físicamente de la base de datos para mantener la correlatividad consecutiva de los folios y el historial de auditoría de almacén.
+                    </div>
+                </section>
+
+
+                <!-- SECCIÓN 9: ESTADOS DEL PASE -->
+                <section id="estados" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fa-solid fa-tags"></i></div>
+                        <div>
+                            <h2 class="section-title">9. Estados del Pase y su Significado</h2>
+                            <small class="text-muted">Indicadores visuales del ciclo de vida del documento.</small>
+                        </div>
+                    </div>
+
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Estado</th>
+                                <th>Distintivo Visual</th>
+                                <th>Significado Operativo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>NUEVO</strong></td>
+                                <td><span class="badge bg-secondary">Sin Folio</span></td>
+                                <td>El pase se encuentra en captura preliminar en la estación de trabajo y aún no se ha guardado en la base de datos.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ACTIVO / GUARDADO</strong></td>
+                                <td><span class="badge-pill-custom badge-status-activo"><i class="fa-solid fa-check me-1"></i> ACTIVO</span></td>
+                                <td>Pase registrado y válido con folio oficial. Los materiales han salido formalmente del almacén. Admite adjuntar evidencias adicionales.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ENTREGADO</strong></td>
+                                <td><span class="badge-pill-custom badge-status-entregado"><i class="fa-solid fa-box-check me-1"></i> ENTREGADO</span></td>
+                                <td>Se ha confirmado la recepción física por parte del destinatario y se han adjuntado remisiones firmadas.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>CANCELADO</strong></td>
+                                <td><span class="badge-pill-custom badge-status-cancelado"><i class="fa-solid fa-xmark me-1"></i> CANCELADO</span></td>
+                                <td>El pase fue anulado. Las existencias no fueron descontadas o fueron devueltas. No permite ediciones.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+
+                <!-- SECCIÓN 10: PROBLEMAS FRECUENTES -->
+                <section id="problemas" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon" style="background: rgba(245, 158, 11, 0.12); color: #d97706;">
+                            <i class="fa-solid fa-circle-question"></i>
+                        </div>
+                        <div>
+                            <h2 class="section-title">10. Preguntas y Problemas Frecuentes</h2>
+                            <small class="text-muted">Soluciones rápidas a dudas operativas habituales.</small>
+                        </div>
+                    </div>
+
+                    <div class="accordion" id="accordionFaq">
+                        <div class="accordion-item mb-2 border rounded-3">
+                            <h2 class="accordion-header" id="faq1">
+                                <button class="accordion-button collapsed fw-bold text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFaq1">
+                                    <i class="fa-solid fa-circle-question me-2"></i> ¿Por qué me aparece el mensaje "Debe guardar primero el pase de salida antes de adjuntar archivos"?
+                                </button>
+                            </h2>
+                            <div id="collapseFaq1" class="accordion-collapse collapse" data-bs-parent="#accordionFaq">
+                                <div class="accordion-body text-muted">
+                                    Los archivos adjuntos en el servidor FTP se organizan y vinculan mediante el identificador y número de folio único del pase. Para poder asociar una remisión o video, primero debe guardar el pase en la barra superior (<kbd>Guardar</kbd>).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item mb-2 border rounded-3">
+                            <h2 class="accordion-header" id="faq2">
+                                <button class="accordion-button collapsed fw-bold text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFaq2">
+                                    <i class="fa-solid fa-circle-question me-2"></i> El botón "Reproducir Video" está deshabilitado, ¿cómo lo activo?
+                                </button>
+                            </h2>
+                            <div id="collapseFaq2" class="accordion-collapse collapse" data-bs-parent="#accordionFaq">
+                                <div class="accordion-body text-muted">
+                                    El botón <span class="btn-action-label"><i class="fa-solid fa-video"></i> Reproducir Video</span> es contextual e inteligente: se habilita exclusivamente cuando selecciona un registro de tipo <strong>VIDEO</strong> en la grilla de adjuntos. Si selecciona un documento PDF o una fotografía, el botón se deshabilita y se activa el botón <span class="btn-action-label"><i class="fa-solid fa-eye"></i> Ver Adjunto</span>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item mb-2 border rounded-3">
+                            <h2 class="accordion-header" id="faq3">
+                                <button class="accordion-button collapsed fw-bold text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFaq3">
+                                    <i class="fa-solid fa-circle-question me-2"></i> ¿Por qué no me permite guardar un video mayor a 30 segundos?
+                                </button>
+                            </h2>
+                            <div id="collapseFaq3" class="accordion-collapse collapse" data-bs-parent="#accordionFaq">
+                                <div class="accordion-body text-muted">
+                                    Por políticas de almacenamiento institucional y para asegurar una descarga inmediata a través de la red, los videos de evidencia están limitados a 30 segundos. Si requiere adjuntar evidencias extensas, grabe tomas breves enfocadas en los sellos, empaques y firma de recepción.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item mb-2 border rounded-3">
+                            <h2 class="accordion-header" id="faq4">
+                                <button class="accordion-button collapsed fw-bold text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFaq4">
+                                    <i class="fa-solid fa-circle-question me-2"></i> ¿Cómo cierro rápidamente los visores o reproductores de video?
+                                </button>
+                            </h2>
+                            <div id="collapseFaq4" class="accordion-collapse collapse" data-bs-parent="#accordionFaq">
+                                <div class="accordion-body text-muted">
+                                    Tanto el visor ampliado como el reproductor independiente de video cuentan con el atajo de teclado <kbd>Esc</kbd> (Escape). Al presionarlo, el visor se cerrará de inmediato liberando la memoria y el archivo.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- SECCIÓN 11: BUENAS PRÁCTICAS -->
+                <section id="buenas-practicas" class="doc-section">
+                    <div class="section-header">
+                        <div class="section-icon" style="background: rgba(2, 132, 199, 0.12); color: var(--brand-secondary);">
+                            <i class="fa-solid fa-shield-heart"></i>
+                        </div>
+                        <div>
+                            <h2 class="section-title">11. Buenas Prácticas y Recomendaciones</h2>
+                            <small class="text-muted">Normas para una operación limpia y confiable de almacén.</small>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-check-double me-1"></i> Calidad en Documentación:</h6>
+                                <p class="small text-muted mb-0">Procure digitalizar las remisiones con buena iluminación y legibilidad, asegurando que el sello de recibido, fecha y firma del cliente sean totalmente nítidos.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-barcode me-1"></i> Control de Lotes y Caducidades:</h6>
+                                <p class="small text-muted mb-0">Respete la política PEPS (Primeras Entradas, Primeras Salidas). Al capturar las partidas, verifique físicamente que el lote y caducidad coincidan exactamente con la caja despachada.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-lock me-1"></i> Identidad y Responsabilidad:</h6>
+                                <p class="small text-muted mb-0">Nunca permita que otro compañero utilice su sesión para entregar mercancía. El campo <em>Usuario Entrega</em> queda registrado formalmente en auditorías internas y legales.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-video me-1"></i> Videos de Evidencia Clave:</h6>
+                                <p class="small text-muted mb-0">En entregas de alto valor o material biológico y controlado, grabe tomas breves (10 a 20 segundos) mostrando el estado de los empaques, refrigeración y sellos intactos.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="manual-footer text-center">
+        <div class="container">
+            <p class="mb-1 fw-bold text-primary">LFM Almacén Central &copy; 2026 - Sistema de Gestión Hospitalaria y Farmacéutica</p>
+            <p class="small text-muted mb-0">Documentación y Soporte Técnico: <a href="mailto:soporte@histomedic.com" class="text-decoration-none">soporte@histomedic.com</a> | Versión de Documentación 2.4</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="../Assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
