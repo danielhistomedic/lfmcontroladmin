@@ -814,12 +814,24 @@ function guardarEntregaPase() {
     }
 
     if (!paseId) {
-        alertaPersonalizada('error', 'Error', 'Identificador de pase inválido.');
+        mensajeAlertaModal({
+            icon: 'error',
+            title: iconMensajeError + ' ¡Identificador Inválido!',
+            text: 'No se pudo identificar el pase de salida a procesar.',
+            textButton: 'Cerrar',
+            timer: 3500
+        });
         return;
     }
 
     if (!usuarioVal) {
-        alertaPersonalizada('warning', 'Campo Requerido', 'Por favor seleccione o escriba el usuario/persona que recibe la mercancía.');
+        mensajeAlertaModal({
+            icon: 'info',
+            title: iconMensajeInfo + ' ¡Campo Requerido!',
+            text: 'Por favor seleccione o escriba el usuario o persona que recibe la mercancía.',
+            textButton: 'Aceptar',
+            timer: 3500
+        });
         if ($.fn.select2) {
             selectEl.select2('open');
         }
@@ -827,34 +839,31 @@ function guardarEntregaPase() {
     }
 
     if (!hasSignature || isCanvasEmpty(canvas)) {
-        alertaPersonalizada('warning', 'Firma Obligatoria', 'Debe dibujar la firma digital en el recuadro antes de guardar.');
+        mensajeAlertaModal({
+            icon: 'info',
+            title: iconMensajeInfo + ' ¡Firma Obligatoria!',
+            text: 'Debe dibujar la firma digital en el recuadro correspondiente antes de guardar la entrega.',
+            textButton: 'Aceptar',
+            timer: 3500
+        });
         return;
     }
 
     // Obtener imagen en formato BASE64
     const firmaBase64 = canvas.toDataURL('image/png');
 
-    // Confirmación previa
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: '¿Confirmar Entrega?',
-            text: `Se registrará formalmente la entrega del pase a "${nombrePersona}". ¿Desea continuar?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: '<i class="fa-solid fa-check me-1"></i> Sí, confirmar entrega',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                enviarRegistroEntregaAjax(paseId, usuarioVal, nombrePersona, firmaBase64);
-            }
-        });
-    } else {
-        if (confirm(`¿Confirmar entrega del pase a "${nombrePersona}"?`)) {
+    // Confirmación previa usando mensajeAlertaModal de alertas.js
+    mensajeAlertaModal({
+        icon: 'warning',
+        title: iconMensajeWarning + ' ¿Confirmar Entrega?',
+        text: `¿Desea registrar formalmente la entrega del pase a <strong>${htmlEncode(nombrePersona)}</strong>?`,
+        textButton: 'Sí, Confirmar',
+        textCancelButton: 'No, Cancelar'
+    }).then(function (result) {
+        if (result && result.si) {
             enviarRegistroEntregaAjax(paseId, usuarioVal, nombrePersona, firmaBase64);
         }
-    }
+    });
 }
 
 function isCanvasEmpty(cnv) {
@@ -915,15 +924,27 @@ function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBas
                     cargarDetallePase(paseId);
                 }
 
-                // 6. Notificar al usuario
-                alertaPersonalizada('success', '¡Éxito!', res.msg || 'Entrega y firma digital registradas correctamente.');
+                // 6. Notificar al usuario con alerta_success de alertas.js
+                alerta_success({
+                    mostrar_mensaje: true,
+                    tiempo: 3500,
+                    mensaje: res.msg || 'Entrega y firma digital registradas correctamente.'
+                }, "");
             } else {
-                alertaPersonalizada('error', 'Error al Guardar', res.msg || 'No se pudo guardar la entrega.');
+                alerta_error({
+                    mostrar_mensaje: true,
+                    tiempo: 4000,
+                    mensaje: res.msg || 'No se pudo guardar la entrega.'
+                }, "");
             }
         },
         error: function () {
             $('#btnConfirmarGuardarEntrega').prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Confirmar y Guardar Entrega');
-            alertaPersonalizada('error', 'Error de Red', 'No se pudo conectar con el servidor.');
+            alerta_error({
+                mostrar_mensaje: true,
+                tiempo: 4000,
+                mensaje: 'Error de red: no se pudo conectar con el servidor.'
+            }, "");
         }
     });
 }
@@ -1218,21 +1239,27 @@ function htmlEncode(str) {
 }
 
 function alertaPersonalizada(tipo, titulo, mensaje) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: tipo,
-            title: titulo,
-            text: mensaje,
-            confirmButtonColor: (tipo === 'error' || tipo === 'danger') ? '#ef4444' : '#10b981',
-            confirmButtonText: 'Aceptar'
-        });
-    } else if (typeof mensajeAlertaModal === 'function') {
-        const iconType = (tipo === 'error') ? 'danger' : (tipo === 'warning' ? 'warning' : 'success');
+    if (typeof mensajeAlertaModal === 'function') {
+        let iconType = 'info';
+        let iconHtml = typeof iconMensajeInfo !== 'undefined' ? iconMensajeInfo : '';
+
+        if (tipo === 'error' || tipo === 'danger') {
+            iconType = 'error';
+            iconHtml = typeof iconMensajeError !== 'undefined' ? iconMensajeError : '';
+        } else if (tipo === 'warning') {
+            iconType = 'warning';
+            iconHtml = typeof iconMensajeWarning !== 'undefined' ? iconMensajeWarning : '';
+        } else if (tipo === 'success') {
+            iconType = 'success';
+            iconHtml = typeof iconMensajeSuccess !== 'undefined' ? iconMensajeSuccess : '';
+        }
+
         mensajeAlertaModal({
             icon: iconType,
-            title: titulo,
+            title: iconHtml + ' ' + (titulo || '¡Atención!'),
             text: mensaje,
-            textButton: 'Aceptar'
+            textButton: 'Cerrar',
+            timer: 3500
         });
     } else {
         alert((titulo ? titulo + ': ' : '') + mensaje);
