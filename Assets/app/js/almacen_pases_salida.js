@@ -689,13 +689,23 @@ function initSignaturePad() {
 }
 
 function ajustarDimensionesCanvas() {
+    if (!canvas || !ctx) {
+        canvas = document.getElementById('canvasFirmaDigital');
+        if (canvas) ctx = canvas.getContext('2d');
+    }
     if (!canvas || !ctx) return;
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    // Limitar DPR a máximo 2 para evitar tamaños de imagen gigantescos en móviles que disparen límites de servidor
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // Ancho real en píxeles del elemento
-    canvas.width = (rect.width > 0 ? rect.width : 700) * dpr;
-    canvas.height = 200 * dpr;
+    const displayWidth = rect.width > 0 ? rect.width : (canvas.parentElement ? canvas.parentElement.clientWidth : 700);
+    const displayHeight = 200;
+
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+
     ctx.scale(dpr, dpr);
 
     ctx.strokeStyle = '#0f172a';
@@ -1022,12 +1032,34 @@ function isCanvasEmpty(cnv) {
     return cnv.toDataURL() === blank.toDataURL();
 }
 
+function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = (arr[0].match(/:(.*?);/) || ['', 'image/png'])[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+
 function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBase64) {
     const formData = new FormData();
     formData.append('pase_id', paseId);
     formData.append('usuario_recibe', usuarioRecibe);
     formData.append('nombre_recibe', nombreRecibe);
-    formData.append('firma_base64', firmaBase64);
+
+    // Convertir el canvas BASE64 a Blob binario y enviarlo como archivo real
+    // Esto es FUNDAMENTAL para evitar que ModSecurity / WAF en producción
+    // bloquee la petición con HTTP 403 por SecRequestBodyNoFilesLimit (128 KB en texto) o reglas XSS data:image
+    try {
+        const blobFirma = dataURLtoBlob(firmaBase64);
+        formData.append('firma_file', blobFirma, `firma_${paseId}_${Date.now()}.png`);
+    } catch (e) {
+        console.warn('Fallback a firma_base64 en texto:', e);
+        formData.append('firma_base64', firmaBase64);
+    }
 
     $.ajax({
         url: base_url + '/almacen/registrarEntregaPase',

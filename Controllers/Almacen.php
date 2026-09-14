@@ -938,6 +938,20 @@ class Almacen extends Controllers
             $usuarioRecibe = trim($_POST['usuario_recibe'] ?? '');
             $firmaBase64   = trim($_POST['firma_base64'] ?? '');
 
+            // Soportar recepción de firma como archivo binario (Blob multipart/form-data)
+            // Evita bloqueos de ModSecurity / WAF en producción (HTTP 403 Forbidden por SecRequestBodyNoFilesLimit o regla XSS data:image)
+            if (!empty($_FILES['firma_file']['tmp_name']) && is_uploaded_file($_FILES['firma_file']['tmp_name'])) {
+                $fileContent = file_get_contents($_FILES['firma_file']['tmp_name']);
+                if (!empty($fileContent)) {
+                    $mime = 'image/png';
+                    if (function_exists('mime_content_type')) {
+                        $detectedMime = @mime_content_type($_FILES['firma_file']['tmp_name']);
+                        if (!empty($detectedMime)) $mime = $detectedMime;
+                    }
+                    $firmaBase64 = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
+                }
+            }
+
             if ($paseId <= 0) {
                 echo json_encode(['status' => false, 'msg' => 'Identificador de pase inválido.'], JSON_UNESCAPED_UNICODE);
                 die();
