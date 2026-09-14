@@ -1076,8 +1076,8 @@
                             <label class="form-label fw-bold text-dark m-0">
                                 <i class="fa-solid fa-pen-nib text-primary me-1"></i> Firma Digital de Recibido de Conformidad: <span class="text-danger">*</span>
                             </label>
-                            <button type="button" id="btnLimpiarCanvasFirma" class="btn btn-sm btn-outline-danger py-0 px-2" title="Limpiar trazo para volver a firmar">
-                                <i class="fa-solid fa-eraser me-1"></i> Borrar Firma
+                            <button type="button" id="btnLimpiarCanvasFirma" class="btn btn-sm btn-outline-danger py-1 px-3 d-inline-flex align-items-center gap-1 shadow-sm" onclick="limpiarCanvasFirma();" title="Limpiar trazo para volver a firmar">
+                                <i class="fa-solid fa-eraser"></i> <span>Borrar Firma</span>
                             </button>
                         </div>
                         

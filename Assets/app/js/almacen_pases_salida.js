@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // 2. Inicializar Signature Pad
     initSignaturePad();
 
-    // 2.1 Inicializar Select2 para Usuario Recibe
-    initSelect2UsuarioRecibe();
+    // 2.1 Inicializar selector para Usuario Recibe
+    initSelectUsuarioRecibe();
 
     // 3. Inicializar Tablas de Reporte
     initReportesTablas();
@@ -83,12 +83,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Botón borrar firma en modal
+    // Botón borrar firma en modal (soporta click y touch en móviles)
     const btnBorrarFirma = document.getElementById('btnLimpiarCanvasFirma');
     if (btnBorrarFirma) {
-        btnBorrarFirma.addEventListener('click', function () {
+        btnBorrarFirma.addEventListener('click', function (e) {
+            e.preventDefault();
             limpiarCanvasFirma();
         });
+        btnBorrarFirma.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            limpiarCanvasFirma();
+        }, { passive: false });
     }
 
     // Botón confirmar entrega en modal
@@ -726,8 +731,22 @@ function trazarLinea(x1, y1, x2, y2) {
 }
 
 function limpiarCanvasFirma() {
+    if (!canvas || !ctx) {
+        canvas = document.getElementById('canvasFirmaDigital');
+        if (canvas) ctx = canvas.getContext('2d');
+    }
     if (!canvas || !ctx) return;
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
     hasSignature = false;
 }
 
