@@ -334,21 +334,24 @@
                 
                 <form id="formFiltrosPases" onsubmit="return false;">
                     <div class="row g-2 align-items-end">
-                        <!-- Filtro Cliente (Obligatorio / Principal) -->
+                        <!-- Filtro Cliente (Input) -->
                         <div class="col-md-3 col-sm-6">
-                            <label for="selectFiltroCliente" class="filter-label">
+                            <label for="txtFiltroCliente" class="filter-label">
                                 <i class="fa-solid fa-user-tie me-1 text-info"></i> Cliente:
                             </label>
-                            <select id="selectFiltroCliente" class="form-select filter-control">
-                                <option value="">-- Todos los Clientes --</option>
+                            <input type="text" 
+                                   id="txtFiltroCliente" 
+                                   class="form-control filter-control" 
+                                   placeholder="Escriba cliente o razón social..." 
+                                   list="datalistClientes" 
+                                   autocomplete="off">
+                            <datalist id="datalistClientes">
                                 <?php if (!empty($data['clientes'])): ?>
                                     <?php foreach ($data['clientes'] as $cli): ?>
-                                        <option value="<?= htmlspecialchars($cli['id']); ?>">
-                                            <?= htmlspecialchars($cli['nombre_cliente']); ?>
-                                        </option>
+                                        <option value="<?= htmlspecialchars($cli['nombre_cliente']); ?>">
                                     <?php endforeach; ?>
                                 <?php endif; ?>
-                            </select>
+                            </datalist>
                         </div>
 
                         <!-- Filtro Estatus -->
@@ -494,7 +497,7 @@
                                 <div>
                                     <div class="text-label text-dark">Pendientes</div>
                                     <div class="text-amount text-dark" id="kpi_pendientes">0</div>
-                                    <small class="text-muted">Por entregar</small>
+                                    <small class="text-muted">Por devolver</small>
                                 </div>
                             </div>
                         </div>

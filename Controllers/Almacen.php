@@ -833,7 +833,8 @@ class Almacen extends Controllers
             }
 
             $filtros = [
-                'cliente_id'    => $_POST['cliente_id']    ?? $_GET['cliente_id']    ?? '',
+                'cliente'       => $_POST['cliente']       ?? $_GET['cliente']       ?? ($_POST['cliente_id'] ?? $_GET['cliente_id'] ?? ''),
+                'cliente_id'    => $_POST['cliente_id']    ?? $_GET['cliente_id']    ?? ($_POST['cliente'] ?? $_GET['cliente'] ?? ''),
                 'estatus'       => $_POST['estatus']       ?? $_GET['estatus']       ?? '',
                 'vendedor'      => $_POST['vendedor']      ?? $_GET['vendedor']      ?? '',
                 'motivo_salida' => $_POST['motivo_salida'] ?? $_GET['motivo_salida'] ?? '',
@@ -1045,7 +1046,8 @@ class Almacen extends Controllers
     {
         try {
             $filtros = [
-                'cliente_id'    => $_POST['cliente_id']    ?? $_GET['cliente_id']    ?? '',
+                'cliente'       => $_POST['cliente']       ?? $_GET['cliente']       ?? ($_POST['cliente_id'] ?? $_GET['cliente_id'] ?? ''),
+                'cliente_id'    => $_POST['cliente_id']    ?? $_GET['cliente_id']    ?? ($_POST['cliente'] ?? $_GET['cliente'] ?? ''),
                 'estatus'       => $_POST['estatus']       ?? $_GET['estatus']       ?? '',
                 'vendedor'      => $_POST['vendedor']      ?? $_GET['vendedor']      ?? '',
                 'motivo_salida' => $_POST['motivo_salida'] ?? $_GET['motivo_salida'] ?? '',

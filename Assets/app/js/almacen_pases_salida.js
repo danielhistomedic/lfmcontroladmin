@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Auto-búsqueda en selects
-    ['selectFiltroCliente', 'selectFiltroEstatus', 'selectFiltroVendedor', 'selectFiltroMotivo', 'selectFiltroAlmacen'].forEach(function (id) {
+    ['selectFiltroEstatus', 'selectFiltroVendedor', 'selectFiltroMotivo', 'selectFiltroAlmacen'].forEach(function (id) {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', function () {
@@ -57,6 +57,20 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
     });
+
+    // Enter y cambio en input de filtro de cliente
+    const txtCliente = document.getElementById('txtFiltroCliente');
+    if (txtCliente) {
+        txtCliente.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                ejecutarBusquedaPases();
+            }
+        });
+        txtCliente.addEventListener('change', function () {
+            ejecutarBusquedaPases();
+        });
+    }
 
     // Enter en input de búsqueda libre
     const txtBusqueda = document.getElementById('txtFiltroBusqueda');
@@ -288,8 +302,10 @@ function initDataTablePases() {
 }
 
 function obtenerValoresFiltros() {
+    const clienteVal = ($('#txtFiltroCliente').val() || '').trim();
     return {
-        cliente_id: $('#selectFiltroCliente').val() || '',
+        cliente: clienteVal,
+        cliente_id: clienteVal,
         estatus: $('#selectFiltroEstatus').val() || '',
         vendedor: $('#selectFiltroVendedor').val() || '',
         motivo_salida: $('#selectFiltroMotivo').val() || '',
@@ -308,7 +324,7 @@ function ejecutarBusquedaPases() {
 }
 
 function limpiarFiltrosPases() {
-    $('#selectFiltroCliente').val('');
+    $('#txtFiltroCliente').val('');
     $('#selectFiltroEstatus').val('');
     $('#selectFiltroVendedor').val('');
     $('#selectFiltroMotivo').val('');
@@ -337,38 +353,46 @@ function actualizarAnalisisEjecutivo(analisis) {
     const totalUrg = analisis.total_urgentes || 0;
     const badgeUrg = $('#badge_total_urgentes');
     if (totalUrg > 0) {
-        badgeUrg.html(`<i class="fa-solid fa-triangle-exclamation me-1"></i> ${totalUrg} Pase(s) Requieren Atención Inmediata (&gt;30 días)`);
+        badgeUrg.html(`<i class="fa-solid fa-triangle-exclamation me-1"></i> ${totalUrg} Pase(s) Críticos por Devolver (&gt;30 días)`);
         badgeUrg.removeClass('bg-success-lighten text-success border-success').addClass('bg-danger-lighten text-danger border-danger');
     } else {
-        badgeUrg.html(`<i class="fa-solid fa-circle-check me-1"></i> 0 Pases Críticos en Rojo`);
+        badgeUrg.html(`<i class="fa-solid fa-circle-check me-1"></i> 0 Pases Críticos por Devolver`);
         badgeUrg.removeClass('bg-danger-lighten text-danger border-danger').addClass('bg-success-lighten text-success border-success');
     }
 
-    // Top Clientes
+    // Top Clientes (Card A)
     const listCli = $('#list_top_clientes');
     listCli.empty();
     if (analisis.top_clientes && analisis.top_clientes.length > 0) {
         analisis.top_clientes.forEach(function (c) {
+            const badgeDiasClass = (c.max_dias > 30) ? 'bg-danger text-white' : (c.max_dias >= 15 ? 'bg-warning text-dark' : 'bg-success text-white');
             listCli.append(`
                 <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
                     <span class="text-truncate me-2" title="${htmlEncode(c.nombre)}">• ${htmlEncode(c.nombre)}</span>
-                    <span class="badge bg-warning text-dark">${c.total} pend.</span>
+                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <span class="badge bg-secondary-lighten text-dark border px-2 py-1">${c.total} pend.</span>
+                        <span class="badge ${badgeDiasClass} px-2 py-1" title="Mayor tiempo pendiente por devolver: ${c.max_dias} días">${c.max_dias} d.</span>
+                    </div>
                 </li>
             `);
         });
     } else {
-        listCli.html('<li class="text-success small"><i class="fa-solid fa-check me-1"></i>No hay clientes con pases pendientes</li>');
+        listCli.html('<li class="text-success small"><i class="fa-solid fa-check me-1"></i>No hay clientes con material pendiente</li>');
     }
 
-    // Top Vendedores
+    // Top Vendedores (Card B)
     const listVen = $('#list_top_vendedores');
     listVen.empty();
     if (analisis.top_vendedores && analisis.top_vendedores.length > 0) {
         analisis.top_vendedores.forEach(function (v) {
+            const badgeDiasClass = (v.max_dias > 30) ? 'bg-danger text-white' : (v.max_dias >= 15 ? 'bg-warning text-dark' : 'bg-success text-white');
             listVen.append(`
                 <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
                     <span class="text-truncate me-2" title="${htmlEncode(v.nombre)}">• ${htmlEncode(v.nombre)}</span>
-                    <span class="badge bg-info text-dark">${v.total} pend.</span>
+                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <span class="badge bg-secondary-lighten text-dark border px-2 py-1">${v.total} pend.</span>
+                        <span class="badge ${badgeDiasClass} px-2 py-1" title="Mayor tiempo pendiente por devolver: ${v.max_dias} días">${v.max_dias} d.</span>
+                    </div>
                 </li>
             `);
         });
@@ -376,24 +400,32 @@ function actualizarAnalisisEjecutivo(analisis) {
         listVen.html('<li class="text-success small"><i class="fa-solid fa-check me-1"></i>No hay pendientes por vendedor</li>');
     }
 
-    // Pases Críticos / Mayor Antigüedad
+    // Pases Críticos / Mayor Antigüedad (Card C)
     const listCrit = $('#list_pases_criticos');
     listCrit.empty();
     if (analisis.pases_criticos && analisis.pases_criticos.length > 0) {
         analisis.pases_criticos.forEach(function (p) {
-            const badgeSem = (p.dias > 30) ? `<span class="badge bg-danger">${p.dias} d.</span>` : `<span class="badge bg-warning text-dark">${p.dias} d.</span>`;
+            const badgeSem = (p.dias > 30) 
+                ? `<span class="badge bg-danger px-2 py-1" title="Crítico: >30 días sin devolver">${p.dias} d.</span>` 
+                : (p.dias >= 15 
+                    ? `<span class="badge bg-warning text-dark px-2 py-1" title="Atención: 15 a 30 días sin devolver">${p.dias} d.</span>` 
+                    : `<span class="badge bg-success text-white px-2 py-1" title="En tiempo: <15 días">${p.dias} d.</span>`);
+            const fechaEnt = p.fecha_entrega_formateada || p.fecha_entrega || '';
             listCrit.append(`
-                <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light" style="cursor: pointer;" onclick="cargarDetallePase(${p.id})">
-                    <span class="text-truncate me-2 fw-semibold text-danger">• ${p.folio} (${htmlEncode(p.cliente)})</span>
+                <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light" style="cursor: pointer;" onclick="cargarDetallePase(${p.id})" title="Entrega: ${fechaEnt} | Motivo: ${htmlEncode(p.motivo)} | Clic para ver detalle">
+                    <div class="text-truncate me-2">
+                        <span class="fw-semibold ${p.dias > 30 ? 'text-danger' : 'text-dark'}">• ${p.folio}</span>
+                        <span class="text-muted small">(${htmlEncode(p.cliente)})</span>
+                    </div>
                     ${badgeSem}
                 </li>
             `);
         });
     } else {
-        listCrit.html('<li class="text-success small"><i class="fa-solid fa-check me-1"></i>Sin pases con antigüedad crítica</li>');
+        listCrit.html('<li class="text-success small"><i class="fa-solid fa-check me-1"></i>Sin material pendiente por devolver</li>');
     }
 
-    // Top Motivos
+    // Top Motivos (Card 4)
     const listMot = $('#list_top_motivos');
     listMot.empty();
     if (analisis.top_motivos && analisis.top_motivos.length > 0) {
@@ -401,7 +433,7 @@ function actualizarAnalisisEjecutivo(analisis) {
             listMot.append(`
                 <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
                     <span class="text-truncate me-2">• ${htmlEncode(m.motivo)}</span>
-                    <span class="badge bg-primary">${m.total} pases</span>
+                    <span class="badge bg-primary px-2 py-1">${m.total} pases</span>
                 </li>
             `);
         });

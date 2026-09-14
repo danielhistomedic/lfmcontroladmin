@@ -541,12 +541,18 @@ class AlmacenModel extends Mysql
                             WHEN (p.firma_recibe IS NOT NULL AND TRIM(p.firma_recibe) != '') OR p.enviado = 1 THEN 'ENTREGADO'
                             ELSE 'PENDIENTE'
                         END AS estatus,
+                        COALESCE(DATE(p.fch_usuario_recibe), p.fecha) AS fecha_entrega,
                         CASE 
-                            WHEN (p.firma_recibe IS NOT NULL AND TRIM(p.firma_recibe) != '') OR p.enviado = 1 THEN
-                                GREATEST(0, DATEDIFF(COALESCE(DATE(p.fchregistroactualiza), CURRENT_DATE), p.fecha))
+                            WHEN p.fchregistrocancela IS NOT NULL THEN 0
+                            WHEN UPPER(TRIM(p.calidad_salida)) != 'VENTA' THEN
+                                GREATEST(0, DATEDIFF(CURRENT_DATE, COALESCE(DATE(p.fch_usuario_recibe), p.fecha)))
                             ELSE
-                                GREATEST(0, DATEDIFF(CURRENT_DATE, p.fecha))
+                                GREATEST(0, DATEDIFF(COALESCE(DATE(p.fch_usuario_recibe), DATE(p.fchregistroactualiza), CURRENT_DATE), p.fecha))
                         END AS dias_transcurridos,
+                        CASE 
+                            WHEN UPPER(TRIM(p.calidad_salida)) != 'VENTA' AND p.fchregistrocancela IS NULL THEN 1
+                            ELSE 0
+                        END AS requiere_devolucion,
                         (SELECT COUNT(*) FROM tb_pases_salida_detalle d WHERE d.pase_salida_id = p.id) AS total_partidas,
                         (SELECT IFNULL(SUM(d.cantidad), 0) FROM tb_pases_salida_detalle d WHERE d.pase_salida_id = p.id) AS total_piezas,
                         (SELECT COUNT(*) FROM tb_pases_salida_adjuntos a WHERE a.pase_salida_id = p.id) AS total_adjuntos,
@@ -560,10 +566,16 @@ class AlmacenModel extends Mysql
 
             $arrValues = [];
 
-            // Filtro por Cliente
-            if (!empty($filtros['cliente_id'])) {
-                $sql .= " AND (v.cliente_id = :cliente_id OR c.id = :cliente_id) ";
-                $arrValues['cliente_id'] = $filtros['cliente_id'];
+            // Filtro por Cliente (Texto / Búsqueda o ID numérico)
+            $clienteFiltro = !empty($filtros['cliente']) ? trim($filtros['cliente']) : (!empty($filtros['cliente_id']) ? trim($filtros['cliente_id']) : '');
+            if ($clienteFiltro !== '') {
+                if (is_numeric($clienteFiltro)) {
+                    $sql .= " AND (v.cliente_id = :cliente_id OR c.id = :cliente_id) ";
+                    $arrValues['cliente_id'] = intval($clienteFiltro);
+                } else {
+                    $sql .= " AND (c.nombre_comercial LIKE :cliente_txt OR c.razon_social LIKE :cliente_txt OR v.cliente_final LIKE :cliente_txt) ";
+                    $arrValues['cliente_txt'] = '%' . $clienteFiltro . '%';
+                }
             }
 
             // Filtro por Estatus
@@ -776,10 +788,11 @@ class AlmacenModel extends Mysql
             ]);
 
             if ($resPase) {
-                // Actualizar estatus en detalle
+                // Al registrar entrega al receptor con firma digital:
+                // Si el motivo es VENTA concluye; si es préstamo/demo/garantía/servicio/consignación, el material queda entregado al cliente pero pendiente de retorno al almacén
                 $sqlDet = "UPDATE tb_pases_salida_detalle SET 
-                                estatus = 1,
-                                fecha_retorno = NOW()
+                                estatus = CASE WHEN UPPER(TRIM((SELECT calidad_salida FROM tb_pases_salida WHERE id = :pase_id))) = 'VENTA' THEN 1 ELSE 0 END,
+                                fecha_retorno = NULL
                            WHERE pase_salida_id = :pase_id";
                 $this->update($sqlDet, [':pase_id' => $pase_id]);
                 return true;
@@ -802,33 +815,51 @@ class AlmacenModel extends Mysql
         try {
             $pases = $this->getPasesSalidaData($filtros);
 
-            $totalPases   = count($pases);
-            $pendientes   = 0;
-            $entregados   = 0;
-            $menos15Dias  = 0;
-            $de15a30Dias  = 0;
-            $mas30Dias    = 0;
+            $totalPases           = count($pases);
+            $pendientesDevolucion = 0;
+            $entregados           = 0;
+            $menos15Dias          = 0;
+            $de15a30Dias          = 0;
+            $mas30Dias            = 0;
 
             foreach ($pases as $p) {
-                $dias = intval($p['dias_transcurridos']);
-                if ($p['estatus'] === 'ENTREGADO') {
-                    $entregados++;
-                } elseif ($p['estatus'] === 'PENDIENTE') {
-                    $pendientes++;
+                if (!empty($p['fchregistrocancela'])) {
+                    continue;
                 }
 
-                if ($dias < 15) {
-                    $menos15Dias++;
-                } elseif ($dias <= 30) {
-                    $de15a30Dias++;
+                $dias = intval($p['dias_transcurridos']);
+                $motivo = strtoupper(trim($p['calidad_salida'] ?? ''));
+                $esVenta = ($motivo === 'VENTA');
+                $fueEntregado = ($p['estatus'] === 'ENTREGADO');
+
+                if ($fueEntregado) {
+                    $entregados++;
+                }
+
+                // Si el material requiere devolución al almacén (Préstamo, Demo, Garantía, Servicio, Consignación, etc.)
+                if (!$esVenta) {
+                    $pendientesDevolucion++;
+                    if ($dias < 15) {
+                        $menos15Dias++;
+                    } elseif ($dias <= 30) {
+                        $de15a30Dias++;
+                    } else {
+                        $mas30Dias++;
+                    }
                 } else {
-                    $mas30Dias++;
+                    if ($dias < 15) {
+                        $menos15Dias++;
+                    } elseif ($dias <= 30) {
+                        $de15a30Dias++;
+                    } else {
+                        $mas30Dias++;
+                    }
                 }
             }
 
             return [
                 'total_pases'    => $totalPases,
-                'pendientes'     => $pendientes,
+                'pendientes'     => $pendientesDevolucion,
                 'entregados'     => $entregados,
                 'menos_15_dias'  => $menos15Dias,
                 'de_15_a_30_dias'=> $de15a30Dias,
@@ -860,6 +891,10 @@ class AlmacenModel extends Mysql
             $agrupado = [];
 
             foreach ($pases as $p) {
+                if (!empty($p['fchregistrocancela'])) {
+                    continue;
+                }
+
                 $key = $p['nombre_cliente'] . '___' . $p['calidad_salida'];
                 if (!isset($agrupado[$key])) {
                     $agrupado[$key] = [
@@ -875,9 +910,13 @@ class AlmacenModel extends Mysql
                 }
 
                 $agrupado[$key]['total_pases']++;
+                $esVenta = (strtoupper(trim($p['calidad_salida'])) === 'VENTA');
                 if ($p['estatus'] === 'ENTREGADO') {
                     $agrupado[$key]['entregados']++;
-                } elseif ($p['estatus'] === 'PENDIENTE') {
+                }
+
+                // Material que requiere devolución al almacén o pendiente de entrega
+                if (!$esVenta || $p['estatus'] === 'PENDIENTE') {
                     $agrupado[$key]['pendientes']++;
                 }
 
@@ -921,6 +960,10 @@ class AlmacenModel extends Mysql
             $agrupado = [];
 
             foreach ($pases as $p) {
+                if (!empty($p['fchregistrocancela'])) {
+                    continue;
+                }
+
                 $key = $p['nombre_vendedor'] . '___' . $p['calidad_salida'];
                 if (!isset($agrupado[$key])) {
                     $agrupado[$key] = [
@@ -936,9 +979,13 @@ class AlmacenModel extends Mysql
                 }
 
                 $agrupado[$key]['total_pases']++;
+                $esVenta = (strtoupper(trim($p['calidad_salida'])) === 'VENTA');
                 if ($p['estatus'] === 'ENTREGADO') {
                     $agrupado[$key]['entregados']++;
-                } elseif ($p['estatus'] === 'PENDIENTE') {
+                }
+
+                // Material que requiere devolución al almacén o pendiente de entrega
+                if (!$esVenta || $p['estatus'] === 'PENDIENTE') {
                     $agrupado[$key]['pendientes']++;
                 }
 
@@ -971,6 +1018,7 @@ class AlmacenModel extends Mysql
 
     /**
      * Genera datos clave para el Resumen y Análisis Ejecutivo
+     * A, B, C son en función de la fecha de entrega del producto y los tiempos pendientes por devolver el material al almacén
      * 
      * @param array $filtros
      * @return array
@@ -986,61 +1034,95 @@ class AlmacenModel extends Mysql
             $pasesCriticos = [];
 
             foreach ($pases as $p) {
-                $esPendiente = ($p['estatus'] === 'PENDIENTE');
-                $dias = intval($p['dias_transcurridos']);
-
-                // Conteo motivos
+                // Conteo motivos (Card 4)
                 $mot = $p['calidad_salida'];
                 $motivosCount[$mot] = ($motivosCount[$mot] ?? 0) + 1;
 
-                if ($esPendiente) {
-                    // Clientes con más pendientes
+                if (!empty($p['fchregistrocancela'])) {
+                    continue;
+                }
+
+                $motivoUpper = strtoupper(trim($p['calidad_salida'] ?? ''));
+                $esVenta = ($motivoUpper === 'VENTA');
+                // Requiere devolución si el motivo es temporal (no venta definitiva)
+                $requiereDevolucion = (!$esVenta && intval($p['requiere_devolucion'] ?? 1) === 1);
+                $dias = intval($p['dias_transcurridos']);
+                $fEntrega = !empty($p['fecha_entrega']) ? $p['fecha_entrega'] : (!empty($p['fch_usuario_recibe']) ? date('Y-m-d', strtotime($p['fch_usuario_recibe'])) : $p['fecha']);
+                $fEntregaFmt = !empty($fEntrega) ? date('d/m/Y', strtotime($fEntrega)) : '';
+
+                // A, B, C: Material entregado pendiente por devolver al almacén
+                if ($requiereDevolucion) {
+                    // A: Clientes con más material pendiente por devolver
                     $cName = $p['nombre_cliente'];
-                    $cliPendientes[$cName] = ($cliPendientes[$cName] ?? 0) + 1;
+                    if (!isset($cliPendientes[$cName])) {
+                        $cliPendientes[$cName] = [
+                            'nombre'   => $cName,
+                            'total'    => 0,
+                            'max_dias' => 0
+                        ];
+                    }
+                    $cliPendientes[$cName]['total']++;
+                    if ($dias > $cliPendientes[$cName]['max_dias']) {
+                        $cliPendientes[$cName]['max_dias'] = $dias;
+                    }
 
-                    // Vendedores con más pendientes
+                    // B: Vendedores con más material pendiente por devolver
                     $vName = $p['nombre_vendedor'];
-                    $venPendientes[$vName] = ($venPendientes[$vName] ?? 0) + 1;
+                    if (!isset($venPendientes[$vName])) {
+                        $venPendientes[$vName] = [
+                            'nombre'   => $vName,
+                            'total'    => 0,
+                            'max_dias' => 0
+                        ];
+                    }
+                    $venPendientes[$vName]['total']++;
+                    if ($dias > $venPendientes[$vName]['max_dias']) {
+                        $venPendientes[$vName]['max_dias'] = $dias;
+                    }
 
-                    // Pases críticos o con mayor antigüedad
+                    // C: Pases con mayor antigüedad pendientes por devolver al almacén
                     $pasesCriticos[] = [
-                        'id'              => $p['id'],
-                        'folio'           => $p['folio'],
-                        'cliente'         => $p['nombre_cliente'],
-                        'vendedor'        => $p['nombre_vendedor'],
-                        'motivo'          => $p['calidad_salida'],
-                        'fecha'           => $p['fecha'],
-                        'dias'            => $dias,
-                        'semaforo'        => ($dias < 15 ? 'VERDE' : ($dias <= 30 ? 'AMARILLO' : 'ROJO'))
+                        'id'                       => $p['id'],
+                        'folio'                    => $p['folio'],
+                        'cliente'                  => $p['nombre_cliente'],
+                        'vendedor'                 => $p['nombre_vendedor'],
+                        'motivo'                   => $p['calidad_salida'],
+                        'fecha'                    => $p['fecha'],
+                        'fecha_entrega'            => $fEntrega,
+                        'fecha_entrega_formateada' => $fEntregaFmt,
+                        'dias'                     => $dias,
+                        'semaforo'                 => ($dias < 15 ? 'VERDE' : ($dias <= 30 ? 'AMARILLO' : 'ROJO'))
                     ];
                 }
             }
 
-            // Ordenar clientes por pendientes desc
-            arsort($cliPendientes);
-            $topClientes = [];
-            $i = 0;
-            foreach ($cliPendientes as $name => $cnt) {
-                if ($i++ >= 5) break;
-                $topClientes[] = ['nombre' => $name, 'total' => $cnt];
-            }
+            // Ordenar A (Clientes): primero por mayor total de pendientes, luego por mayor días
+            $topClientesList = array_values($cliPendientes);
+            usort($topClientesList, function($a, $b) {
+                if ($b['total'] !== $a['total']) {
+                    return $b['total'] - $a['total'];
+                }
+                return $b['max_dias'] - $a['max_dias'];
+            });
+            $topClientes = array_slice($topClientesList, 0, 5);
 
-            // Ordenar vendedores por pendientes desc
-            arsort($venPendientes);
-            $topVendedores = [];
-            $i = 0;
-            foreach ($venPendientes as $name => $cnt) {
-                if ($i++ >= 5) break;
-                $topVendedores[] = ['nombre' => $name, 'total' => $cnt];
-            }
+            // Ordenar B (Vendedores): primero por mayor total de pendientes, luego por mayor días
+            $topVendedoresList = array_values($venPendientes);
+            usort($topVendedoresList, function($a, $b) {
+                if ($b['total'] !== $a['total']) {
+                    return $b['total'] - $a['total'];
+                }
+                return $b['max_dias'] - $a['max_dias'];
+            });
+            $topVendedores = array_slice($topVendedoresList, 0, 5);
 
-            // Ordenar pases críticos por días desc
+            // Ordenar C (Pases críticos / Mayor antigüedad por devolver): días DESC
             usort($pasesCriticos, function($a, $b) {
                 return $b['dias'] - $a['dias'];
             });
             $topPasesCriticos = array_slice($pasesCriticos, 0, 5);
 
-            // Ordenar motivos frecuentes
+            // Ordenar motivos frecuentes (Card 4)
             arsort($motivosCount);
             $topMotivos = [];
             $i = 0;
