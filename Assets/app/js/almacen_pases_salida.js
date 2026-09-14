@@ -919,15 +919,18 @@ function isCanvasEmpty(cnv) {
 }
 
 function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBase64) {
+    const formData = new FormData();
+    formData.append('pase_id', paseId);
+    formData.append('usuario_recibe', usuarioRecibe);
+    formData.append('nombre_recibe', nombreRecibe);
+    formData.append('firma_base64', firmaBase64);
+
     $.ajax({
         url: base_url + '/almacen/registrarEntregaPase',
         type: 'POST',
-        data: {
-            pase_id: paseId,
-            usuario_recibe: usuarioRecibe,
-            nombre_recibe: nombreRecibe,
-            firma_base64: firmaBase64
-        },
+        data: formData,
+        processData: false,
+        contentType: false,
         dataType: 'json',
         beforeSend: function () {
             $('#btnConfirmarGuardarEntrega').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando...');
@@ -935,7 +938,7 @@ function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBas
         success: function (res) {
             $('#btnConfirmarGuardarEntrega').prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Confirmar y Guardar Entrega');
 
-            if (res.status) {
+            if (res && res.status) {
                 // 1. Cerrar modal
                 const modalEl = document.getElementById('modalRegistrarEntrega');
                 if (modalEl) {
@@ -977,17 +980,28 @@ function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBas
             } else {
                 alerta_error({
                     mostrar_mensaje: true,
-                    tiempo: 4000,
-                    mensaje: res.msg || 'No se pudo guardar la entrega.'
+                    tiempo: 4500,
+                    mensaje: (res && res.msg) ? res.msg : 'No se pudo guardar la entrega.'
                 }, "");
             }
         },
-        error: function () {
+        error: function (xhr, status, error) {
             $('#btnConfirmarGuardarEntrega').prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Confirmar y Guardar Entrega');
+            console.error('[Error Registrar Entrega]', xhr.status, xhr.responseText);
+            let errMsg = 'Error de red o comunicación con el servidor.';
+            if (xhr.responseJSON && xhr.responseJSON.msg) {
+                errMsg = xhr.responseJSON.msg;
+            } else if (xhr.status === 403) {
+                errMsg = 'Acceso denegado (403). La solicitud fue rechazada por el servidor o expiró la sesión.';
+            } else if (xhr.status === 413) {
+                errMsg = 'El tamaño de la firma o datos excede el límite permitido por el servidor (413).';
+            } else if (xhr.status === 500) {
+                errMsg = 'Ocurrió un error interno en el servidor (500) al procesar la entrega.';
+            }
             alerta_error({
                 mostrar_mensaje: true,
-                tiempo: 4000,
-                mensaje: 'Error de red: no se pudo conectar con el servidor.'
+                tiempo: 5000,
+                mensaje: errMsg
             }, "");
         }
     });

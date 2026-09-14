@@ -992,8 +992,13 @@ class Almacen extends Controllers
             }
             die();
         } catch (\Throwable $th) {
-            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
-            echo json_encode(['status' => false, 'msg' => 'Error inesperado al registrar la entrega.'], JSON_UNESCAPED_UNICODE);
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, self::prefijo_msj_error));
+                }
+            }
+            echo json_encode(['status' => false, 'msg' => 'Error al registrar entrega: ' . $th->getMessage()], JSON_UNESCAPED_UNICODE);
             die();
         }
     }

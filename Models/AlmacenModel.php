@@ -793,16 +793,22 @@ class AlmacenModel extends Mysql
             if ($resPase) {
                 // Al registrar entrega al receptor con firma digital:
                 // Si el motivo es VENTA concluye; si es préstamo/demo/garantía/servicio/consignación, el material queda entregado al cliente pero pendiente de retorno al almacén
-                $sqlDet = "UPDATE tb_pases_salida_detalle SET 
-                                estatus = CASE WHEN UPPER(TRIM((SELECT calidad_salida FROM tb_pases_salida WHERE id = :pase_id))) = 'VENTA' THEN 1 ELSE 0 END,
-                                fecha_retorno = NULL
-                           WHERE pase_salida_id = :pase_id";
+                $sqlDet = "UPDATE tb_pases_salida_detalle d
+                           JOIN tb_pases_salida p ON p.id = d.pase_salida_id
+                           SET d.estatus = CASE WHEN UPPER(TRIM(p.calidad_salida)) = 'VENTA' THEN 1 ELSE 0 END,
+                               d.fecha_retorno = NULL
+                           WHERE d.pase_salida_id = :pase_id";
                 $this->update($sqlDet, [':pase_id' => $pase_id]);
                 return true;
             }
             return false;
         } catch (\Throwable $th) {
-            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel"));
+                }
+            }
             return false;
         }
     }
