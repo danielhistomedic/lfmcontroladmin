@@ -197,24 +197,61 @@
         color: #1d4ed8;
         border-bottom: 3px solid #1d4ed8;
     }
-    /* Video Player Moderno y Responsive */
+    /* Video Player Moderno y Responsive para Modal de Evidencias */
+    .visor-modal-body {
+        height: 72vh;
+        min-height: 480px;
+        max-height: 590px;
+    }
+    .visor-sidebar-col {
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .visor-sidebar-list {
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+    .visor-display-col {
+        height: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
     .video-player-wrapper {
         width: 100%;
         max-width: 820px;
+        height: 460px;
+        max-height: calc(72vh - 100px);
         margin: 0 auto;
         position: relative;
         background-color: #0b1120;
         border-radius: 12px;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
     }
     .video-js {
         width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 16 / 9;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
         font-family: 'Inter', system-ui, sans-serif !important;
         border-radius: 12px;
         overflow: hidden;
+        background-color: #0b1120 !important;
+    }
+    .video-js .vjs-tech {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        object-fit: contain !important;
     }
     .video-js .vjs-big-play-button {
         top: 50% !important;
@@ -248,8 +285,37 @@
     .plyr {
         border-radius: 12px;
         overflow: hidden;
-        width: 100%;
-        aspect-ratio: 16 / 9;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        background-color: #0b1120 !important;
+    }
+    .plyr video {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        object-fit: contain !important;
+    }
+    .plyr--video {
+        height: 100% !important;
+    }
+    @media (max-width: 767.98px) {
+        .visor-modal-body {
+            height: auto;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .visor-sidebar-col {
+            height: 180px;
+            max-height: 180px;
+        }
+        .visor-display-col {
+            height: auto;
+            min-height: 360px;
+        }
+        .video-player-wrapper {
+            height: 280px;
+        }
     }
     /* Video Error and Loading Overlays */
     .video-error-card {
@@ -1008,13 +1074,7 @@
                         </small>
                     </div>
 
-                    <!-- Nota informativa de fecha y usuario -->
-                    <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center">
-                        <i class="fa-solid fa-circle-info fs-5 me-2"></i>
-                        <div>
-                            Al confirmar, se registrará la fecha y hora actual del sistema y la operación quedará vinculada al usuario <strong><?= htmlspecialchars($data['usuario']['nombre_solo'] ?? 'Usuario Activo'); ?></strong>.
-                        </div>
-                    </div>
+
                 </form>
             </div>
             <div class="modal-footer bg-light d-flex justify-content-between align-items-center py-2 px-4">
@@ -1039,21 +1099,21 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0 bg-dark position-relative">
-                <div class="row g-0">
+            <div class="modal-body p-0 bg-dark position-relative visor-modal-body">
+                <div class="row g-0 h-100 align-items-stretch">
                     <!-- Lista lateral de archivos -->
-                    <div class="col-md-3 bg-light border-end p-3" style="max-height: 580px; overflow-y: auto;">
-                        <h6 class="fw-bold text-primary mb-2" style="font-size: 0.85rem;">
+                    <div class="col-md-3 bg-light border-end p-3 visor-sidebar-col">
+                        <h6 class="fw-bold text-primary mb-2 flex-shrink-0" style="font-size: 0.85rem;">
                             <i class="fa-solid fa-folder-open me-1"></i> Archivos del Pase
                         </h6>
-                        <div class="list-group list-group-flush" id="visorListaArchivos">
+                        <div class="list-group list-group-flush visor-sidebar-list" id="visorListaArchivos">
                             <!-- Dinámico -->
                         </div>
                     </div>
 
                     <!-- Área de visualización interactiva -->
-                    <div class="col-md-9 d-flex align-items-center justify-content-center bg-dark text-white p-3" style="min-height: 580px;">
-                        <div id="visorDisplayContainer" class="w-100 text-center">
+                    <div class="col-md-9 bg-dark text-white p-3 visor-display-col">
+                        <div id="visorDisplayContainer" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <span class="text-muted">Seleccione un archivo de la lista para previsualizarlo.</span>
                         </div>
                     </div>

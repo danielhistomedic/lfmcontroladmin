@@ -1108,39 +1108,41 @@ const VideoPlayerEngine = {
         const playerId = 'visorVideoJsPlayer_' + Date.now();
 
         const html = `
-            <div class="video-player-wrapper">
-                <video-js id="${playerId}" 
-                          class="video-js vjs-default-skin vjs-big-play-centered vjs-fluid" 
-                          controls 
-                          preload="auto" 
-                          playsinline>
-                    <source src="${url}" type="${mime}">
-                    <p class="vjs-no-js">
-                        Para ver este video, por favor habilite JavaScript y considere actualizar su navegador.
-                    </p>
-                </video-js>
-                <div id="${playerId}_loadingWatchdog" class="video-loading-badge d-none">
-                    <i class="fa-solid fa-spinner fa-spin"></i>
-                    <span>El video está tardando más de lo habitual en responder. Verificando conexión...</span>
+            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                <div class="video-player-wrapper">
+                    <video-js id="${playerId}" 
+                              class="video-js vjs-default-skin vjs-big-play-centered" 
+                              controls 
+                              preload="auto" 
+                              playsinline>
+                        <source src="${url}" type="${mime}">
+                        <p class="vjs-no-js">
+                            Para ver este video, por favor habilite JavaScript y considere actualizar su navegador.
+                        </p>
+                    </video-js>
+                    <div id="${playerId}_loadingWatchdog" class="video-loading-badge d-none">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <span>El video está tardando más de lo habitual en responder. Verificando conexión...</span>
+                    </div>
                 </div>
-            </div>
-            <div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
-                <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
-                    <i class="fa-solid fa-download me-1"></i> Descargar Video
-                </a>
-                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
-                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
-                </a>
-                <div class="dropdown d-inline-block">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
-                        <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>Video.js</strong>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                        <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
-                        <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-check me-2"></i>Video.js (Preferente)</a></li>
-                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-play me-2"></i>Plyr (Alternativa)</a></li>
-                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-brands fa-html5 me-2"></i>HTML5 Nativo</a></li>
-                    </ul>
+                <div class="mt-2 flex-shrink-0 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                    <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
+                        <i class="fa-solid fa-download me-1"></i> Descargar Video
+                    </a>
+                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
+                    </a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
+                            <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>Video.js</strong>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                            <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
+                            <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-check me-2"></i>Video.js (Preferente)</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-play me-2"></i>Plyr (Alternativa)</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-brands fa-html5 me-2"></i>HTML5 Nativo</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         `;
@@ -1152,8 +1154,8 @@ const VideoPlayerEngine = {
                 controls: true,
                 autoplay: self.currentOptions.autoplay !== false,
                 preload: 'auto',
-                fluid: true,
-                responsive: true,
+                fluid: false,
+                responsive: false,
                 language: 'es',
                 playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
                 controlBar: {
@@ -1229,33 +1231,35 @@ const VideoPlayerEngine = {
         const videoElId = 'visorPlyrVideo_' + Date.now();
 
         const html = `
-            <div class="video-player-wrapper">
-                <video id="${videoElId}" playsinline controls class="w-100">
-                    <source src="${url}" type="${mime}">
-                    <p>Su navegador no soporta reproducción directa de video HTML5.</p>
-                </video>
-                <div id="${videoElId}_loadingWatchdog" class="video-loading-badge d-none">
-                    <i class="fa-solid fa-spinner fa-spin"></i>
-                    <span>El video está tardando más de lo habitual en responder. Verificando conexión...</span>
+            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                <div class="video-player-wrapper">
+                    <video id="${videoElId}" playsinline controls class="w-100 h-100" style="object-fit: contain; background: #000;">
+                        <source src="${url}" type="${mime}">
+                        <p>Su navegador no soporta reproducción directa de video HTML5.</p>
+                    </video>
+                    <div id="${videoElId}_loadingWatchdog" class="video-loading-badge d-none">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <span>El video está tardando más de lo habitual en responder. Verificando conexión...</span>
+                    </div>
                 </div>
-            </div>
-            <div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
-                <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
-                    <i class="fa-solid fa-download me-1"></i> Descargar Video
-                </a>
-                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
-                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
-                </a>
-                <div class="dropdown d-inline-block">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
-                        <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>Plyr</strong>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                        <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
-                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-play me-2"></i>Video.js (Preferente)</a></li>
-                        <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-check me-2"></i>Plyr (Alternativa)</a></li>
-                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-brands fa-html5 me-2"></i>HTML5 Nativo</a></li>
-                    </ul>
+                <div class="mt-2 flex-shrink-0 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                    <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
+                        <i class="fa-solid fa-download me-1"></i> Descargar Video
+                    </a>
+                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
+                    </a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
+                            <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>Plyr</strong>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                            <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-play me-2"></i>Video.js (Preferente)</a></li>
+                            <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-check me-2"></i>Plyr (Alternativa)</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-brands fa-html5 me-2"></i>HTML5 Nativo</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         `;
@@ -1343,29 +1347,31 @@ const VideoPlayerEngine = {
         const self = this;
         const nativeId = 'visorNativeVideo_' + Date.now();
         const html = `
-            <div class="video-player-wrapper text-center p-2">
-                <video id="${nativeId}" controls autoplay class="rounded shadow-lg w-100" style="max-height: 520px; aspect-ratio: 16/9; background: #000;">
-                    <source src="${url}" type="${mime}">
-                    Su navegador no soporta reproducción directa de video HTML5.
-                </video>
-            </div>
-            <div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
-                <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
-                    <i class="fa-solid fa-download me-1"></i> Descargar Video
-                </a>
-                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
-                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
-                </a>
-                <div class="dropdown d-inline-block">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
-                        <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>HTML5 Nativo</strong>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                        <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
-                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-play me-2"></i>Video.js (Preferente)</a></li>
-                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-play me-2"></i>Plyr (Alternativa)</a></li>
-                        <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-solid fa-check me-2"></i>HTML5 Nativo</a></li>
-                    </ul>
+            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                <div class="video-player-wrapper text-center">
+                    <video id="${nativeId}" controls autoplay class="rounded shadow-lg w-100 h-100" style="max-height: 100%; object-fit: contain; background: #000;">
+                        <source src="${url}" type="${mime}">
+                        Su navegador no soporta reproducción directa de video HTML5.
+                    </video>
+                </div>
+                <div class="mt-2 flex-shrink-0 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                    <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
+                        <i class="fa-solid fa-download me-1"></i> Descargar Video
+                    </a>
+                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
+                    </a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
+                            <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>HTML5 Nativo</strong>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                            <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-play me-2"></i>Video.js (Preferente)</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-play me-2"></i>Plyr (Alternativa)</a></li>
+                            <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-solid fa-check me-2"></i>HTML5 Nativo</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         `;
@@ -1519,13 +1525,13 @@ function mostrarArchivoEnVisor(adj, btnEl) {
     if (tipo.includes('pdf') || fileName.match(/\.pdf$/i)) {
         // Visor de PDF embebido
         container.html(`
-            <div class="w-100 h-100 d-flex flex-column" style="height: 540px;">
-                <div class="mb-2 text-end">
+            <div class="w-100 h-100 d-flex flex-column" style="height: 100%;">
+                <div class="mb-2 text-end flex-shrink-0">
                     <a href="${url}" target="_blank" class="btn btn-sm btn-outline-light">
                         <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Nueva Pestaña
                     </a>
                 </div>
-                <iframe src="${url}" class="w-100 flex-grow-1 rounded border-0" style="min-height: 480px;"></iframe>
+                <iframe src="${url}" class="w-100 flex-grow-1 rounded border-0" style="min-height: 380px; height: 100%;"></iframe>
             </div>
         `);
     } else if (tipo.includes('vid') || tipo.includes('mp4') || fileName.match(/\.(mp4|webm|ogg|mov|m4v)$/i)) {
@@ -1539,9 +1545,11 @@ function mostrarArchivoEnVisor(adj, btnEl) {
     } else {
         // Visor de Imágenes con zoom ligero
         container.html(`
-            <div class="w-100 text-center">
-                <img src="${url}" alt="${htmlEncode(fileName)}" class="img-fluid rounded shadow-lg" style="max-height: 520px; object-fit: contain;">
-                <div class="mt-2">
+            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 0; max-height: calc(72vh - 90px);">
+                    <img src="${url}" alt="${htmlEncode(fileName)}" class="img-fluid rounded shadow-lg" style="max-height: 460px; max-width: 100%; object-fit: contain;">
+                </div>
+                <div class="mt-2 flex-shrink-0">
                     <a href="${url}" target="_blank" class="btn btn-sm btn-outline-light">
                         <i class="fa-solid fa-expand me-1"></i> Ver Imagen Completa
                     </a>
