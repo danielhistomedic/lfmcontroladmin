@@ -197,7 +197,99 @@
         color: #1d4ed8;
         border-bottom: 3px solid #1d4ed8;
     }
+    /* Video Player Moderno y Responsive */
+    .video-player-wrapper {
+        width: 100%;
+        max-width: 820px;
+        margin: 0 auto;
+        position: relative;
+        background-color: #0b1120;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+    .video-js {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16 / 9;
+        font-family: 'Inter', system-ui, sans-serif !important;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .video-js .vjs-big-play-button {
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 70px !important;
+        height: 70px !important;
+        line-height: 70px !important;
+        border-radius: 50% !important;
+        background: rgba(37, 99, 235, 0.85) !important;
+        border: 2px solid rgba(255, 255, 255, 0.8) !important;
+        box-shadow: 0 0 20px rgba(37, 99, 235, 0.6) !important;
+        transition: all 0.25s ease !important;
+    }
+    .video-js:hover .vjs-big-play-button {
+        background: rgba(29, 78, 216, 0.95) !important;
+        transform: translate(-50%, -50%) scale(1.1) !important;
+    }
+    .video-js .vjs-control-bar {
+        background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+        height: 48px !important;
+        padding: 0 8px !important;
+    }
+    .video-js .vjs-play-progress {
+        background-color: #3b82f6 !important;
+    }
+    .video-js .vjs-volume-level {
+        background-color: #3b82f6 !important;
+    }
+    /* Plyr custom container */
+    .plyr {
+        border-radius: 12px;
+        overflow: hidden;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+    }
+    /* Video Error and Loading Overlays */
+    .video-error-card {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 12px;
+        padding: 2.5rem 1.5rem;
+        color: #f8fafc;
+        max-width: 600px;
+        margin: 1.5rem auto;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+        text-align: center;
+    }
+    .video-error-icon {
+        font-size: 3.5rem;
+        color: #ef4444;
+        margin-bottom: 1rem;
+        animation: pulseError 2s infinite ease-in-out;
+    }
+    @keyframes pulseError {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.06); opacity: 0.85; }
+    }
+    .video-loading-badge {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        color: #93c5fd;
+        font-size: 0.82rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
 </style>
+
+<!-- Vendor CSS Reproductor de Video -->
+<link rel="stylesheet" href="<?= assets(); ?>/vendor/video-js/video-js.min.css">
+<link rel="stylesheet" href="<?= assets(); ?>/vendor/plyr/plyr.css">
 
 <!-- Header Admin 02 -->
 <?php require_once("Template/header_02.php"); ?>
@@ -977,6 +1069,11 @@
 <?php require_once("Template/footer_01.php"); ?>
 
 <div id="loadModalPermisos"></div>
+
+<!-- Scripts Reproductor Multimedia HTML5 (Video.js + Plyr Fallback) -->
+<script src="<?= assets(); ?>/vendor/video-js/video.min.js"></script>
+<script src="<?= assets(); ?>/vendor/video-js/es.js"></script>
+<script src="<?= assets(); ?>/vendor/plyr/plyr.polyfilled.min.js"></script>
 
 <!-- Footer Admin 02 -->
 <?php require_once("Template/footer_02.php"); ?>

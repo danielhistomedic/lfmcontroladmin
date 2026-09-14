@@ -99,6 +99,18 @@ document.addEventListener("DOMContentLoaded", function () {
     $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
         $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
     });
+
+    // Evento al cerrar modal de evidencias: destruir reproductor de video y limpiar contenedor
+    const modalVisorEl = document.getElementById('modalVisorEvidencias');
+    if (modalVisorEl) {
+        modalVisorEl.addEventListener('hidden.bs.modal', function () {
+            if (typeof VideoPlayerEngine !== 'undefined') {
+                VideoPlayerEngine.destroy();
+            }
+            $('#visorDisplayContainer').empty().html('<span class="text-muted">Seleccione un archivo de la lista para previsualizarlo.</span>');
+            $('#visorFileInfo').empty();
+        });
+    }
 });
 
 /*==================================================================
@@ -950,11 +962,457 @@ function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBas
 }
 
 /*==================================================================
-[ 4. Modal Visor de Evidencias Multimedia (PDF, Imágenes, Video) ]
+[ 4. Motor Modular de Video HTML5: Video.js (Principal) + Plyr ]
+==================================================================*/
+
+const VideoPlayerEngine = {
+    currentEngine: 'videojs', // 'videojs' (preferente) | 'plyr' | 'native'
+    activePlayer: null,
+    watchdogTimer: null,
+    currentOptions: null,
+
+    /**
+     * Permite alternar el motor de reproducción (Video.js, Plyr, HTML5 Nativo)
+     */
+    setEngine: function (engineName) {
+        if (['videojs', 'plyr', 'native'].includes(engineName)) {
+            this.currentEngine = engineName;
+            if (this.currentOptions && this.currentOptions.container) {
+                this.init(this.currentOptions.container, this.currentOptions);
+            }
+        }
+    },
+
+    getEngine: function () {
+        return this.currentEngine;
+    },
+
+    /**
+     * Destruye de forma segura cualquier instancia activa del reproductor
+     * Previene fugas de memoria, audio residual y errores de colisión en el DOM.
+     */
+    destroy: function () {
+        if (this.watchdogTimer) {
+            clearTimeout(this.watchdogTimer);
+            this.watchdogTimer = null;
+        }
+
+        if (this.activePlayer) {
+            try {
+                if (this.currentEngine === 'videojs' && typeof this.activePlayer.dispose === 'function') {
+                    if (!this.activePlayer.isDisposed()) {
+                        this.activePlayer.pause();
+                        this.activePlayer.dispose();
+                    }
+                } else if (this.currentEngine === 'plyr' && typeof this.activePlayer.destroy === 'function') {
+                    this.activePlayer.destroy();
+                } else if (this.activePlayer.pause) {
+                    this.activePlayer.pause();
+                    this.activePlayer.removeAttribute('src');
+                    if (typeof this.activePlayer.load === 'function') {
+                        this.activePlayer.load();
+                    }
+                }
+            } catch (err) {
+                console.warn('[VideoPlayerEngine] Error al destruir reproductor anterior:', err);
+            }
+            this.activePlayer = null;
+        }
+    },
+
+    /**
+     * Inicializa el reproductor sobre el contenedor indicado
+     */
+    init: function (containerSelector, options) {
+        const self = this;
+        self.destroy();
+
+        const $container = $(containerSelector);
+        if (!$container.length) return;
+
+        self.currentOptions = Object.assign({
+            container: containerSelector,
+            url: '',
+            fileName: 'video.mp4',
+            type: 'video',
+            autoplay: true,
+            mimeType: 'video/mp4'
+        }, options || {});
+
+        const url = self.currentOptions.url || '';
+        const fileName = self.currentOptions.fileName || 'video.mp4';
+
+        // Detección automática del tipo MIME según extensión
+        let mime = 'video/mp4';
+        const lowerUrl = url.toLowerCase();
+        const lowerName = fileName.toLowerCase();
+        if (lowerUrl.includes('.webm') || lowerName.endsWith('.webm')) mime = 'video/webm';
+        else if (lowerUrl.includes('.ogg') || lowerName.endsWith('.ogg') || lowerUrl.includes('.ogv')) mime = 'video/ogg';
+        else if (lowerUrl.includes('.mov') || lowerName.endsWith('.mov')) mime = 'video/mp4';
+
+        $container.empty();
+
+        // 1. Alternativa modular: Plyr
+        if (self.currentEngine === 'plyr' && typeof Plyr !== 'undefined') {
+            self.initPlyr($container, url, mime, fileName);
+            return;
+        }
+
+        // 2. Opción preferente: Video.js
+        if (typeof videojs !== 'undefined' && self.currentEngine !== 'native') {
+            self.initVideoJs($container, url, mime, fileName);
+            return;
+        }
+
+        // 3. Respaldo: HTML5 Nativo
+        self.initNative($container, url, mime, fileName);
+    },
+
+    /**
+     * Inicialización moderna basada en Video.js v8+
+     */
+    initVideoJs: function ($container, url, mime, fileName) {
+        const self = this;
+        const playerId = 'visorVideoJsPlayer_' + Date.now();
+
+        const html = `
+            <div class="video-player-wrapper">
+                <video-js id="${playerId}" 
+                          class="video-js vjs-default-skin vjs-big-play-centered vjs-fluid" 
+                          controls 
+                          preload="auto" 
+                          playsinline>
+                    <source src="${url}" type="${mime}">
+                    <p class="vjs-no-js">
+                        Para ver este video, por favor habilite JavaScript y considere actualizar su navegador.
+                    </p>
+                </video-js>
+                <div id="${playerId}_loadingWatchdog" class="video-loading-badge d-none">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>El video está tardando más de lo habitual en responder. Verificando conexión...</span>
+                </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
+                    <i class="fa-solid fa-download me-1"></i> Descargar Video
+                </a>
+                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
+                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
+                </a>
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
+                        <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>Video.js</strong>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                        <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
+                        <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-check me-2"></i>Video.js (Preferente)</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-play me-2"></i>Plyr (Alternativa)</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-brands fa-html5 me-2"></i>HTML5 Nativo</a></li>
+                    </ul>
+                </div>
+            </div>
+        `;
+
+        $container.html(html);
+
+        try {
+            const player = videojs(playerId, {
+                controls: true,
+                autoplay: self.currentOptions.autoplay !== false,
+                preload: 'auto',
+                fluid: true,
+                responsive: true,
+                language: 'es',
+                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                controlBar: {
+                    children: [
+                        'playToggle',
+                        'volumePanel',
+                        'currentTimeDisplay',
+                        'timeDivider',
+                        'durationDisplay',
+                        'progressControl',
+                        'playbackRateMenuButton',
+                        'fullscreenToggle'
+                    ]
+                }
+            });
+
+            self.activePlayer = player;
+
+            // Watchdog para detectar demoras de red (10s)
+            self.watchdogTimer = setTimeout(function () {
+                const badge = document.getElementById(`${playerId}_loadingWatchdog`);
+                if (badge && !player.hasStarted() && !player.error()) {
+                    $(badge).removeClass('d-none');
+                }
+            }, 10000);
+
+            player.on('canplay', function () {
+                if (self.watchdogTimer) clearTimeout(self.watchdogTimer);
+                $(`#${playerId}_loadingWatchdog`).addClass('d-none');
+            });
+
+            player.on('playing', function () {
+                if (self.watchdogTimer) clearTimeout(self.watchdogTimer);
+                $(`#${playerId}_loadingWatchdog`).addClass('d-none');
+            });
+
+            // Manejador centralizado de errores de reproducción
+            player.on('error', function () {
+                if (self.watchdogTimer) clearTimeout(self.watchdogTimer);
+                const mediaErr = player.error();
+                let errorTitle = 'No se pudo reproducir el video';
+                let errorMsg = 'Ocurrió un error inesperado al cargar o procesar el archivo de video.';
+                let errorCode = mediaErr ? mediaErr.code : 0;
+
+                if (errorCode === 1) { // MEDIA_ERR_ABORTED
+                    errorTitle = 'Reproducción Cancelada';
+                    errorMsg = 'La reproducción del video fue cancelada por el usuario o por el navegador.';
+                } else if (errorCode === 2) { // MEDIA_ERR_NETWORK
+                    errorTitle = 'Error de Conexión / Red';
+                    errorMsg = 'No fue posible descargar el archivo de video. Verifique su conexión de red o la disponibilidad del servidor.';
+                } else if (errorCode === 3) { // MEDIA_ERR_DECODE
+                    errorTitle = 'Archivo Dañado o Códec No Compatible';
+                    errorMsg = 'El archivo de video parece estar incompleto o codificado en un formato incompatible con este navegador.';
+                } else if (errorCode === 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
+                    errorTitle = 'Video No Encontrado o Formato No Soportado';
+                    errorMsg = 'El archivo no fue encontrado en la ruta indicada (Error 404) o el formato no es admitido por el motor de reproducción.';
+                }
+
+                self.renderErrorCard($container, errorTitle, errorMsg, url, fileName, errorCode);
+            });
+
+        } catch (e) {
+            console.error('[VideoPlayerEngine] Error al inicializar Video.js:', e);
+            self.renderErrorCard($container, 'Error de Inicialización', 'No fue posible inicializar Video.js en este navegador.', url, fileName, 0);
+        }
+    },
+
+    /**
+     * Inicialización alternativa modular basada en Plyr
+     */
+    initPlyr: function ($container, url, mime, fileName) {
+        const self = this;
+        const videoElId = 'visorPlyrVideo_' + Date.now();
+
+        const html = `
+            <div class="video-player-wrapper">
+                <video id="${videoElId}" playsinline controls class="w-100">
+                    <source src="${url}" type="${mime}">
+                    <p>Su navegador no soporta reproducción directa de video HTML5.</p>
+                </video>
+                <div id="${videoElId}_loadingWatchdog" class="video-loading-badge d-none">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>El video está tardando más de lo habitual en responder. Verificando conexión...</span>
+                </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
+                    <i class="fa-solid fa-download me-1"></i> Descargar Video
+                </a>
+                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
+                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
+                </a>
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
+                        <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>Plyr</strong>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                        <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
+                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-play me-2"></i>Video.js (Preferente)</a></li>
+                        <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-check me-2"></i>Plyr (Alternativa)</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-brands fa-html5 me-2"></i>HTML5 Nativo</a></li>
+                    </ul>
+                </div>
+            </div>
+        `;
+
+        $container.html(html);
+
+        try {
+            const plyrInstance = new Plyr(`#${videoElId}`, {
+                autoplay: self.currentOptions.autoplay !== false,
+                controls: [
+                    'play-large',
+                    'play',
+                    'progress',
+                    'current-time',
+                    'duration',
+                    'mute',
+                    'volume',
+                    'settings',
+                    'pip',
+                    'airplay',
+                    'fullscreen'
+                ],
+                i18n: {
+                    restart: 'Reiniciar',
+                    rewind: 'Retroceder {seektime}s',
+                    play: 'Reproducir',
+                    pause: 'Pausar',
+                    fastForward: 'Adelantar {seektime}s',
+                    seek: 'Buscar',
+                    seekLabel: '{currentTime} de {duration}',
+                    played: 'Reproducido',
+                    buffered: 'Cargado',
+                    currentTime: 'Tiempo actual',
+                    duration: 'Duración',
+                    volume: 'Volumen',
+                    mute: 'Silenciar',
+                    unmute: 'Activar sonido',
+                    enableCaptions: 'Activar subtítulos',
+                    disableCaptions: 'Desactivar subtítulos',
+                    download: 'Descargar',
+                    enterFullscreen: 'Pantalla completa',
+                    exitFullscreen: 'Salir de pantalla completa',
+                    frameTitle: 'Reproductor para {title}',
+                    captions: 'Subtítulos',
+                    settings: 'Ajustes',
+                    speed: 'Velocidad',
+                    normal: 'Normal',
+                    quality: 'Calidad',
+                    loop: 'Repetir'
+                }
+            });
+
+            self.activePlayer = plyrInstance;
+
+            const videoElem = document.getElementById(videoElId);
+            if (videoElem) {
+                videoElem.addEventListener('error', function () {
+                    const mediaErr = videoElem.error;
+                    let errorTitle = 'No se pudo reproducir el video';
+                    let errorMsg = 'Ocurrió un error inesperado al cargar el video en Plyr.';
+                    let code = mediaErr ? mediaErr.code : 0;
+                    if (code === 2) {
+                        errorTitle = 'Error de Red / Conexión';
+                        errorMsg = 'No fue posible descargar el video desde el servidor.';
+                    } else if (code === 3) {
+                        errorTitle = 'Archivo Dañado / No Decodificable';
+                        errorMsg = 'El archivo de video está dañado o su codec no es compatible.';
+                    } else if (code === 4) {
+                        errorTitle = 'Video No Encontrado o Formato Incompatible';
+                        errorMsg = 'El archivo no existe en el servidor (404) o el formato no es compatible.';
+                    }
+                    self.renderErrorCard($container, errorTitle, errorMsg, url, fileName, code);
+                });
+            }
+        } catch (e) {
+            console.error('[VideoPlayerEngine] Error en Plyr:', e);
+            self.renderErrorCard($container, 'Fallo de Inicialización Plyr', 'No fue posible iniciar el reproductor Plyr.', url, fileName, 0);
+        }
+    },
+
+    /**
+     * Respaldo HTML5 estándar
+     */
+    initNative: function ($container, url, mime, fileName) {
+        const self = this;
+        const nativeId = 'visorNativeVideo_' + Date.now();
+        const html = `
+            <div class="video-player-wrapper text-center p-2">
+                <video id="${nativeId}" controls autoplay class="rounded shadow-lg w-100" style="max-height: 520px; aspect-ratio: 16/9; background: #000;">
+                    <source src="${url}" type="${mime}">
+                    Su navegador no soporta reproducción directa de video HTML5.
+                </video>
+            </div>
+            <div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-sm btn-outline-light">
+                    <i class="fa-solid fa-download me-1"></i> Descargar Video
+                </a>
+                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info">
+                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir en Pestaña
+                </a>
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Motor del reproductor">
+                        <i class="fa-solid fa-sliders me-1"></i> Motor: <strong>HTML5 Nativo</strong>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                        <li><h6 class="dropdown-header">Alternar Motor de Reproducción</h6></li>
+                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')"><i class="fa-solid fa-play me-2"></i>Video.js (Preferente)</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')"><i class="fa-solid fa-play me-2"></i>Plyr (Alternativa)</a></li>
+                        <li><a class="dropdown-item active" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')"><i class="fa-solid fa-check me-2"></i>HTML5 Nativo</a></li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        $container.html(html);
+
+        const videoElem = document.getElementById(nativeId);
+        self.activePlayer = videoElem;
+        if (videoElem) {
+            videoElem.addEventListener('error', function () {
+                const mediaErr = videoElem.error;
+                let errorTitle = 'No se pudo reproducir el video';
+                let errorMsg = 'Ocurrió un error al cargar el video nativo.';
+                let code = mediaErr ? mediaErr.code : 0;
+                if (code === 4) {
+                    errorTitle = 'Video No Encontrado o No Compatible';
+                    errorMsg = 'El archivo no existe (404) o el formato no es compatible.';
+                }
+                self.renderErrorCard($container, errorTitle, errorMsg, url, fileName, code);
+            });
+        }
+    },
+
+    /**
+     * Renderiza tarjeta amigable e interactiva cuando ocurre un error de reproducción
+     */
+    renderErrorCard: function ($container, title, message, url, fileName, code) {
+        const self = this;
+        self.destroy();
+
+        const cardHtml = `
+            <div class="video-error-card">
+                <div class="video-error-icon">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h4 class="fw-bold mb-2 text-white">${htmlEncode(title)}</h4>
+                <p class="text-white-50 mb-3" style="font-size: 0.92rem; line-height: 1.5;">
+                    ${htmlEncode(message)}
+                </p>
+                <div class="p-3 mb-3 rounded bg-black bg-opacity-50 border border-secondary border-opacity-50 text-start" style="font-size: 0.8rem;">
+                    <div class="mb-1"><strong class="text-secondary">Archivo:</strong> <span class="text-light">${htmlEncode(fileName)}</span></div>
+                    <div class="text-truncate mb-1"><strong class="text-secondary">Ruta / URL:</strong> <span class="text-light">${htmlEncode(url)}</span></div>
+                    ${code ? `<div><strong class="text-secondary">Código HTML5:</strong> <span class="badge bg-danger text-uppercase">Error de Reproducción ${code}</span></div>` : ''}
+                </div>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary btn-sm px-3" onclick="VideoPlayerEngine.init('${self.currentOptions ? self.currentOptions.container : '#visorDisplayContainer'}', ${JSON.stringify(self.currentOptions || {}).replace(/"/g, '&quot;')})">
+                        <i class="fa-solid fa-rotate-right me-1"></i> Reintentar Carga
+                    </button>
+                    <a href="${url}" target="_blank" download="${htmlEncode(fileName)}" class="btn btn-outline-light btn-sm px-3">
+                        <i class="fa-solid fa-download me-1"></i> Descargar Archivo
+                    </a>
+                    <a href="${url}" target="_blank" class="btn btn-outline-info btn-sm px-3">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Abrir Enlace
+                    </a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-sliders me-1"></i> Probar otro motor
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                            <li><a class="dropdown-item ${self.currentEngine === 'videojs' ? 'active' : ''}" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('videojs')">Video.js</a></li>
+                            <li><a class="dropdown-item ${self.currentEngine === 'plyr' ? 'active' : ''}" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('plyr')">Plyr</a></li>
+                            <li><a class="dropdown-item ${self.currentEngine === 'native' ? 'active' : ''}" href="javascript:void(0);" onclick="VideoPlayerEngine.setEngine('native')">HTML5 Nativo</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+        $container.html(cardHtml);
+    }
+};
+
+/*==================================================================
+[ 4.1 Modal Visor de Evidencias Multimedia (PDF, Imágenes, Video) ]
 ==================================================================*/
 
 function abrirModalEvidencias(paseId, activeIndex = 0) {
     if (!paseId) return;
+
+    // Asegurar limpieza de reproductor previo
+    VideoPlayerEngine.destroy();
 
     $.ajax({
         url: base_url + '/almacen/getAdjuntosPase',
@@ -1003,6 +1461,9 @@ function abrirModalEvidencias(paseId, activeIndex = 0) {
 }
 
 function mostrarArchivoEnVisor(adj, btnEl) {
+    // 1. Destruir cualquier reproductor de video previo inmediatamente
+    VideoPlayerEngine.destroy();
+
     if (btnEl) {
         $('#visorListaArchivos .list-group-item').removeClass('active');
         $(btnEl).addClass('active');
@@ -1023,7 +1484,7 @@ function mostrarArchivoEnVisor(adj, btnEl) {
 
     infoEl.html(`<strong>Archivo:</strong> ${htmlEncode(fileName)} | <strong>Tipo:</strong> ${tipo.toUpperCase()}`);
 
-    if (tipo.includes('pdf')) {
+    if (tipo.includes('pdf') || fileName.match(/\.pdf$/i)) {
         // Visor de PDF embebido
         container.html(`
             <div class="w-100 h-100 d-flex flex-column" style="height: 540px;">
@@ -1035,21 +1496,14 @@ function mostrarArchivoEnVisor(adj, btnEl) {
                 <iframe src="${url}" class="w-100 flex-grow-1 rounded border-0" style="min-height: 480px;"></iframe>
             </div>
         `);
-    } else if (tipo.includes('vid') || tipo.includes('mp4')) {
-        // Reproductor de Video HTML5
-        container.html(`
-            <div class="w-100 text-center">
-                <video controls autoplay class="rounded shadow-lg" style="max-height: 520px; max-width: 100%;">
-                    <source src="${url}" type="video/mp4">
-                    Su navegador no soporta reproducción directa de video HTML5.
-                </video>
-                <div class="mt-2">
-                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline-light">
-                        <i class="fa-solid fa-download me-1"></i> Descargar Video
-                    </a>
-                </div>
-            </div>
-        `);
+    } else if (tipo.includes('vid') || tipo.includes('mp4') || fileName.match(/\.(mp4|webm|ogg|mov|m4v)$/i)) {
+        // Reproductor de Video HTML5 con VideoPlayerEngine (Video.js preferente / Plyr)
+        VideoPlayerEngine.init('#visorDisplayContainer', {
+            url: url,
+            fileName: fileName,
+            type: tipo,
+            autoplay: true
+        });
     } else {
         // Visor de Imágenes con zoom ligero
         container.html(`

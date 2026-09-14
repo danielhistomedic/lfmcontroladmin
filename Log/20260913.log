@@ -4,3 +4,5 @@
 [2026-09-13T15:49:32.428214-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 261, codigo: 0 [] []
 [2026-09-13T15:49:32.428840-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 261, codigo: 0 [] []
 [2026-09-13T15:49:32.429328-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 261, codigo: 0 [] []
+[2026-09-13T17:45:51.494831-06:00] lfmcontrol.WARNING: Usuario o Password No Válido [] []
+[2026-09-13T17:50:40.748906-06:00] lfmcontrol.WARNING: Usuario o Password No Válido [] []
