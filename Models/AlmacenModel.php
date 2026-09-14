@@ -667,6 +667,8 @@ class AlmacenModel extends Mysql
                         IFNULL(p.sinc, 0) AS sinc,
                         IFNULL(p.observaciones, '') AS observaciones,
                         IFNULL(p.ccveusuario, '') AS ccveusuario,
+                        IFNULL(NULLIF(TRIM(CONCAT_WS(' ', u_reg.cnombre, u_reg.cpriapellido, u_reg.csegapellido)), ''), p.ccveusuario) AS nombre_usuario_registro,
+                        IFNULL(NULLIF(TRIM(CONCAT_WS(' ', u_rec.cnombre, u_rec.cpriapellido, u_rec.csegapellido)), ''), p.nombre_recibio_salida) AS nombre_usuario_recibe,
                         p.fchregistro,
                         p.fchregistroactualiza,
                         p.ccveusuariocancela,
@@ -689,11 +691,18 @@ class AlmacenModel extends Mysql
                     LEFT JOIN cat_clientes c ON c.id = v.cliente_id
                     LEFT JOIN cat_medico vd ON vd.ccvemedico = v.ccveusuario_vendedor
                     LEFT JOIN cat_almacen ca ON ca.ccvealmacen = p.ccvealmacen
+                    LEFT JOIN cat_medico u_reg ON u_reg.ccvemedico = p.ccveusuario
+                    LEFT JOIN cat_medico u_rec ON u_rec.ccvemedico = p.ccveusuario_recibe
                     WHERE p.id = :id";
             $arrResponse = $this->selectModel($sql, [':id' => $id]);
             return is_array($arrResponse) ? $arrResponse : [];
         } catch (\Throwable $th) {
-            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel"));
+                }
+            }
             return [];
         }
     }
@@ -1232,18 +1241,28 @@ class AlmacenModel extends Mysql
     {
         try {
             $sql = "SELECT 
-                        u.id, 
-                        u.usuario, 
-                        u.ccveusuario,
-                        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', dg.nombre, dg.paterno, dg.materno)), ''), u.usuario) as nombre_completo
-                    FROM ssf_usuarios u
-                    LEFT JOIN ssf_usuarios_datos_generales dg ON dg.usuario_id = u.id
-                    WHERE u.activo = 1
+                        m.icvemedico AS id,
+                        m.ccvemedico,
+                        m.ccvemedico AS ccveusuario,
+                        COALESCE(NULLIF(TRIM(m.user), ''), NULLIF(TRIM(u.usuario), ''), m.ccvemedico) AS usuario,
+                        COALESCE(NULLIF(TRIM(m.email), ''), u.usuario, '') AS email,
+                        TRIM(CONCAT_WS(' ', m.cnombre, m.cpriapellido, m.csegapellido)) AS nombre_completo,
+                        m.cdsctipousuario,
+                        m.cdscareaafectada,
+                        m.cCargo
+                    FROM cat_medico m
+                    LEFT JOIN ssf_usuarios u ON (u.usuario_local = m.user OR u.usuario = m.email)
+                    WHERE m.iActivo = 1
                     ORDER BY nombre_completo ASC";
             $arrResponse = $this->select($sql, []);
             return is_array($arrResponse) ? $arrResponse : [];
         } catch (\Throwable $th) {
-            getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel"));
+                }
+            }
             return [];
         }
     }

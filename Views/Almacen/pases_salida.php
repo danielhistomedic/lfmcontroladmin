@@ -1033,25 +1033,40 @@
                         </div>
                     </div>
 
-                    <!-- Captura de Usuario / Persona que Recibe con Select2 -->
+                    <!-- Captura de Usuario / Persona que Recibe -->
                     <div class="mb-3">
                         <label for="selectUsuarioRecibe" class="form-label fw-bold text-dark">
                             <i class="fa-solid fa-user-check text-success me-1"></i> Usuario / Persona que Recibe Física y Formalmente: <span class="text-danger">*</span>
                         </label>
-                        <select id="selectUsuarioRecibe" class="form-select select2" style="width: 100%;" required>
-                            <option value="">-- Seleccionar o escribir usuario que recibe --</option>
+                        <select id="selectUsuarioRecibe" class="form-select form-select-md shadow-sm" style="width: 100%; font-size: 0.95rem;" required>
+                            <option value="">-- Seleccionar usuario del sistema que recibe --</option>
+                            <option value="__OTRO__">✍️ [OTRO] Escribir nombre de receptor externo / cliente...</option>
                             <?php if (!empty($data['usuarios_sistema'])): ?>
                                 <?php foreach ($data['usuarios_sistema'] as $usr): ?>
-                                    <option value="<?= htmlspecialchars($usr['usuario']); ?>"
-                                            data-nombre="<?= htmlspecialchars($usr['nombre_completo']); ?>"
-                                            data-clave="<?= htmlspecialchars($usr['ccveusuario']); ?>">
-                                        <?= htmlspecialchars($usr['nombre_completo']); ?> (<?= htmlspecialchars($usr['usuario']); ?>)
+                                    <option value="<?= htmlspecialchars($usr['ccvemedico'] ?? $usr['ccveusuario']); ?>"
+                                            data-clave="<?= htmlspecialchars($usr['ccvemedico'] ?? $usr['ccveusuario']); ?>"
+                                            data-usuario="<?= htmlspecialchars($usr['usuario'] ?? ''); ?>"
+                                            data-nombre="<?= htmlspecialchars($usr['nombre_completo'] ?? ''); ?>"
+                                            data-email="<?= htmlspecialchars($usr['email'] ?? ''); ?>">
+                                        <?= htmlspecialchars($usr['nombre_completo']); ?> (<?= htmlspecialchars($usr['usuario'] ?? $usr['ccvemedico']); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </select>
-                        <small class="text-muted">
-                            <i class="fa-solid fa-circle-info me-1"></i> Seleccione un usuario de la lista o escriba el nombre/cargo del receptor.
+
+                        <!-- Entrada para especificar receptor externo cuando se elija [OTRO] -->
+                        <div id="containerNombreRecibeOtro" class="mt-2" style="display: none;">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-primary border-end-0">
+                                    <i class="fa-solid fa-user-pen"></i>
+                                </span>
+                                <input type="text" id="inputNombreRecibeOtro" class="form-control border-start-0" placeholder="Escriba el nombre completo y/o cargo del receptor externo...">
+                            </div>
+                            <small class="text-muted fst-italic">Ingrese el nombre completo del receptor que firmará de conformidad.</small>
+                        </div>
+
+                        <small class="text-muted d-block mt-1">
+                            <i class="fa-solid fa-circle-info me-1"></i> Seleccione un usuario de la lista o elija "[OTRO]" para escribir un nombre externo.
                         </small>
                     </div>
 

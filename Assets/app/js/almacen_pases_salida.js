@@ -767,32 +767,63 @@ function abrirModalEntrega(paseId) {
             $('#modal_entrega_proyecto').text(h.proyecto_titulo || 'Sin proyecto');
             $('#modal_entrega_motivo').text(h.calidad_salida || '-');
             $('#modal_entrega_fecha').text(h.fecha || '-');
-            // Inicializar Select2 si no se ha hecho
-            initSelect2UsuarioRecibe();
+            // Inicializar selector de usuario receptor
+            initSelectUsuarioRecibe();
 
-            // Pre-seleccionar usuario que recibe en Select2
-            const prevUser = (h.ccveusuario_recibe || '').trim();
-            const prevNombre = (h.nombre_recibio_salida || '').trim();
+            // Pre-seleccionar usuario que recibe:
+            // 1. Si el pase ya tiene registrado un receptor (h.ccveusuario_recibe o h.nombre_recibio_salida), usarlo
+            // 2. Si no, precargar el usuario registrado en la base de datos para el pase (h.ccveusuario / h.nombre_usuario_registro)
+            const savedClaveRecibe = (h.ccveusuario_recibe || '').trim();
+            const savedNombreRecibe = (h.nombre_recibio_salida || '').trim();
+            const savedClaveReg = (h.ccveusuario || '').trim();
+            const savedNombreReg = (h.nombre_usuario_registro || '').trim();
 
-            if (prevUser && $("#selectUsuarioRecibe option[value='" + prevUser + "']").length > 0) {
-                $('#selectUsuarioRecibe').val(prevUser).trigger('change');
-            } else if (prevNombre) {
-                let foundVal = '';
+            const targetClave = savedClaveRecibe || savedClaveReg;
+            const targetNombre = savedNombreRecibe || savedNombreReg;
+
+            let matchedVal = '';
+
+            if (targetClave) {
+                if ($("#selectUsuarioRecibe option[value='" + targetClave + "']").length > 0) {
+                    matchedVal = targetClave;
+                } else {
+                    $('#selectUsuarioRecibe option').each(function () {
+                        const cClave = ($(this).data('clave') || '').toString().trim();
+                        const cUser = ($(this).data('usuario') || '').toString().trim();
+                        if ((cClave && cClave === targetClave) || (cUser && cUser.toLowerCase() === targetClave.toLowerCase())) {
+                            matchedVal = $(this).val();
+                            return false;
+                        }
+                    });
+                }
+            }
+
+            if (!matchedVal && targetNombre) {
+                const searchNombre = targetNombre.toLowerCase();
                 $('#selectUsuarioRecibe option').each(function () {
-                    if ($(this).data('nombre') === prevNombre || $(this).text().indexOf(prevNombre) !== -1) {
-                        foundVal = $(this).val();
+                    const cNombre = ($(this).data('nombre') || '').toString().toLowerCase().trim();
+                    const cText = $(this).text().toLowerCase();
+                    if ((cNombre && cNombre === searchNombre) || cText.indexOf(searchNombre) !== -1) {
+                        matchedVal = $(this).val();
                         return false;
                     }
                 });
+            }
 
-                if (foundVal) {
-                    $('#selectUsuarioRecibe').val(foundVal).trigger('change');
-                } else {
-                    const newOpt = new Option(prevNombre, prevNombre, true, true);
-                    $('#selectUsuarioRecibe').append(newOpt).trigger('change');
-                }
+            if (matchedVal) {
+                $('#selectUsuarioRecibe').val(matchedVal).trigger('change');
+                $('#containerNombreRecibeOtro').hide();
+                $('#inputNombreRecibeOtro').val('');
+            } else if (targetNombre || targetClave) {
+                // Es un receptor externo o libre guardado previamente
+                const customText = targetNombre || targetClave;
+                $('#selectUsuarioRecibe').val('__OTRO__').trigger('change');
+                $('#containerNombreRecibeOtro').show();
+                $('#inputNombreRecibeOtro').val(customText);
             } else {
                 $('#selectUsuarioRecibe').val('').trigger('change');
+                $('#containerNombreRecibeOtro').hide();
+                $('#inputNombreRecibeOtro').val('');
             }
 
             // Partidas
@@ -821,9 +852,9 @@ function abrirModalEntrega(paseId) {
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
 
-            // Reajustar canvas y Select2 al mostrar modal
+            // Reajustar canvas y selector al mostrar modal
             $(modalEl).one('shown.bs.modal', function () {
-                initSelect2UsuarioRecibe();
+                initSelectUsuarioRecibe();
                 ajustarDimensionesCanvas();
                 limpiarCanvasFirma();
             });
@@ -831,30 +862,82 @@ function abrirModalEntrega(paseId) {
     });
 }
 
-function initSelect2UsuarioRecibe() {
-    if ($.fn.select2) {
-        if ($('#selectUsuarioRecibe').hasClass("select2-hidden-accessible")) {
-            return;
+function isMobileOrTouch() {
+    return window.matchMedia('(max-width: 767px)').matches || 
+           ('ontouchstart' in window) || 
+           (navigator.maxTouchPoints > 0 && window.innerWidth < 992);
+}
+
+function initSelectUsuarioRecibe() {
+    const selectEl = $('#selectUsuarioRecibe');
+
+    // Manejador del cambio para mostrar u ocultar la caja de texto de receptor externo
+    selectEl.off('change.receptorOtro').on('change.receptorOtro', function () {
+        if ($(this).val() === '__OTRO__') {
+            $('#containerNombreRecibeOtro').slideDown(150);
+            setTimeout(function () {
+                $('#inputNombreRecibeOtro').focus();
+            }, 180);
+        } else {
+            $('#containerNombreRecibeOtro').slideUp(150);
         }
-        $('#selectUsuarioRecibe').select2({
-            dropdownParent: $('#modalRegistrarEntrega'),
-            placeholder: '-- Seleccionar o escribir usuario que recibe --',
-            allowClear: true,
-            tags: true,
-            width: '100%'
-        });
+    });
+
+    if (isMobileOrTouch()) {
+        // En teléfonos y pantallas táctiles utilizamos el selector nativo del sistema operativo:
+        // Evita bloqueos de teclado virtual, problemas de foco en Bootstrap modal y permite selección 100% fluida
+        if (selectEl.hasClass("select2-hidden-accessible")) {
+            selectEl.select2('destroy');
+        }
+    } else {
+        // En desktop podemos usar Select2 para búsqueda rápida
+        if ($.fn.select2) {
+            if (!selectEl.hasClass("select2-hidden-accessible")) {
+                selectEl.select2({
+                    dropdownParent: $('#modalRegistrarEntrega'),
+                    placeholder: '-- Seleccionar usuario del sistema que recibe --',
+                    allowClear: true,
+                    width: '100%'
+                });
+            }
+        }
     }
 }
+
+// Prevenir que Bootstrap 5 modal robe el foco al escribir en el buscador de Select2 en desktop
+$(document).on('focusin.bs.modal', function (e) {
+    if ($(e.target).closest('.select2-container, .select2-dropdown, .select2-search__field').length) {
+        e.stopImmediatePropagation();
+    }
+});
 
 function guardarEntregaPase() {
     const paseId = $('#modal_entrega_pase_id').val();
     const selectEl = $('#selectUsuarioRecibe');
-    const usuarioVal = (selectEl.val() || '').trim();
+    const selectedVal = (selectEl.val() || '').trim();
     const selectedOpt = selectEl.find('option:selected');
     
-    let nombrePersona = selectedOpt.data('nombre') || '';
-    if (!nombrePersona) {
-        nombrePersona = usuarioVal;
+    let usuarioVal = '';
+    let nombrePersona = '';
+
+    if (selectedVal === '__OTRO__') {
+        const customName = ($('#inputNombreRecibeOtro').val() || '').trim();
+        if (!customName) {
+            mensajeAlertaModal({
+                icon: 'info',
+                title: iconMensajeInfo + ' ¡Nombre Requerido!',
+                text: 'Por favor escriba el nombre completo y/o cargo del receptor externo.',
+                textButton: 'Aceptar',
+                timer: 3500
+            });
+            $('#inputNombreRecibeOtro').focus();
+            return;
+        }
+        usuarioVal = customName;
+        nombrePersona = customName;
+    } else if (selectedVal) {
+        usuarioVal = selectedOpt.data('clave') || selectedVal;
+        nombrePersona = selectedOpt.data('nombre') || selectedOpt.text().trim();
     }
 
     if (!paseId) {
@@ -876,8 +959,10 @@ function guardarEntregaPase() {
             textButton: 'Aceptar',
             timer: 3500
         });
-        if ($.fn.select2) {
+        if (!isMobileOrTouch() && $.fn.select2 && selectEl.hasClass('select2-hidden-accessible')) {
             selectEl.select2('open');
+        } else {
+            selectEl.focus();
         }
         return;
     }
