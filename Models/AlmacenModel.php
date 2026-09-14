@@ -529,6 +529,7 @@ class AlmacenModel extends Mysql
                         IFNULL(p.ccveusuario_recibe, '') AS ccveusuario_recibe,
                         p.fch_usuario_recibe,
                         p.enviado,
+                        IFNULL(p.sinc, 0) AS sinc,
                         IFNULL(p.observaciones, '') AS observaciones,
                         IFNULL(p.ccveusuario, '') AS ccveusuario,
                         p.fchregistro,
@@ -663,6 +664,7 @@ class AlmacenModel extends Mysql
                         IFNULL(p.ccveusuario_recibe, '') AS ccveusuario_recibe,
                         p.fch_usuario_recibe,
                         p.enviado,
+                        IFNULL(p.sinc, 0) AS sinc,
                         IFNULL(p.observaciones, '') AS observaciones,
                         IFNULL(p.ccveusuario, '') AS ccveusuario,
                         p.fchregistro,
@@ -778,6 +780,7 @@ class AlmacenModel extends Mysql
                             ccveusuario_recibe = :usuario_recibe,
                             fch_usuario_recibe = NOW(),
                             enviado = 1,
+                            sinc = 1,
                             fchregistroactualiza = NOW()
                         WHERE id = :pase_id AND fchregistrocancela IS NULL";
             $resPase = $this->update($sqlPase, [

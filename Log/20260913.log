@@ -6,3 +6,7 @@
 [2026-09-13T15:49:32.429328-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 261, codigo: 0 [] []
 [2026-09-13T17:45:51.494831-06:00] lfmcontrol.WARNING: Usuario o Password No Válido [] []
 [2026-09-13T17:50:40.748906-06:00] lfmcontrol.WARNING: Usuario o Password No Válido [] []
+[2026-09-13T19:50:30.484729-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Conexion.php, linea: 18, codigo: 2002 [] []
+[2026-09-13T19:50:30.607317-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 125, codigo: 0 [] []
+[2026-09-13T19:51:11.590073-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Conexion.php, linea: 18, codigo: 2002 [] []
+[2026-09-13T19:51:11.591351-06:00] lfmcontrol.ERROR: mensaje: Call to a member function prepare() on null, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 125, codigo: 0 [] []
