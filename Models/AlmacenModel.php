@@ -1266,6 +1266,531 @@ class AlmacenModel extends Mysql
             return [];
         }
     }
+
+    // ==================================================================
+    // [ MÓDULO: REPORTE DE NOTAS DE SALIDA ]
+    // ==================================================================
+
+    /**
+     * Obtiene el listado de Notas de Salida que afectan inventarios (tb_notasalida)
+     * con cálculo de estatus (contabilizada, en proceso, cancelada), datos de firma y partidas.
+     * 
+     * @param array $filtros
+     * @return array
+     */
+    public function getNotasSalidaData(array $filtros = []): array
+    {
+        try {
+            $sql = "SELECT 
+                        n.icvenotasalida AS id,
+                        n.cNumNota AS folio,
+                        n.fchNota AS fecha,
+                        n.fchregistro,
+                        n.cTipoNota AS tipo_nota,
+                        IFNULL(n.cNumDocumentoSalida, '') AS num_documento_salida,
+                        n.ccvealmacen,
+                        IFNULL(alm_orig.cdscalmacen, n.ccvealmacen) AS almacen_origen,
+                        n.ccvealmacenDestino,
+                        IFNULL(alm_dest.cdscalmacen, n.ccvealmacenDestino) AS almacen_destino,
+                        IFNULL(n.cdscareaafectada_Destino, '') AS area_afectada,
+                        IFNULL(n.cliente_id, 0) AS cliente_id,
+                        IFNULL(c.nombre_comercial, IFNULL(c.razon_social, 'PÚBLICO GENERAL')) AS nombre_cliente,
+                        IFNULL(n.venta_id, 0) AS venta_id,
+                        IFNULL(v.proyecto_id, '') AS proyecto_id,
+                        IFNULL(v.titulo, '') AS proyecto_titulo,
+                        IFNULL(v.cliente_final, '') AS cliente_final,
+                        IFNULL(n.pedido_cliente_id, 0) AS pedido_cliente_id,
+                        IFNULL(n.icvetipodoctoalmacen, 0) AS icvetipodoctoalmacen,
+                        IFNULL(tda.cdsctipodoctoalmacen, 'ORDEN DE COMPRA DE CLIENTE') AS tipo_docto_almacen,
+                        IFNULL(n.icvetipomovimiento, 0) AS icvetipomovimiento,
+                        IFNULL(tm.cdsctipomovimiento, 'SALIDA') AS tipo_movimiento,
+                        IFNULL(n.iContabilizada, 0) AS iContabilizada,
+                        n.fchContabiliza,
+                        IFNULL(n.ccveusuariocontabiliza, '') AS ccveusuariocontabiliza,
+                        IFNULL(n.iCancelada, 0) AS iCancelada,
+                        n.fchregistrocancela,
+                        IFNULL(n.ccveusuariocancela, '') AS ccveusuariocancela,
+                        IFNULL(n.cMotivoCancela, '') AS motivo_cancela,
+                        CASE 
+                            WHEN (n.iCancelada = 1 OR n.fchregistrocancela IS NOT NULL) THEN 'CANCELADA'
+                            WHEN (n.iContabilizada = 1 AND (n.iCancelada = 0 OR n.iCancelada IS NULL)) THEN 'CONTABILIZADA'
+                            WHEN ((n.iContabilizada = 0 OR n.iContabilizada IS NULL) AND (n.iCancelada = 0 OR n.iCancelada IS NULL)) THEN 'EN PROCESO'
+                            ELSE 'EN PROCESO'
+                        END AS estatus,
+                        IFNULL(n.iFirmaRecibe, 0) AS iFirmaRecibe,
+                        CASE 
+                            WHEN (n.firma_recibe IS NOT NULL AND TRIM(n.firma_recibe) != '') OR n.iFirmaRecibe = 1 THEN 1 
+                            ELSE 0 
+                        END AS tiene_firma,
+                        n.fch_usuario_recibe,
+                        COALESCE(NULLIF(TRIM(n.cRecibeNotaExterna), ''), NULLIF(TRIM(n.cNombreRecibe), ''), '') AS persona_recibe,
+                        IFNULL(n.ccveusuarioRecibe, '') AS ccveusuarioRecibe,
+                        IFNULL(TRIM(CONCAT_WS(' ', u_rec.cnombre, u_rec.cpriapellido, u_rec.csegapellido)), '') AS usuario_recibe_nombre,
+                        IFNULL(n.cNombreSolicita, '') AS nombre_solicita,
+                        IFNULL(n.ccveusuarioEntrega, '') AS ccveusuarioEntrega,
+                        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u_ent.cnombre, u_ent.cpriapellido, u_ent.csegapellido)), ''), NULLIF(TRIM(n.cEntregaNotaExterna), ''), '') AS usuario_entrega_nombre,
+                        IFNULL(n.cObservaciones, '') AS observaciones,
+                        GREATEST(0, DATEDIFF(CURRENT_DATE, n.fchNota)) AS dias_transcurridos,
+                        (SELECT COUNT(*) FROM tb_notasalida_detalle d WHERE d.cNumNotaSalida = n.cNumNota) AS total_partidas,
+                        (SELECT IFNULL(SUM(d.iCantidad), 0) FROM tb_notasalida_detalle d WHERE d.cNumNotaSalida = n.cNumNota) AS total_piezas,
+                        (SELECT IFNULL(SUM(d.iImporte), 0) FROM tb_notasalida_detalle d WHERE d.cNumNotaSalida = n.cNumNota) AS total_importe,
+                        (SELECT COUNT(*) FROM tb_notasalida_adjuntos a WHERE a.cNumNota = n.cNumNota OR a.nota_salida_id = n.icvenotasalida) AS total_adjuntos
+                    FROM tb_notasalida n
+                    LEFT JOIN cat_almacen alm_orig ON alm_orig.ccvealmacen = n.ccvealmacen
+                    LEFT JOIN cat_almacen alm_dest ON alm_dest.ccvealmacen = n.ccvealmacenDestino
+                    LEFT JOIN cat_clientes c ON c.id = n.cliente_id
+                    LEFT JOIN tb_ventas v ON v.id = n.venta_id
+                    LEFT JOIN cat_tipodocto_almacen tda ON tda.icvetipodoctoalmacen = n.icvetipodoctoalmacen
+                    LEFT JOIN cat_tipomovimiento tm ON tm.icvetipomovimiento = n.icvetipomovimiento
+                    LEFT JOIN cat_medico u_rec ON u_rec.ccvemedico = n.ccveusuarioRecibe
+                    LEFT JOIN cat_medico u_ent ON u_ent.ccvemedico = n.ccveusuarioEntrega
+                    WHERE 1 = 1 ";
+
+            $arrValues = [];
+
+            // Filtro por Estatus
+            if (!empty($filtros['estatus'])) {
+                $est = strtoupper(trim($filtros['estatus']));
+                if ($est === 'CONTABILIZADA') {
+                    $sql .= " AND (n.iContabilizada = 1 AND (n.iCancelada = 0 OR n.iCancelada IS NULL) AND n.fchregistrocancela IS NULL) ";
+                } elseif ($est === 'EN PROCESO' || $est === 'EN_PROCESO') {
+                    $sql .= " AND ((n.iContabilizada = 0 OR n.iContabilizada IS NULL) AND (n.iCancelada = 0 OR n.iCancelada IS NULL) AND n.fchregistrocancela IS NULL) ";
+                } elseif ($est === 'CANCELADA') {
+                    $sql .= " AND (n.iCancelada = 1 OR n.fchregistrocancela IS NOT NULL) ";
+                }
+            }
+
+            // Filtro por Estatus de Firma
+            if (!empty($filtros['estatus_firma'])) {
+                $estFirma = strtoupper(trim($filtros['estatus_firma']));
+                if ($estFirma === 'CON_FIRMA' || $estFirma === 'FIRMADA') {
+                    $sql .= " AND ((n.firma_recibe IS NOT NULL AND TRIM(n.firma_recibe) != '') OR n.iFirmaRecibe = 1) ";
+                } elseif ($estFirma === 'SIN_FIRMA' || $estFirma === 'PENDIENTE') {
+                    $sql .= " AND (n.firma_recibe IS NULL OR TRIM(n.firma_recibe) = '') AND (n.iFirmaRecibe = 0 OR n.iFirmaRecibe IS NULL) ";
+                }
+            }
+
+            // Filtro por Almacén Origen
+            if (!empty($filtros['almacen'])) {
+                $sql .= " AND n.ccvealmacen = :almacen ";
+                $arrValues[':almacen'] = trim($filtros['almacen']);
+            }
+
+            // Filtro por Almacén Destino
+            if (!empty($filtros['almacen_destino'])) {
+                $sql .= " AND n.ccvealmacenDestino = :almacen_destino ";
+                $arrValues[':almacen_destino'] = trim($filtros['almacen_destino']);
+            }
+
+            // Filtro por Cliente
+            $cliFiltro = !empty($filtros['cliente']) ? trim($filtros['cliente']) : (!empty($filtros['cliente_id']) ? trim($filtros['cliente_id']) : '');
+            if ($cliFiltro !== '') {
+                if (is_numeric($cliFiltro)) {
+                    $sql .= " AND (n.cliente_id = :cliente_id OR v.cliente_id = :cliente_id) ";
+                    $arrValues[':cliente_id'] = intval($cliFiltro);
+                } else {
+                    $sql .= " AND (c.nombre_comercial LIKE :cliente_txt OR c.razon_social LIKE :cliente_txt OR n.cdscareaafectada_Destino LIKE :cliente_txt) ";
+                    $arrValues[':cliente_txt'] = '%' . $cliFiltro . '%';
+                }
+            }
+
+            // Filtro por Tipo de Documento
+            if (!empty($filtros['tipo_docto'])) {
+                $sql .= " AND n.icvetipodoctoalmacen = :tipo_docto ";
+                $arrValues[':tipo_docto'] = intval($filtros['tipo_docto']);
+            }
+
+            // Filtro por Fechas
+            if (!empty($filtros['fecha_inicio'])) {
+                $sql .= " AND n.fchNota >= :fecha_inicio ";
+                $arrValues[':fecha_inicio'] = $filtros['fecha_inicio'];
+            }
+            if (!empty($filtros['fecha_fin'])) {
+                $sql .= " AND n.fchNota <= :fecha_fin ";
+                $arrValues[':fecha_fin'] = $filtros['fecha_fin'];
+            }
+
+            // Filtro por Búsqueda General (folio, PO, persona, solicitante)
+            if (!empty($filtros['busqueda'])) {
+                $sql .= " AND (n.cNumNota LIKE :busqueda 
+                               OR n.cNumDocumentoSalida LIKE :busqueda 
+                               OR n.cNombreSolicita LIKE :busqueda 
+                               OR n.cRecibeNotaExterna LIKE :busqueda 
+                               OR n.cNombreRecibe LIKE :busqueda
+                               OR v.proyecto_id LIKE :busqueda
+                               OR v.titulo LIKE :busqueda) ";
+                $arrValues[':busqueda'] = '%' . trim($filtros['busqueda']) . '%';
+            }
+
+            $sql .= " ORDER BY n.fchNota DESC, n.icvenotasalida DESC";
+
+            $arrResponse = $this->select($sql, $arrValues);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel::getNotasSalidaData"));
+                }
+            }
+            return [];
+        }
+    }
+
+    /**
+     * Calcula KPIs resumidos de Notas de Salida respondiendo a los filtros aplicados
+     * 
+     * @param array $filtros
+     * @return array
+     */
+    public function getKpisNotasSalida(array $filtros = []): array
+    {
+        try {
+            $notas = $this->getNotasSalidaData($filtros);
+
+            $totalNotas       = count($notas);
+            $contabilizadas   = 0;
+            $enProceso        = 0;
+            $canceladas       = 0;
+            $conFirma         = 0;
+            $pendientesFirma  = 0;
+            $totalPiezas      = 0;
+            $totalImporte     = 0.0;
+
+            foreach ($notas as $n) {
+                $est = $n['estatus'];
+                if ($est === 'CONTABILIZADA') {
+                    $contabilizadas++;
+                } elseif ($est === 'EN PROCESO') {
+                    $enProceso++;
+                } elseif ($est === 'CANCELADA') {
+                    $canceladas++;
+                }
+
+                if ($n['tiene_firma'] == 1) {
+                    $conFirma++;
+                } else {
+                    if ($est !== 'CANCELADA') {
+                        $pendientesFirma++;
+                    }
+                }
+
+                if ($est !== 'CANCELADA') {
+                    $totalPiezas += floatval($n['total_piezas']);
+                    $totalImporte += floatval($n['total_importe']);
+                }
+            }
+
+            return [
+                'total_notas'      => $totalNotas,
+                'contabilizadas'   => $contabilizadas,
+                'en_proceso'       => $enProceso,
+                'canceladas'       => $canceladas,
+                'con_firma'        => $conFirma,
+                'pendientes_firma' => $pendientesFirma,
+                'total_piezas'     => $totalPiezas,
+                'total_importe'    => $totalImporte
+            ];
+        } catch (\Throwable $th) {
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel::getKpisNotasSalida"));
+                }
+            }
+            return [
+                'total_notas'      => 0,
+                'contabilizadas'   => 0,
+                'en_proceso'       => 0,
+                'canceladas'       => 0,
+                'con_firma'        => 0,
+                'pendientes_firma' => 0,
+                'total_piezas'     => 0,
+                'total_importe'    => 0
+            ];
+        }
+    }
+
+    /**
+     * Genera datos de análisis ejecutivo para el Jefe de Almacén
+     * 
+     * @param array $filtros
+     * @return array
+     */
+    public function getAnalisisNotasSalida(array $filtros = []): array
+    {
+        try {
+            $notas = $this->getNotasSalidaData($filtros);
+
+            $clientesCount = [];
+            $almacenesCount = [];
+            $notasAtencion = [];
+
+            foreach ($notas as $n) {
+                if ($n['estatus'] === 'CANCELADA') continue;
+
+                // Conteo por cliente
+                $cli = !empty($n['nombre_cliente']) ? $n['nombre_cliente'] : 'PÚBLICO GENERAL';
+                if (!isset($clientesCount[$cli])) {
+                    $clientesCount[$cli] = ['nombre' => $cli, 'notas' => 0, 'piezas' => 0];
+                }
+                $clientesCount[$cli]['notas']++;
+                $clientesCount[$cli]['piezas'] += floatval($n['total_piezas']);
+
+                // Conteo por almacén
+                $alm = !empty($n['almacen_origen']) ? $n['almacen_origen'] : $n['ccvealmacen'];
+                if (!isset($almacenesCount[$alm])) {
+                    $almacenesCount[$alm] = ['nombre' => $alm, 'notas' => 0, 'piezas' => 0];
+                }
+                $almacenesCount[$alm]['notas']++;
+                $almacenesCount[$alm]['piezas'] += floatval($n['total_piezas']);
+
+                // Alertas de atención: Sin firma o en proceso con más de 3 días
+                $dias = intval($n['dias_transcurridos']);
+                if ($n['tiene_firma'] == 0 || $n['estatus'] === 'EN PROCESO') {
+                    $notasAtencion[] = [
+                        'id'           => $n['id'],
+                        'folio'        => $n['folio'],
+                        'fecha'        => $n['fecha'],
+                        'cliente'      => $cli,
+                        'estatus'      => $n['estatus'],
+                        'tiene_firma'  => $n['tiene_firma'],
+                        'dias'         => $dias,
+                        'piezas'       => $n['total_piezas']
+                    ];
+                }
+            }
+
+            // Ordenar clientes por notas desc
+            usort($clientesCount, fn($a, $b) => $b['notas'] <=> $a['notas']);
+            // Ordenar almacenes por notas desc
+            usort($almacenesCount, fn($a, $b) => $b['notas'] <=> $a['notas']);
+            // Ordenar atención por días desc
+            usort($notasAtencion, fn($a, $b) => $b['dias'] <=> $a['dias']);
+
+            return [
+                'top_clientes'      => array_slice($clientesCount, 0, 5),
+                'top_almacenes'     => array_slice($almacenesCount, 0, 5),
+                'alertas_atencion'  => array_slice($notasAtencion, 0, 8),
+                'total_atencion'    => count($notasAtencion)
+            ];
+        } catch (\Throwable $th) {
+            return [
+                'top_clientes'      => [],
+                'top_almacenes'     => [],
+                'alertas_atencion'  => [],
+                'total_atencion'    => 0
+            ];
+        }
+    }
+
+    /**
+     * Obtiene el encabezado y datos completos de una Nota de Salida por ID
+     * 
+     * @param int $id
+     * @return array
+     */
+    public function getNotaSalidaById(int $id): array
+    {
+        try {
+            $sql = "SELECT 
+                        n.icvenotasalida AS id,
+                        n.cNumNota AS folio,
+                        n.fchNota AS fecha,
+                        n.fchregistro,
+                        n.cTipoNota AS tipo_nota,
+                        IFNULL(n.cNumDocumentoSalida, '') AS num_documento_salida,
+                        n.ccvealmacen,
+                        IFNULL(alm_orig.cdscalmacen, n.ccvealmacen) AS almacen_origen,
+                        n.ccvealmacenDestino,
+                        IFNULL(alm_dest.cdscalmacen, n.ccvealmacenDestino) AS almacen_destino,
+                        IFNULL(n.cdscareaafectada_Destino, '') AS area_afectada,
+                        IFNULL(n.cliente_id, 0) AS cliente_id,
+                        IFNULL(c.nombre_comercial, IFNULL(c.razon_social, 'PÚBLICO GENERAL')) AS nombre_cliente,
+                        IFNULL(n.venta_id, 0) AS venta_id,
+                        IFNULL(v.proyecto_id, '') AS proyecto_id,
+                        IFNULL(v.titulo, '') AS proyecto_titulo,
+                        IFNULL(v.cliente_final, '') AS cliente_final,
+                        IFNULL(n.pedido_cliente_id, 0) AS pedido_cliente_id,
+                        IFNULL(n.icvetipodoctoalmacen, 0) AS icvetipodoctoalmacen,
+                        IFNULL(tda.cdsctipodoctoalmacen, 'ORDEN DE COMPRA DE CLIENTE') AS tipo_docto_almacen,
+                        IFNULL(n.icvetipomovimiento, 0) AS icvetipomovimiento,
+                        IFNULL(tm.cdsctipomovimiento, 'SALIDA') AS tipo_movimiento,
+                        IFNULL(n.iContabilizada, 0) AS iContabilizada,
+                        n.fchContabiliza,
+                        IFNULL(n.ccveusuariocontabiliza, '') AS ccveusuariocontabiliza,
+                        IFNULL(n.iCancelada, 0) AS iCancelada,
+                        n.fchregistrocancela,
+                        IFNULL(n.ccveusuariocancela, '') AS ccveusuariocancela,
+                        IFNULL(n.cMotivoCancela, '') AS motivo_cancela,
+                        CASE 
+                            WHEN (n.iCancelada = 1 OR n.fchregistrocancela IS NOT NULL) THEN 'CANCELADA'
+                            WHEN (n.iContabilizada = 1 AND (n.iCancelada = 0 OR n.iCancelada IS NULL)) THEN 'CONTABILIZADA'
+                            WHEN ((n.iContabilizada = 0 OR n.iContabilizada IS NULL) AND (n.iCancelada = 0 OR n.iCancelada IS NULL)) THEN 'EN PROCESO'
+                            ELSE 'EN PROCESO'
+                        END AS estatus,
+                        IFNULL(n.iFirmaRecibe, 0) AS iFirmaRecibe,
+                        IFNULL(n.firma_recibe, '') AS firma_recibe,
+                        CASE 
+                            WHEN (n.firma_recibe IS NOT NULL AND TRIM(n.firma_recibe) != '') OR n.iFirmaRecibe = 1 THEN 1 
+                            ELSE 0 
+                        END AS tiene_firma,
+                        n.fch_usuario_recibe,
+                        COALESCE(NULLIF(TRIM(n.cRecibeNotaExterna), ''), NULLIF(TRIM(n.cNombreRecibe), ''), '') AS persona_recibe,
+                        IFNULL(n.ccveusuarioRecibe, '') AS ccveusuarioRecibe,
+                        IFNULL(TRIM(CONCAT_WS(' ', u_rec.cnombre, u_rec.cpriapellido, u_rec.csegapellido)), '') AS usuario_recibe_nombre,
+                        IFNULL(n.cNombreSolicita, '') AS nombre_solicita,
+                        IFNULL(n.ccveusuarioEntrega, '') AS ccveusuarioEntrega,
+                        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u_ent.cnombre, u_ent.cpriapellido, u_ent.csegapellido)), ''), NULLIF(TRIM(n.cEntregaNotaExterna), ''), '') AS usuario_entrega_nombre,
+                        IFNULL(n.cObservaciones, '') AS observaciones,
+                        IFNULL(n.iSubtotal, 0) AS subtotal,
+                        IFNULL(n.iIVA, 0) AS iva,
+                        IFNULL(n.iTotal, 0) AS total,
+                        GREATEST(0, DATEDIFF(CURRENT_DATE, n.fchNota)) AS dias_transcurridos
+                    FROM tb_notasalida n
+                    LEFT JOIN cat_almacen alm_orig ON alm_orig.ccvealmacen = n.ccvealmacen
+                    LEFT JOIN cat_almacen alm_dest ON alm_dest.ccvealmacen = n.ccvealmacenDestino
+                    LEFT JOIN cat_clientes c ON c.id = n.cliente_id
+                    LEFT JOIN tb_ventas v ON v.id = n.venta_id
+                    LEFT JOIN cat_tipodocto_almacen tda ON tda.icvetipodoctoalmacen = n.icvetipodoctoalmacen
+                    LEFT JOIN cat_tipomovimiento tm ON tm.icvetipomovimiento = n.icvetipomovimiento
+                    LEFT JOIN cat_medico u_rec ON u_rec.ccvemedico = n.ccveusuarioRecibe
+                    LEFT JOIN cat_medico u_ent ON u_ent.ccvemedico = n.ccveusuarioEntrega
+                    WHERE n.icvenotasalida = :id";
+            $arrResponse = $this->selectModel($sql, [':id' => $id]);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel::getNotaSalidaById"));
+                }
+            }
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene las partidas detalladas de una Nota de Salida desde tb_notasalida_detalle
+     * 
+     * @param string $cNumNota
+     * @return array
+     */
+    public function getNotaSalidaDetalleItems(string $cNumNota): array
+    {
+        try {
+            $sql = "SELECT 
+                        d.icvenotasalidadetalle AS id,
+                        d.cNumNotaSalida,
+                        IFNULL(d.ccvematerial, '') AS clave,
+                        IFNULL(d.ccveMaterialAlmacen, '') AS ccn,
+                        IFNULL(d.cDescripcion, '') AS descripcion,
+                        IFNULL(d.iCantidad, 0) AS cantidad,
+                        IFNULL(d.ccveunidad, 'pza') AS unidad,
+                        IFNULL(d.iCostoUnitario, 0) AS costo_unitario,
+                        IFNULL(d.iImporte, 0) AS importe,
+                        IFNULL(d.cNumLote, '') AS lote,
+                        IFNULL(d.cNumSerie, '') AS serie,
+                        IFNULL(d.cCodigoBarras, '') AS codigo_barras,
+                        IFNULL(d.iContabilizado, 0) AS contabilizado,
+                        IFNULL(d.iPrecioVenta, 0) AS precio_venta,
+                        IFNULL(m.iExistenciaActual, 0) AS existencia_actual
+                    FROM tb_notasalida_detalle d
+                    LEFT JOIN tb_materiales m ON m.ccvematerial = d.ccvematerial
+                    WHERE d.cNumNotaSalida = :num_nota
+                    ORDER BY d.icvenotasalidadetalle ASC";
+            $arrResponse = $this->select($sql, [':num_nota' => $cNumNota]);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel::getNotaSalidaDetalleItems"));
+                }
+            }
+            return [];
+        }
+    }
+
+    /**
+     * Guarda la firma digital y los datos de recepción en tb_notasalida
+     * 
+     * @param int $notaId
+     * @param string $firmaBase64
+     * @param string $nombreRecibe
+     * @param string $usuarioRecibe
+     * @return bool
+     */
+    public function saveFirmaNotaSalida(int $notaId, string $firmaBase64, string $nombreRecibe, string $usuarioRecibe): bool
+    {
+        try {
+            $sql = "UPDATE tb_notasalida SET 
+                        firma_recibe = :firma_recibe,
+                        sinc = 1,
+                        iFirmaRecibe = 1,
+                        fch_usuario_recibe = NOW(),
+                        cRecibeNotaExterna = :nombre_recibe,
+                        cNombreRecibe = :nombre_recibe_ext,
+                        ccveusuarioRecibe = :usuario_recibe
+                    WHERE icvenotasalida = :id AND (iCancelada = 0 OR iCancelada IS NULL)";
+            return $this->update($sql, [
+                ':firma_recibe'       => $firmaBase64,
+                ':nombre_recibe'      => $nombreRecibe,
+                ':nombre_recibe_ext'  => $nombreRecibe,
+                ':usuario_recibe'     => $usuarioRecibe,
+                ':id'                 => $notaId
+            ]);
+        } catch (\Throwable $th) {
+            if (function_exists('getLoggerSystem')) {
+                $logger = getLoggerSystem();
+                if ($logger && is_object($logger)) {
+                    $logger->error(getMensajeError($th, "AlmacenModel::saveFirmaNotaSalida"));
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene los clientes con notas de salida registradas
+     * 
+     * @return array
+     */
+    public function getClientesNotasSalida(): array
+    {
+        try {
+            $sql = "SELECT DISTINCT 
+                        IFNULL(c.id, 0) AS id, 
+                        IFNULL(c.nombre_comercial, IFNULL(c.razon_social, 'PÚBLICO GENERAL')) AS nombre_cliente
+                    FROM tb_notasalida n
+                    LEFT JOIN cat_clientes c ON c.id = n.cliente_id
+                    WHERE c.id IS NOT NULL AND c.id > 0
+                    ORDER BY nombre_cliente ASC";
+            $arrResponse = $this->select($sql, []);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene el catálogo de tipos de documento de almacén activos
+     * 
+     * @return array
+     */
+    public function getTiposDoctoAlmacen(): array
+    {
+        try {
+            $sql = "SELECT icvetipodoctoalmacen AS id, cdsctipodoctoalmacen AS nombre 
+                    FROM cat_tipodocto_almacen 
+                    WHERE iActivo = 1 
+                    ORDER BY cdsctipodoctoalmacen ASC";
+            $arrResponse = $this->select($sql, []);
+            return is_array($arrResponse) ? $arrResponse : [];
+        } catch (\Throwable $th) {
+            return [];
+        }
+    }
 }
 
 

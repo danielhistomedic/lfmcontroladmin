@@ -1092,6 +1092,270 @@ class Almacen extends Controllers
             die();
         }
     }
+
+    // ==================================================================
+    // [ MÓDULO: REPORTE DE NOTAS DE SALIDA ]
+    // ==================================================================
+
+    /**
+     * Módulo: Reporte de Notas de Salida
+     * Consulta, seguimiento y firma de salidas de almacén que afectan inventarios
+     */
+    public function notas_salida()
+    {
+        try {
+            $arrPermisos = getPermisosGlobal();
+            if (empty($arrPermisos)) {
+                $this->session->redirect('inicio');
+                return;
+            }
+
+            // Permisos del módulo con fallback a almacén general
+            $this->permisosMod = $arrPermisos[MOD_ALMACEN_NOTAS_SALIDA] ?? (
+                $arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['r' => 1, 'c' => 1, 'u' => 1, 'd' => 0]
+            );
+
+            // Valida si tiene acceso a la página
+            if (empty($this->permisosMod['r'])) {
+                echo "<h4>Lo sentimos, Acceso restringido</h4>";
+                die();
+            }
+
+            /*-------------------------------------------
+            [ Obtener datos de Modulo ]*/
+            $menus_model = new MenusModel;
+            $menu = $menus_model->selectMenu(MOD_ALMACEN_NOTAS_SALIDA);
+
+            // Asigna los permisos de Módulo y SideBar
+            $data['permisos']    = $arrPermisos;
+            $data['permisosMod'] = $this->permisosMod;
+
+            // Datos de Usuario en Sesión
+            $data['empresa_id']             = $this->session->get('empresa_id');
+            $data['sucursal_id']            = $this->session->get('sucursal_id');
+            $data['theme']                  = $this->session->get('theme');
+            $data['usuario']['nombre_solo'] = $this->session->get('nombre_solo');
+            $data['usuario']['email']       = $this->session->get('email');
+            $data['usuario']['rol']         = $this->session->get('rol');
+            $data['usuario']['rol_id']      = $this->session->get('rol_id');
+            $data['usuario']['ccveusuario'] = $this->session->get('ccveusuario') ?? $this->session->get('usuario');
+
+            // Configuración
+            $configuracion_model = new ConfiguracionModel;
+            $configuracion_model->setEmpresaId($data['empresa_id']);
+            $configuracion = $configuracion_model->selectRecord($configuracion_model);
+            $data['configuracion'] = $configuracion;
+
+            // Id de Menú para script de Permisos
+            $data['menu'] = MOD_ALMACEN_NOTAS_SALIDA;
+
+            // Header
+            $data['page_title']        = !empty($menu['name'])        ? $menu['name']        : 'Reporte de Notas de Salida';
+            $data['meta_description']  = !empty($menu['descripcion']) ? $menu['descripcion'] : 'Control, seguimiento y firma de salidas de almacén que afectan inventarios';
+            $data['meta_keywords']     = !empty($menu['tags'])        ? $menu['tags']        : 'almacen, notas, salida, inventario, firmas, seguimiento';
+
+            // Form Principal
+            $data['icon_form_title']  = !empty($menu['icon_form_title']) ? $menu['icon_form_title'] : '<i class="fa-sharp fa-light fa-file-invoice-dollar text-primary me-2"></i>';
+            $data['page_form_title']  = $data['icon_form_title'] . (!empty($menu['form_title']) ? $menu['form_title'] : ' Reporte de Notas de Salida');
+
+            // Breadcrumb
+            $data['page_breadcrumb']       = 'Almacén / Reporte de Notas de Salida';
+            $data['page_card_title']       = !empty($menu['card_title']) ? $menu['card_title'] : 'Reporte y Control de Notas de Salida';
+            $data['page_card_description'] = $data['meta_description'];
+
+            // JS de la página
+            $data['page_functions_js'] = !empty($menu['js']) ? $menu['js'] : 'almacen_notas_salida.js';
+
+            // Catálogos para filtros
+            $almacenModel = new AlmacenModel();
+            $data['almacenes']        = $almacenModel->getAlmacenes();
+            $data['clientes']         = $almacenModel->getClientesNotasSalida();
+            $data['tipos_docto']      = $almacenModel->getTiposDoctoAlmacen();
+            $data['usuarios_sistema'] = $almacenModel->getUsuariosSistema();
+
+            // Call Vista
+            $this->views->getView($this, "notas_salida", $data);
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+        }
+    }
+
+    /**
+     * Endpoint AJAX para listar notas de salida, KPIs y análisis para Jefe de Almacén
+     * URL: /almacen/getNotasSalida
+     */
+    public function getNotasSalida()
+    {
+        try {
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_NOTAS_SALIDA] ?? ($arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['r' => 1]);
+
+            if (empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'Acceso no permitido.', 'data' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $filtros = [
+                'estatus'          => $_POST['estatus']          ?? $_GET['estatus']          ?? '',
+                'estatus_firma'    => $_POST['estatus_firma']    ?? $_GET['estatus_firma']    ?? '',
+                'cliente'          => $_POST['cliente']          ?? $_GET['cliente']          ?? '',
+                'cliente_id'       => $_POST['cliente_id']       ?? $_GET['cliente_id']       ?? '',
+                'almacen'          => $_POST['almacen']          ?? $_GET['almacen']          ?? '',
+                'almacen_destino'  => $_POST['almacen_destino']  ?? $_GET['almacen_destino']  ?? '',
+                'tipo_docto'       => $_POST['tipo_docto']       ?? $_GET['tipo_docto']       ?? '',
+                'fecha_inicio'     => $_POST['fecha_inicio']     ?? $_GET['fecha_inicio']     ?? '',
+                'fecha_fin'        => $_POST['fecha_fin']        ?? $_GET['fecha_fin']        ?? '',
+                'busqueda'         => $_POST['busqueda']         ?? $_GET['busqueda']         ?? ''
+            ];
+
+            $almacenModel = new AlmacenModel();
+            $arrNotas     = $almacenModel->getNotasSalidaData($filtros);
+            $arrKpis      = $almacenModel->getKpisNotasSalida($filtros);
+            $arrAnalisis  = $almacenModel->getAnalisisNotasSalida($filtros);
+
+            echo json_encode([
+                'status'          => true,
+                'total_registros' => count($arrNotas),
+                'kpis'            => $arrKpis,
+                'analisis'        => $arrAnalisis,
+                'data'            => $arrNotas
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al procesar la consulta.', 'data' => []], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX para consultar detalle completo de una nota de salida
+     * URL: /almacen/getNotaSalidaDetalle
+     */
+    public function getNotaSalidaDetalle()
+    {
+        try {
+            $id = intval($_POST['id'] ?? $_GET['id'] ?? 0);
+            if ($id <= 0) {
+                echo json_encode(['status' => false, 'msg' => 'Identificador de nota inválido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $almacenModel = new AlmacenModel();
+            $header = $almacenModel->getNotaSalidaById($id);
+            if (empty($header)) {
+                echo json_encode(['status' => false, 'msg' => 'Nota de salida no encontrada.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $partidas = $almacenModel->getNotaSalidaDetalleItems($header['folio']);
+
+            echo json_encode([
+                'status'   => true,
+                'header'   => $header,
+                'partidas' => $partidas
+            ], JSON_UNESCAPED_UNICODE);
+            die();
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al obtener el detalle de la nota de salida.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
+
+    /**
+     * Endpoint AJAX POST para registrar firma digital en una nota de salida
+     * URL: /almacen/guardarFirmaNotaSalida
+     */
+    public function guardarFirmaNotaSalida()
+    {
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode(['status' => false, 'msg' => 'Método no permitido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $arrPermisos = getPermisosGlobal();
+            $permisosMod = $arrPermisos[MOD_ALMACEN_NOTAS_SALIDA] ?? ($arrPermisos[MOD_ALMACEN_PRODUCTOS] ?? ['u' => 1]);
+            if (empty($permisosMod['u']) && empty($permisosMod['r'])) {
+                echo json_encode(['status' => false, 'msg' => 'No cuenta con permisos para registrar firmas.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $notaId        = intval($_POST['nota_id'] ?? 0);
+            $nombreRecibe  = trim($_POST['nombre_recibe'] ?? '');
+            $usuarioRecibe = trim($_POST['usuario_recibe'] ?? '');
+            $firmaBase64   = trim($_POST['firma_base64'] ?? '');
+
+            // Soporte para multipart/form-data Blob para evitar bloqueos por WAF/ModSecurity
+            if (!empty($_FILES['firma_file']['tmp_name']) && is_uploaded_file($_FILES['firma_file']['tmp_name'])) {
+                $fileContent = file_get_contents($_FILES['firma_file']['tmp_name']);
+                if (!empty($fileContent)) {
+                    $mime = 'image/png';
+                    if (function_exists('mime_content_type')) {
+                        $detectedMime = @mime_content_type($_FILES['firma_file']['tmp_name']);
+                        if (!empty($detectedMime)) $mime = $detectedMime;
+                    }
+                    $firmaBase64 = 'data:' . $mime . ';base64,' . base64_encode($fileContent);
+                }
+            }
+
+            if ($notaId <= 0) {
+                echo json_encode(['status' => false, 'msg' => 'Identificador de nota de salida inválido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if (empty($usuarioRecibe) && empty($nombreRecibe)) {
+                echo json_encode(['status' => false, 'msg' => 'Debe seleccionar o ingresar la persona que recibe la salida.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if (empty($nombreRecibe)) {
+                $nombreRecibe = $usuarioRecibe;
+            }
+            if (empty($usuarioRecibe)) {
+                $usuarioRecibe = $nombreRecibe;
+            }
+
+            if (empty($firmaBase64) || strlen($firmaBase64) < 100 || strpos($firmaBase64, 'data:image') !== 0) {
+                echo json_encode(['status' => false, 'msg' => 'La firma digital es obligatoria. Dibuje la firma en el recuadro antes de guardar.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $almacenModel = new AlmacenModel();
+            $nota = $almacenModel->getNotaSalidaById($notaId);
+            if (empty($nota)) {
+                echo json_encode(['status' => false, 'msg' => 'La nota de salida no existe en el sistema.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if ($nota['estatus'] === 'CANCELADA') {
+                echo json_encode(['status' => false, 'msg' => 'No es posible registrar firma en una nota de salida cancelada.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            if ($nota['tiene_firma'] == 1) {
+                echo json_encode(['status' => false, 'msg' => 'Esta nota de salida ya cuenta con firma registrada previamente.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $ok = $almacenModel->saveFirmaNotaSalida($notaId, $firmaBase64, $nombreRecibe, $usuarioRecibe);
+            if ($ok) {
+                echo json_encode([
+                    'status' => true,
+                    'msg'    => '¡Firma digital y recepción de la nota registradas con éxito!'
+                ], JSON_UNESCAPED_UNICODE);
+                die();
+            } else {
+                echo json_encode(['status' => false, 'msg' => 'No se pudo guardar la firma digital en la base de datos.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+        } catch (\Throwable $th) {
+            getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
+            echo json_encode(['status' => false, 'msg' => 'Error al registrar la firma digital.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+    }
 }
 
 
