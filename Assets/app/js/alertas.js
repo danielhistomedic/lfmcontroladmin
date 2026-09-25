@@ -381,3 +381,51 @@ function alerta_warning(responseObj, divLoading) {
         }
     }
 }
+
+/*==================================================================
+[ Polyfill / Compatibilidad para Swal (SweetAlert2) ]
+==================================================================*/
+if (typeof window.Swal === 'undefined') {
+    window.Swal = {
+        fire: function (titleOrOptions, text, icon) {
+            let options = {};
+            if (typeof titleOrOptions === 'object' && titleOrOptions !== null) {
+                options = titleOrOptions;
+            } else {
+                options = {
+                    title: titleOrOptions || '¡Atención!',
+                    text: text || '',
+                    icon: icon || 'info'
+                };
+            }
+
+            let iconType = options.icon || 'info';
+            let iconHtml = typeof iconMensajeInfo !== 'undefined' ? iconMensajeInfo : '';
+            if (iconType === 'error' || iconType === 'danger') {
+                iconType = 'error';
+                iconHtml = typeof iconMensajeError !== 'undefined' ? iconMensajeError : '';
+            } else if (iconType === 'warning') {
+                iconType = 'warning';
+                iconHtml = typeof iconMensajeWarning !== 'undefined' ? iconMensajeWarning : '';
+            } else if (iconType === 'success') {
+                iconType = 'success';
+                iconHtml = typeof iconMensajeSuccess !== 'undefined' ? iconMensajeSuccess : '';
+            }
+
+            if (typeof mensajeAlertaModal === 'function') {
+                return mensajeAlertaModal({
+                    icon: iconType,
+                    title: iconHtml + ' ' + (options.title || '¡Atención!'),
+                    text: options.text || '',
+                    textButton: options.confirmButtonText || 'Cerrar',
+                    textCancelButton: options.cancelButtonText || 'Cancelar',
+                    timer: options.timer || 3500
+                });
+            } else {
+                alert((options.title ? options.title + '\n' : '') + (options.text || ''));
+                return Promise.resolve({ isConfirmed: true, value: true });
+            }
+        }
+    };
+    window.swal = window.Swal.fire;
+}

@@ -458,7 +458,7 @@ function cargarDetalleNota(id) {
         dataType: 'json',
         success: function (res) {
             if (!res.status || !res.header) {
-                Swal.fire('Atención', res.msg || 'No se pudo cargar el detalle.', 'warning');
+                alertaPersonalizada('warning', 'Atención', res.msg || 'No se pudo cargar el detalle.');
                 return;
             }
 
@@ -559,8 +559,9 @@ function cargarDetalleNota(id) {
                 scrollTop: $('#panelDetalleNota').offset().top - 80
             }, 300);
         },
-        error: function () {
-            Swal.fire('Error', 'No fue posible comunicarse con el servidor.', 'error');
+        error: function (xhr, status, error) {
+            console.error('[Error Cargar Detalle]', xhr.status, xhr.responseText);
+            alertaPersonalizada('error', 'Error', 'No fue posible comunicarse con el servidor.');
         }
     });
 }
@@ -700,7 +701,7 @@ function abrirModalFirmaNota(notaId) {
         dataType: 'json',
         success: function (res) {
             if (!res.status || !res.header) {
-                Swal.fire('Error', res.msg || 'No se pudieron consultar los datos de la nota.', 'error');
+                alertaPersonalizada('error', 'Error', res.msg || 'No se pudieron consultar los datos de la nota.');
                 return;
             }
 
@@ -740,11 +741,14 @@ function abrirModalFirmaNota(notaId) {
                 $('#inputNombreRecibeOtroNota').val(h.persona_recibe);
             }
 
-            const modal = new bootstrap.Modal(document.getElementById('modalRegistrarFirmaNota'));
+            const modalEl = document.getElementById('modalRegistrarFirmaNota');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         },
-        error: function () {
-            Swal.fire('Error', 'No fue posible consultar la información de la nota.', 'error');
+        error: function (xhr, status, error) {
+            btnFirmar.prop('disabled', false).html('<i class="fa-solid fa-pen-nib me-1"></i> Firmar Salida');
+            console.error('[Error Consultar Nota]', xhr.status, xhr.responseText);
+            alertaPersonalizada('error', 'Error', 'No fue posible consultar la información de la nota.');
         }
     });
 }
@@ -756,7 +760,7 @@ function guardarFirmaNota() {
     let usuarioRecibe = '';
 
     if (!selVal) {
-        Swal.fire('Atención', 'Debe seleccionar o especificar la persona que recibe la salida.', 'warning');
+        alertaPersonalizada('warning', 'Atención', 'Debe seleccionar o especificar la persona que recibe la salida.');
         return;
     }
 
@@ -764,7 +768,8 @@ function guardarFirmaNota() {
         nombreRecibe = $.trim($('#inputNombreRecibeOtroNota').val());
         usuarioRecibe = nombreRecibe;
         if (!nombreRecibe) {
-            Swal.fire('Atención', 'Debe ingresar el nombre del receptor externo.', 'warning');
+            alertaPersonalizada('warning', 'Atención', 'Debe ingresar el nombre del receptor externo.');
+            $('#inputNombreRecibeOtroNota').focus();
             return;
         }
     } else {
@@ -774,34 +779,33 @@ function guardarFirmaNota() {
     }
 
     if (!hasSignatureNota || !canvasNota) {
-        Swal.fire('Atención', 'Debe dibujar la firma digital de conformidad en el recuadro antes de confirmar.', 'warning');
+        alertaPersonalizada('warning', 'Atención', 'Debe dibujar la firma digital de conformidad en el recuadro antes de confirmar.');
         return;
     }
 
     const firmaBase64 = canvasNota.toDataURL('image/png');
     if (!firmaBase64 || firmaBase64.length < 150) {
-        Swal.fire('Atención', 'El trazo de la firma es demasiado corto. Por favor firme adecuadamente.', 'warning');
+        alertaPersonalizada('warning', 'Atención', 'El trazo de la firma es demasiado corto. Por favor firme adecuadamente.');
         return;
     }
 
     // Preparar FormData con soporte Blob multipart
+    // IMPORTANTE: Se envía únicamente 'firma_file' como archivo binario (Blob)
+    // para evitar que ModSecurity / WAF en producción bloquee la petición con HTTP 403 Forbidden
     const formData = new FormData();
     formData.append('nota_id', notaId);
     formData.append('nombre_recibe', nombreRecibe);
     formData.append('usuario_recibe', usuarioRecibe);
-    formData.append('firma_base64', firmaBase64);
 
-    // Convertir canvas a Blob para mayor resiliencia contra WAF/ModSecurity
     try {
-        canvasNota.toBlob(function (blob) {
-            if (blob) {
-                formData.append('firma_file', blob, 'firma_recibe.png');
-            }
-            enviarRegistroFirma(formData);
-        }, 'image/png');
+        const blobFirma = dataURLtoBlob(firmaBase64);
+        formData.append('firma_file', blobFirma, `firma_nota_${notaId}_${Date.now()}.png`);
     } catch (e) {
-        enviarRegistroFirma(formData);
+        console.warn('Fallback a firma_base64 en texto:', e);
+        formData.append('firma_base64', firmaBase64);
     }
+
+    enviarRegistroFirma(formData);
 }
 
 function enviarRegistroFirma(formData) {
@@ -818,18 +822,23 @@ function enviarRegistroFirma(formData) {
         success: function (res) {
             btnConfirmar.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Confirmar y Guardar Firma');
 
-            if (res.status) {
+            if (res && res.status) {
                 const modalEl = document.getElementById('modalRegistrarFirmaNota');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
+                if (modalEl) {
+                    if (document.activeElement) document.activeElement.blur();
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
 
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Firma Registrada!',
-                    text: res.msg,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                if (typeof alerta_success === 'function') {
+                    alerta_success({
+                        mostrar_mensaje: true,
+                        tiempo: 3000,
+                        mensaje: res.msg || '¡Firma digital registrada con éxito!'
+                    }, "");
+                } else {
+                    alertaPersonalizada('success', '¡Firma Registrada!', res.msg || '¡Firma digital registrada con éxito!');
+                }
 
                 // Recargar tabla principal
                 if (tableNotas) {
@@ -842,12 +851,41 @@ function enviarRegistroFirma(formData) {
                     cargarDetalleNota(currentId);
                 }
             } else {
-                Swal.fire('Atención', res.msg || 'No se pudo guardar la firma.', 'error');
+                if (typeof alerta_error === 'function') {
+                    alerta_error({
+                        mostrar_mensaje: true,
+                        tiempo: 4500,
+                        mensaje: (res && res.msg) ? res.msg : 'No se pudo guardar la firma.'
+                    }, "");
+                } else {
+                    alertaPersonalizada('error', 'Atención', (res && res.msg) ? res.msg : 'No se pudo guardar la firma.');
+                }
             }
         },
-        error: function () {
+        error: function (xhr, status, error) {
             btnConfirmar.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Confirmar y Guardar Firma');
-            Swal.fire('Error', 'Error de comunicación con el servidor al registrar la firma.', 'error');
+            console.error('[Error Guardar Firma]', xhr.status, xhr.responseText);
+
+            let errMsg = 'Error de comunicación con el servidor al registrar la firma.';
+            if (xhr.responseJSON && xhr.responseJSON.msg) {
+                errMsg = xhr.responseJSON.msg;
+            } else if (xhr.status === 403) {
+                errMsg = 'Acceso denegado (403). La solicitud fue rechazada por el servidor o expiró la sesión.';
+            } else if (xhr.status === 413) {
+                errMsg = 'El tamaño de la firma excede el límite permitido por el servidor (413).';
+            } else if (xhr.status === 500) {
+                errMsg = 'Ocurrió un error interno en el servidor (500) al procesar la firma.';
+            }
+
+            if (typeof alerta_error === 'function') {
+                alerta_error({
+                    mostrar_mensaje: true,
+                    tiempo: 5000,
+                    mensaje: errMsg
+                }, "");
+            } else {
+                alertaPersonalizada('error', 'Error al Guardar Firma', errMsg);
+            }
         }
     });
 }
@@ -864,4 +902,52 @@ function htmlEncode(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+/**
+ * Convierte una cadena dataURL base64 a Blob binario
+ */
+function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = (arr[0].match(/:(.*?);/) || ['', 'image/png'])[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+
+/**
+ * Muestra alertas estándar del sistema usando mensajeAlertaModal o fallback
+ */
+function alertaPersonalizada(tipo, titulo, mensaje) {
+    if (typeof mensajeAlertaModal === 'function') {
+        let iconType = 'info';
+        let iconHtml = typeof iconMensajeInfo !== 'undefined' ? iconMensajeInfo : '';
+
+        if (tipo === 'error' || tipo === 'danger') {
+            iconType = 'error';
+            iconHtml = typeof iconMensajeError !== 'undefined' ? iconMensajeError : '';
+        } else if (tipo === 'warning') {
+            iconType = 'warning';
+            iconHtml = typeof iconMensajeWarning !== 'undefined' ? iconMensajeWarning : '';
+        } else if (tipo === 'success') {
+            iconType = 'success';
+            iconHtml = typeof iconMensajeSuccess !== 'undefined' ? iconMensajeSuccess : '';
+        }
+
+        mensajeAlertaModal({
+            icon: iconType,
+            title: iconHtml + ' ' + (titulo || '¡Atención!'),
+            text: mensaje,
+            textButton: 'Cerrar',
+            timer: 3500
+        });
+    } else if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+        Swal.fire(titulo || '¡Atención!', mensaje, tipo || 'info');
+    } else {
+        alert((titulo ? titulo + ': ' : '') + mensaje);
+    }
 }
