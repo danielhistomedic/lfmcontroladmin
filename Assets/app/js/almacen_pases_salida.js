@@ -12,6 +12,7 @@ var canvas = null;
 var ctx = null;
 var isDrawing = false;
 var hasSignature = false;
+var firmaEntregaExistente = false;
 var lastX = 0;
 var lastY = 0;
 
@@ -179,15 +180,14 @@ function initDataTablePases() {
                 className: 'text-center',
                 orderable: false,
                 render: function (data, type, row) {
-                    const esEntregado = (row.estatus === 'ENTREGADO');
                     const esCancelado = (row.estatus === 'CANCELADO');
 
                     let btnEntrega = '';
-                    if (!esEntregado && !esCancelado) {
+                    if (!esCancelado) {
                         btnEntrega = `
                             <button type="button" class="btn btn-sm btn-success py-1 px-2 me-1" 
                                     onclick="abrirModalEntrega(${row.id}); event.stopPropagation();" 
-                                    title="Registrar Entrega / Firma Digital">
+                                    title="${row.estatus === 'ENTREGADO' ? 'Actualizar persona que recibe' : 'Registrar Entrega / Firma Digital'}">
                                 <i class="fa-solid fa-pen-nib"></i>
                             </button>
                         `;
@@ -528,13 +528,13 @@ function cargarDetallePase(id) {
                 firmaBox.html('<span class="text-muted fst-italic small">Sin firma digital registrada</span>');
             }
 
-            // Botón dinámico para entregar si está pendiente
+            // Mostrar registro o corrección del receptor para pases no cancelados
             const btnCont = $('#det_btn_entregar_container');
             btnCont.empty();
-            if (h.estatus === 'PENDIENTE') {
+            if (h.estatus !== 'CANCELADO') {
                 btnCont.html(`
                     <button type="button" class="btn btn-success w-100 fw-bold shadow-sm" onclick="abrirModalEntrega(${h.id})">
-                        <i class="fa-solid fa-pen-nib me-1"></i> Registrar Entrega y Firma de Recibido
+                        <i class="fa-solid fa-pen-nib me-1"></i> ${h.estatus === 'ENTREGADO' ? 'Actualizar Persona que Recibe' : 'Registrar Entrega y Firma de Recibido'}
                     </button>
                 `);
             }
@@ -777,13 +777,6 @@ function abrirModalEntrega(paseId) {
 
             const h = res.header;
 
-            // Validar si ya está entregado
-            if (h.estatus === 'ENTREGADO' && h.firma_recibe) {
-                alertaPersonalizada('warning', 'Pase ya Entregado', `El pase de salida ${h.folio} ya fue entregado y cuenta con firma digital registrada.`);
-                cargarDetallePase(paseId);
-                return;
-            }
-
             if (h.estatus === 'CANCELADO') {
                 alertaPersonalizada('error', 'Pase Cancelado', 'No es posible registrar entrega en un pase cancelado.');
                 return;
@@ -813,7 +806,7 @@ function abrirModalEntrega(paseId) {
             let matchedVal = '';
 
             if (targetClave) {
-                if ($("#selectUsuarioRecibe option[value='" + targetClave + "']").length > 0) {
+                if ($('#selectUsuarioRecibe option').filter(function () { return this.value === targetClave; }).length > 0) {
                     matchedVal = targetClave;
                 } else {
                     $('#selectUsuarioRecibe option').each(function () {
@@ -875,6 +868,12 @@ function abrirModalEntrega(paseId) {
 
             // Limpiar canvas
             limpiarCanvasFirma();
+            firmaEntregaExistente = h.estatus === 'ENTREGADO' && !!h.firma_recibe;
+            $('#avisoFirmaExistente').toggle(firmaEntregaExistente);
+            $('#capturaFirmaEntrega').toggle(!firmaEntregaExistente);
+            $('#btnConfirmarGuardarEntrega').html(firmaEntregaExistente
+                ? '<i class="fa-solid fa-check me-1"></i> Actualizar Receptor'
+                : '<i class="fa-solid fa-check me-1"></i> Confirmar y Guardar Entrega');
 
             // Mostrar modal
             const modalEl = document.getElementById('modalRegistrarEntrega');
@@ -996,7 +995,7 @@ function guardarEntregaPase() {
         return;
     }
 
-    if (!hasSignature || isCanvasEmpty(canvas)) {
+    if (!firmaEntregaExistente && (!hasSignature || isCanvasEmpty(canvas))) {
         mensajeAlertaModal({
             icon: 'info',
             title: iconMensajeInfo + ' ¡Firma Obligatoria!',
@@ -1008,13 +1007,15 @@ function guardarEntregaPase() {
     }
 
     // Obtener imagen en formato BASE64
-    const firmaBase64 = canvas.toDataURL('image/png');
+    const firmaBase64 = firmaEntregaExistente ? null : canvas.toDataURL('image/png');
 
     // Confirmación previa usando mensajeAlertaModal de alertas.js
     mensajeAlertaModal({
         icon: 'warning',
         title: iconMensajeWarning + ' ¿Confirmar Entrega?',
-        text: `¿Desea registrar formalmente la entrega del pase a <strong>${htmlEncode(nombrePersona)}</strong>?`,
+        text: firmaEntregaExistente
+            ? `¿Desea actualizar la persona que recibe a <strong>${htmlEncode(nombrePersona)}</strong> conservando la firma registrada?`
+            : `¿Desea registrar formalmente la entrega del pase a <strong>${htmlEncode(nombrePersona)}</strong>?`,
         textButton: 'Sí, Confirmar',
         textCancelButton: 'No, Cancelar'
     }).then(function (result) {
@@ -1053,12 +1054,14 @@ function enviarRegistroEntregaAjax(paseId, usuarioRecibe, nombreRecibe, firmaBas
     // Convertir el canvas BASE64 a Blob binario y enviarlo como archivo real
     // Esto es FUNDAMENTAL para evitar que ModSecurity / WAF en producción
     // bloquee la petición con HTTP 403 por SecRequestBodyNoFilesLimit (128 KB en texto) o reglas XSS data:image
-    try {
-        const blobFirma = dataURLtoBlob(firmaBase64);
-        formData.append('firma_file', blobFirma, `firma_${paseId}_${Date.now()}.png`);
-    } catch (e) {
-        console.warn('Fallback a firma_base64 en texto:', e);
-        formData.append('firma_base64', firmaBase64);
+    if (firmaBase64) {
+        try {
+            const blobFirma = dataURLtoBlob(firmaBase64);
+            formData.append('firma_file', blobFirma, `firma_${paseId}_${Date.now()}.png`);
+        } catch (e) {
+            console.warn('Fallback a firma_base64 en texto:', e);
+            formData.append('firma_base64', firmaBase64);
+        }
     }
 
     $.ajax({

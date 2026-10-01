@@ -970,11 +970,6 @@ class Almacen extends Controllers
                 $usuarioRecibe = $nombreRecibe;
             }
 
-            if (empty($firmaBase64) || strlen($firmaBase64) < 100 || strpos($firmaBase64, 'data:image') !== 0) {
-                echo json_encode(['status' => false, 'msg' => 'La firma digital es obligatoria. Dibuje su firma en el recuadro correspondiente antes de guardar.'], JSON_UNESCAPED_UNICODE);
-                die();
-            }
-
             $almacenModel = new AlmacenModel();
             $pase = $almacenModel->getPaseSalidaById($paseId);
             if (empty($pase)) {
@@ -987,21 +982,27 @@ class Almacen extends Controllers
                 die();
             }
 
-            if ($pase['estatus'] === 'ENTREGADO' && !empty($pase['firma_recibe'])) {
-                echo json_encode(['status' => false, 'msg' => 'Este pase de salida ya fue registrado como entregado previamente.'], JSON_UNESCAPED_UNICODE);
-                die();
+            $firmaExistente = $pase['estatus'] === 'ENTREGADO' && !empty($pase['firma_recibe']);
+            if ($firmaExistente) {
+                $ok = $almacenModel->updateReceptorEntrega($paseId, $nombreRecibe, $usuarioRecibe);
+            } else {
+                if (strlen($firmaBase64) < 100 || strpos($firmaBase64, 'data:image') !== 0) {
+                    echo json_encode(['status' => false, 'msg' => 'La firma digital es obligatoria. Dibuje su firma en el recuadro correspondiente antes de guardar.'], JSON_UNESCAPED_UNICODE);
+                    die();
+                }
+                $ok = $almacenModel->saveEntregaFirma($paseId, $firmaBase64, $nombreRecibe, $usuarioRecibe);
             }
-
-            $ok = $almacenModel->saveEntregaFirma($paseId, $firmaBase64, $nombreRecibe, $usuarioRecibe);
             if ($ok) {
                 echo json_encode([
                     'status' => true,
-                    'msg'    => '¡Entrega y firma digital registradas con éxito!'
+                    'msg'    => $firmaExistente
+                        ? 'Persona que recibe actualizada con éxito.'
+                        : '¡Entrega y firma digital registradas con éxito!'
                 ], JSON_UNESCAPED_UNICODE);
             } else {
                 echo json_encode([
                     'status' => false,
-                    'msg'    => 'No se pudo guardar la entrega del pase. Inténtelo nuevamente.'
+                    'msg'    => 'No se pudieron confirmar los datos del receptor en la base de datos. Inténtelo nuevamente.'
                 ], JSON_UNESCAPED_UNICODE);
             }
             die();

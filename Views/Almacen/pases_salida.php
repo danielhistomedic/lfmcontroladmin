@@ -1070,8 +1070,11 @@
                         </small>
                     </div>
 
+                    <div id="avisoFirmaExistente" class="alert alert-info mb-2" style="display: none;">
+                        La firma registrada se conservará. Puede actualizar la persona que recibe.
+                    </div>
                     <!-- Cuadro de Firma Digital -->
-                    <div class="mb-2">
+                    <div id="capturaFirmaEntrega" class="mb-2">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label fw-bold text-dark m-0">
                                 <i class="fa-solid fa-pen-nib text-primary me-1"></i> Firma Digital de Recibido de Conformidad: <span class="text-danger">*</span>

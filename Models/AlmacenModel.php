@@ -808,7 +808,7 @@ class AlmacenModel extends Mysql
                                d.fecha_retorno = NULL
                            WHERE d.pase_salida_id = :pase_id";
                 $this->update($sqlDet, [':pase_id' => $pase_id]);
-                return true;
+                return $this->receptorEntregaGuardado($pase_id, $nombre_recibe, $usuario_recibe);
             }
             return false;
         } catch (\Throwable $th) {
@@ -820,6 +820,31 @@ class AlmacenModel extends Mysql
             }
             return false;
         }
+    }
+
+    public function updateReceptorEntrega(int $pase_id, string $nombre_recibe, string $usuario_recibe): bool
+    {
+        $sql = "UPDATE tb_pases_salida SET
+                    nombre_recibio_salida = :nombre_recibe,
+                    ccveusuario_recibe = :usuario_recibe,
+                    fchregistroactualiza = NOW()
+                WHERE id = :pase_id AND fchregistrocancela IS NULL";
+        return $this->update($sql, [
+            ':nombre_recibe' => $nombre_recibe,
+            ':usuario_recibe' => $usuario_recibe,
+            ':pase_id' => $pase_id
+        ]) && $this->receptorEntregaGuardado($pase_id, $nombre_recibe, $usuario_recibe);
+    }
+
+    private function receptorEntregaGuardado(int $pase_id, string $nombre_recibe, string $usuario_recibe): bool
+    {
+        $guardado = $this->selectModel(
+            "SELECT nombre_recibio_salida, ccveusuario_recibe FROM tb_pases_salida WHERE id = :pase_id",
+            [':pase_id' => $pase_id]
+        );
+        return is_array($guardado)
+            && ($guardado['nombre_recibio_salida'] ?? null) === $nombre_recibe
+            && ($guardado['ccveusuario_recibe'] ?? null) === $usuario_recibe;
     }
 
     /**
@@ -1792,6 +1817,5 @@ class AlmacenModel extends Mysql
         }
     }
 }
-
 
 
