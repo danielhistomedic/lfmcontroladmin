@@ -119,23 +119,15 @@ function ejecutar(empty, width, theme, periods = false) {
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts.length,7,'Segunda grafica debajo sin reemplazar la primera');
+        assert.equal(charts.length,6,'Segunda grafica debajo sin reemplazar la primera');
         assert.deepEqual(charts[4].getOption().xAxis[0].data,['Bombas','Sellos']);
         assert.deepEqual(charts[5].getOption().xAxis[0].data,['Cotizacion','Pedido']);
         assert.deepEqual(charts[5].getOption().series[1].data,[0,2]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
-        assert.equal(charts.length,7,'Reutilizar grafica secundaria');
-        assert.equal(charts[6].getOption().xAxis[0].data.length,12);
-        assert.ok(nodes.get('ventas-vendedor-mensual-titulo').textContent.includes('Vendedor 2'));
-        assert.equal(charts[6].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
-        dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts[6].getOption().series[0].data[8],6);
-        assert.equal(charts[6].getOption().series[1].data[8],4);
-        const sellerYear=nodes.get('ventas-vendedor-anio');
-        sellerYear.value='2024'; sellerYear.events.change();
-        assert.equal(charts[6].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
+        assert.equal(charts.length,6,'Reutilizar grafica secundaria');
+        assert.equal(nodes.has('ventas-vendedor-mensual'),false);
         dropdown.value='1'; dropdown.events.change();
         assert.deepEqual(charts[4].getOption().series[0].data,[0]);
         assert.deepEqual(charts[4].getOption().series[1].data,[2]);
@@ -148,7 +140,7 @@ function ejecutar(empty, width, theme, periods = false) {
         charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'no_declinados');
         assert.equal(nodes.get('modal-declinados-ventas').shown,true);
-        assert.equal(charts.length,7,'Modal conserva las graficas existentes sin agregar A ni B');
+        assert.equal(charts.length,6,'Modal conserva las graficas existentes sin agregar A ni B');
     }
     change.call({id:'ventas-mes'}); change.call({id:'ventas-mes'});
     change.call({id:'ventas-anio'}); change.call({id:'ventas-anio'});

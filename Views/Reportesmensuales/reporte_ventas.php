@@ -142,18 +142,6 @@
                             </div>
                             <p id="ventas-cascada-vacio" class="text-muted" hidden>Sin proyectos para los filtros seleccionados.</p>
                             <div id="ventas-estatus-panel" class="mt-4 pt-3 border-top" hidden>
-                                <details class="card shadow-sm ventas-card-desglose mb-4" open>
-                                    <summary id="ventas-vendedor-mensual-titulo" class="card-header fw-semibold">Evolución mensual del vendedor</summary>
-                                    <div class="card-body">
-                                        <label for="ventas-vendedor-anio" class="form-label">Año de la evolución mensual</label>
-                                        <select id="ventas-vendedor-anio" class="form-select mb-3" aria-controls="ventas-vendedor-mensual">
-                                            <?php foreach ($selectedYears as $year): ?><option value="<?= $year; ?>"><?= $year; ?></option><?php endforeach; ?>
-                                        </select>
-                                        <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Evolución mensual del vendedor">
-                                            <div id="ventas-vendedor-mensual" class="ventas-chart" role="img" aria-label="Proyectos de enero a diciembre, con declinados apilados en rojo"></div>
-                                        </div>
-                                    </div>
-                                </details>
                                 <h4 id="ventas-estatus-titulo" class="mt-0" aria-live="polite"></h4>
                                 <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                 <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de clasificaciones del vendedor; desplazamiento horizontal">

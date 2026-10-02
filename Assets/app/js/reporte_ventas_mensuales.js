@@ -315,7 +315,6 @@ document.addEventListener('DOMContentLoaded', function () {
         projectStatusChart.count = projectStatuses.length;
         projectStatusChart.instance.setOption(stackedOption(projectStatuses, 'estatus'), true);
         fitCascade(projectStatusChart);
-        updateSellerMonthly();
     }
     function stackedOption(statuses, nameField) {
         const option = cascadeOption(statuses.map(row => ({ nombre: row[nameField], proyectos: row.proyectos })));
@@ -351,47 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const selectedYears = data.anios_seleccionados || [...new Set((data.estatus_por_clasificacion || []).map(row => Number(row.anio)).filter(Boolean))];
     const selectedMonths = data.meses_seleccionados || [];
-    const sellerYearSelect = document.getElementById('ventas-vendedor-anio');
-    sellerYearSelect.value = String(selectedYears[selectedYears.length - 1] || '');
-    let sellerMonthlyChart = null;
-    function updateSellerMonthly() {
-        if (selectedIndex < 0) return;
-        const seller = projectCounts[selectedIndex];
-        const year = Number(sellerYearSelect.value);
-        const rows = monthNames.map((mes, index) => ({ mes, mes_id: index + 1, proyectos: 0, declinados: 0, vendedor: seller.nombre }));
-        (data.estatus_por_clasificacion || []).filter(row => Number(row.anio) === year &&
-            String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')).forEach(row => {
-            const total = rows[Number(row.mes) - 1];
-            if (!total) return;
-            total.proyectos += Number(row.proyectos);
-            total.declinados += Number(row.declinados);
-        });
-        document.getElementById('ventas-vendedor-mensual-titulo').textContent = seller.nombre + ' — Evolución mensual ' + year;
-        if (!sellerMonthlyChart) {
-            sellerMonthlyChart = cascade('ventas-vendedor-mensual');
-            sellerMonthlyChart.height = 280;
-            sellerMonthlyChart.slotWidth = 100;
-            sellerMonthlyChart.element.style.height = '280px';
-        }
-        sellerMonthlyChart.count = 12;
-        const option = stackedOption(rows, 'mes');
-        option.tooltip = classificationTooltip(rows, 'vendedor', row => row.mes + ' ' + year);
-        option.xAxis.axisLabel.width = 90;
-        option.xAxis.axisLabel.fontSize = 11;
-        option.grid.bottom = 65;
-        sellerMonthlyChart.instance.setOption(option, true);
-        fitCascade(sellerMonthlyChart);
-    }
-    sellerYearSelect.addEventListener('change', updateSellerMonthly);
-    const periodText = selectedMonths.length === 12 ? 'Todo el año · ' + selectedYears.join(', ')
-        : selectedMonths.map(month => monthNames[Number(month) - 1]).join(', ') + ' · ' + selectedYears.join(', ');
-    function classificationTooltip(rows, nameField, period) {
-        return { trigger: 'axis', renderMode: 'richText', formatter: params => {
-            const row = rows[params[0].dataIndex];
-            return row[nameField] + '\nPeríodo: ' + period(row) + '\nProyectos activos: ' + (row.proyectos - row.declinados) +
-                '\nDeclinados: ' + row.declinados + '\nTotal: ' + row.proyectos;
-        } };
-    }
     const periods = selectedYears.slice().sort((a,b)=>a-b).flatMap(anio => selectedMonths.slice().sort((a,b)=>a-b).map(mes => ({anio,mes})));
     const periodCounts = new Map();
     (data.estatus_por_clasificacion || []).forEach(row => {
