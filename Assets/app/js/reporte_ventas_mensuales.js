@@ -217,9 +217,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function fitCascade(entry) {
         const available = entry.element.parentElement ? entry.element.parentElement.clientWidth : entry.element.clientWidth;
-        const width = Math.max(available || 320, entry.count * 160 + 90);
+        const width = Math.max(available || 320, entry.count * (entry.slotWidth || 160) + 90);
         entry.element.style.width = width + 'px';
-        entry.instance.resize({ width, height: 460 });
+        entry.instance.resize({ width, height: entry.height || 460 });
     }
     function cascadeOption(rows, selected = -1) {
         return {
@@ -308,6 +308,50 @@ document.addEventListener('DOMContentLoaded', function () {
     classificationChart.count = generalClassifications.length;
     classificationChart.instance.setOption(stackedOption(generalClassifications, 'clasificacion'));
     fitCascade(classificationChart);
+    const classificationCard = document.getElementById('ventas-clasificacion-card');
+    const classificationSelect = document.getElementById('ventas-clasificacion-desglose');
+    let classificationStatusChart = null;
+    function selectClassification(id) {
+        const classification = generalClassifications.find(row => String(row.clasificacion_id) === String(id));
+        classificationCard.hidden = !classification;
+        classificationSelect.value = classification ? String(classification.clasificacion_id) : '';
+        if (!classification) return;
+        classificationCard.open = true;
+        const statuses = (data.estatus_por_clasificacion || [])
+            .filter(row => String(row.clasificacion_id) === String(classification.clasificacion_id))
+            .sort((a, b) => Number(a.estatus_id) - Number(b.estatus_id));
+        document.getElementById('ventas-clasificacion-card-titulo').textContent = classification.clasificacion +
+            ' — ' + classification.proyectos + ' proyectos · Desglose por estatus';
+        document.getElementById('ventas-clasificacion-card-resumen').textContent = statuses.length
+            ? statuses.map(row => row.estatus + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ')
+            : 'Sin estatus registrados.';
+        if (!classificationStatusChart) {
+            classificationStatusChart = cascade('ventas-clasificacion-estatus');
+            classificationStatusChart.height = 380;
+            classificationStatusChart.slotWidth = 145;
+            classificationStatusChart.element.style.height = '380px';
+        }
+        classificationStatusChart.count = statuses.length;
+        const option = stackedOption(statuses, 'estatus');
+        option.xAxis.axisLabel.fontSize = 10;
+        option.xAxis.axisLabel.lineHeight = 14;
+        option.yAxis.axisLabel.fontSize = 10;
+        option.yAxis.nameTextStyle.fontSize = 10;
+        option.legend.textStyle.fontSize = 10;
+        option.series[1].label.fontSize = 10;
+        option.grid.bottom = 110;
+        classificationStatusChart.instance.setOption(option, true);
+        fitCascade(classificationStatusChart);
+    }
+    classificationChart.instance.on('click', event => {
+        if (event.componentType !== 'series') return;
+        const row = generalClassifications[event.dataIndex];
+        if (row) selectClassification(row.clasificacion_id);
+    });
+    classificationSelect.addEventListener('change', () => selectClassification(classificationSelect.value));
+    classificationCard.addEventListener('toggle', () => {
+        if (classificationCard.open && classificationStatusChart) fitCascade(classificationStatusChart);
+    });
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
 });

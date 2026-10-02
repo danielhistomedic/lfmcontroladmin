@@ -23,6 +23,7 @@ function ejecutar(empty, width, theme) {
         {vendedor_id:'V1',estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2},
         {vendedor_id:'V1',estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},
         {vendedor_id:'V2',estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2}];
+    data.estatus_por_clasificacion = empty ? [] : [{clasificacion_id:3,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2},{clasificacion_id:3,estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},{clasificacion_id:5,estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2}];
     const context = {
         document: {
             addEventListener: (name, cb) => { events[name] = cb; },
@@ -80,6 +81,17 @@ function ejecutar(empty, width, theme) {
         assert.equal(charts[3].getOption().series[1].stack,'proyectos');
         assert.deepEqual(charts[4].getOption().series[1].data,[2]);
         assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
+    }
+    if (!empty) {
+        charts[2].trigger('click',{componentType:'series',dataIndex:0});
+        assert.equal(nodes.get('ventas-clasificacion-card').open,true);
+        assert.equal(nodes.get('ventas-clasificacion-card').hidden,false);
+        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Cotizacion','Pedido']);
+        assert.deepEqual(charts[5].getOption().series[1].data,[0,2]);
+        assert.equal(charts[5].getOption().xAxis[0].axisLabel.fontSize,10);
+        charts[2].trigger('click',{componentType:'series',dataIndex:1});
+        assert.equal(charts.length,6,'Reutilizar desglose de clasificacion');
+        assert.deepEqual(charts[5].getOption().series[1].data,[2]);
     }
     change(); change();
     assert.equal(requests, 1, 'Un solo envío global mientras está cargando');

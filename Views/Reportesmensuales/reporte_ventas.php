@@ -95,6 +95,28 @@
                     <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
                         <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
                     </div>
+                    <label for="ventas-clasificacion-desglose" class="form-label mt-2">Selecciona una barra o una clasificación para ver sus estatus</label>
+                    <select id="ventas-clasificacion-desglose" class="form-select" aria-controls="ventas-clasificacion-card">
+                        <option value="">Selecciona una clasificación</option>
+                        <?php
+                        $classificationOptions = [];
+                        foreach ($report['clasificaciones_por_vendedor'] ?? [] as $classification) {
+                            $classificationOptions[$classification['clasificacion_id']] = $classification['clasificacion'];
+                        }
+                        ksort($classificationOptions, SORT_NUMERIC);
+                        foreach ($classificationOptions as $id => $name): ?>
+                            <option value="<?= $esc($id); ?>"><?= $esc($name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <details id="ventas-clasificacion-card" class="card shadow-sm ventas-card-desglose mt-3" hidden>
+                        <summary class="card-header fw-semibold" id="ventas-clasificacion-card-titulo">Estatus de la clasificación</summary>
+                        <div class="card-body">
+                            <p id="ventas-clasificacion-card-resumen" class="text-muted" aria-live="polite"></p>
+                            <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Desglose de estatus de la clasificación seleccionada">
+                                <div id="ventas-clasificacion-estatus" class="ventas-chart" role="img" aria-label="Estatus por clasificación, con declinados apilados en rojo"></div>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             </div>
             <hr class="ventas-separador">
@@ -187,6 +209,17 @@
         <?php endif; ?>
     </div>
     <style>
+        #ventas-mensuales .ventas-card-desglose {
+            display: block;
+            margin-left: 2rem;
+            border-left: 3px solid #a8cbdc;
+        }
+        #ventas-mensuales .ventas-card-desglose[hidden] { display: none !important; }
+        #ventas-mensuales .ventas-card-desglose summary { cursor: pointer; font-size: .9rem; }
+        #ventas-mensuales .ventas-card-desglose p { font-size: .8rem; }
+        @media (max-width: 575px) {
+            #ventas-mensuales .ventas-card-desglose { margin-left: 0; }
+        }
         #ventas-mensuales .ventas-encabezado-cuantitativo {
             padding: 1rem 1.25rem;
             background-color: #eaf4f8;

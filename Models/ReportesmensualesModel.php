@@ -153,14 +153,33 @@ class ReportesmensualesModel extends Mysql
         }
         unset($statusRow);
         return self::resumir($headers, $divisor)
+            // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
                 'cantidades' => $quantities,
                 'proyectos_por_vendedor' => $projectsBySeller,
                 'clasificaciones_por_vendedor' => $statusesBySeller,
                 'estatus_por_vendedor' => $projectStatuses,
+                'estatus_por_clasificacion' => $this->estatusPorClasificacion($scope, $params),
                 'tipo_cambio' => $rate,
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
+    }
+
+    private function estatusPorClasificacion(string $scope, array $params): array
+    {
+        $rows = $this->consultar("SELECT v.clasificacion_proyecto_id AS clasificacion_id,
+            v.estatus_proyecto_id AS estatus_id, COALESCE(s.cEstatusReporte, 'Sin Estatus') AS estatus,
+            COUNT(*) AS proyectos, SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
+            FROM tb_ventas v LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
+            WHERE v.fecha >= ? AND v.fecha < ? $scope
+            GROUP BY v.clasificacion_proyecto_id, v.estatus_proyecto_id, s.cEstatusReporte
+            ORDER BY v.clasificacion_proyecto_id ASC, v.estatus_proyecto_id ASC", $params);
+        foreach ($rows as &$row) {
+            $row['proyectos'] = (int)$row['proyectos'];
+            $row['declinados'] = (int)$row['declinados'];
+        }
+        unset($row);
+        return $rows;
     }
 
     /** Lista paginada con las mismas condiciones del indicador Declinados. */
