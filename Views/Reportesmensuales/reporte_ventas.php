@@ -1,5 +1,6 @@
 <?php require_once('Template/header_01.php'); ?>
 <link rel="stylesheet" href="<?= assets(); ?>/app/css/reporte_ventas_mensuales.css?v=<?= version(); ?>">
+<link rel="stylesheet" href="<?= assets(); ?>/app/css/reporte_ventas_colocados.css?v=<?= version(); ?>">
 <?php require_once('Template/header_02.php'); ?>
 
 <section role="main" class="content-body fondo-general">
@@ -84,7 +85,7 @@
                 <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos de los meses seleccionados declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos de los meses seleccionados con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos de los meses seleccionados con orden de compra de cliente']] as $kpi): ?>
                     <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
-                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ''; ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php endif; ?>>
+                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ($kpi[0] === 'Pedidos Colocados' ? ' ventas-abrir-colocados' : ''); ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php elseif ($kpi[0] === 'Pedidos Colocados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-colocados-financiero" aria-haspopup="dialog" aria-controls="modal-colocados-financiero" aria-label="Ver resumen financiero de pedidos colocados" <?php endif; ?>>
                             <div class="card-body">
                                 <div class="text-muted mb-2"><?= $esc($kpi[0]); ?></div>
                                 <div class="ventas-valor"><?= $esc($kpi[1]); ?></div><small class="text-muted"><?= $esc($kpi[2]); ?></small>
@@ -218,6 +219,7 @@
                     </div>
                 </div>
             </div>
+            <?php require dirname(__DIR__, 2) . '/Views/Reportesmensuales/modal_colocados_financiero.php'; ?>
             <script type="application/json" id="ventas-mensuales-datos">
                 <?= json_encode($report, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR); ?>
             </script>
@@ -785,6 +787,7 @@ require dirname(__DIR__, 2) . '/Template/modal_seguimientos_venta.php'; ?>
 
 <?php require_once('Template/footer_01.php'); ?>
 <script src="<?= assets(); ?>/app/js/seguimientos_proyecto.js?v=<?= version(); ?>"></script>
+<script src="<?= assets(); ?>/app/js/reporte_ventas_colocados.js?v=<?= version(); ?>"></script>
 <script src="<?= assets(); ?>/vendor/echarts/dist/echarts.js?v=<?= version(); ?>"></script>
 <script src="<?= assets(); ?>/vendor/echarts/i18n/langES.js?v=<?= version(); ?>"></script>
 <?php require_once('Template/footer_02.php'); ?>

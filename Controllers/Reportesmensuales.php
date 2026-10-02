@@ -171,6 +171,58 @@ class Reportesmensuales extends Controllers
         }
     }
 
+    /** GET anio[], mes[], vendedor, seccion y parametros DataTables para el resumen de pedidos. */
+    public function colocadosfinanciero()
+    {
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store');
+        try {
+            if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
+                header('Allow: GET'); http_response_code(405);
+                echo json_encode(['status'=>false,'message'=>'Método no permitido.']); return;
+            }
+            if (!$this->session->getStatus()) {
+                http_response_code(401); echo json_encode(['status'=>false,'message'=>'La sesión ha expirado.']); return;
+            }
+            $permissions = getPermisosGlobal();
+            if (empty($permissions[MOD_REPORTES_MENSUALES_VENTAS]['r'])) {
+                http_response_code(403); echo json_encode(['status'=>false,'message'=>'Acceso restringido.']); return;
+            }
+            $years = self::seleccionNumerica($_GET['anio'] ?? null,2000,2100);
+            $months = self::seleccionNumerica($_GET['mes'] ?? null,1,12);
+            $seller = $_GET['vendedor'] ?? '';
+            $section = $_GET['seccion'] ?? 'resumen';
+            if ($years === false || $months === false || !is_string($seller) || strlen($seller)>100
+                || !in_array($section,['resumen','clientes','vendedores'],true)) {
+                http_response_code(400); echo json_encode(['status'=>false,'message'=>'Los filtros del resumen no son válidos.']); return;
+            }
+            if ((int)$this->session->get('rol_id') === 4) {
+                $scope = (string)$this->session->get('ccveusuario');
+                if ($scope === '' || ($seller !== '' && $seller !== $scope)) {
+                    http_response_code(403); echo json_encode(['status'=>false,'message'=>'Vendedor no autorizado.']); return;
+                }
+                $seller = $scope;
+            }
+            $options = [];
+            if ($section !== 'resumen') {
+                $integer = static fn($key,$default,$min,$max) => filter_var($_GET[$key] ?? $default,
+                    FILTER_VALIDATE_INT,['options'=>['min_range'=>$min,'max_range'=>$max]]);
+                $options = ['draw'=>$integer('draw',1,0,1000000000),'start'=>$integer('start',0,0,1000000),
+                    'length'=>$integer('length',10,5,100),'order_column'=>$integer('order_column',1,0,2),
+                    'order_dir'=>$_GET['order_dir'] ?? 'asc','search'=>$_GET['search'] ?? ''];
+                if (in_array(false,[$options['draw'],$options['start'],$options['length'],$options['order_column']],true)
+                    || !in_array($options['order_dir'],['asc','desc'],true) || !is_string($options['search']) || strlen($options['search'])>200) {
+                    http_response_code(400); echo json_encode(['status'=>false,'message'=>'Los filtros de la tabla no son válidos.']); return;
+                }
+            }
+            $result = $this->model->colocadosFinanciero($years,$months,$seller,$section,$options);
+            echo json_encode(['status'=>true,'data'=>$result],JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
+        } catch (\Throwable $ex) {
+            getLoggerSystem()->error('No se pudo consultar el resumen financiero de pedidos colocados.');
+            http_response_code(500); echo json_encode(['status'=>false,'message'=>'No se pudo cargar el resumen financiero. Intente nuevamente.']);
+        }
+    }
+
     /** GET anio, mes, vendedor, pagina; acceso de lectura del módulo de ventas mensuales. */
     public function declinados()
     {

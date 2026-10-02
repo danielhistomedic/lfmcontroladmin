@@ -335,6 +335,55 @@ class ReportesmensualesModel extends Mysql
         ];
     }
 
+    /** Pedidos enviados por fecha de pedido; importes originales sin conversion de moneda. */
+    public function colocadosFinanciero(int|array $year, int|array $month, string $seller, string $section = 'resumen', array $options = []): array
+    {
+        $params = [];
+        $period = self::periodo('pc.fecha_pedido', $year, $month, $params);
+        $where = "$period AND pc.enviado = 1 AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND " . self::FILTRO_PROYECTOS;
+        if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        $base = 'FROM tb_pedidos_cliente pc INNER JOIN tb_ventas v ON v.id = pc.venta_id';
+        $currency = "CASE WHEN pc.moneda_id = 1 THEN 'MXN' WHEN pc.moneda_id = 3 THEN 'USD' ELSE CONCAT('Moneda ', COALESCE(pc.moneda_id, 'sin identificar')) END";
+        if ($section === 'resumen') {
+            $totals = $this->consultar("SELECT pc.moneda_id, $currency AS moneda, SUM(COALESCE(pc.total,0)) AS total,
+                COUNT(*) AS pedidos $base WHERE $where GROUP BY pc.moneda_id ORDER BY pc.moneda_id", $params);
+            $group = "CASE WHEN v.clasificacion_proyecto_id IN (2,3,4) THEN 'Flowserve' ELSE 'Diversos' END";
+            $groups = $this->consultar("SELECT $group AS grupo, pc.moneda_id, $currency AS moneda,
+                SUM(COALESCE(pc.total,0)) AS total, COUNT(*) AS pedidos $base WHERE $where
+                GROUP BY $group, pc.moneda_id ORDER BY grupo, pc.moneda_id", $params);
+            return ['totales'=>$totals, 'grupos'=>$groups];
+        }
+        if (!in_array($section, ['clientes','vendedores'], true)) throw new InvalidArgumentException('Seccion no valida.');
+        $entity = $section === 'clientes' ? 'pc.cliente_id' : 'v.ccveusuario_vendedor';
+        $name = $section === 'clientes' ? "COALESCE(c.nombre_comercial,'Sin cliente')"
+            : "COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)),''),'Sin vendedor')";
+        $joins = $base . ($section === 'clientes' ? ' LEFT JOIN cat_clientes c ON c.id = pc.cliente_id'
+            : ' LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor');
+        $group = "$entity, pc.moneda_id";
+        $countSql = "SELECT COUNT(*) AS total FROM (SELECT $entity, pc.moneda_id $joins WHERE $where GROUP BY $group) grupos";
+        $totalRows = $this->consultar($countSql, $params);
+        $filteredWhere = $where;
+        $filteredParams = $params;
+        $search = $options['search'] ?? '';
+        if ($search !== '') {
+            $filteredWhere .= " AND ($name LIKE ? ESCAPE '!' OR $currency LIKE ? ESCAPE '!')";
+            $pattern = '%' . str_replace(['!','%','_'], ['!!','!%','!_'], $search) . '%';
+            array_push($filteredParams, $pattern, $pattern);
+        }
+        $filtered = $search === '' ? $totalRows : $this->consultar("SELECT COUNT(*) AS total FROM (
+            SELECT $entity, pc.moneda_id $joins WHERE $filteredWhere GROUP BY $group) grupos", $filteredParams);
+        $order = [0=>'nombre',1=>'moneda',2=>'total'][(int)($options['order_column'] ?? 1)] ?? 'moneda';
+        $direction = ($options['order_dir'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+        $length = max(5,min(100,(int)($options['length'] ?? 10)));
+        $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
+        $rows = $this->consultar("SELECT $entity AS entidad_id, MAX($name) AS nombre, pc.moneda_id,
+            $currency AS moneda, SUM(COALESCE(pc.total,0)) AS total, COUNT(*) AS pedidos
+            $joins WHERE $filteredWhere GROUP BY $group ORDER BY $order $direction, entidad_id ASC, pc.moneda_id ASC
+            LIMIT $length OFFSET $offset", $filteredParams);
+        return ['draw'=>(int)($options['draw'] ?? 1),'recordsTotal'=>(int)($totalRows[0]['total'] ?? 0),
+            'recordsFiltered'=>(int)($filtered[0]['total'] ?? 0),'data'=>$rows];
+    }
+
     /** Totales del comparativo, con la misma conversion y redondeo por proyecto. */
     public static function resumir(array $headers, float $divisor): array
     {
