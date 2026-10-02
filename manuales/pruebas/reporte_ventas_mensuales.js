@@ -22,7 +22,7 @@ function ejecutar(empty, width, theme) {
         document: {
             addEventListener: (name, cb) => { events[name] = cb; },
             getElementById: id => id === 'modal-declinados-ventas' ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
-                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : { id, clientWidth: width },
+                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : { id, clientWidth: width, style: {} },
             querySelectorAll: () => []
         },
         window: { addEventListener: (name, cb) => { events[name] = cb; } },
@@ -45,6 +45,7 @@ function ejecutar(empty, width, theme) {
     const counts=charts[0].getOption();
     assert.equal(counts.xAxis[0].name,'Proyectos');
     assert.equal(counts.xAxis[0].minInterval,1);
+    assert.equal((counts.dataZoom || []).length,0,'Sin control lateral en cantidades por vendedor');
     if (!empty) {
         assert.deepEqual(counts.series[0].data,[8,2]);
         const comparison = charts[4].getOption();
@@ -71,7 +72,7 @@ console.log('OK: cinco gráficas SVG con ECharts '+echarts.version+', cruce por 
 async function probarModal(critical = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;
     function node(id) {
-        if (!nodes.has(id)) nodes.set(id, { id, children: [], events: {}, textContent: '', dataset: {}, disabled: false,
+        if (!nodes.has(id)) nodes.set(id, { id, children: [], events: {}, textContent: '', dataset: {}, style: {}, disabled: false,
             addEventListener(name, cb) { this.events[name] = cb; }, setAttribute() {},
             appendChild(child) { this.children.push(child); }, replaceChildren() { this.children = []; },
             click() { this.clicked = true; }

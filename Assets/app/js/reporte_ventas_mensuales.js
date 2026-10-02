@@ -188,17 +188,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const colors = ['#2385bd', '#27a58c', '#e5a543', '#8c6bb1', '#cf6478', '#428582', '#718bbd', '#ad7e56'];
     function chart(id, labels, series, horizontal, unit = 'USD') {
         const el = document.getElementById(id);
+        const projectCountsChart = id === 'ventas-cantidades-vendedores';
+        if (projectCountsChart) el.style.height = Math.max(340, labels.length * 38 + 110) + 'px';
         const instance = echarts.init(el, typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? 'dark' : null);
         const compact = el.clientWidth < 500;
         const chartText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
         const category = { type: 'category', data: labels, axisLabel: { color: chartText, width: compact ? 95 : 150, overflow: 'truncate' } };
         const value = { type: 'value', name: unit, nameTextStyle: { color: chartText }, axisLabel: { color: chartText, formatter: v => amount.format(v) } };
         if (unit === 'Proyectos') value.minInterval = 1;
-        const zoom = labels.length > 10 ? [{ type: 'slider', orient: horizontal ? 'vertical' : 'horizontal',
+        const zoom = labels.length > 10 && !projectCountsChart ? [{ type: 'slider', orient: horizontal ? 'vertical' : 'horizontal',
             [horizontal ? 'yAxisIndex' : 'xAxisIndex']: 0, start: 0, end: Math.min(100, 1000 / labels.length) }] : [];
         instance.setOption({ color: colors, backgroundColor: 'transparent',
             tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: v => amount.format(v) + ' ' + unit },
-            legend: { top: 0, type: 'scroll', textStyle: { color: chartText } }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal ? 60 : 25, top: 50, bottom: 60 },
+            legend: { top: 0, type: 'scroll', textStyle: { color: chartText } }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal && !projectCountsChart ? 60 : 25, top: 50, bottom: 60 },
             xAxis: horizontal ? value : category, yAxis: horizontal ? category : value,
             dataZoom: zoom, series: series, aria: { enabled: true } });
         charts.push(instance);

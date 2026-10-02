@@ -3,7 +3,7 @@
 /** Reporte mensual: reglas de MOSTRAR_ESTATUS_PEDIDOS en frmRegistrarProyecto. */
 class ReportesmensualesModel extends Mysql
 {
-    private const FILTRO_CLASIFICACION = 'v.clasificacion_proyecto_id IN (2,3,4,5)';
+    private const FILTRO_PROYECTOS = 'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)';
     // Usa la conexión central; propaga errores para distinguir error de un mes vacío.
     private function consultar(string $sql, array $params = []): array
     {
@@ -16,19 +16,23 @@ class ReportesmensualesModel extends Mysql
 
     public function vendedores(string $alcance): array
     {
-        $where = 'WHERE ' . self::FILTRO_CLASIFICACION . ($alcance === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
-        return $this->consultar("SELECT v.ccveusuario_vendedor AS id,
+        $where = 'WHERE ' . self::FILTRO_PROYECTOS . ($alcance === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
+        return $this->consultar(
+            "SELECT v.ccveusuario_vendedor AS id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS nombre
             FROM tb_ventas v LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             $where GROUP BY v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido ORDER BY nombre",
-            $alcance === '' ? [] : [$alcance]);
+            $alcance === '' ? [] : [$alcance]
+        );
     }
 
     public function proyectoDeclinadoAutorizado(int $ventaId, string $seller): bool
     {
-        $scope = ' AND ' . self::FILTRO_CLASIFICACION . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
-        return $this->consultar("SELECT v.id FROM tb_ventas v WHERE v.id = ? AND v.activo = 'CERRADO'$scope",
-            $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
+        $scope = ' AND ' . self::FILTRO_PROYECTOS . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
+        return $this->consultar(
+            "SELECT v.id FROM tb_ventas v WHERE v.id = ? AND v.activo = 'CERRADO'$scope",
+            $seller === '' ? [$ventaId] : [$ventaId, $seller]
+        ) !== [];
     }
 
     /** Condición única para el KPI crítico, su listado y acceso al historial. */
@@ -46,16 +50,18 @@ class ReportesmensualesModel extends Mysql
     public function proyectoInternaSinClienteAutorizado(int $ventaId, string $seller): bool
     {
         $condition = self::condicionInternaSinCliente();
-        $scope = ' AND ' . self::FILTRO_CLASIFICACION . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
-        return $this->consultar("SELECT v.id FROM tb_ventas v WHERE v.id = ? AND $condition$scope",
-            $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
+        $scope = ' AND ' . self::FILTRO_PROYECTOS . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
+        return $this->consultar(
+            "SELECT v.id FROM tb_ventas v WHERE v.id = ? AND $condition$scope",
+            $seller === '' ? [$ventaId] : [$ventaId, $seller]
+        ) !== [];
     }
 
     public function dashboard(int $year, int $month, string $seller): array
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
-        $scope = ' AND ' . self::FILTRO_CLASIFICACION . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
+        $scope = ' AND ' . self::FILTRO_PROYECTOS . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
         $params = $seller === '' ? [$start, $end] : [$start, $end, $seller];
         $rateRows = $this->consultar('SELECT valor, fecha FROM tb_historial_tipos_cambio WHERE idMoneda = 3 ORDER BY fecha DESC, id DESC LIMIT 1');
         $rate = (float)($rateRows[0]['valor'] ?? 0);
@@ -150,8 +156,12 @@ class ReportesmensualesModel extends Mysql
         foreach ($projectsBySeller as &$sellerRow) $sellerRow['proyectos'] = (int)$sellerRow['proyectos'];
         unset($sellerRow);
         return self::resumir($headers, $lines, $divisor, (int)(new DateTimeImmutable($start))->format('t'))
-            + ['cantidades' => $quantities, 'proyectos_por_vendedor' => $projectsBySeller,
-                'tipo_cambio' => $rate, 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null];
+            + [
+                'cantidades' => $quantities,
+                'proyectos_por_vendedor' => $projectsBySeller,
+                'tipo_cambio' => $rate,
+                'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
+            ];
     }
 
     /** Lista paginada con las mismas condiciones del indicador Declinados. */
@@ -159,9 +169,12 @@ class ReportesmensualesModel extends Mysql
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
-        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO' AND " . self::FILTRO_CLASIFICACION;
+        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO' AND " . self::FILTRO_PROYECTOS;
         $params = [$start, $end];
-        if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        if ($seller !== '') {
+            $where .= ' AND v.ccveusuario_vendedor = ?';
+            $params[] = $seller;
+        }
         $count = $this->consultar("SELECT COUNT(*) AS total FROM tb_ventas v WHERE $where", $params);
         if (!$count) throw new RuntimeException('No se pudo obtener la lista de declinados.');
         $total = (int)$count[0]['total'];
@@ -175,7 +188,7 @@ class ReportesmensualesModel extends Mysql
             FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id = v.cliente_id
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE $where ORDER BY v.fecha DESC, v.id DESC LIMIT $pageSize OFFSET $offset", $params);
-        return ['proyectos'=>$rows, 'total'=>$total, 'pagina'=>$page, 'paginas'=>$pages, 'por_pagina'=>$pageSize];
+        return ['proyectos' => $rows, 'total' => $total, 'pagina' => $page, 'paginas' => $pages, 'por_pagina' => $pageSize];
     }
 
     /** DataTables: búsqueda y paginación en servidor, dentro del alcance autorizado. */
@@ -184,26 +197,39 @@ class ReportesmensualesModel extends Mysql
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
         $condition = $lista === 'interna_sin_cliente' ? self::condicionInternaSinCliente() : "v.activo = 'CERRADO'";
-        $where = "v.fecha >= ? AND v.fecha < ? AND $condition AND " . self::FILTRO_CLASIFICACION;
+        $where = "v.fecha >= ? AND v.fecha < ? AND $condition AND " . self::FILTRO_PROYECTOS;
         $params = [$start, $end];
-        if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        if ($seller !== '') {
+            $where .= ' AND v.ccveusuario_vendedor = ?';
+            $params[] = $seller;
+        }
         $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id
             LEFT JOIN cat_medico m ON m.ccvemedico=v.ccveusuario_vendedor
             LEFT JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id';
         $sellerName = "COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor')";
-        $fields = [1=>'v.proyecto_id', 2=>"DATE_FORMAT(v.fecha, '%d/%m/%Y')", 3=>"COALESCE(c.nombre_comercial, 'Sin cliente')",
-            4=>$sellerName, 5=>"COALESCE(cl.clasificacion, 'Sin clasificación')", 6=>"COALESCE(v.titulo,'')", 7=>'v.activo'];
+        $fields = [
+            1 => 'v.proyecto_id',
+            2 => "DATE_FORMAT(v.fecha, '%d/%m/%Y')",
+            3 => "COALESCE(c.nombre_comercial, 'Sin cliente')",
+            4 => $sellerName,
+            5 => "COALESCE(cl.clasificacion, 'Sin clasificación')",
+            6 => "COALESCE(v.titulo,'')",
+            7 => 'v.activo'
+        ];
         $total = $this->consultar("SELECT COUNT(*) AS total FROM tb_ventas v WHERE $where", $params);
         if (!$total) throw new RuntimeException('No se pudo consultar la tabla.');
         $filteredWhere = $where;
         $filteredParams = $params;
-        $like = static fn($text) => '%'.str_replace(['!','%','_'], ['!!','!%','!_'], $text).'%';
+        $like = static fn($text) => '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $text) . '%';
         if ($options['search'] !== '') {
             $clauses = [];
-            foreach ($fields as $field) { $clauses[] = "$field LIKE ? ESCAPE '!'"; $filteredParams[] = $like($options['search']); }
-            $filteredWhere .= ' AND ('.implode(' OR ', $clauses).')';
+            foreach ($fields as $field) {
+                $clauses[] = "$field LIKE ? ESCAPE '!'";
+                $filteredParams[] = $like($options['search']);
+            }
+            $filteredWhere .= ' AND (' . implode(' OR ', $clauses) . ')';
         }
-        foreach ($fields as $index=>$field) {
+        foreach ($fields as $index => $field) {
             if (($options['filters'][$index] ?? '') !== '') {
                 $filteredWhere .= " AND $field LIKE ? ESCAPE '!'";
                 $filteredParams[] = $like($options['filters'][$index]);
@@ -220,30 +246,52 @@ class ReportesmensualesModel extends Mysql
             COALESCE(c.nombre_comercial, 'Sin cliente') AS cliente, $sellerName AS vendedor,
             COALESCE(cl.clasificacion, 'Sin clasificación') AS clasificacion
             $joins WHERE $filteredWhere ORDER BY $order $direction, v.id DESC LIMIT $length OFFSET $offset", $filteredParams);
-        return ['draw'=>(int)$options['draw'], 'recordsTotal'=>(int)$total[0]['total'],
-            'recordsFiltered'=>(int)$filtered[0]['total'], 'data'=>$rows];
+        return [
+            'draw' => (int)$options['draw'],
+            'recordsTotal' => (int)$total[0]['total'],
+            'recordsFiltered' => (int)$filtered[0]['total'],
+            'data' => $rows
+        ];
     }
 
     public static function resumir(array $headers, array $lines, float $divisor, int $days): array
     {
-        $result = ['cotizado' => 0.0, 'colocado' => 0.0, 'proyectos' => 0, 'cotizaciones_enviadas' => 0,
-            'proyectos_cotizados' => 0, 'proyectos_colocados' => 0, 'vendedores' => [], 'productos' => [], 'cruce' => [], 'diario' => []];
-        for ($day=1; $day<=$days; $day++) $result['diario'][] = ['dia'=>$day, 'cotizado'=>0.0, 'colocado'=>0.0];
-        $index = []; $unique = []; $sums = [];
+        $result = [
+            'cotizado' => 0.0,
+            'colocado' => 0.0,
+            'proyectos' => 0,
+            'cotizaciones_enviadas' => 0,
+            'proyectos_cotizados' => 0,
+            'proyectos_colocados' => 0,
+            'vendedores' => [],
+            'productos' => [],
+            'cruce' => [],
+            'diario' => []
+        ];
+        for ($day = 1; $day <= $days; $day++) $result['diario'][] = ['dia' => $day, 'cotizado' => 0.0, 'colocado' => 0.0];
+        $index = [];
+        $unique = [];
+        $sums = [];
         foreach ($headers as $h) {
-            $type = $h['tipo']; $id = (string)$h['id']; $seller = (string)$h['vendedor_id'];
+            $type = $h['tipo'];
+            $id = (string)$h['id'];
+            $seller = (string)$h['vendedor_id'];
             $factor = (int)$h['moneda_id'] === 1 ? 1 / $divisor : 1;
-            $h['factor'] = $factor; $h['usd'] = round((float)$h['monto'] * $factor, 2);
-            $index[$type][$id] = $h; $unique[$id] = true;
-            $result[$type] += $h['usd']; $result['proyectos_'.$type.'s']++;
+            $h['factor'] = $factor;
+            $h['usd'] = round((float)$h['monto'] * $factor, 2);
+            $index[$type][$id] = $h;
+            $unique[$id] = true;
+            $result[$type] += $h['usd'];
+            $result['proyectos_' . $type . 's']++;
             if ($type === 'cotizado') $result['cotizaciones_enviadas'] += (int)($h['cotizaciones'] ?? 0);
-            if (!isset($result['vendedores'][$seller])) $result['vendedores'][$seller] = ['nombre'=>$h['vendedor'], 'cotizado'=>0.0, 'colocado'=>0.0];
+            if (!isset($result['vendedores'][$seller])) $result['vendedores'][$seller] = ['nombre' => $h['vendedor'], 'cotizado' => 0.0, 'colocado' => 0.0];
             $result['vendedores'][$seller][$type] += $h['usd'];
-            $day = (int)substr((string)$h['fecha'],8,2);
-            if ($day>=1 && $day<=$days) $result['diario'][$day-1][$type] += $h['usd'];
+            $day = (int)substr((string)$h['fecha'], 8, 2);
+            if ($day >= 1 && $day <= $days) $result['diario'][$day - 1][$type] += $h['usd'];
         }
         foreach ($lines as $line) {
-            $type = $line['tipo']; $id = (string)$line['venta_id'];
+            $type = $line['tipo'];
+            $id = (string)$line['venta_id'];
             if (!isset($index[$type][$id])) continue;
             $h = $index[$type][$id];
             $amount = (float)$line['monto'] * $h['factor'];
@@ -252,11 +300,15 @@ class ReportesmensualesModel extends Mysql
         }
         foreach ($index as $type => $rows) foreach ($rows as $id => $h) {
             $difference = $h['usd'] - ($sums[$type][$id] ?? 0);
-            if (abs($difference) > 0.000001) self::agregarPartida($result, $h,
-                ['subclasificacion_id'=>'conciliacion', 'subclasificacion'=>'Sin desglose / diferencia con total de proyecto', 'partida_id'=>null, 'cantidad'=>0, 'unidad'=>''], $difference);
+            if (abs($difference) > 0.000001) self::agregarPartida(
+                $result,
+                $h,
+                ['subclasificacion_id' => 'conciliacion', 'subclasificacion' => 'Sin desglose / diferencia con total de proyecto', 'partida_id' => null, 'cantidad' => 0, 'unidad' => ''],
+                $difference
+            );
         }
         $result['proyectos'] = count($unique);
-        foreach (['productos','cruce'] as $section) {
+        foreach (['productos', 'cruce'] as $section) {
             foreach ($result[$section] as &$row) {
                 $row['partidas'] = count($row['partidas']);
                 $row['unidades_cotizadas'] = self::unidades($row['unidades_cotizadas']);
@@ -274,10 +326,18 @@ class ReportesmensualesModel extends Mysql
     {
         $sub = (string)($line['subclasificacion_id'] ?? 'sin');
         $name = $line['subclasificacion'] ?: 'Sin subclasificación';
-        foreach (['productos'=>$sub, 'cruce'=>json_encode([(string)$h['vendedor_id'],$sub])] as $section=>$key) {
-            if (!isset($result[$section][$key])) $result[$section][$key] = ['nombre'=>$name, 'subclasificacion_id'=>$sub,
-                'vendedor'=>$h['vendedor'], 'vendedor_id'=>(string)$h['vendedor_id'], 'partidas'=>[],
-                'unidades_cotizadas'=>[], 'unidades_vendidas'=>[], 'cotizado'=>0.0, 'colocado'=>0.0];
+        foreach (['productos' => $sub, 'cruce' => json_encode([(string)$h['vendedor_id'], $sub])] as $section => $key) {
+            if (!isset($result[$section][$key])) $result[$section][$key] = [
+                'nombre' => $name,
+                'subclasificacion_id' => $sub,
+                'vendedor' => $h['vendedor'],
+                'vendedor_id' => (string)$h['vendedor_id'],
+                'partidas' => [],
+                'unidades_cotizadas' => [],
+                'unidades_vendidas' => [],
+                'cotizado' => 0.0,
+                'colocado' => 0.0
+            ];
             $row = &$result[$section][$key];
             $row[$h['tipo']] += $amount;
             if ($line['partida_id'] !== null) $row['partidas'][(string)$line['partida_id']] = true;
@@ -290,8 +350,9 @@ class ReportesmensualesModel extends Mysql
 
     private static function unidades(array $units): string
     {
-        ksort($units); $labels=[];
-        foreach ($units as $unit=>$quantity) $labels[] = rtrim(rtrim(number_format($quantity,4,'.',','),'0'),'.').' '.$unit;
+        ksort($units);
+        $labels = [];
+        foreach ($units as $unit => $quantity) $labels[] = rtrim(rtrim(number_format($quantity, 4, '.', ','), '0'), '.') . ' ' . $unit;
         return implode(' · ', $labels) ?: '—';
     }
 }
