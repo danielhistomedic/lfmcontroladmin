@@ -95,6 +95,51 @@ $duplicateModel=new ModeloSimulado(new ConexionSimulada([[],[],[$headers[1],$dup
 try { $duplicateModel->dashboard(2024,2,''); verificar(false,'Rechazar folios ambiguos'); }
 catch (RuntimeException $ex) { verificar(str_contains($ex->getMessage(),'duplicados'),'Error identificable de folios duplicados'); }
 
+// La lista conserva fecha, estado y alcance; no multiplica proyectos por documentos.
+$listDb = new ConexionSimulada([[['total'=>21]], [['id'=>21,'proyecto_id'=>'P21']]]);
+$list = (new ModeloSimulado($listDb))->declinados(2024,2,"V'1",100);
+verificar($list['pagina']===2 && $list['paginas']===2 && $list['total']===21, 'Paginación limitada al último resultado');
+verificar($listDb->calls[0][1]===['2024-02-01','2024-03-01',"V'1"] && $listDb->calls[1][1]===$listDb->calls[0][1], 'Lista y total comparten mes y vendedor');
+verificar(str_contains($listDb->calls[1][0], "v.activo = 'CERRADO'") && str_contains($listDb->calls[1][0], 'LIMIT 20 OFFSET 20'), 'Estado y tamaño de página controlados');
+$emptyList = (new ModeloSimulado(new ConexionSimulada([[['total'=>0]],[]])))->declinados(2024,2,'',1);
+verificar($emptyList['proyectos']===[] && $emptyList['paginas']===1, 'Lista vacía válida');
+
+// Ejecuta el endpoint con sesión/modelo simulados, sin cargar el bootstrap real.
+class Controllers { public $model; public function __construct() {} }
+class Session {
+    public static bool $active = true;
+    public static array $values = ['rol_id'=>4,'ccveusuario'=>'V1'];
+    public function getStatus() { return self::$active; }
+    public function get($key) { return self::$values[$key] ?? null; }
+}
+define('MOD_REPORTES_MENSUALES_VENTAS',139);
+$testPermissions=[139=>['r'=>1]];
+function getPermisosGlobal() { global $testPermissions; return $testPermissions; }
+function getLoggerSystem() { return new class { public function error($message) {} }; }
+require_once __DIR__.'/../../Controllers/Reportesmensuales.php';
+$api = new Reportesmensuales();
+$api->model = new class {
+    public array $calls=[];
+    public function declinados($year,$month,$seller,$page) {
+        $this->calls[]=[$year,$month,$seller,$page];
+        return ['proyectos'=>[],'total'=>0,'pagina'=>1,'paginas'=>1,'por_pagina'=>20];
+    }
+};
+function llamarLista($api): array {
+    http_response_code(200); ob_start(); $api->declinados();
+    return [http_response_code(),json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR)];
+}
+$_SERVER['REQUEST_METHOD']='GET'; $_GET=['anio'=>'2024','mes'=>'2','vendedor'=>'','pagina'=>'1'];
+verificar(llamarLista($api)[0]===200 && $api->model->calls[0]===[2024,2,'V1',1], 'TODOS restringido al vendedor de sesión');
+$_GET['vendedor']='V2'; verificar(llamarLista($api)[0]===403 && count($api->model->calls)===1, 'Rechazar otro vendedor sin consultar datos');
+$_GET['vendedor']=''; $_GET['mes']='13'; verificar(llamarLista($api)[0]===400, 'Rechazar período inválido');
+$_GET['mes']='2'; Session::$active=false; verificar(llamarLista($api)[0]===401, 'Sesión vencida responde JSON');
+Session::$active=true; $testPermissions=[]; verificar(llamarLista($api)[0]===403, 'Verificar permiso del módulo');
+$testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='POST'; verificar(llamarLista($api)[0]===405, 'Sólo GET');
+$_SERVER['REQUEST_METHOD']='GET'; Session::$values=['rol_id'=>1,'ccveusuario'=>'ADMIN'];
+verificar(llamarLista($api)[0]===200 && $api->model->calls[1]===[2024,2,'',1], 'TODOS para usuario autorizado general');
+http_response_code(200);
+
 // Renderiza sólo la vista con datos sintéticos y sin cargar las plantillas del portal.
 function base_url() { return '/portal'; }
 function assets() { return '/portal/Assets'; }
@@ -113,5 +158,6 @@ verificar(str_contains($html,'\\u003Cscript\\u003E'),'Escape de JSON incrustado'
 verificar(str_contains($html,'TODOS') && str_contains($html,'José'),'UTF-8 y filtros');
 verificar(str_contains($html,'Cantidades') && !str_contains($html,'>Importes</h4>') && str_contains($html,'Orden Compra Cliente'),'Conservar Cantidades y retirar el bloque Importes');
 verificar(str_contains($html,'Cantidades (crítico)') && str_contains($html,'col-12 col-md-3') && str_contains($html,'sin cotización a cliente enviada vinculada'), 'Tarjeta crítica en el primer cuarto de la fila');
+verificar(substr_count($html,'data-bs-target="#modal-declinados-ventas"')===2, 'Ambas tarjetas abren el modal de declinados solicitado');
 verificar(!str_contains($html,'Colocado / cotizado'),'Retirar el indicador de relación anterior');
 echo "OK: agregaciones, conciliación, permisos por conjunto, consultas parametrizadas, vacío, bisiesto, divisor de respaldo, folios ambiguos y renderizado seguro.\n";

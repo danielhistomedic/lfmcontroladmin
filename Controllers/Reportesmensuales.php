@@ -95,4 +95,57 @@ class Reportesmensuales extends Controllers
             getLoggerSystem()->error(getMensajeError($th));
         }
     }
+
+    /** GET anio, mes, vendedor, pagina; acceso de lectura del módulo de ventas mensuales. */
+    public function declinados()
+    {
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store');
+        try {
+            if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
+                header('Allow: GET');
+                http_response_code(405);
+                echo json_encode(['status'=>false, 'message'=>'Método no permitido.']);
+                return;
+            }
+            if (!$this->session->getStatus()) {
+                http_response_code(401);
+                echo json_encode(['status'=>false, 'message'=>'La sesión ha expirado.']);
+                return;
+            }
+            $permissions = getPermisosGlobal();
+            if (empty($permissions[MOD_REPORTES_MENSUALES_VENTAS]['r'])) {
+                http_response_code(403);
+                echo json_encode(['status'=>false, 'message'=>'Acceso restringido.']);
+                return;
+            }
+            $year = filter_var($_GET['anio'] ?? null, FILTER_VALIDATE_INT,
+                ['options'=>['min_range'=>2000, 'max_range'=>2100]]);
+            $month = filter_var($_GET['mes'] ?? null, FILTER_VALIDATE_INT,
+                ['options'=>['min_range'=>1, 'max_range'=>12]]);
+            $page = filter_var($_GET['pagina'] ?? 1, FILTER_VALIDATE_INT,
+                ['options'=>['min_range'=>1, 'max_range'=>1000000]]);
+            $seller = $_GET['vendedor'] ?? '';
+            if ($year === false || $month === false || $page === false || !is_string($seller) || strlen($seller)>100) {
+                http_response_code(400);
+                echo json_encode(['status'=>false, 'message'=>'Los filtros de la lista no son válidos.']);
+                return;
+            }
+            if ((int)$this->session->get('rol_id') === 4) {
+                $scope = (string)$this->session->get('ccveusuario');
+                if ($scope === '' || ($seller !== '' && $seller !== $scope)) {
+                    http_response_code(403);
+                    echo json_encode(['status'=>false, 'message'=>'Vendedor no autorizado.']);
+                    return;
+                }
+                $seller = $scope;
+            }
+            $result = $this->model->declinados($year, $month, $seller, $page);
+            echo json_encode(['status'=>true, 'data'=>$result], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
+        } catch (\Throwable $ex) {
+            getLoggerSystem()->error('No se pudo consultar la lista de proyectos declinados.');
+            http_response_code(500);
+            echo json_encode(['status'=>false, 'message'=>'No se pudo cargar la lista. Intente nuevamente.']);
+        }
+    }
 }

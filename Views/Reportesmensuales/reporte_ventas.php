@@ -61,7 +61,7 @@
                 <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en el mes seleccionado'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos del mes declinados'], ['Cotización Cliente', $report['cantidades']['cotizacion_cliente'], 'Proyectos del mes con cotización enviada'], ['Orden Compra Cliente', $report['cantidades']['orden_compra_cliente'], 'Proyectos del mes con orden de compra de cliente']] as $kpi): ?>
                     <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Orden Compra Cliente' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
-                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?>">
+                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ''; ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados"<?php endif; ?>>
                             <div class="card-body">
                                 <div class="text-muted mb-2"><?= $esc($kpi[0]); ?></div>
                                 <div class="ventas-valor"><?= $esc($kpi[1]); ?></div><small class="text-muted"><?= $esc($kpi[2]); ?></small>
@@ -73,7 +73,7 @@
             <h4 class="mt-0 mb-3">Cantidades (crítico)</h4>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-md-3">
-                    <div class="card h-100 ventas-kpi shadow rounded-3">
+                    <div class="card h-100 ventas-kpi shadow rounded-3 ventas-abrir-declinados" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados">
                         <div class="card-body">
                             <div class="text-muted mb-2">Proyectos con cotización interna sin cotización a cliente</div>
                             <div class="ventas-valor"><?= $esc($report['cantidades']['interna_sin_cliente']); ?></div>
@@ -182,12 +182,43 @@
                     </details>
                 </div>
             </div>
+            <div class="modal fade" id="modal-declinados-ventas" tabindex="-1" aria-labelledby="modal-declinados-titulo" aria-hidden="true" data-url="<?= base_url(); ?>/reportesmensuales/declinados" data-anio="<?= $esc($filters['anio']); ?>" data-mes="<?= $esc($filters['mes']); ?>" data-vendedor="<?= $esc($filters['vendedor']); ?>">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modal-declinados-titulo">Proyectos declinados · <?= $esc($months[$filters['mes']]); ?> <?= $esc($filters['anio']); ?></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="declinados-estado" class="mb-3" role="status" aria-live="polite"></div>
+                            <button type="button" id="declinados-reintentar" class="btn btn-outline-primary mb-3" hidden>Reintentar</button>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover mb-0">
+                                    <caption class="visually-hidden">Lista de proyectos con activo CERRADO del período y vendedor seleccionados</caption>
+                                    <thead><tr><th>Proyecto</th><th>Fecha</th><th>Título</th><th>Cliente</th><th>Vendedor</th><th>Estado</th></tr></thead>
+                                    <tbody id="declinados-proyectos"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <span id="declinados-pagina" class="text-muted"></span>
+                            <div class="d-flex gap-2">
+                                <button type="button" id="declinados-anterior" class="btn btn-outline-primary" disabled>Anterior</button>
+                                <button type="button" id="declinados-siguiente" class="btn btn-outline-primary" disabled>Siguiente</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <script type="application/json" id="ventas-mensuales-datos">
                 <?= json_encode($report, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR); ?>
             </script>
         <?php endif; ?>
     </div>
     <style>
+        #ventas-mensuales .ventas-abrir-declinados { cursor: pointer; }
+        #ventas-mensuales .ventas-abrir-declinados:focus-visible { outline: 3px solid var(--primary, #0088cc); outline-offset: 4px; }
         #ventas-mensuales .ventas-kpi {
             border: 1px solid var(--bs-border-color, #dee2e6);
             border-top: 3px solid var(--primary, #0088cc);

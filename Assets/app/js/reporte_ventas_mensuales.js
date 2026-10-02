@@ -24,6 +24,73 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     const source = document.getElementById('ventas-mensuales-datos');
     if (!source) return;
+    const modal = document.getElementById('modal-declinados-ventas');
+    if (modal) {
+        const tbody = document.getElementById('declinados-proyectos');
+        const status = document.getElementById('declinados-estado');
+        const info = document.getElementById('declinados-pagina');
+        const previous = document.getElementById('declinados-anterior');
+        const next = document.getElementById('declinados-siguiente');
+        const retry = document.getElementById('declinados-reintentar');
+        let page = 1;
+        let request = null;
+        async function load(targetPage) {
+            if (request) request.abort();
+            const current = new AbortController();
+            request = current;
+            page = targetPage;
+            tbody.replaceChildren();
+            status.textContent = 'Cargando proyectos declinados…';
+            status.className = 'mb-3 text-muted';
+            info.textContent = '';
+            retry.hidden = true;
+            previous.disabled = next.disabled = true;
+            const params = new URLSearchParams({ anio: modal.dataset.anio, mes: modal.dataset.mes,
+                vendedor: modal.dataset.vendedor, pagina: String(targetPage) });
+            try {
+                const response = await fetch(modal.dataset.url + '?' + params, {
+                    signal: current.signal, headers: { Accept: 'application/json' }, credentials: 'same-origin'
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo cargar la lista.');
+                if (request !== current) return;
+                const result = payload.data;
+                page = result.pagina;
+                for (const row of result.proyectos) {
+                    const tr = document.createElement('tr');
+                    const date = String(row.fecha || '').slice(0, 10);
+                    const shownDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.split('-').reverse().join('/') : '—';
+                    for (const value of [row.proyecto_id, shownDate, row.titulo, row.cliente, row.vendedor, 'Declinado']) {
+                        const td = document.createElement('td');
+                        td.textContent = value == null || value === '' ? '—' : String(value);
+                        tr.appendChild(td);
+                    }
+                    tbody.appendChild(tr);
+                }
+                status.textContent = result.total ? result.total + ' proyectos declinados' : 'No hay proyectos declinados para los filtros seleccionados.';
+                info.textContent = 'Página ' + page + ' de ' + result.paginas;
+                previous.disabled = page <= 1;
+                next.disabled = page >= result.paginas;
+            } catch (error) {
+                if (error.name === 'AbortError' || request !== current) return;
+                status.textContent = error instanceof SyntaxError ? 'No se pudo cargar la lista. Intente nuevamente.' : error.message;
+                status.className = 'mb-3 text-danger';
+                retry.hidden = false;
+            } finally {
+                if (request === current) request = null;
+            }
+        }
+        modal.addEventListener('show.bs.modal', () => load(1));
+        modal.addEventListener('hidden.bs.modal', () => { if (request) request.abort(); request = null; });
+        previous.addEventListener('click', () => load(page - 1));
+        next.addEventListener('click', () => load(page + 1));
+        retry.addEventListener('click', () => load(page));
+        document.querySelectorAll('#ventas-mensuales .ventas-abrir-declinados').forEach(card => {
+            card.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
+            });
+        });
+    }
     const data = JSON.parse(source.textContent);
     const charts = [];
     const amount = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });

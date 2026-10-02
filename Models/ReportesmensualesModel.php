@@ -121,6 +121,30 @@ class ReportesmensualesModel extends Mysql
             + ['cantidades' => $quantities, 'tipo_cambio' => $rate, 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null];
     }
 
+    /** Lista paginada con las mismas condiciones del indicador Declinados. */
+    public function declinados(int $year, int $month, string $seller, int $page): array
+    {
+        $start = sprintf('%04d-%02d-01', $year, $month);
+        $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
+        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO'";
+        $params = [$start, $end];
+        if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        $count = $this->consultar("SELECT COUNT(*) AS total FROM tb_ventas v WHERE $where", $params);
+        if (!$count) throw new RuntimeException('No se pudo obtener la lista de declinados.');
+        $total = (int)$count[0]['total'];
+        $pageSize = 20;
+        $pages = max(1, (int)ceil($total / $pageSize));
+        $page = max(1, min($page, $pages));
+        $offset = ($page - 1) * $pageSize;
+        $rows = $this->consultar("SELECT v.id, v.proyecto_id, v.fecha, v.titulo, v.activo,
+            COALESCE(c.nombre_comercial, 'Sin cliente') AS cliente,
+            COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor
+            FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id = v.cliente_id
+            LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
+            WHERE $where ORDER BY v.fecha DESC, v.id DESC LIMIT $pageSize OFFSET $offset", $params);
+        return ['proyectos'=>$rows, 'total'=>$total, 'pagina'=>$page, 'paginas'=>$pages, 'por_pagina'=>$pageSize];
+    }
+
     public static function resumir(array $headers, array $lines, float $divisor, int $days): array
     {
         $result = ['cotizado' => 0.0, 'colocado' => 0.0, 'proyectos' => 0, 'cotizaciones_enviadas' => 0,
