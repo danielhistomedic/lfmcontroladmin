@@ -56,6 +56,10 @@
             <div class="alert alert-danger" role="alert"><?= $esc($data['reporte_error']); ?></div>
         <?php elseif ($report !== null): ?>
             <?php if ($report['cantidades']['total_proyectos'] === 0 && $report['proyectos'] === 0): ?><div class="alert alert-info" role="status">No hay proyectos ni ventas cotizadas o colocadas para los filtros seleccionados.</div><?php endif; ?>
+            <div class="ventas-encabezado-cuantitativo mb-4">
+                <h3 class="mt-0 mb-1 fw-bold"><i class="fa-solid fa-chart-column me-2" aria-hidden="true"></i>Análisis cuantitativo</h3>
+                <p class="mb-0">Cantidad de proyectos del período: indicadores generales, pendientes críticos y distribución por vendedor, clasificación y estatus.</p>
+            </div>
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
                 <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en el mes seleccionado'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos del mes declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos del mes con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos del mes con orden de compra de cliente']] as $kpi): ?>
@@ -80,6 +84,16 @@
                             <div class="ventas-valor"><?= $esc($report['cantidades']['interna_sin_cliente']); ?></div>
                             <small class="text-muted">Proyectos del mes no declinados, con cotización interna enviada y sin cotización a cliente enviada vinculada</small>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <hr class="ventas-separador">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mt-0">Proyectos por clasificación</h4>
+                    <p class="text-muted">Proyectos del mes seleccionado, con declinados apilados en rojo.</p>
+                    <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
+                        <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
                     </div>
                 </div>
             </div>
@@ -119,6 +133,10 @@
                 </div>
             </div>
             <hr class="ventas-separador">
+            <div class="ventas-encabezado-cuantitativo mb-4" aria-labelledby="ventas-financiero-titulo">
+                <h3 id="ventas-financiero-titulo" class="mt-0 mb-1 fw-bold"><i class="fa-solid fa-dollar-sign me-2" aria-hidden="true"></i>Análisis financiero</h3>
+                <p class="mb-0">Comparativo de importes cotizados y colocados del período seleccionado, con IVA en USD.</p>
+            </div>
             <div class="row g-3 mb-4">
                 <div class="col-12">
                     <div class="card h-100">
@@ -169,6 +187,16 @@
         <?php endif; ?>
     </div>
     <style>
+        #ventas-mensuales .ventas-encabezado-cuantitativo {
+            padding: 1rem 1.25rem;
+            background-color: #eaf4f8;
+            border-left: 4px solid #0085a3;
+            border-radius: .35rem;
+        }
+        html.dark #ventas-mensuales .ventas-encabezado-cuantitativo {
+            background-color: #203846;
+            border-left-color: #6dc2dd;
+        }
         #ventas-mensuales .ventas-cascada-scroll {
             width: 100%;
             overflow-x: auto;

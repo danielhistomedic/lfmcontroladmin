@@ -41,11 +41,17 @@ function ejecutar(empty, width, theme) {
     };
     vm.runInNewContext(code, context, { filename: 'reporte_ventas_mensuales.js' });
     events.DOMContentLoaded();
-    assert.equal(charts.length, 2, 'Inicializar las cinco gráficas restantes');
+    assert.equal(charts.length, 3, 'Inicializar las cinco gráficas restantes');
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
+    }
+    if (!empty) {
+        assert.deepEqual(charts[2].getOption().xAxis[0].data,['Bombas','Sellos']);
+        assert.deepEqual(charts[2].getOption().series[0].data,[3,3]);
+        assert.deepEqual(charts[2].getOption().series[1].data,[2,2]);
+        assert.equal(charts[2].getOption().series[1].itemStyle.color,'#dc3545');
     }
     const counts=charts[0].getOption();
     assert.equal(counts.yAxis[0].name,'Proyectos');
@@ -60,20 +66,20 @@ function ejecutar(empty, width, theme) {
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts.length,4,'Segunda grafica debajo sin reemplazar la primera');
-        assert.deepEqual(charts[2].getOption().xAxis[0].data,['Bombas','Sellos']);
-        assert.deepEqual(charts[3].getOption().xAxis[0].data,['Cotizacion','Pedido']);
-        assert.deepEqual(charts[3].getOption().series[1].data,[0,2]);
+        assert.equal(charts.length,5,'Segunda grafica debajo sin reemplazar la primera');
+        assert.deepEqual(charts[3].getOption().xAxis[0].data,['Bombas','Sellos']);
+        assert.deepEqual(charts[4].getOption().xAxis[0].data,['Cotizacion','Pedido']);
+        assert.deepEqual(charts[4].getOption().series[1].data,[0,2]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
-        assert.equal(charts.length,4,'Reutilizar grafica secundaria');
-        assert.deepEqual(charts[2].getOption().series[0].data,[0]);
-        assert.deepEqual(charts[2].getOption().series[1].data,[2]);
-        assert.equal(charts[2].getOption().series[1].itemStyle.color,'#dc3545');
-        assert.equal(charts[2].getOption().series[1].stack,'proyectos');
+        assert.equal(charts.length,5,'Reutilizar grafica secundaria');
+        assert.deepEqual(charts[3].getOption().series[0].data,[0]);
         assert.deepEqual(charts[3].getOption().series[1].data,[2]);
         assert.equal(charts[3].getOption().series[1].itemStyle.color,'#dc3545');
+        assert.equal(charts[3].getOption().series[1].stack,'proyectos');
+        assert.deepEqual(charts[4].getOption().series[1].data,[2]);
+        assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
     }
     change(); change();
     assert.equal(requests, 1, 'Un solo envío global mientras está cargando');

@@ -291,6 +291,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     selector.addEventListener('change', () => selectSeller(selector.value === '' ? -1 : Number(selector.value)));
     chart('ventas-comparativo', ['Mes seleccionado'], bars([data]), false);
+    // Consolida las clasificaciones del mismo conjunto filtrado, sin otra consulta.
+    const classificationTotals = new Map();
+    statusCounts.forEach(row => {
+        const key = String(row.clasificacion_id);
+        if (!classificationTotals.has(key)) classificationTotals.set(key, {
+            clasificacion_id: row.clasificacion_id, clasificacion: row.clasificacion, proyectos: 0, declinados: 0
+        });
+        const total = classificationTotals.get(key);
+        total.proyectos += Number(row.proyectos);
+        total.declinados += Number(row.declinados);
+    });
+    const generalClassifications = [...classificationTotals.values()]
+        .sort((a, b) => Number(a.clasificacion_id) - Number(b.clasificacion_id));
+    const classificationChart = cascade('ventas-clasificaciones-general');
+    classificationChart.count = generalClassifications.length;
+    classificationChart.instance.setOption(stackedOption(generalClassifications, 'clasificacion'));
+    fitCascade(classificationChart);
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
 });
