@@ -145,6 +145,51 @@ class ReportesmensualesModel extends Mysql
         return ['proyectos'=>$rows, 'total'=>$total, 'pagina'=>$page, 'paginas'=>$pages, 'por_pagina'=>$pageSize];
     }
 
+    /** DataTables: búsqueda y paginación en servidor, dentro del alcance autorizado. */
+    public function declinadosTabla(int $year, int $month, string $seller, array $options): array
+    {
+        $start = sprintf('%04d-%02d-01', $year, $month);
+        $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
+        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO'";
+        $params = [$start, $end];
+        if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id
+            LEFT JOIN cat_medico m ON m.ccvemedico=v.ccveusuario_vendedor
+            LEFT JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id';
+        $sellerName = "COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor')";
+        $fields = [1=>'v.proyecto_id', 2=>"DATE_FORMAT(v.fecha, '%d/%m/%Y')", 3=>"COALESCE(c.nombre_comercial, 'Sin cliente')",
+            4=>$sellerName, 5=>"COALESCE(cl.clasificacion, 'Sin clasificación')", 6=>"COALESCE(v.titulo,'')", 7=>'v.activo'];
+        $total = $this->consultar("SELECT COUNT(*) AS total FROM tb_ventas v WHERE $where", $params);
+        if (!$total) throw new RuntimeException('No se pudo consultar la tabla.');
+        $filteredWhere = $where;
+        $filteredParams = $params;
+        $like = static fn($text) => '%'.str_replace(['!','%','_'], ['!!','!%','!_'], $text).'%';
+        if ($options['search'] !== '') {
+            $clauses = [];
+            foreach ($fields as $field) { $clauses[] = "$field LIKE ? ESCAPE '!'"; $filteredParams[] = $like($options['search']); }
+            $filteredWhere .= ' AND ('.implode(' OR ', $clauses).')';
+        }
+        foreach ($fields as $index=>$field) {
+            if (($options['filters'][$index] ?? '') !== '') {
+                $filteredWhere .= " AND $field LIKE ? ESCAPE '!'";
+                $filteredParams[] = $like($options['filters'][$index]);
+            }
+        }
+        $filtered = $this->consultar("SELECT COUNT(*) AS total $joins WHERE $filteredWhere", $filteredParams);
+        if (!$filtered) throw new RuntimeException('No se pudo consultar la tabla.');
+        $orderIndex = (int)$options['order_column'];
+        $order = $orderIndex === 2 ? 'v.fecha' : ($fields[$orderIndex] ?? 'v.id');
+        $direction = $options['order_dir'] === 'asc' ? 'ASC' : 'DESC';
+        $length = max(5, min(100, (int)$options['length']));
+        $offset = max(0, min(1000000, (int)$options['start']));
+        $rows = $this->consultar("SELECT v.id, v.proyecto_id, v.fecha, v.titulo, v.activo,
+            COALESCE(c.nombre_comercial, 'Sin cliente') AS cliente, $sellerName AS vendedor,
+            COALESCE(cl.clasificacion, 'Sin clasificación') AS clasificacion
+            $joins WHERE $filteredWhere ORDER BY $order $direction, v.id DESC LIMIT $length OFFSET $offset", $filteredParams);
+        return ['draw'=>(int)$options['draw'], 'recordsTotal'=>(int)$total[0]['total'],
+            'recordsFiltered'=>(int)$filtered[0]['total'], 'data'=>$rows];
+    }
+
     public static function resumir(array $headers, array $lines, float $divisor, int $days): array
     {
         $result = ['cotizado' => 0.0, 'colocado' => 0.0, 'proyectos' => 0, 'cotizaciones_enviadas' => 0,

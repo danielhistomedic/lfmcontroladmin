@@ -184,29 +184,32 @@
             </div>
             <div class="modal fade" id="modal-declinados-ventas" tabindex="-1" aria-labelledby="modal-declinados-titulo" aria-hidden="true" data-url="<?= base_url(); ?>/reportesmensuales/declinados" data-anio="<?= $esc($filters['anio']); ?>" data-mes="<?= $esc($filters['mes']); ?>" data-vendedor="<?= $esc($filters['vendedor']); ?>">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="modal-declinados-titulo">Proyectos declinados · <?= $esc($months[$filters['mes']]); ?> <?= $esc($filters['anio']); ?></h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header bg-primary text-white py-3" style="border-radius: 6px 6px 0 0;">
+                            <h5 class="modal-title fw-bold text-white d-flex align-items-center m-0" id="modal-declinados-titulo"><i class="fa-solid fa-chart-line-up me-2" aria-hidden="true"></i> Listado de Proyectos Declinados</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                         </div>
-                        <div class="modal-body">
-                            <div id="declinados-estado" class="mb-3" role="status" aria-live="polite"></div>
+                        <div class="modal-body p-3">
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1" aria-hidden="true"></i> Periodo: <strong class="text-dark"><?= sprintf('01/%02d/%04d', $filters['mes'], $filters['anio']); ?> al <?= (new DateTimeImmutable(sprintf('%04d-%02d-01', $filters['anio'], $filters['mes'])))->modify('last day of this month')->format('d/m/Y'); ?></strong></span>
+                                <span class="badge bg-primary text-white text-3 px-3 py-2" id="declinados-total">0 Proyectos</span>
+                            </div>
+                            <div id="declinados-estado" class="mb-2" role="status" aria-live="polite"></div>
                             <button type="button" id="declinados-reintentar" class="btn btn-outline-primary mb-3" hidden>Reintentar</button>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover mb-0">
+                            <div class="table-responsive export-table">
+                                <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
                                     <caption class="visually-hidden">Lista de proyectos con activo CERRADO del período y vendedor seleccionados</caption>
-                                    <thead><tr><th>Proyecto</th><th>Fecha</th><th>Título</th><th>Cliente</th><th>Vendedor</th><th>Estado</th></tr></thead>
+                                    <thead><tr>
+                                        <?php foreach (['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo'] as $heading): ?>
+                                            <th class="border-bottom-0 fw-semibold text-center"><?= $esc($heading); ?></th>
+                                        <?php endforeach; ?>
+                                    </tr></thead>
                                     <tbody id="declinados-proyectos"></tbody>
                                 </table>
                             </div>
                         </div>
-                        <div class="modal-footer justify-content-between">
-                            <span id="declinados-pagina" class="text-muted"></span>
-                            <div class="d-flex gap-2">
-                                <button type="button" id="declinados-anterior" class="btn btn-outline-primary" disabled>Anterior</button>
-                                <button type="button" id="declinados-siguiente" class="btn btn-outline-primary" disabled>Siguiente</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            </div>
+                        <div class="modal-footer bg-light p-2">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
                         </div>
                     </div>
                 </div>

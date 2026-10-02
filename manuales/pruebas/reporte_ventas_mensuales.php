@@ -103,6 +103,13 @@ verificar($listDb->calls[0][1]===['2024-02-01','2024-03-01',"V'1"] && $listDb->c
 verificar(str_contains($listDb->calls[1][0], "v.activo = 'CERRADO'") && str_contains($listDb->calls[1][0], 'LIMIT 20 OFFSET 20'), 'Estado y tamaño de página controlados');
 $emptyList = (new ModeloSimulado(new ConexionSimulada([[['total'=>0]],[]])))->declinados(2024,2,'',1);
 verificar($emptyList['proyectos']===[] && $emptyList['paginas']===1, 'Lista vacía válida');
+$tableDb = new ConexionSimulada([[['total'=>8]],[['total'=>1]],[['id'=>5,'proyecto_id'=>'P5']]]);
+$tableOptions = ['draw'=>3,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'asc','search'=>"100% O'Neil",'filters'=>[3=>'Cliente']];
+$tableResult = (new ModeloSimulado($tableDb))->declinadosTabla(2024,2,'V1',$tableOptions);
+verificar($tableResult['draw']===3 && $tableResult['recordsTotal']===8 && $tableResult['recordsFiltered']===1, 'Contrato DataTables con total y total filtrado');
+verificar($tableDb->calls[0][1]===['2024-02-01','2024-03-01','V1'] &&
+    in_array("%100!% O'Neil%", $tableDb->calls[1][1],true), 'Búsqueda parametrizada con comodines literales');
+verificar(str_contains($tableDb->calls[2][0],'ORDER BY v.fecha ASC, v.id DESC LIMIT 10 OFFSET 0'), 'Orden real de fecha y paginación DataTables');
 
 // Ejecuta el endpoint con sesión/modelo simulados, sin cargar el bootstrap real.
 class Controllers { public $model; public function __construct() {} }
@@ -124,6 +131,10 @@ $api->model = new class {
         $this->calls[]=[$year,$month,$seller,$page];
         return ['proyectos'=>[],'total'=>0,'pagina'=>1,'paginas'=>1,'por_pagina'=>20];
     }
+    public function declinadosTabla($year,$month,$seller,$options) {
+        $this->calls[]=[$year,$month,$seller,$options];
+        return ['draw'=>$options['draw'],'recordsTotal'=>0,'recordsFiltered'=>0,'data'=>[]];
+    }
 };
 function llamarLista($api): array {
     http_response_code(200); ob_start(); $api->declinados();
@@ -138,6 +149,11 @@ Session::$active=true; $testPermissions=[]; verificar(llamarLista($api)[0]===403
 $testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='POST'; verificar(llamarLista($api)[0]===405, 'Sólo GET');
 $_SERVER['REQUEST_METHOD']='GET'; Session::$values=['rol_id'=>1,'ccveusuario'=>'ADMIN'];
 verificar(llamarLista($api)[0]===200 && $api->model->calls[1]===[2024,2,'',1], 'TODOS para usuario autorizado general');
+$_GET['datatable']='1'; $_GET['draw']='2'; $_GET['length']='10';
+$tableResponse=llamarLista($api);
+verificar($tableResponse[0]===200 && $tableResponse[1]['data']['draw']===2, 'Modo DataTables del endpoint');
+$_GET['length']='10000'; verificar(llamarLista($api)[0]===400, 'Limitar filas solicitadas');
+$_GET['length']='10'; $_GET['f3']=['malformado']; verificar(llamarLista($api)[0]===400, 'Rechazar filtro de columna malformado');
 http_response_code(200);
 
 // Renderiza sólo la vista con datos sintéticos y sin cargar las plantillas del portal.

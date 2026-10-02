@@ -65,10 +65,10 @@ ejecutar(true, 320, 'dark');
 console.log('OK: cuatro gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');
 
 async function probarModal() {
-    const nodes = new Map(); const events = {}; const calls = []; let response;
+    const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;
     function node(id) {
         if (!nodes.has(id)) nodes.set(id, { id, children: [], events: {}, textContent: '', dataset: {}, disabled: false,
-            addEventListener(name, cb) { this.events[name] = cb; },
+            addEventListener(name, cb) { this.events[name] = cb; }, setAttribute() {},
             appendChild(child) { this.children.push(child); }, replaceChildren() { this.children = []; },
             click() { this.clicked = true; }
         });
@@ -80,44 +80,55 @@ async function probarModal() {
     const source = node('ventas-mensuales-datos');
     source.textContent = JSON.stringify({ cotizado: 0, colocado: 0, vendedores: [], productos: [], cruce: [] });
     const cards = [node('declinados-card'), node('critico-card')];
+    const tableNode = node('table-declinados-ventas');
+    tableNode.tHead = { rows: [{ cells: ['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo'].map(textContent => ({textContent})) }], appendChild(child) { this.filterRow=child; } };
+    const requestData = { draw: 1, start: 0, length: 10, search: { value: '' }, order: [],
+        columns: Array.from({ length: 8 }, () => ({ search: { value: '' } })) };
+    let result;
+    function draw() { pending = options.ajax(requestData, payload => { result = payload; }); return pending; }
+    const dt = { columns: { adjust() {} }, ajax: { reload() { return draw(); } }, table: () => ({ container: () => node('container') }),
+        column: index => ({ search(value) { requestData.columns[index].search.value = value; return { draw }; } }) };
+    const jquery = element => ({ find: () => ({ on() {} }), on: (name, selector, handler) => { delegated = handler; },
+        DataTable(configuration) { if (element === tableNode) { options = configuration; draw(); return dt; } } });
+    jquery.fn = { dataTable: { render: { text: () => ({ display: value => value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }) } } };
     const context = {
         document: { addEventListener: (name, cb) => { events[name] = cb; }, getElementById: node,
-            createElement: tag => ({ tag, children: [], textContent: '', appendChild(child) { this.children.push(child); } }),
+            createElement: tag => node('created-'+Math.random()),
             querySelectorAll: selector => selector.includes('.ventas-abrir-declinados') ? cards : [] },
-        window: { addEventListener() {} },
-        jQuery: () => ({ find: () => ({ on() {} }), DataTable() {} }),
+        window: { addEventListener() {} }, jQuery: jquery,
         echarts: { init: () => ({ setOption() {}, resize() {} }) },
-        fetch: async (url, options) => { calls.push([url, options]); return { ok: response.status,
-            json: async () => response }; }, AbortController, URLSearchParams, Intl, Map, JSON
+        fetch: async (url, settings) => { calls.push([url, settings]); return { ok: response.status, json: async () => response }; },
+        AbortController, URLSearchParams, Intl, Map, JSON, setTimeout, clearTimeout
     };
-    vm.runInNewContext(code, context);
-    events.DOMContentLoaded();
-    assert.equal(calls.length, 0, 'No consultar la lista antes de abrir el modal');
+    vm.runInNewContext(code, context); events.DOMContentLoaded();
+    assert.equal(calls.length, 0, 'No consultar antes de abrir');
     for (const card of cards) {
-        let prevented = false;
-        card.events.keydown({ key: 'Enter', preventDefault() { prevented = true; } });
-        assert.ok(card.clicked && prevented, 'Abrir ambas tarjetas con teclado');
+        card.events.keydown({ key: 'Enter', preventDefault() {} });
+        assert.ok(card.clicked, 'Ambas tarjetas accesibles con teclado');
     }
-    response = { status: true, data: { proyectos: [{ proyecto_id: 'P1', fecha: '2026-09-30 15:00:00',
-        titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José' }], total: 21, pagina: 1, paginas: 2 } };
-    await modal.events['show.bs.modal']();
-    assert.ok(calls[0][0].includes('anio=2026&mes=9&vendedor=V1&pagina=1'), 'Aplicar filtros al cargar la lista');
-    assert.equal(node('declinados-proyectos').children[0].children[2].textContent, '<img src=x onerror=alert(1)>', 'Renderizar título como texto, sin HTML');
-    assert.equal(node('declinados-proyectos').children[0].children[1].textContent, '30/09/2026', 'Fecha sin conversión de zona horaria');
-    assert.equal(node('declinados-anterior').disabled, true);
-    assert.equal(node('declinados-siguiente').disabled, false);
-    response.data.pagina = 2;
-    await node('declinados-siguiente').events.click();
-    assert.ok(calls[1][0].includes('pagina=2'), 'Solicitar página siguiente');
-    assert.equal(node('declinados-siguiente').disabled, true);
-    response = { status: false, message: 'Acceso restringido.' };
-    await modal.events['show.bs.modal']();
-    assert.equal(node('declinados-reintentar').hidden, false, 'Ofrecer reintento tras error');
-    assert.equal(node('declinados-proyectos').children.length, 0, 'No conservar registros después de error');
-    response = { status: true, data: { proyectos: [], total: 0, pagina: 1, paginas: 1 } };
-    await node('declinados-reintentar').events.click();
-    assert.ok(node('declinados-estado').textContent.includes('No hay proyectos'), 'Mostrar lista vacía');
+    response = { status: true, data: { draw: 1, recordsTotal: 8, recordsFiltered: 8,
+        data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
+    modal.events['shown.bs.modal'](); await pending;
+    assert.equal(options.serverSide, true);
+    assert.equal(options.dom, 'Blfrtip');
+    assert.equal(options.buttons[1].extend, 'colvis');
+    assert.equal(tableNode.tHead.filterRow.children.length, 8, 'Cabecera con filtros');
+    assert.ok(calls[0][0].includes('datatable=1&anio=2026&mes=9&vendedor=V1'), 'Filtrar período y vendedor');
+    assert.equal(node('declinados-total').textContent, '8 Proyectos');
+    assert.equal(options.columns[6].render(response.data.data[0].titulo,'display'), '&lt;img src=x onerror=alert(1)&gt;', 'Salida escapada');
+    assert.equal(options.columns[2].render('2026-09-30','display'), '30/09/2026');
+    requestData.start = 10; await dt.ajax.reload();
+    assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
+    delegated.call({ dataset: { column: '3' }, value: 'Cliente' });
+    await new Promise(resolve => setTimeout(resolve, 400)); await pending;
+    assert.ok(calls[2][0].includes('f3=Cliente'), 'Filtro por columna delegado en scrollX');
+    response = { status: false, message: 'Acceso restringido.' }; await dt.ajax.reload();
+    assert.equal(node('declinados-reintentar').hidden, false);
+    assert.equal(result.data.length, 0, 'Vaciar tabla ante error');
+    response = { status: true, data: { draw: 1, recordsTotal: 0, recordsFiltered: 0, data: [] } };
+    node('declinados-reintentar').events.click(); await pending;
+    assert.equal(node('declinados-total').textContent, '0 Proyectos');
     modal.events['hidden.bs.modal']();
-    console.log('OK: modal, teclado, carga bajo demanda, filtros, paginación, error, reintento, vacío y salida segura.');
+    console.log('OK: modal DataTables, teclado, filtros, paginación, columnas, error, reintento y salida segura.');
 }
 probarModal().catch(error => { console.error(error); process.exitCode = 1; });

@@ -26,65 +26,111 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!source) return;
     const modal = document.getElementById('modal-declinados-ventas');
     if (modal) {
-        const tbody = document.getElementById('declinados-proyectos');
         const status = document.getElementById('declinados-estado');
-        const info = document.getElementById('declinados-pagina');
-        const previous = document.getElementById('declinados-anterior');
-        const next = document.getElementById('declinados-siguiente');
+        const badge = document.getElementById('declinados-total');
         const retry = document.getElementById('declinados-reintentar');
-        let page = 1;
+        const tableElement = document.getElementById('table-declinados-ventas');
+        let table = null;
         let request = null;
-        async function load(targetPage) {
-            if (request) request.abort();
-            const current = new AbortController();
-            request = current;
-            page = targetPage;
-            tbody.replaceChildren();
-            status.textContent = 'Cargando proyectos declinados…';
-            status.className = 'mb-3 text-muted';
-            info.textContent = '';
-            retry.hidden = true;
-            previous.disabled = next.disabled = true;
-            const params = new URLSearchParams({ anio: modal.dataset.anio, mes: modal.dataset.mes,
-                vendedor: modal.dataset.vendedor, pagina: String(targetPage) });
-            try {
-                const response = await fetch(modal.dataset.url + '?' + params, {
-                    signal: current.signal, headers: { Accept: 'application/json' }, credentials: 'same-origin'
-                });
-                const payload = await response.json();
-                if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo cargar la lista.');
-                if (request !== current) return;
-                const result = payload.data;
-                page = result.pagina;
-                for (const row of result.proyectos) {
-                    const tr = document.createElement('tr');
-                    const date = String(row.fecha || '').slice(0, 10);
-                    const shownDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.split('-').reverse().join('/') : '—';
-                    for (const value of [row.proyecto_id, shownDate, row.titulo, row.cliente, row.vendedor, 'Declinado']) {
-                        const td = document.createElement('td');
-                        td.textContent = value == null || value === '' ? '—' : String(value);
-                        tr.appendChild(td);
-                    }
-                    tbody.appendChild(tr);
+        let filterTimer;
+        const escape = jQuery.fn.dataTable.render.text().display;
+        const text = value => escape(String(value == null ? '' : value));
+        function initialize() {
+            if (table) { table.columns.adjust(); table.ajax.reload(null, true); return; }
+            const filterRow = document.createElement('tr');
+            filterRow.className = 'filters';
+            Array.from(tableElement.tHead.rows[0].cells).forEach((header, index) => {
+                const th = document.createElement('th');
+                th.className = 'text-center p-1';
+                if (index > 0) {
+                    const input = document.createElement('input');
+                    input.type = 'search';
+                    input.className = 'form-control form-control-sm';
+                    input.placeholder = 'Filtrar ' + header.textContent.trim();
+                    input.setAttribute('aria-label', input.placeholder);
+                    input.dataset.column = String(index);
+                    th.appendChild(input);
                 }
-                status.textContent = result.total ? result.total + ' proyectos declinados' : 'No hay proyectos declinados para los filtros seleccionados.';
-                info.textContent = 'Página ' + page + ' de ' + result.paginas;
-                previous.disabled = page <= 1;
-                next.disabled = page >= result.paginas;
-            } catch (error) {
-                if (error.name === 'AbortError' || request !== current) return;
-                status.textContent = error instanceof SyntaxError ? 'No se pudo cargar la lista. Intente nuevamente.' : error.message;
-                status.className = 'mb-3 text-danger';
-                retry.hidden = false;
-            } finally {
-                if (request === current) request = null;
-            }
+                filterRow.appendChild(th);
+            });
+            tableElement.tHead.appendChild(filterRow);
+            table = jQuery(tableElement).DataTable({
+                serverSide: true, processing: true, searchDelay: 400,
+                orderCellsTop: true, scrollX: '100%', select: true, order: [],
+                iDisplayLength: 10, lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
+                dom: 'Blfrtip',
+                buttons: [
+                    { extend: 'excelHtml5', text: 'Excel (página actual)', autoFilter: true,
+                        sheetName: 'Declinados', title: 'Listado de Proyectos Declinados',
+                        exportOptions: { columns: ':visible' } },
+                    { extend: 'colvis', text: '<i class="fa-solid fa-table-columns me-1"></i> Columnas', postfixButtons: ['colvisRestore'] }
+                ],
+                language: typeof idioma_espanol !== 'undefined' ? idioma_espanol : {
+                    processing: 'Cargando…', emptyTable: 'Sin proyectos declinados', zeroRecords: 'No hay coincidencias',
+                    search: 'Buscar:', lengthMenu: 'Mostrar _MENU_ registros', info: 'Registros del _START_ al _END_ de un total de _TOTAL_ registros',
+                    infoEmpty: 'Sin registros', infoFiltered: '(filtrado de _MAX_ registros)',
+                    paginate: { previous: 'Anterior', next: 'Siguiente' }
+                },
+                columns: [
+                    { data: null, orderable: false, searchable: false, render: (value, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1 },
+                    { data: 'proyecto_id', render: (v, type) => type === 'display' ? '<span class="text-danger">' + text(v) + '</span>' : v },
+                    { data: 'fecha', render: (v, type) => {
+                        if (type !== 'display') return v;
+                        const date = String(v || '').slice(0, 10);
+                        return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.split('-').reverse().join('/') : '—';
+                    } },
+                    { data: 'cliente', render: (v, type) => type === 'display' ? '<span class="text-primary">' + text(v) + '</span>' : v },
+                    { data: 'vendedor', render: (v, type) => type === 'display' ? text(v) : v },
+                    { data: 'clasificacion', render: (v, type) => type === 'display' ? '<span class="badge border text-dark bg-light">' + text(v) + '</span>' : v },
+                    { data: 'titulo', render: (v, type) => type === 'display' ? text(v) : v },
+                    { data: 'activo', render: (v, type) => type === 'display' ? '<span class="badge border text-danger bg-light">' + text(v) + '</span>' : v }
+                ],
+                columnDefs: [{ className: 'text-center', targets: [0, 1, 2, 7] }, { className: 'text-start', targets: [3, 4, 5, 6] }],
+                ajax: async function (data, callback) {
+                    if (request) request.abort();
+                    const current = new AbortController();
+                    request = current;
+                    status.textContent = 'Cargando proyectos declinados…';
+                    status.className = 'mb-2 text-muted';
+                    retry.hidden = true;
+                    const order = data.order[0] || { column: 2, dir: 'desc' };
+                    const params = new URLSearchParams({ datatable: '1', anio: modal.dataset.anio, mes: modal.dataset.mes,
+                        vendedor: modal.dataset.vendedor, draw: String(data.draw), start: String(data.start), length: String(data.length),
+                        search: data.search.value, order_column: String(order.column), order_dir: order.dir });
+                    data.columns.forEach((column, index) => { if (index > 0) params.set('f' + index, column.search.value); });
+                    try {
+                        const response = await fetch(modal.dataset.url + '?' + params, {
+                            signal: current.signal, headers: { Accept: 'application/json' }, credentials: 'same-origin'
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo cargar la lista.');
+                        if (request !== current) return;
+                        badge.textContent = payload.data.recordsTotal + ' Proyectos';
+                        status.textContent = '';
+                        callback(payload.data);
+                    } catch (error) {
+                        if (error.name === 'AbortError' || request !== current) return;
+                        badge.textContent = '— Proyectos';
+                        status.textContent = error instanceof SyntaxError ? 'No se pudo cargar la lista. Intente nuevamente.' : error.message;
+                        status.className = 'mb-2 text-danger';
+                        retry.hidden = false;
+                        callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
+                    } finally { if (request === current) request = null; }
+                }
+            });
+            // Delegación sobre el contenedor: incluye la cabecera clonada por scrollX.
+            jQuery(table.table().container()).on('input', 'thead input', function () {
+                const index = Number(this.dataset.column);
+                const value = this.value;
+                clearTimeout(filterTimer);
+                filterTimer = setTimeout(() => table.column(index).search(value).draw(), 350);
+            });
         }
-        modal.addEventListener('show.bs.modal', () => load(1));
-        modal.addEventListener('hidden.bs.modal', () => { if (request) request.abort(); request = null; });
-        previous.addEventListener('click', () => load(page - 1));
-        next.addEventListener('click', () => load(page + 1));
-        retry.addEventListener('click', () => load(page));
+        modal.addEventListener('shown.bs.modal', initialize);
+        modal.addEventListener('hidden.bs.modal', () => {
+            if (request) request.abort(); request = null; clearTimeout(filterTimer);
+        });
+        retry.addEventListener('click', () => { if (table) table.ajax.reload(null, false); });
         document.querySelectorAll('#ventas-mensuales .ventas-abrir-declinados').forEach(card => {
             card.addEventListener('keydown', event => {
                 if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
