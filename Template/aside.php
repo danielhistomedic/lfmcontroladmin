@@ -64,6 +64,23 @@
                     <?php }  ?>
 
 
+                    <!-- Reportes Mensuales -->
+                    <?php if (!empty($data['permisos'][MOD_REPORTES_MENSUALES_VENTAS]['r'])) { ?>
+                        <li class="nav-parent <?= ($data['menu'] == MOD_REPORTES_MENSUALES_VENTAS) ? 'nav-expanded nav-active' : ''; ?>">
+                            <a class="nav-link" href="#">
+                                <i class="fa-sharp fa-light fa-chart-column"></i>
+                                <span>Reportes Mensuales</span>
+                            </a>
+                            <ul class="nav nav-children">
+                                <li class="<?= ($data['menu'] == MOD_REPORTES_MENSUALES_VENTAS) ? 'nav-active' : ''; ?>">
+                                    <a class="nav-link" href="<?= base_url(); ?>/reportesmensuales/ventas">
+                                        Reporte Ventas
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    <?php } ?>
+
                     <!-- Configuración -->
                     <?php if (
                         !empty($data['permisos'][MOD_CONFIGURACION]['r']) ||

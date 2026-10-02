@@ -46,6 +46,11 @@ const MOD_DASHBOARD_RH = 126;
 const MOD_DASHBOARD_VENTAS = 127;
 
 // ** -----------------------------
+// [ Reportes Mensuales ]
+// ** -----------------------------
+const MOD_REPORTES_MENSUALES_VENTAS = 139;
+
+// ** -----------------------------
 // [ Gestion Administrativa ]
 // ** -----------------------------
 const MOD_CONTACTANOS = 116;
