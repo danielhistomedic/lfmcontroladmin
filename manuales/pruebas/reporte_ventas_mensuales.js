@@ -60,8 +60,10 @@ function ejecutar(empty, width, theme, periods = false) {
     }
     if (periods) {
         const statusOption = charts[3].getOption();
-        assert.equal(statusOption.series[0].name,'3 · Cotizacion');
-        assert.equal(statusOption.series[2].name,'6 · Pedido');
+        assert.equal(statusOption.legend[0].show,false);
+        assert.equal(statusOption.series[0].label.formatter(),'Cotizacion');
+        assert.equal(statusOption.series[0].name,'Cotizacion');
+        assert.equal(statusOption.series[2].name,'Pedido');
         assert.deepEqual(statusOption.series[0].data,[0,0,0,3]);
         assert.deepEqual(statusOption.series[1].data,[0,0,0,1]);
         assert.deepEqual(statusOption.series[2].data,[1,0,0,3]);

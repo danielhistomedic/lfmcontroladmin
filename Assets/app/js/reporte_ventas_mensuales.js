@@ -461,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function () {
     (data.estatus_por_clasificacion || []).forEach(row => {
         const key = String(row.estatus_id);
         if (!statusGroups.has(key)) statusGroups.set(key, { id: row.estatus_id,
-            nombre: (row.estatus_id == null ? 'S/E' : row.estatus_id) + ' · ' + row.estatus });
+            nombre: row.estatus || 'Sin estatus' });
         const periodKey = [key,row.anio,row.mes].join(':');
         if (!statusPeriodCounts.has(periodKey)) statusPeriodCounts.set(periodKey,{proyectos:0,declinados:0});
         const total = statusPeriodCounts.get(periodKey);
@@ -471,14 +471,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const statuses = [...statusGroups.values()].sort((a,b) => Number(a.id)-Number(b.id));
     const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
     const statusOption = { ...principalOption, grid: { ...principalOption.grid },
-        legend: {top:0,type:'scroll',data:statuses.length ? [...statuses.map(row=>row.nombre),'Declinados'] : [],textStyle:{color:cascadeText}},
+        legend: {show:false},
         series: statuses.flatMap((status,index) => {
             const totals = periods.map(period=>statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
             return [
-                {name:status.nombre,type:'bar',stack:'estatus-'+status.id,barMaxWidth:50,
+                {name:status.nombre,type:'bar',stack:'estatus-'+status.id,barWidth:50,barGap:'260%',
                     itemStyle:{color:statusColors[index%statusColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
-                    label:{show:true,position:'bottom',distance:5,color:cascadeText,formatter:()=>status.id == null ? 'S/E' : String(status.id)}},
-                {name:'Declinados',type:'bar',stack:'estatus-'+status.id,barMaxWidth:50,
+                    label:{show:true,position:'bottom',distance:8,color:cascadeText,fontSize:10,width:160,overflow:'break',lineHeight:14,formatter:()=>status.nombre}},
+                {name:'Declinados',type:'bar',stack:'estatus-'+status.id,barWidth:50,barGap:'260%',
                     itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
                     label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
             ];
@@ -492,8 +492,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }}
     };
     const generalStatusChart = cascade('ventas-estatus-general');
+    generalStatusChart.height = 560;
+    generalStatusChart.element.style.height = '560px';
     generalStatusChart.count = periods.length;
-    generalStatusChart.slotWidth = Math.max(180,statuses.length*85);
+    generalStatusChart.slotWidth = Math.max(320,statuses.length*180);
+    statusOption.grid.top = 35;
+    statusOption.grid.bottom = 210;
+    statusOption.xAxis = principalOption.xAxis.map(axis => ({...axis,axisLabel:{...axis.axisLabel}}));
+    statusOption.xAxis[0].axisLabel.margin = 125;
+    statusOption.xAxis[1].offset = 155;
     generalStatusChart.instance.setOption(statusOption);
     fitCascade(generalStatusChart);
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
