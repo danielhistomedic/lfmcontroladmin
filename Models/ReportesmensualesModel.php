@@ -179,6 +179,9 @@ class ReportesmensualesModel extends Mysql
             $statusRow['declinados'] = (int)$statusRow['declinados'];
         }
         unset($statusRow);
+        $annualParams = [];
+        $annualPeriod = self::periodo('v.fecha', $year, range(1,12), $annualParams);
+        if ($seller !== '') $annualParams[] = $seller;
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -186,7 +189,9 @@ class ReportesmensualesModel extends Mysql
                 'proyectos_por_vendedor' => $projectsBySeller,
                 'clasificaciones_por_vendedor' => $statusesBySeller,
                 'estatus_por_vendedor' => $projectStatuses,
-                'estatus_por_clasificacion' => $this->estatusPorClasificacion($scope, $params, $projectPeriod),
+                'estatus_por_clasificacion' => $this->estatusPorClasificacion($scope, $annualParams, $annualPeriod),
+                'anios_seleccionados' => is_array($year) ? $year : [$year],
+                'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
@@ -195,12 +200,15 @@ class ReportesmensualesModel extends Mysql
     private function estatusPorClasificacion(string $scope, array $params, string $projectPeriod): array
     {
         $rows = $this->consultar("SELECT v.clasificacion_proyecto_id AS clasificacion_id,
+            v.ccveusuario_vendedor AS vendedor_id,
+            COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor,
             YEAR(v.fecha) AS anio, MONTH(v.fecha) AS mes,
             v.estatus_proyecto_id AS estatus_id, COALESCE(s.cEstatusReporte, 'Sin Estatus') AS estatus,
             COUNT(*) AS proyectos, SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
             FROM tb_ventas v LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
+            LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE $projectPeriod $scope
-            GROUP BY v.clasificacion_proyecto_id, YEAR(v.fecha), MONTH(v.fecha), v.estatus_proyecto_id, s.cEstatusReporte
+            GROUP BY v.clasificacion_proyecto_id, YEAR(v.fecha), MONTH(v.fecha), v.estatus_proyecto_id, s.cEstatusReporte, v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido
             ORDER BY v.clasificacion_proyecto_id ASC, anio ASC, mes ASC, v.estatus_proyecto_id ASC", $params);
         foreach ($rows as &$row) {
             $row['proyectos'] = (int)$row['proyectos'];
@@ -249,13 +257,16 @@ class ReportesmensualesModel extends Mysql
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
         }
-        if ($lista === 'estatus_clasificacion') {
+        if (in_array($lista, ['estatus_clasificacion','vendedor_clasificacion'], true)) {
             $where = "$projectPeriod AND " . self::FILTRO_PROYECTOS;
             $params = $dateParams;
             if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
             $where .= ' AND v.clasificacion_proyecto_id = ?';
             $params[] = $options['clasificacion_id'];
-            if ($options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
+            if ($lista === 'vendedor_clasificacion') {
+                $where .= ' AND v.ccveusuario_vendedor = ?';
+                $params[] = $options['vendedor_id'];
+            } elseif ($options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
             else { $where .= ' AND v.estatus_proyecto_id = ?'; $params[] = $options['estatus_id']; }
             $where .= $options['segmento'] === 'declinados'
                 ? " AND v.activo = 'CERRADO'" : " AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'";
@@ -297,7 +308,7 @@ class ReportesmensualesModel extends Mysql
         $orderIndex = (int)$options['order_column'];
         $order = $orderIndex === 2 ? 'v.fecha' : ($fields[$orderIndex] ?? 'v.id');
         $direction = $options['order_dir'] === 'asc' ? 'ASC' : 'DESC';
-        $groupOrder = $lista === 'estatus_clasificacion'
+        $groupOrder = in_array($lista, ['estatus_clasificacion','vendedor_clasificacion'], true)
             ? "$sellerName ASC, v.ccveusuario_vendedor ASC, COALESCE(c.nombre_comercial, 'Sin cliente') ASC, v.cliente_id ASC, " : '';
         $length = max(5, min(100, (int)$options['length']));
         $offset = max(0, min(1000000, (int)$options['start']));

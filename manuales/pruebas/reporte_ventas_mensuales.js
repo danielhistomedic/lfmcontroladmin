@@ -24,15 +24,20 @@ function ejecutar(empty, width, theme, periods = false) {
         {vendedor_id:'V1',estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},
         {vendedor_id:'V2',estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2}];
     data.estatus_por_clasificacion = empty ? [] : [{clasificacion_id:3,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2},{clasificacion_id:3,estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},{clasificacion_id:5,estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2}];
+    data.anios_seleccionados = [2024,2026];
+    data.meses_seleccionados = [2,9];
+    if (periods) data.clasificaciones_por_vendedor[0].proyectos = 9;
     if (periods) data.estatus_por_clasificacion = [
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:3,estatus:'Cotizacion',proyectos:4,declinados:1},
         {clasificacion_id:3,anio:2024,mes:2,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:1},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:3,declinados:0}];
+    data.estatus_por_clasificacion = data.estatus_por_clasificacion.map(row => ({anio:2026,mes:9,vendedor_id:'V1',...row}));
     const context = {
         document: {
+            createElement: () => ({value:'',textContent:''}),
             addEventListener: (name, cb) => { events[name] = cb; },
             getElementById: id => id === 'modal-declinados-ventas' && !nodes.has('ventas-clasificacion-card') ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
-                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : (nodes.has(id)?nodes.get(id):(nodes.set(id,{ id, clientWidth: width, style: {}, dataset:{}, events:{}, addEventListener(name,cb){this.events[name]=cb;} }),nodes.get(id))),
+                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : (nodes.has(id)?nodes.get(id):(nodes.set(id,{ id, clientWidth: width, style: {}, dataset:{}, children:[], replaceChildren(){this.children=[];}, appendChild(child){this.children.push(child);this.value=this.children[0].value;}, events:{}, addEventListener(name,cb){this.events[name]=cb;} }),nodes.get(id))),
             querySelectorAll: () => []
         },
         window: { addEventListener: (name, cb) => { events[name] = cb; } },
@@ -54,19 +59,39 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
     if (periods) {
-        assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Bombas\nFebrero 2024','Bombas\nSeptiembre 2026']);
-        assert.deepEqual(charts[2].getOption().series[0].data,[1,6]);
-        assert.deepEqual(charts[2].getOption().series[1].data,[1,1]);
+        assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Sellos','Bombas'], 'Clasificaciones de mayor a menor');
+        assert.deepEqual(charts[2].getOption().series[0].data,[7,3]);
         charts[2].trigger('click',{componentType:'series',dataIndex:1});
-        assert.ok(nodes.get('ventas-clasificacion-card-titulo').textContent.includes('Septiembre 2026'));
-        assert.deepEqual(charts[3].getOption().series[0].data,[3,3]);
-        charts[3].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
-        const drillModal=nodes.get('modal-declinados-ventas');
-        assert.equal(drillModal.dataset.desgloseAnio,'2026');
-        assert.equal(drillModal.dataset.desgloseMes,'9');
-        const dropdown=nodes.get('ventas-clasificacion-desglose');
-        dropdown.value='3'; dropdown.events.change();
-        assert.deepEqual(charts[3].getOption().series[0].data,[3,4],'Selector general suma los periodos por estatus');
+        assert.ok(nodes.get('ventas-clasificacion-card-titulo').textContent.includes('2026'));
+        assert.equal(charts[3].getOption().xAxis[0].data.length,12);
+        assert.equal(charts[3].getOption().xAxis[0].data[0],'Enero');
+        assert.equal(charts[3].getOption().xAxis[0].data[11],'Diciembre');
+        assert.equal(charts[3].getOption().series[0].data[8],6);
+        assert.equal(charts[3].getOption().series[1].data[8],1);
+        assert.equal(charts[3].getOption().series[0].data[0],0);
+        const tip = charts[3].getOption().tooltip[0].formatter([{dataIndex:8}]);
+        assert.ok(tip.includes('Septiembre 2026') && tip.includes('Proyectos activos: 6') && tip.includes('Total: 7'));
+        const year = nodes.get('ventas-clasificacion-anio');
+        year.value='2024'; year.events.change();
+        assert.equal(charts.length,4,'Reutilizar evolucion mensual al cambiar anio');
+        assert.equal(charts[3].getOption().series[0].data[1],1);
+        assert.equal(charts[3].getOption().series[1].data[1],1);
+        charts[3].trigger('click',{componentType:'series',dataIndex:1,seriesIndex:0});
+        assert.equal(nodes.get('ventas-clasificacion-vendedores-panel').hidden,false);
+        assert.equal(charts[4].getOption().xAxis[0].data[0],'Vendedor 1');
+        assert.deepEqual(charts[4].getOption().series[0].data,[1]);
+        assert.deepEqual(charts[4].getOption().series[1].data,[1]);
+        charts[4].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
+        const modal=nodes.get('modal-declinados-ventas');
+        assert.equal(modal.dataset.desgloseLista,'vendedor_clasificacion');
+        assert.equal(modal.dataset.desgloseAnio,'2024');
+        assert.equal(modal.dataset.desgloseMes,'2');
+        assert.equal(modal.dataset.desgloseVendedor,'V1');
+        assert.equal(modal.dataset.clasificacionId,'3');
+        assert.equal(modal.dataset.segmento,'declinados');
+        assert.equal(modal.shown,true);
+        year.value='2026'; year.events.change();
+        assert.equal(nodes.get('ventas-clasificacion-vendedores-panel').hidden,true,'Ocultar datos anteriores al cambiar anio');
         charts.forEach(chart=>chart.dispose());
         return;
     }
@@ -89,14 +114,24 @@ function ejecutar(empty, width, theme, periods = false) {
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts.length,5,'Segunda grafica debajo sin reemplazar la primera');
+        assert.equal(charts.length,6,'Segunda grafica debajo sin reemplazar la primera');
         assert.deepEqual(charts[3].getOption().xAxis[0].data,['Bombas','Sellos']);
         assert.deepEqual(charts[4].getOption().xAxis[0].data,['Cotizacion','Pedido']);
         assert.deepEqual(charts[4].getOption().series[1].data,[0,2]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
-        assert.equal(charts.length,5,'Reutilizar grafica secundaria');
+        assert.equal(charts.length,6,'Reutilizar grafica secundaria');
+        assert.equal(charts[5].getOption().xAxis[0].data.length,12);
+        assert.ok(nodes.get('ventas-vendedor-mensual-titulo').textContent.includes('Vendedor 2'));
+        assert.equal(charts[5].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
+        dropdown.value='0'; dropdown.events.change();
+        assert.equal(charts[5].getOption().series[0].data[8],6);
+        assert.equal(charts[5].getOption().series[1].data[8],4);
+        const sellerYear=nodes.get('ventas-vendedor-anio');
+        sellerYear.value='2024'; sellerYear.events.change();
+        assert.equal(charts[5].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
+        dropdown.value='1'; dropdown.events.change();
         assert.deepEqual(charts[3].getOption().series[0].data,[0]);
         assert.deepEqual(charts[3].getOption().series[1].data,[2]);
         assert.equal(charts[3].getOption().series[1].itemStyle.color,'#dc3545');
@@ -108,18 +143,9 @@ function ejecutar(empty, width, theme, periods = false) {
         charts[2].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-clasificacion-card').open,true);
         assert.equal(nodes.get('ventas-clasificacion-card').hidden,false);
-        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Cotizacion','Pedido']);
-        assert.deepEqual(charts[5].getOption().series[1].data,[0,2]);
-        assert.equal(charts[5].getOption().xAxis[0].axisLabel.fontSize,10);
+        assert.equal(charts[6].getOption().xAxis[0].data.length,12);
         charts[2].trigger('click',{componentType:'series',dataIndex:1});
-        charts[5].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
-        const drillModal=nodes.get('modal-declinados-ventas');
-        assert.equal(drillModal.dataset.clasificacionId,'5');
-        assert.equal(drillModal.dataset.estatusId,'6');
-        assert.equal(drillModal.dataset.segmento,'declinados');
-        assert.equal(drillModal.shown,true);
-        assert.equal(charts.length,6,'Reutilizar desglose de clasificacion');
-        assert.deepEqual(charts[5].getOption().series[1].data,[2]);
+        assert.equal(charts.length,7,'Reutilizar evolucion mensual');
     }
     change.call({id:'ventas-mes'}); change.call({id:'ventas-mes'});
     change.call({id:'ventas-anio'}); change.call({id:'ventas-anio'});

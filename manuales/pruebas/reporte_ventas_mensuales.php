@@ -62,7 +62,7 @@ verificar(str_contains($db->calls[7][0], 'YEAR(v.fecha) AS anio')
 $multiDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], []]);
 (new ModeloSimulado($multiDb))->dashboard(2024, [12,2,9,2], 'V1');
 $multiParams = ['2024-02-01','2024-03-01','2024-09-01','2024-10-01','2024-12-01','2025-01-01','V1'];
-foreach (array_slice($multiDb->calls, 1) as [$sql,$params]) {
+foreach (array_slice($multiDb->calls, 1, 6) as [$sql,$params]) {
     verificar($params === $multiParams, 'Todos los indicadores usan solo los meses seleccionados y el vendedor');
     verificar(substr_count($sql, ' OR ') >= 2, 'Rangos de meses separados');
     verificar(str_contains($sql, 'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Conservar clasificaciones globales');
@@ -77,7 +77,7 @@ $yearsDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [],
 (new ModeloSimulado($yearsDb))->dashboard([2026,2024,2026], [2,12], 'V1');
 $yearsParams = ['2024-02-01','2024-03-01','2024-12-01','2025-01-01',
     '2026-02-01','2026-03-01','2026-12-01','2027-01-01','V1'];
-foreach (array_slice($yearsDb->calls,1) as [$sql,$params]) {
+foreach (array_slice($yearsDb->calls,1,6) as [$sql,$params]) {
     verificar($params === $yearsParams, 'Combinar solo los anios y meses seleccionados sin duplicados');
     verificar(str_contains($sql, ' OR ') && str_contains($sql,'v.estatus_proyecto_id <> 2'), 'Conservar filtros sobre todos los rangos');
 }
@@ -120,7 +120,7 @@ verificar($actual['clasificaciones_por_vendedor'][0]['proyectos']===10 && $actua
 verificar($db->calls[5][1]===$db->calls[4][1] && str_contains($db->calls[5][0],'s.id = v.clasificacion_proyecto_id') && str_contains($db->calls[5][0],'s.clasificacion'), 'Desglose usa catalogo y filtros de la grafica general');
 verificar($actual['clasificaciones_por_vendedor'][0]['declinados']===2 && str_contains($db->calls[5][0], "v.activo = 'CERRADO'"), 'Declinados como subconjunto del total');
 verificar($actual['estatus_por_vendedor'][0]['declinados']===2 && $db->calls[6][1]===$db->calls[4][1] && str_contains($db->calls[6][0],'ORDER BY v.estatus_proyecto_id ASC'), 'Estatus ordenados por ID y filtros compartidos');
-verificar($actual['estatus_por_clasificacion'][0]['declinados']===2 && $db->calls[7][1]===$db->calls[4][1] && str_contains($db->calls[7][0],'s.cEstatusReporte'), 'Desglose de clasificacion con filtros y nombre del reporte');
+verificar($actual['estatus_por_clasificacion'][0]['declinados']===2 && count($db->calls[7][1])===25 && $db->calls[7][1][0]==='2024-01-01' && $db->calls[7][1][23]==='2025-01-01' && $db->calls[7][1][24]==="V'1" && str_contains($db->calls[7][0],'s.cEstatusReporte'), 'Desglose de clasificacion con filtros y nombre del reporte');
 // La lista conserva fecha, estado y alcance; no multiplica proyectos por documentos.
 $listDb = new ConexionSimulada([[['total'=>21]], [['id'=>21,'proyecto_id'=>'P21']]]);
 $list = (new ModeloSimulado($listDb))->declinados(2024,2,"V'1",100);
@@ -226,6 +226,13 @@ foreach ([[], ['2024','2101'], [['2024']], ['2024 OR 1=1']] as $invalidYears) {
 }
 $_GET = ['anio'=>'2024','mes'=>'2','vendedor'=>'','pagina'=>'1'];
 
+$_SERVER['REQUEST_METHOD']='GET';
+$_GET=['anio'=>'2026','mes'=>'9','datatable'=>'1','lista'=>'vendedor_clasificacion',
+    'clasificacion_id'=>'3','vendedor_id'=>'V1','segmento'=>'no_declinados'];
+verificar(llamarLista($api)[0]===200, 'Endpoint acepta lista por clasificacion y vendedor');
+$_GET['vendedor_id']=['V1'];
+verificar(llamarLista($api)[0]===400, 'Rechazar vendedor malformado');
+
 // Historial: contrato compartido y permisos por proyecto.
 class VentasModel {
     public static array $calls=[];
@@ -258,6 +265,15 @@ $_SERVER['REQUEST_METHOD']='POST'; Session::$values=['rol_id'=>1]; verificar(lla
 http_response_code(200);
 
 // Renderiza sólo la vista con datos sintéticos y sin cargar las plantillas del portal.
+// El modal por vendedor conserva el alcance autorizado y agrega la seleccion concreta.
+$sellerModalDb = new ConexionSimulada([[['total'=>1]], [['total'=>1]], []]);
+(new ModeloSimulado($sellerModalDb))->declinadosTabla(2026,9,'V1',
+    ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[],
+    'clasificacion_id'=>3,'vendedor_id'=>'V2','segmento'=>'declinados'], 'vendedor_clasificacion');
+foreach ($sellerModalDb->calls as [$sql,$params]) {
+    verificar($params===['2026-09-01','2026-10-01','V1',3,'V2'], 'No reemplazar el vendedor autorizado al abrir el modal');
+    verificar(str_contains($sql,"v.activo = 'CERRADO'") && str_contains($sql,'v.clasificacion_proyecto_id = ?'), 'Conservar clasificacion y segmento');
+}
 function base_url() { return '/portal'; }
 function assets() { return '/portal/Assets'; }
 function version() { return 'test'; }
