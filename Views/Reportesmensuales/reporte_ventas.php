@@ -507,6 +507,45 @@
         #ventas-mensuales .select2-selection--multiple .select2-selection__choice { margin-top: 3px; }
         #ventas-mensuales .select2-selection--single .select2-selection__rendered { line-height: 30px; }
         #ventas-mensuales .select2-selection--single .select2-selection__arrow { height: 30px; }
+        #filtros-ventas-mensuales { align-items: flex-start !important; }
+        #filtros-ventas-mensuales .form-label { line-height: 16px; margin-bottom: 4px; }
+        #filtros-ventas-mensuales .select2-container .select2-selection {
+            box-sizing: border-box;
+            min-height: 36px;
+            padding: 5px 8px;
+        }
+        #filtros-ventas-mensuales .select2-container .select2-selection--single { height: 36px; }
+        #filtros-ventas-mensuales .select2-selection--single .select2-selection__rendered {
+            line-height: 24px;
+            padding: 0 20px 0 0;
+        }
+        #filtros-ventas-mensuales .select2-selection--single .select2-selection__arrow { height: 34px; }
+        #filtros-ventas-mensuales .select2-selection--multiple .select2-selection__rendered {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+            min-height: 24px;
+            margin: 0;
+            padding: 0;
+        }
+        #filtros-ventas-mensuales .select2-selection--multiple .select2-selection__choice {
+            margin: 0;
+            padding: 1px 5px;
+            line-height: 20px;
+        }
+        #filtros-ventas-mensuales .select2-search--inline { margin: 0; }
+        #filtros-ventas-mensuales .select2-search__field {
+            margin: 0 !important;
+            padding: 0;
+            height: 24px;
+            min-height: 0;
+            line-height: 24px;
+        }
+        #filtros-ventas-mensuales button[type="submit"] { height: 36px; margin-top: 20px; }
+        @media (max-width: 767px) {
+            #filtros-ventas-mensuales button[type="submit"] { margin-top: 0; }
+        }
         #ventas-mensuales .ventas-kpi .card-body { padding: 10px 12px; }
         #ventas-mensuales .ventas-kpi .mb-2 { margin-bottom: 4px !important; }
         #ventas-mensuales .ventas-valor { font-size: 25px; line-height: 1.2; margin-bottom: 5px; }
