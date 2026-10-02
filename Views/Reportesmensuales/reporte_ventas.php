@@ -101,6 +101,7 @@
                 </div>
             </div>
             <hr class="ventas-separador">
+            <div class="ventas-paneles">
             <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
                 <div class="card-body">
                     <h4 class="mt-0">Proyectos por clasificación</h4>
@@ -122,6 +123,7 @@
                 </div>
             </div>
             <hr class="ventas-separador">
+            </div>
             <div class="row g-3 mb-4">
                 <div class="col-12">
                     <div class="card h-100">
@@ -471,6 +473,57 @@
                 height: 290px;
             }
         }
+        /* Densidad del reporte, limitada a esta vista. */
+        #ventas-mensuales { font-size: 13px; line-height: 1.4; background: #f3f5f7; padding: 10px; border-radius: 4px; }
+        #ventas-mensuales .card { border: 1px solid #dbe3e8; border-radius: 5px; background-color: #fff; }
+        #ventas-mensuales .shadow { box-shadow: 0 2px 7px rgba(36,52,71,.12) !important; }
+        #ventas-mensuales .ventas-paneles { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; margin-bottom: 14px; }
+        #ventas-mensuales .ventas-paneles > .card { min-width: 0; margin-bottom: 0 !important; }
+        #ventas-mensuales .ventas-paneles > .ventas-separador { display: none; }
+        html.dark #ventas-mensuales { background-color: #17232d; }
+        html.dark #ventas-mensuales .card { background-color: #21313e; border-color: #455563; }
+        #ventas-mensuales .ventas-kpi.bg-danger { background-color: #dc3545 !important; }
+        #ventas-mensuales .ventas-kpi.bg-success { background-color: #198754 !important; }
+        @media (min-width: 1600px) {
+            #ventas-mensuales .ventas-paneles { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        }
+        #ventas-mensuales h3 { font-size: 18px; line-height: 1.3; }
+        #ventas-mensuales h4 { font-size: 15px; line-height: 1.3; margin-bottom: 8px; }
+        #ventas-mensuales p { margin-bottom: 8px; }
+        #ventas-mensuales small { font-size: 11px; line-height: 1.35; }
+        #ventas-mensuales .card-body { padding: 12px 14px; }
+        #ventas-mensuales .card-header { padding: 9px 12px; }
+        #ventas-mensuales .mb-4 { margin-bottom: 14px !important; }
+        #ventas-mensuales .mb-3 { margin-bottom: 10px !important; }
+        #ventas-mensuales .mt-4 { margin-top: 14px !important; }
+        #ventas-mensuales .g-3 { --bs-gutter-x: 12px; --bs-gutter-y: 10px; }
+        #ventas-mensuales .form-label { font-size: 12px; margin-bottom: 4px; }
+        #ventas-mensuales .form-control,
+        #ventas-mensuales .form-select,
+        #ventas-mensuales .btn { font-size: 12px; padding: 5px 9px; min-height: 32px; }
+        #ventas-mensuales .select2-selection { min-height: 32px; font-size: 12px; }
+        #ventas-mensuales .select2-selection--single { height: 32px; }
+        #ventas-mensuales .select2-selection--multiple { height: auto; padding: 2px 4px; }
+        #ventas-mensuales .select2-selection--multiple .select2-selection__choice { margin-top: 3px; }
+        #ventas-mensuales .select2-selection--single .select2-selection__rendered { line-height: 30px; }
+        #ventas-mensuales .select2-selection--single .select2-selection__arrow { height: 30px; }
+        #ventas-mensuales .ventas-kpi .card-body { padding: 10px 12px; }
+        #ventas-mensuales .ventas-kpi .mb-2 { margin-bottom: 4px !important; }
+        #ventas-mensuales .ventas-valor { font-size: 25px; line-height: 1.2; margin-bottom: 5px; }
+        #ventas-mensuales .ventas-encabezado-cuantitativo { padding: 10px 14px; }
+        #ventas-mensuales .ventas-separador { margin: 14px 0; border-top-width: 1px; }
+        #ventas-mensuales .ventas-card-desglose { margin-left: 16px; }
+        #ventas-mensuales .ventas-chart { height: 280px; }
+        #modal-declinados-ventas .modal-body { font-size: 12px; }
+        #modal-declinados-ventas .table th,
+        #modal-declinados-ventas .table td { padding: 5px 7px; font-size: 12px; }
+        #modal-declinados-ventas .form-control,
+        #modal-declinados-ventas .btn { font-size: 12px; }
+        @media (max-width: 575px) {
+            #ventas-mensuales .card-body { padding: 10px; }
+            #ventas-mensuales .ventas-card-desglose { margin-left: 0; }
+        }
+
     </style>
 </section>
 
