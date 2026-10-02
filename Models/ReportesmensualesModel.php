@@ -34,23 +34,17 @@ class ReportesmensualesModel extends Mysql
         $divisor = $rate == 0 ? 1.0 : $rate;
         $columns = "v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id, v.moneda_id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
-        // Cotizaciones enviadas: no se agrega un filtro ACTIVO ni de estatus de proyecto.
+        // Cotizaciones enviadas: se excluye CERRADO por indicación del usuario para este dashboard.
         $sent = $this->consultar("SELECT $columns, 'cotizado' AS tipo,
             SUM(COALESCE(cc.total, 0)) AS monto, COUNT(*) AS cotizaciones,
             COALESCE(MAX(cc.fecha), v.fecha_cotizacion, v.fecha) AS fecha
             FROM tb_ventas_cotizacion_cliente cc INNER JOIN tb_ventas v ON v.id = cc.venta_id
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE cc.enviado = 1 AND v.estatus_pedido_reporte IN (1,2)
+            AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
             AND COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha) >= ?
             AND COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha) < ? $scope
             GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido", $params);
-        // NOT EXISTS comprende todo el historial, no sólo el mes seleccionado.
-        $fallback = $this->consultar("SELECT $columns, 'cotizado' AS tipo, COALESCE(v.total,0) AS monto,
-            COALESCE(v.fecha_cotizacion,v.fecha) AS fecha
-            FROM tb_ventas v LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
-            WHERE COALESCE(v.activo,'ACTIVO') = 'ACTIVO' AND v.estatus_pedido_reporte IN (1,2)
-            AND COALESCE(v.fecha_cotizacion,v.fecha) >= ? AND COALESCE(v.fecha_cotizacion,v.fecha) < ? $scope
-            AND NOT EXISTS (SELECT 1 FROM tb_ventas_cotizacion_cliente cc WHERE cc.venta_id=v.id AND cc.enviado=1)", $params);
         // Una fila por proyecto como en el listado de escritorio; los pedidos sólo determinan pertenencia al período.
         $placed = $this->consultar("SELECT $columns, 'colocado' AS tipo, COALESCE(v.total,0) AS monto,
             p.fecha AS fecha FROM tb_ventas v
@@ -70,7 +64,7 @@ class ReportesmensualesModel extends Mysql
             }
             $projects[$folio] = true;
         }
-        $headers = array_merge($sent, $fallback, $placed);
+        $headers = array_merge($sent, $placed);
         $lines = [];
         // Consultas por conjunto, sin N+1; sólo partidas de proyectos autorizados del mes.
         foreach (['cotizado' => $sent, 'colocado' => $placed] as $type => $rows) {
@@ -100,19 +94,24 @@ class ReportesmensualesModel extends Mysql
                 $lines[] = $line;
             }
         }
-        if ($fallback) {
-            $ids = array_column($fallback, 'id');
-            $marks = implode(',', array_fill(0, count($ids), '?'));
-            foreach ($this->consultar("SELECT vd.venta_id, vd.id AS partida_id, vd.subclasificacion_id,
-                s.subclasificacion, vd.ccveunidad AS unidad, vd.cantidad, 0 AS monto
-                FROM tb_ventas_detalle vd LEFT JOIN cat_subclasificacion_proyectos s ON s.id=vd.subclasificacion_id
-                WHERE vd.venta_id IN ($marks)", $ids) as $line) {
-                $line['tipo'] = 'cotizado';
-                $lines[] = $line;
-            }
-        }
+        // Cantidades independientes del pipeline: todos los proyectos registrados en el mes.
+        // Los documentos se agrupan por venta_id para contar proyectos, no documentos ni partidas.
+        $counts = $this->consultar("SELECT COUNT(*) AS total_proyectos,
+            COALESCE(SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END),0) AS declinados,
+            COALESCE(SUM(CASE WHEN cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+                THEN 1 ELSE 0 END),0) AS cotizacion_cliente,
+            COALESCE(SUM(CASE WHEN pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+                THEN 1 ELSE 0 END),0) AS orden_compra_cliente
+            FROM tb_ventas v
+            LEFT JOIN (SELECT venta_id FROM tb_ventas_cotizacion_cliente
+                WHERE enviado = 1 GROUP BY venta_id) cc ON cc.venta_id=v.id
+            LEFT JOIN (SELECT venta_id FROM tb_pedidos_cliente
+                WHERE enviado = 1 GROUP BY venta_id) pc ON pc.venta_id=v.id
+            WHERE v.fecha >= ? AND v.fecha < ? $scope", $params);
+        if (!$counts) throw new RuntimeException('No se pudieron obtener las cantidades de proyectos.');
+        $quantities = array_map('intval', $counts[0]);
         return self::resumir($headers, $lines, $divisor, (int)(new DateTimeImmutable($start))->format('t'))
-            + ['tipo_cambio' => $rate, 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null];
+            + ['cantidades' => $quantities, 'tipo_cambio' => $rate, 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null];
     }
 
     public static function resumir(array $headers, array $lines, float $divisor, int $days): array
