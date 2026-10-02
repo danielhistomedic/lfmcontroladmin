@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 serverSide: true, processing: true, searchDelay: 400,
                 orderCellsTop: true, scrollX: '100%', select: true, order: [],
                 iDisplayLength: 10, lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
-                dom: 'Blfrtip',
+                dom: '<"declinados-toolbar d-flex flex-wrap align-items-center gap-3 mb-2"<"declinados-length"l><"declinados-buttons"B><"declinados-search ms-auto"f>>rt<"d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2"ip>',
                 buttons: [
                     { extend: 'excelHtml5', text: 'Excel (página actual)', autoFilter: true,
                         sheetName: 'Declinados', title: 'Listado de Proyectos Declinados',

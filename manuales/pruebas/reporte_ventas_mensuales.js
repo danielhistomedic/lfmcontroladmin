@@ -110,7 +110,7 @@ async function probarModal() {
         data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
     modal.events['shown.bs.modal'](); await pending;
     assert.equal(options.serverSide, true);
-    assert.equal(options.dom, 'Blfrtip');
+    assert.ok(options.dom.includes('declinados-length"l') && options.dom.includes('declinados-buttons"B') && options.dom.includes('declinados-search ms-auto"f'), 'Separar cantidad, botones y búsqueda en la barra');
     assert.equal(options.buttons[1].extend, 'colvis');
     assert.equal(tableNode.tHead.filterRow.children.length, 8, 'Cabecera con filtros');
     assert.ok(calls[0][0].includes('datatable=1&anio=2026&mes=9&vendedor=V1'), 'Filtrar período y vendedor');

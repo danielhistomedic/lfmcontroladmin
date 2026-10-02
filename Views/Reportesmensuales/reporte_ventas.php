@@ -220,6 +220,41 @@
         <?php endif; ?>
     </div>
     <style>
+        #modal-declinados-ventas .declinados-buttons > .dt-buttons.btn-group {
+            position: static;
+            top: auto;
+            left: auto;
+            float: none;
+            margin: 0;
+            display: inline-flex;
+            gap: .5rem;
+        }
+        #modal-declinados-ventas .declinados-buttons .buttons-excel {
+            display: inline-block;
+            margin-left: 0;
+        }
+        #modal-declinados-ventas .declinados-buttons .btn {
+            margin: 0;
+            white-space: nowrap;
+            border-radius: .25rem;
+        }
+        #modal-declinados-ventas .dataTables_length,
+        #modal-declinados-ventas .dataTables_filter { float: none; margin: 0; }
+        #modal-declinados-ventas .dataTables_length label,
+        #modal-declinados-ventas .dataTables_filter label {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            margin: 0;
+            white-space: nowrap;
+        }
+        #modal-declinados-ventas .dataTables_length select { width: 80px; }
+        #modal-declinados-ventas .dataTables_length .select2-container { width: 80px !important; }
+        #modal-declinados-ventas .dataTables_filter input { width: 200px; margin-left: 0; }
+        @media (max-width: 575px) {
+            #modal-declinados-ventas .declinados-search { width: 100%; }
+            #modal-declinados-ventas .dataTables_filter input { flex: 1; width: auto; min-width: 0; }
+        }
         #ventas-mensuales .ventas-abrir-declinados { cursor: pointer; }
         #ventas-mensuales .ventas-abrir-declinados:focus-visible { outline: 3px solid var(--primary, #0088cc); outline-offset: 4px; }
         #ventas-mensuales .ventas-kpi {
