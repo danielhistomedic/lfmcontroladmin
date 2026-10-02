@@ -67,7 +67,7 @@ class ModeloSimulado extends ReportesmensualesModel
     public function __construct(public ConexionSimulada $fake) {}
     public function getConexion() { return $this->fake; }
 }
-$quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3];
+$quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3,'interna_sin_cliente'=>4];
 $db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$lines[0]],[$lines[2]],[$quantities]]);
 $model=new ModeloSimulado($db);
 $actual=$model->dashboard(2024,2,"V'1");
@@ -81,6 +81,10 @@ verificar($actual['cantidades']===$quantities,'Cantidades independientes de los 
 verificar($db->calls[5][1]===['2024-02-01','2024-03-01',"V'1"],'Cantidades con mes de proyecto y alcance autorizado');
 verificar(str_contains($db->calls[5][0], 'WHERE enviado = 1 GROUP BY venta_id'), 'Contar proyectos con cotización enviada en cualquier fecha según la consulta solicitada');
 verificar(substr_count($db->calls[5][0],'GROUP BY venta_id')===2,'Agrupar documentos por proyecto antes del JOIN');
+verificar(str_contains($db->calls[5][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS") &&
+    str_contains($db->calls[5][0], 'WHERE ci.venta_id = v.id AND ci.enviado = 1 AND NOT EXISTS') &&
+    str_contains($db->calls[5][0], 'WHERE cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1'),
+    'Contar proyectos no declinados con interna enviada sin cotización a cliente enviada vinculada');
 verificar(substr_count($db->calls[5][0],'WHERE enviado = 1 GROUP BY venta_id')===2,'Cotizaciones y pedidos deben estar enviados, sin restringir su fecha');
 verificar(str_contains($db->calls[5][0], "pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados del conteo de pedidos, conservando el total de proyectos');
 verificar(str_contains($db->calls[5][0],"v.activo = 'CERRADO'"),'Usar el estatus explícito solicitado');
@@ -108,5 +112,6 @@ verificar(!str_contains($html,'<script>alert'),'Sin inyección HTML');
 verificar(str_contains($html,'\\u003Cscript\\u003E'),'Escape de JSON incrustado');
 verificar(str_contains($html,'TODOS') && str_contains($html,'José'),'UTF-8 y filtros');
 verificar(str_contains($html,'Cantidades') && !str_contains($html,'>Importes</h4>') && str_contains($html,'Orden Compra Cliente'),'Conservar Cantidades y retirar el bloque Importes');
+verificar(str_contains($html,'Cantidades (crítico)') && str_contains($html,'col-12 col-md-3') && str_contains($html,'sin cotización a cliente enviada vinculada'), 'Tarjeta crítica en el primer cuarto de la fila');
 verificar(!str_contains($html,'Colocado / cotizado'),'Retirar el indicador de relación anterior');
 echo "OK: agregaciones, conciliación, permisos por conjunto, consultas parametrizadas, vacío, bisiesto, divisor de respaldo, folios ambiguos y renderizado seguro.\n";

@@ -36,14 +36,14 @@ function ejecutar(empty, width, theme) {
     };
     vm.runInNewContext(code, context, { filename: 'reporte_ventas_mensuales.js' });
     events.DOMContentLoaded();
-    assert.equal(charts.length, 5, 'Inicializar las cinco gráficas');
+    assert.equal(charts.length, 4, 'Inicializar las cuatro gráficas restantes');
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
     if (!empty) {
-        const comparison = charts[4].getOption();
+        const comparison = charts[3].getOption();
         assert.equal(comparison.series.length, 2, 'Cruce con una serie por vendedor');
         assert.equal(comparison.series[0].data[0], 5, 'Asignar ventas a su vendedor y subclasificación');
         assert.equal(comparison.series[1].data[0], 0, 'Mantener cero para combinaciones sin ventas');
@@ -62,4 +62,4 @@ ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');
 ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
-console.log('OK: cinco gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');
+console.log('OK: cuatro gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');

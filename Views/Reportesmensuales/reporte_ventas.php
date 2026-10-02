@@ -70,39 +70,24 @@
                     </div>
                 <?php endforeach; ?>
             </div>
+            <h4 class="mt-0 mb-3">Cantidades (crítico)</h4>
             <div class="row g-3 mb-4">
-                <div class="col-lg-4">
+                <div class="col-12 col-md-3">
+                    <div class="card h-100 ventas-kpi shadow rounded-3">
+                        <div class="card-body">
+                            <div class="text-muted mb-2">Proyectos con cotización interna sin cotización a cliente</div>
+                            <div class="ventas-valor"><?= $esc($report['cantidades']['interna_sin_cliente']); ?></div>
+                            <small class="text-muted">Proyectos del mes no declinados, con cotización interna enviada y sin cotización a cliente enviada vinculada</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
                     <div class="card h-100">
                         <div class="card-body">
                             <h4 class="mt-0">Cotizado vs. colocado</h4>
                             <div id="ventas-comparativo" class="ventas-chart" role="img" aria-label="Comparación de montos cotizados y colocados; cifras en los totales de la tabla de ventas por vendedor"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-8">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h4 class="mt-0">Evolución durante el mes</h4>
-                            <div id="ventas-evolucion" class="ventas-chart" role="img" aria-label="Distribución diaria; cifras disponibles en la tabla diaria"></div><small class="text-muted">Cotizado: última fecha de cotización enviada del proyecto en el mes. Colocado: primer pedido del proyecto en el mes. Cada proyecto se contabiliza una vez por concepto.</small>
-                            <details class="mt-2">
-                                <summary>Ver distribución diaria</summary>
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Día</th>
-                                                <th class="text-end">Cotizado USD</th>
-                                                <th class="text-end">Colocado USD</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody><?php foreach ($report['diario'] as $day): ?><tr>
-                                                    <td><?= $day['dia']; ?></td>
-                                                    <td class="text-end"><?= $money($day['cotizado']); ?></td>
-                                                    <td class="text-end"><?= $money($day['colocado']); ?></td>
-                                                </tr><?php endforeach; ?></tbody>
-                                    </table>
-                                </div>
-                            </details>
                         </div>
                     </div>
                 </div>

@@ -45,8 +45,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const bars = rows => ['cotizado', 'colocado'].map((key, i) => ({ name: i === 0 ? 'Cotizado' : 'Colocado', type: 'bar', data: rows.map(r => r[key]) }));
     chart('ventas-comparativo', ['Mes seleccionado'], bars([data]), false);
-    chart('ventas-evolucion', data.diario.map(r => String(r.dia)),
-        ['cotizado', 'colocado'].map((key, i) => ({ name: i === 0 ? 'Cotizado' : 'Colocado', type: 'line', data: data.diario.map(r => r[key]) })), false);
     chart('ventas-vendedores', data.vendedores.map(r => r.nombre), bars(data.vendedores), true);
     chart('ventas-productos', data.productos.map(r => r.nombre), bars(data.productos), true);
     // Series por vendedor, categorías por subclasificación: comparación del mismo producto entre vendedores.

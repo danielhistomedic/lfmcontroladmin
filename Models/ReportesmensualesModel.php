@@ -101,7 +101,14 @@ class ReportesmensualesModel extends Mysql
             COALESCE(SUM(CASE WHEN cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
                 THEN 1 ELSE 0 END),0) AS cotizacion_cliente,
             COALESCE(SUM(CASE WHEN pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
-                THEN 1 ELSE 0 END),0) AS orden_compra_cliente
+                THEN 1 ELSE 0 END),0) AS orden_compra_cliente,
+            COALESCE(SUM(CASE WHEN COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS (
+                SELECT 1 FROM tb_compras_cotizacion_interna ci
+                WHERE ci.venta_id = v.id AND ci.enviado = 1 AND NOT EXISTS (
+                    SELECT 1 FROM tb_ventas_cotizacion_cliente cliente
+                    WHERE cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1
+                )
+            ) THEN 1 ELSE 0 END),0) AS interna_sin_cliente
             FROM tb_ventas v
             LEFT JOIN (SELECT venta_id FROM tb_ventas_cotizacion_cliente
                 WHERE enviado = 1 GROUP BY venta_id) cc ON cc.venta_id=v.id
