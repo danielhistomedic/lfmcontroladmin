@@ -156,6 +156,32 @@ $_GET['length']='10000'; verificar(llamarLista($api)[0]===400, 'Limitar filas so
 $_GET['length']='10'; $_GET['f3']=['malformado']; verificar(llamarLista($api)[0]===400, 'Rechazar filtro de columna malformado');
 http_response_code(200);
 
+// Historial: contrato compartido y permisos por proyecto.
+class VentasModel {
+    public static array $calls=[];
+    public function selectSeguimientoVenta(int $id): array { self::$calls[]=$id; return [['id'=>768,'venta_id'=>$id,'seguimiento'=>'Prueba']]; }
+}
+$api->model = new class {
+    public array $calls=[];
+    public bool $allowed=true;
+    public function proyectoDeclinadoAutorizado($id,$seller) { $this->calls[]=[$id,$seller]; return $this->allowed; }
+};
+function llamarSeguimientos($api): array {
+    http_response_code(200); ob_start(); $api->seguimientos();
+    return [http_response_code(),json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR)];
+}
+$_SERVER['REQUEST_METHOD']='POST'; $_POST=['venta_id'=>'633']; Session::$values=['rol_id'=>4,'ccveusuario'=>'V1'];
+$r=llamarSeguimientos($api);
+verificar($r[0]===200 && $r[1]['respuesta']==='ok' && VentasModel::$calls===[633] && $api->model->calls[0]===[633,'V1'],'Historial del ID elegido y vendedor autenticado');
+$api->model->allowed=false;
+verificar(llamarSeguimientos($api)[0]===403 && VentasModel::$calls===[633],'Rechazar proyecto ajeno o no declinado');
+$api->model->allowed=true; $_POST['venta_id']=['633']; verificar(llamarSeguimientos($api)[0]===400,'Rechazar ID malformado');
+$_POST['venta_id']='633'; Session::$active=false; verificar(llamarSeguimientos($api)[0]===401,'Historial requiere sesion');
+Session::$active=true; $testPermissions=[]; verificar(llamarSeguimientos($api)[0]===403,'Historial requiere permiso del reporte');
+$testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='GET'; verificar(llamarSeguimientos($api)[0]===405,'Historial solo acepta POST');
+$_SERVER['REQUEST_METHOD']='POST'; Session::$values=['rol_id'=>1]; verificar(llamarSeguimientos($api)[0]===200,'Administrador autorizado');
+http_response_code(200);
+
 // Renderiza sólo la vista con datos sintéticos y sin cargar las plantillas del portal.
 function base_url() { return '/portal'; }
 function assets() { return '/portal/Assets'; }

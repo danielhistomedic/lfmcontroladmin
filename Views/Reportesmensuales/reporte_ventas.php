@@ -318,7 +318,11 @@
     </style>
 </section>
 
+<?php $seguimientosUrl = base_url() . '/Reportesmensuales/seguimientos';
+require dirname(__DIR__, 2) . '/Template/modal_seguimientos_venta.php'; ?>
+
 <?php require_once('Template/footer_01.php'); ?>
+<script src="<?= assets(); ?>/app/js/seguimientos_proyecto.js?v=<?= version(); ?>"></script>
 <script src="<?= assets(); ?>/vendor/echarts/dist/echarts.js?v=<?= version(); ?>"></script>
 <script src="<?= assets(); ?>/vendor/echarts/i18n/langES.js?v=<?= version(); ?>"></script>
 <?php require_once('Template/footer_02.php'); ?>

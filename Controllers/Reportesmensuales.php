@@ -13,6 +13,56 @@ class Reportesmensuales extends Controllers
         $this->session = new Session;
     }
 
+    /** Lectura del historial desde el listado de declinados; conserva el contrato del modal compartido. */
+    public function seguimientos()
+    {
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store');
+        try {
+            if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+                header('Allow: POST');
+                http_response_code(405);
+                echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+                return;
+            }
+            if (!$this->session->getStatus()) {
+                http_response_code(401);
+                echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+                return;
+            }
+            $permisos = getPermisosGlobal();
+            if (empty($permisos[MOD_REPORTES_MENSUALES_VENTAS]['r'])) {
+                http_response_code(403);
+                echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+                return;
+            }
+            $ventaId = filter_var($_POST['venta_id'] ?? null, FILTER_VALIDATE_INT,
+                ['options'=>['min_range'=>1]]);
+            if ($ventaId === false) {
+                http_response_code(400);
+                echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+                return;
+            }
+            $restricted = (int)$this->session->get('rol_id') === 4;
+            $seller = $restricted ? (string)$this->session->get('ccveusuario') : '';
+            if (($restricted && $seller === '') || !$this->model->proyectoDeclinadoAutorizado($ventaId, $seller)) {
+                http_response_code(403);
+                echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+                return;
+            }
+            if (!class_exists('VentasModel')) {
+                require_once dirname(__DIR__) . '/Models/VentasModel.php';
+            }
+            $ventas = new VentasModel;
+            echo json_encode(['respuesta'=>'ok', 'data'=>$ventas->selectSeguimientoVenta($ventaId)],
+                JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
+        } catch (\Throwable $ex) {
+            getLoggerSystem()->error('No se pudo consultar el seguimiento del proyecto declinado.');
+            http_response_code(500);
+            echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+        }
+    }
+
     public function ventas()
     {
         try {

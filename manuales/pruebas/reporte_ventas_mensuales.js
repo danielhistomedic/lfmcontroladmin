@@ -87,6 +87,7 @@ async function probarModal() {
     let result;
     function draw() { pending = options.ajax(requestData, payload => { result = payload; }); return pending; }
     const dt = { columns: { adjust() {} }, ajax: { reload() { return draw(); } }, table: () => ({ container: () => node('container') }),
+        row: () => ({ data: () => ({id:633, proyecto_id:'PV-2026-20035'}) }),
         column: index => ({ search(value) { requestData.columns[index].search.value = value; return { draw }; } }) };
     const jquery = element => ({ find: () => ({ on() {} }), on: (name, selector, handler) => { delegated = handler; },
         DataTable(configuration) { if (element === tableNode) { options = configuration; draw(); return dt; } } });
@@ -95,7 +96,8 @@ async function probarModal() {
         document: { addEventListener: (name, cb) => { events[name] = cb; }, getElementById: node,
             createElement: tag => node('created-'+Math.random()),
             querySelectorAll: selector => selector.includes('.ventas-abrir-declinados') ? cards : [] },
-        window: { addEventListener() {} }, jQuery: jquery,
+        window: { addEventListener() {}, verSeguimientosProyecto(id,project) { context.selected=[id,project]; } }, jQuery: jquery,
+        bootstrap: { Modal: { getOrCreateInstance: () => ({hide() {}, show() {}}) } },
         echarts: { init: () => ({ setOption() {}, resize() {} }) },
         fetch: async (url, settings) => { calls.push([url, settings]); return { ok: response.status, json: async () => response }; },
         AbortController, URLSearchParams, Intl, Map, JSON, setTimeout, clearTimeout
@@ -117,6 +119,11 @@ async function probarModal() {
     assert.equal(node('declinados-total').textContent, '8 Proyectos');
     assert.equal(options.columns[6].render(response.data.data[0].titulo,'display'), '&lt;img src=x onerror=alert(1)&gt;', 'Salida escapada');
     assert.equal(options.columns[2].render('2026-09-30','display'), '30/09/2026');
+    assert.ok(options.columns[7].render('CERRADO','display').includes('ventas-ver-seguimientos'), 'Activo como boton de seguimiento');
+    const selectedButton = { closest: () => ({}), focus() {} };
+    tableNode.events.click({ target: { closest: () => selectedButton }, stopPropagation() {} });
+    modal.events['hidden.bs.modal']();
+    assert.deepEqual(context.selected,[633,'PV-2026-20035'],'Historial del proyecto seleccionado');
     requestData.start = 10; await dt.ajax.reload();
     assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
     delegated.call({ dataset: { column: '3' }, value: 'Cliente' });

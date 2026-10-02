@@ -33,10 +33,12 @@ document.addEventListener('DOMContentLoaded', function () {
         let table = null;
         let request = null;
         let filterTimer;
+        let restoreList = false;
+        let openingFollowup = false;
         const escape = jQuery.fn.dataTable.render.text().display;
         const text = value => escape(String(value == null ? '' : value));
         function initialize() {
-            if (table) { table.columns.adjust(); table.ajax.reload(null, true); return; }
+            if (table) { table.columns.adjust(); if (!restoreList) table.ajax.reload(null, true); restoreList = false; return; }
             const filterRow = document.createElement('tr');
             filterRow.className = 'filters';
             Array.from(tableElement.tHead.rows[0].cells).forEach((header, index) => {
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     { data: 'vendedor', render: (v, type) => type === 'display' ? text(v) : v },
                     { data: 'clasificacion', render: (v, type) => type === 'display' ? '<span class="badge border text-dark bg-light">' + text(v) + '</span>' : v },
                     { data: 'titulo', render: (v, type) => type === 'display' ? text(v) : v },
-                    { data: 'activo', render: (v, type) => type === 'display' ? '<span class="badge border text-danger bg-light">' + text(v) + '</span>' : v }
+                    { data: 'activo', render: (v, type) => type === 'display' ? '<button type="button" class="badge border text-danger bg-light ventas-ver-seguimientos" title="Ver seguimientos del proyecto" aria-label="Ver seguimientos del proyecto">' + text(v) + ' <i class="fa-solid fa-eye ms-1" aria-hidden="true"></i></button>' : v }
                 ],
                 columnDefs: [{ className: 'text-center', targets: [0, 1, 2, 7] }, { className: 'text-start', targets: [3, 4, 5, 6] }],
                 ajax: async function (data, callback) {
@@ -126,6 +128,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 filterTimer = setTimeout(() => table.column(index).search(value).draw(), 350);
             });
         }
+        tableElement.addEventListener('click', event => {
+            const button = event.target.closest('.ventas-ver-seguimientos');
+            if (!button || !table || openingFollowup) return;
+            const row = table.row(button.closest('tr')).data();
+            if (!row || !row.id) return;
+            event.stopPropagation();
+            openingFollowup = true;
+            const followup = document.getElementById('modalSeguimientosVenta');
+            restoreList = true;
+            followup.addEventListener('hidden.bs.modal', () => {
+                openingFollowup = false;
+                modal.addEventListener('shown.bs.modal', () => button.focus(), { once: true });
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            }, { once: true });
+            modal.addEventListener('hidden.bs.modal', () => window.verSeguimientosProyecto(row.id, row.proyecto_id), { once: true });
+            bootstrap.Modal.getOrCreateInstance(modal).hide();
+        });
         modal.addEventListener('shown.bs.modal', initialize);
         modal.addEventListener('hidden.bs.modal', () => {
             if (request) request.abort(); request = null; clearTimeout(filterTimer);

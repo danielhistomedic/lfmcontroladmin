@@ -23,6 +23,13 @@ class ReportesmensualesModel extends Mysql
             $alcance === '' ? [] : [$alcance]);
     }
 
+    public function proyectoDeclinadoAutorizado(int $ventaId, string $seller): bool
+    {
+        $scope = $seller === '' ? '' : ' AND ccveusuario_vendedor = ?';
+        return $this->consultar("SELECT id FROM tb_ventas WHERE id = ? AND activo = 'CERRADO'$scope",
+            $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
+    }
+
     public function dashboard(int $year, int $month, string $seller): array
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
