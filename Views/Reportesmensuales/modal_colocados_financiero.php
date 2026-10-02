@@ -9,7 +9,7 @@
             </div>
             <div class="modal-body">
                 <p class="mb-1"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Período: <strong><?= $esc($monthNames); ?> <?= $esc($yearNames); ?></strong></p>
-                <p class="colocados-nota">Pedidos enviados por fecha del pedido, con el filtro de vendedor aplicado. Importes originales con IVA, sin conversión de moneda. Se excluyen proyectos declinados.</p>
+                <p class="colocados-nota">Pedidos enviados por fecha del pedido, con el filtro de vendedor aplicado. Importes originales sin IVA, sin conversión de moneda. Se excluyen proyectos declinados.</p>
                 <div id="colocados-financiero-estado" role="status" aria-live="polite"></div>
                 <button id="colocados-financiero-reintentar" type="button" class="btn btn-outline-primary btn-sm mb-3" hidden>Reintentar</button>
                 <div id="colocados-financiero-resumen" hidden>

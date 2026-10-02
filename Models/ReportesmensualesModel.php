@@ -106,7 +106,7 @@ class ReportesmensualesModel extends Mysql
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
         // Cotizaciones enviadas: se excluye CERRADO por indicación del usuario para este dashboard.
         $sent = $this->consultar("SELECT $columns, 'cotizado' AS tipo,
-            SUM(COALESCE(cc.total, 0)) AS monto, COUNT(*) AS cotizaciones,
+            SUM(COALESCE(cc.subtotal, 0)) AS monto, COUNT(*) AS cotizaciones,
             COALESCE(MAX(cc.fecha), v.fecha_cotizacion, v.fecha) AS fecha
             FROM tb_ventas_cotizacion_cliente cc INNER JOIN tb_ventas v ON v.id = cc.venta_id
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
@@ -115,7 +115,7 @@ class ReportesmensualesModel extends Mysql
             AND $sentPeriod $scope
             GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido", $params);
         // Una fila por proyecto como en el listado de escritorio; los pedidos sólo determinan pertenencia al período.
-        $placed = $this->consultar("SELECT $columns, 'colocado' AS tipo, COALESCE(v.total,0) AS monto,
+        $placed = $this->consultar("SELECT $columns, 'colocado' AS tipo, COALESCE(v.subtotal,0) AS monto,
             p.fecha AS fecha FROM tb_ventas v
             INNER JOIN (SELECT venta_id, MIN(fecha_pedido) AS fecha FROM tb_pedidos_cliente
                 WHERE $placedPeriod GROUP BY venta_id) p ON p.venta_id=v.id
@@ -345,11 +345,11 @@ class ReportesmensualesModel extends Mysql
         $base = 'FROM tb_pedidos_cliente pc INNER JOIN tb_ventas v ON v.id = pc.venta_id';
         $currency = "CASE WHEN pc.moneda_id = 1 THEN 'MXN' WHEN pc.moneda_id = 3 THEN 'USD' ELSE CONCAT('Moneda ', COALESCE(pc.moneda_id, 'sin identificar')) END";
         if ($section === 'resumen') {
-            $totals = $this->consultar("SELECT pc.moneda_id, $currency AS moneda, SUM(COALESCE(pc.total,0)) AS total,
+            $totals = $this->consultar("SELECT pc.moneda_id, $currency AS moneda, SUM(COALESCE(pc.subtotal,0)) AS total,
                 COUNT(*) AS pedidos $base WHERE $where GROUP BY pc.moneda_id ORDER BY pc.moneda_id", $params);
             $group = "CASE WHEN v.clasificacion_proyecto_id IN (2,3,4) THEN 'Flowserve' ELSE 'Diversos' END";
             $groups = $this->consultar("SELECT $group AS grupo, pc.moneda_id, $currency AS moneda,
-                SUM(COALESCE(pc.total,0)) AS total, COUNT(*) AS pedidos $base WHERE $where
+                SUM(COALESCE(pc.subtotal,0)) AS total, COUNT(*) AS pedidos $base WHERE $where
                 GROUP BY $group, pc.moneda_id ORDER BY grupo, pc.moneda_id", $params);
             return ['totales'=>$totals, 'grupos'=>$groups];
         }
@@ -377,7 +377,7 @@ class ReportesmensualesModel extends Mysql
         $length = max(5,min(100,(int)($options['length'] ?? 10)));
         $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
         $rows = $this->consultar("SELECT $entity AS entidad_id, MAX($name) AS nombre, pc.moneda_id,
-            $currency AS moneda, SUM(COALESCE(pc.total,0)) AS total, COUNT(*) AS pedidos
+            $currency AS moneda, SUM(COALESCE(pc.subtotal,0)) AS total, COUNT(*) AS pedidos
             $joins WHERE $filteredWhere GROUP BY $group ORDER BY $order $direction, entidad_id ASC, pc.moneda_id ASC
             LIMIT $length OFFSET $offset", $filteredParams);
         return ['draw'=>(int)($options['draw'] ?? 1),'recordsTotal'=>(int)($totalRows[0]['total'] ?? 0),

@@ -67,7 +67,7 @@
                         </select></div>
                     <div class="col-md-2"><button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button></div>
                 </form>
-                <div class="ventas-contexto"><span class="ventas-periodo"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i>Resultados de <?= $esc($monthNames); ?> <?= $esc($yearNames); ?> · Importes con IVA en USD</span><small>Selecciona uno o varios años y meses y pulsa Actualizar para aplicar la selección.</small></div>
+                <div class="ventas-contexto"><span class="ventas-periodo"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i>Resultados de <?= $esc($monthNames); ?> <?= $esc($yearNames); ?> · Importes sin IVA en USD</span><small>Selecciona uno o varios años y meses y pulsa Actualizar para aplicar la selección.</small></div>
                 <div id="ventas-cargando" class="mt-2 text-primary" role="status" hidden>Actualizando todos los indicadores…</div>
                 <?php if ((int)$data['usuario']['rol_id'] === 4): ?><small class="d-block mt-2 text-muted">TODOS incluye únicamente tus proyectos autorizados.</small><?php endif; ?>
             </div>
@@ -83,9 +83,9 @@
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
                 <?php foreach ([['Total de Proyectos del Mes', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados del Mes', $report['cantidades']['declinados'], 'Proyectos de los meses seleccionados declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos de los meses seleccionados con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos de los meses seleccionados con orden de compra de cliente']] as $kpi): ?>
-                    <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
+                    <?php $colorClass = str_starts_with($kpi[0], 'Declinados') ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
-                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ($kpi[0] === 'Pedidos Colocados' ? ' ventas-abrir-colocados' : ''); ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php elseif ($kpi[0] === 'Pedidos Colocados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-colocados-financiero" aria-haspopup="dialog" aria-controls="modal-colocados-financiero" aria-label="Ver resumen financiero de pedidos colocados" <?php endif; ?>>
+                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= str_starts_with($kpi[0], 'Declinados') ? ' ventas-abrir-declinados' : ($kpi[0] === 'Pedidos Colocados' ? ' ventas-abrir-colocados' : ''); ?>" <?php if (str_starts_with($kpi[0], 'Declinados')): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php elseif ($kpi[0] === 'Pedidos Colocados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-colocados-financiero" aria-haspopup="dialog" aria-controls="modal-colocados-financiero" aria-label="Ver resumen financiero de pedidos colocados" <?php endif; ?>>
                             <div class="card-body">
                                 <div class="text-muted mb-2"><?= $esc($kpi[0]); ?></div>
                                 <div class="ventas-valor"><?= $esc($kpi[1]); ?></div><small class="text-muted"><?= $esc($kpi[2]); ?></small>
@@ -173,7 +173,7 @@
             <hr class="ventas-separador">
             <div class="ventas-encabezado-cuantitativo mb-4" aria-labelledby="ventas-financiero-titulo">
                 <h3 id="ventas-financiero-titulo" class="mt-0 mb-1 fw-bold"><i class="fa-solid fa-dollar-sign me-2" aria-hidden="true"></i>Análisis financiero</h3>
-                <p class="mb-0">Comparativo de importes cotizados y colocados del período seleccionado, con IVA en USD.</p>
+                <p class="mb-0">Comparativo de importes cotizados y colocados del período seleccionado, sin IVA en USD.</p>
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-12">

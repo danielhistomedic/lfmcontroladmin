@@ -12,9 +12,10 @@ verificar(count($financial['totales'])===2 && $financial['totales'][0]['total']=
 foreach ($financialDb->calls as [$sql,$params]) {
     verificar(substr_count($sql,'?')===count($params), 'Parametros coinciden con rangos y vendedor');
     verificar(str_contains($sql,'pc.fecha_pedido >= ?') && !str_contains($sql,'v.fecha >= ?'), 'Usar fecha del pedido');
-    verificar(str_contains($sql,'SUM(COALESCE(pc.total,0))') && str_contains($sql,'pc.moneda_id'), 'Total y moneda provienen del pedido');
+    verificar(str_contains($sql,'SUM(COALESCE(pc.subtotal,0))') && str_contains($sql,'pc.moneda_id'), 'Subtotal sin IVA y moneda provienen del pedido');
     verificar(str_contains($sql,'pc.enviado = 1') && str_contains($sql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
         && str_contains($sql,'v.ccveusuario_vendedor = ?') && str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Conservar alcance comercial y vendedor');
+    verificar(!str_contains($sql,'pc.total'), 'No sumar importes con IVA');
     verificar(!str_contains($sql,'tb_pedidos_cliente_detalle') && !str_contains($sql,'tb_historial_tipos_cambio'), 'Sin multiplicar pedidos por partidas ni convertir moneda');
 }
 verificar(str_contains($financialDb->calls[1][0],"IN (2,3,4) THEN 'Flowserve' ELSE 'Diversos'"), 'Clasificaciones Flowserve y Diversos');
@@ -22,11 +23,13 @@ $clientDb = new ConexionSimulada([[['total'=>4]],[['total'=>1]],[['entidad_id'=>
 $options = ['draw'=>4,'start'=>10,'length'=>10,'search'=>'a%_','order_column'=>2,'order_dir'=>'desc'];
 $clientRows = (new ModeloSimulado($clientDb))->colocadosFinanciero(2026,9,'V1','clientes',$options);
 verificar($clientRows['draw']===4 && $clientRows['recordsTotal']===4 && $clientRows['recordsFiltered']===1, 'Paginacion de clientes');
+verificar(str_contains($clientDb->calls[2][0],'SUM(COALESCE(pc.subtotal,0))') && !str_contains($clientDb->calls[2][0],'pc.total'), 'Clientes muestran subtotales sin IVA');
 verificar(str_contains($clientDb->calls[2][0],'GROUP BY pc.cliente_id, pc.moneda_id') &&
     str_contains($clientDb->calls[2][0],'ORDER BY total DESC, entidad_id ASC, pc.moneda_id ASC') &&
     str_contains($clientDb->calls[2][0],'LIMIT 10 OFFSET 10') && in_array('%a!%!_%',$clientDb->calls[2][1],true), 'Cliente del pedido, monedas separadas y busqueda literal');
 $sellerDb = new ConexionSimulada([[['total'=>1]],[]]);
 (new ModeloSimulado($sellerDb))->colocadosFinanciero(2026,9,'V1','vendedores',['search'=>'']);
+verificar(str_contains($sellerDb->calls[1][0],'SUM(COALESCE(pc.subtotal,0))') && !str_contains($sellerDb->calls[1][0],'pc.total'), 'Vendedores muestran subtotales sin IVA');
 verificar(count($sellerDb->calls)===2 && str_contains($sellerDb->calls[1][0],'GROUP BY v.ccveusuario_vendedor, pc.moneda_id'), 'Vendedor del proyecto y moneda del pedido');
 $emptyDb = new ConexionSimulada([[],[]]);
 verificar((new ModeloSimulado($emptyDb))->colocadosFinanciero(2026,9,'')['totales']===[], 'Resumen vacio valido');
