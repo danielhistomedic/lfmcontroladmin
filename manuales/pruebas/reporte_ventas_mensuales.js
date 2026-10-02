@@ -59,9 +59,11 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
     if (periods) {
-        assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Sellos','Bombas'], 'Clasificaciones de mayor a menor');
-        assert.deepEqual(charts[2].getOption().series[0].data,[7,3]);
-        charts[2].trigger('click',{componentType:'series',dataIndex:1});
+        assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
+        assert.deepEqual(charts[2].getOption().xAxis[1].data,['2024','2024','2026','2026']);
+        assert.deepEqual(charts[2].getOption().series[2].data,[1,0,0,6]);
+        assert.deepEqual(charts[2].getOption().series[3].data,[1,0,0,1]);
+        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:2});
         assert.ok(nodes.get('ventas-clasificacion-card-titulo').textContent.includes('2026'));
         assert.equal(charts[3].getOption().xAxis[0].data.length,12);
         assert.equal(charts[3].getOption().xAxis[0].data[0],'Enero');
@@ -96,9 +98,9 @@ function ejecutar(empty, width, theme, periods = false) {
         return;
     }
     if (!empty) {
-        assert.deepEqual(charts[2].getOption().xAxis[0].data,['Bombas','Sellos']);
-        assert.deepEqual(charts[2].getOption().series[0].data,[3,3]);
-        assert.deepEqual(charts[2].getOption().series[1].data,[2,2]);
+        assert.deepEqual(charts[2].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
+        assert.deepEqual(charts[2].getOption().series[0].data,[0,0,0,3]);
+        assert.deepEqual(charts[2].getOption().series[1].data,[0,0,0,2]);
         assert.equal(charts[2].getOption().series[1].itemStyle.color,'#dc3545');
     }
     const counts=charts[0].getOption();
@@ -140,11 +142,11 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
     }
     if (!empty) {
-        charts[2].trigger('click',{componentType:'series',dataIndex:0});
+        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
         assert.equal(nodes.get('ventas-clasificacion-card').open,true);
         assert.equal(nodes.get('ventas-clasificacion-card').hidden,false);
         assert.equal(charts[6].getOption().xAxis[0].data.length,12);
-        charts[2].trigger('click',{componentType:'series',dataIndex:1});
+        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:2});
         assert.equal(charts.length,7,'Reutilizar evolucion mensual');
     }
     change.call({id:'ventas-mes'}); change.call({id:'ventas-mes'});

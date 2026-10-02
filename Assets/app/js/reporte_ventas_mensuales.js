@@ -391,10 +391,52 @@ document.addEventListener('DOMContentLoaded', function () {
                 '\nDeclinados: ' + row.declinados + '\nTotal: ' + row.proyectos;
         } };
     }
+    const periods = selectedYears.slice().sort((a,b)=>a-b).flatMap(anio => selectedMonths.slice().sort((a,b)=>a-b).map(mes => ({anio,mes})));
+    const periodCounts = new Map();
+    (data.estatus_por_clasificacion || []).forEach(row => {
+        const key = [row.clasificacion_id,row.anio,row.mes].join(':');
+        if (!periodCounts.has(key)) periodCounts.set(key,{proyectos:0,declinados:0});
+        const total=periodCounts.get(key);
+        total.proyectos+=Number(row.proyectos);
+        total.declinados+=Number(row.declinados);
+    });
+    const classificationColors=['#2385bd','#239c83','#d48825','#8064b0'];
+    const groupedSeries=generalClassifications.flatMap((classification,index) => {
+        const totals=periods.map(period=>periodCounts.get([classification.clasificacion_id,period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
+        const abbreviation=classification.clasificacion.trim().charAt(0);
+        return [
+            {name:classification.clasificacion,type:'bar',stack:'clase-'+classification.clasificacion_id,barMaxWidth:50,
+                itemStyle:{color:classificationColors[index%classificationColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
+                label:{show:true,position:'bottom',distance:5,color:cascadeText,formatter:()=>abbreviation}},
+            {name:'Declinados',type:'bar',stack:'clase-'+classification.clasificacion_id,barMaxWidth:50,
+                itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
+                label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
+        ];
+    });
     const classificationChart = cascade('ventas-clasificaciones-general');
-    classificationChart.count = generalClassifications.length;
-    const principalOption = stackedOption(generalClassifications, 'clasificacion');
-    principalOption.tooltip = classificationTooltip(generalClassifications, 'clasificacion', () => periodText);
+    classificationChart.count = periods.length;
+    classificationChart.slotWidth = Math.max(180,generalClassifications.length*85);
+    const principalOption = cascadeOption([]);
+    principalOption.legend={top:0,type:'scroll',data:generalClassifications.length?[...generalClassifications.map(row=>row.clasificacion),'Declinados']:[],textStyle:{color:cascadeText}};
+    principalOption.grid.bottom=100;
+    principalOption.xAxis.data=periods.map(period=>monthNames[Number(period.mes)-1]);
+    principalOption.xAxis.axisLabel.margin=27;
+    principalOption.xAxis.splitLine={show:true,lineStyle:{color:"#dce5ed"}};
+    const yearAxis={type:'category',data:periods.map(period=>String(period.anio)),position:'bottom',offset:55,
+        axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,color:cascadeText,formatter:(value,index)=>{
+            const first=periods.findIndex(period=>String(period.anio)===value);
+            const last=periods.length-1-periods.slice().reverse().findIndex(period=>String(period.anio)===value);
+            return index===Math.floor((first+last)/2)?value:'';
+        }}};
+    principalOption.xAxis=[principalOption.xAxis,yearAxis];
+    principalOption.series=groupedSeries;
+    principalOption.tooltip={trigger:'item',renderMode:'richText',formatter:params=>{
+        const classification=generalClassifications[Math.floor(params.seriesIndex/2)];
+        const period=periods[params.dataIndex];
+        const total=periodCounts.get([classification.clasificacion_id,period.anio,period.mes].join(':')) || {proyectos:0,declinados:0};
+        return classification.clasificacion+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+            '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
+    }};
     classificationChart.instance.setOption(principalOption);
     fitCascade(classificationChart);
     const classificationCard = document.getElementById('ventas-clasificacion-card');
@@ -517,8 +559,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     classificationChart.instance.on('click', event => {
         if (event.componentType !== 'series') return;
-        const row = generalClassifications[event.dataIndex];
-        if (row) selectClassification(row.clasificacion_id);
+        const row = generalClassifications[Math.floor(event.seriesIndex / 2)];
+        const period = periods[event.dataIndex];
+        if (row) {
+            if (period) yearSelect.value=String(period.anio);
+            selectClassification(row.clasificacion_id);
+        }
     });
     classificationSelect.addEventListener('change', () => selectClassification(classificationSelect.value));
     yearSelect.addEventListener('change', updateMonthly);
