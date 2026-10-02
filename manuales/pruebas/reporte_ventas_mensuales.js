@@ -9,18 +9,20 @@ const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
 function ejecutar(empty, width, theme) {
-    const vendors = empty ? [] : [{ nombre: 'José', cotizado: 130, colocado: 80 }, { nombre: 'Ana', cotizado: 20, colocado: 40 }];
-    const rows = empty ? [] : Array.from({ length: 12 }, (_, i) => ({ nombre: 'Servicio '+i, subclasificacion_id: String(i),
-        vendedor_id: i % 2 ? 'V2' : 'V1', vendedor: i % 2 ? 'Ana' : 'José', cotizado: i+10, colocado: i+5 }));
-    const data = { cotizado: empty ? 0 : 150, colocado: empty ? 0 : 120, vendedores: vendors, proyectos_por_vendedor: empty ? [] : [{vendedor_id:'V1',nombre:'Vendedor 1',proyectos:8},{vendedor_id:'V2',nombre:'Vendedor 2',proyectos:2}], productos: rows, cruce: rows,
-        diario: Array.from({ length: 29 }, (_, i) => ({ dia: i+1, cotizado: i === 0 && !empty ? 150 : 0, colocado: i === 1 && !empty ? 120 : 0 })) };
-    data.clasificaciones_por_vendedor=empty?[]:[{vendedor_id:'V1',clasificacion_id:5,clasificacion:'Sellos',proyectos:5,declinados:2},{vendedor_id:'V1',clasificacion_id:3,clasificacion:'Bombas',proyectos:3,declinados:0},{vendedor_id:'V2',clasificacion_id:3,clasificacion:'Bombas',proyectos:2,declinados:2}];
-    data.estatus_por_vendedor=empty?[]:[{vendedor_id:'V1',estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2},{vendedor_id:'V1',estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},{vendedor_id:'V2',estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2}];
-    const nodes=new Map();
+    const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
     const form = { addEventListener: (name, cb) => { formEvents[name] = cb; }, querySelector: () => button,
         requestSubmit: () => { requests++; formEvents.submit({ preventDefault() {} }); } };
+            const data = { cotizado: empty ? 0 : 150, colocado: empty ? 0 : 120, proyectos_por_vendedor: empty ? [] : [{vendedor_id:'V1',nombre:'Vendedor 1',proyectos:8},{vendedor_id:'V2',nombre:'Vendedor 2',proyectos:2}] };
+    data.clasificaciones_por_vendedor = empty ? [] : [
+        {vendedor_id:'V1',clasificacion_id:5,clasificacion:'Sellos',proyectos:5,declinados:2},
+        {vendedor_id:'V1',clasificacion_id:3,clasificacion:'Bombas',proyectos:3,declinados:0},
+        {vendedor_id:'V2',clasificacion_id:3,clasificacion:'Bombas',proyectos:2,declinados:2}];
+    data.estatus_por_vendedor = empty ? [] : [
+        {vendedor_id:'V1',estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2},
+        {vendedor_id:'V1',estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},
+        {vendedor_id:'V2',estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2}];
     const context = {
         document: {
             addEventListener: (name, cb) => { events[name] = cb; },
@@ -39,7 +41,7 @@ function ejecutar(empty, width, theme) {
     };
     vm.runInNewContext(code, context, { filename: 'reporte_ventas_mensuales.js' });
     events.DOMContentLoaded();
-    assert.equal(charts.length, 5, 'Inicializar las cinco gráficas restantes');
+    assert.equal(charts.length, 2, 'Inicializar las cinco gráficas restantes');
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
@@ -51,31 +53,27 @@ function ejecutar(empty, width, theme) {
     assert.equal((counts.dataZoom || []).length,0,'Sin control lateral en cantidades por vendedor');
     if (!empty) {
         assert.deepEqual(counts.series[0].data.map(row=>row.value),[8,2]);
-        const comparison = charts[4].getOption();
-        assert.equal(comparison.series.length, 2, 'Cruce con una serie por vendedor');
-        assert.equal(comparison.series[0].data[0], 5, 'Asignar ventas a su vendedor y subclasificación');
-        assert.equal(comparison.series[1].data[0], 0, 'Mantener cero para combinaciones sin ventas');
-        assert.ok(comparison.dataZoom.length > 0, 'Permitir recorrer subclasificaciones numerosas');
+
     }
     if (!empty) {
         const dropdown=nodes.get('ventas-vendedor-desglose');
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts.length,7,'Segunda grafica debajo sin reemplazar la primera');
-        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Bombas','Sellos']);
-        assert.deepEqual(charts[6].getOption().xAxis[0].data,['Cotizacion','Pedido']);
-        assert.deepEqual(charts[6].getOption().series[1].data,[0,2]);
+        assert.equal(charts.length,4,'Segunda grafica debajo sin reemplazar la primera');
+        assert.deepEqual(charts[2].getOption().xAxis[0].data,['Bombas','Sellos']);
+        assert.deepEqual(charts[3].getOption().xAxis[0].data,['Cotizacion','Pedido']);
+        assert.deepEqual(charts[3].getOption().series[1].data,[0,2]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
-        assert.equal(charts.length,7,'Reutilizar grafica secundaria');
-        assert.deepEqual(charts[5].getOption().series[0].data,[0]);
-        assert.deepEqual(charts[5].getOption().series[1].data,[2]);
-        assert.equal(charts[5].getOption().series[1].itemStyle.color,'#dc3545');
-        assert.equal(charts[5].getOption().series[1].stack,'proyectos');
-        assert.deepEqual(charts[6].getOption().series[1].data,[2]);
-        assert.equal(charts[6].getOption().series[1].itemStyle.color,'#dc3545');
+        assert.equal(charts.length,4,'Reutilizar grafica secundaria');
+        assert.deepEqual(charts[2].getOption().series[0].data,[0]);
+        assert.deepEqual(charts[2].getOption().series[1].data,[2]);
+        assert.equal(charts[2].getOption().series[1].itemStyle.color,'#dc3545');
+        assert.equal(charts[2].getOption().series[1].stack,'proyectos');
+        assert.deepEqual(charts[3].getOption().series[1].data,[2]);
+        assert.equal(charts[3].getOption().series[1].itemStyle.color,'#dc3545');
     }
     change(); change();
     assert.equal(requests, 1, 'Un solo envío global mientras está cargando');
@@ -90,7 +88,7 @@ ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');
 ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
-console.log('OK: cinco gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');
+console.log('OK: comparativo y cascada, clasificaciones, estatus, declinados apilados, movil, oscuro y filtros globales.');
 
 async function probarModal(critical = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;

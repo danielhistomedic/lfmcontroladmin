@@ -15,13 +15,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('ventas-cargando').hidden = true;
         form.querySelector('button').disabled = false;
     });
-    jQuery('#ventas-mensuales .ventas-tabla').DataTable({
-        pageLength: 10, order: [], autoWidth: false,
-        language: { emptyTable: 'Sin resultados para este período', search: 'Buscar:',
-            lengthMenu: 'Mostrar _MENU_ filas', info: '_START_ a _END_ de _TOTAL_ filas', infoEmpty: 'Sin filas',
-            infoFiltered: '(de _MAX_ filas)', zeroRecords: 'No hay coincidencias',
-            paginate: { first: 'Primera', last: 'Última', next: 'Siguiente', previous: 'Anterior' } }
-    });
     const source = document.getElementById('ventas-mensuales-datos');
     if (!source) return;
     const modal = document.getElementById('modal-declinados-ventas');
@@ -298,14 +291,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     selector.addEventListener('change', () => selectSeller(selector.value === '' ? -1 : Number(selector.value)));
     chart('ventas-comparativo', ['Mes seleccionado'], bars([data]), false);
-    chart('ventas-vendedores', data.vendedores.map(r => r.nombre), bars(data.vendedores), true);
-    chart('ventas-productos', data.productos.map(r => r.nombre), bars(data.productos), true);
-    // Series por vendedor, categorías por subclasificación: comparación del mismo producto entre vendedores.
-    const products = [...new Map(data.cruce.map(r => [r.subclasificacion_id, r.nombre])).entries()];
-    const sellers = [...new Map(data.cruce.map(r => [r.vendedor_id, r.vendedor])).entries()];
-    const matrix = new Map(data.cruce.map(r => [JSON.stringify([r.vendedor_id, r.subclasificacion_id]), r.colocado]));
-    chart('ventas-cruce', products.map(r => r[1]), sellers.map(([id, name]) => ({ name, type: 'bar',
-        data: products.map(([sub]) => matrix.get(JSON.stringify([id, sub])) || 0) })), true);
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
-    document.querySelectorAll('#ventas-mensuales details').forEach(el => el.addEventListener('toggle', () => charts.forEach(c => c.resize())));
+
 });

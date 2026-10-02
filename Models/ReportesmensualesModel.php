@@ -99,35 +99,6 @@ class ReportesmensualesModel extends Mysql
             $projects[$folio] = true;
         }
         $headers = array_merge($sent, $placed);
-        $lines = [];
-        // Consultas por conjunto, sin N+1; sólo partidas de proyectos autorizados del mes.
-        foreach (['cotizado' => $sent, 'colocado' => $placed] as $type => $rows) {
-            if (!$rows) continue;
-            $ids = array_column($rows, 'id');
-            $marks = implode(',', array_fill(0, count($ids), '?'));
-            if ($type === 'cotizado') {
-                $sql = "SELECT cc.venta_id, vd.id AS partida_id, vd.subclasificacion_id, s.subclasificacion,
-                    d.ccveunidad AS unidad, d.cantidad AS cantidad, COALESCE(d.importe,0) AS monto
-                    FROM tb_ventas_cotizacion_cliente_detalle d
-                    INNER JOIN tb_ventas_cotizacion_cliente cc ON cc.id=d.cotizacion_cliente_id
-                    INNER JOIN tb_ventas v ON v.id=cc.venta_id
-                    LEFT JOIN tb_ventas_detalle vd ON vd.id=d.venta_detalle_id_partida AND vd.venta_id=cc.venta_id
-                    LEFT JOIN cat_subclasificacion_proyectos s ON s.id=vd.subclasificacion_id
-                    WHERE cc.enviado=1 AND COALESCE(cc.fecha,v.fecha_cotizacion,v.fecha)>=?
-                    AND COALESCE(cc.fecha,v.fecha_cotizacion,v.fecha)<? AND cc.venta_id IN ($marks)";
-            } else {
-                $sql = "SELECT pc.venta_id, vd.id AS partida_id, vd.subclasificacion_id, s.subclasificacion,
-                    d.ccveunidad AS unidad, d.cantidad_pedido AS cantidad, COALESCE(d.importe,0) AS monto
-                    FROM tb_pedidos_cliente_detalle d INNER JOIN tb_pedidos_cliente pc ON pc.id=d.pedido_id
-                    LEFT JOIN tb_ventas_detalle vd ON vd.id=d.venta_detalle_id AND vd.venta_id=pc.venta_id
-                    LEFT JOIN cat_subclasificacion_proyectos s ON s.id=vd.subclasificacion_id
-                    WHERE pc.fecha_pedido>=? AND pc.fecha_pedido<? AND pc.venta_id IN ($marks)";
-            }
-            foreach ($this->consultar($sql, array_merge([$start, $end], $ids)) as $line) {
-                $line['tipo'] = $type;
-                $lines[] = $line;
-            }
-        }
         // Cantidades independientes del pipeline: todos los proyectos registrados en el mes.
         // Los documentos se agrupan por venta_id para contar proyectos, no documentos ni partidas.
         $criticalCondition = self::condicionInternaSinCliente();
@@ -181,7 +152,7 @@ class ReportesmensualesModel extends Mysql
             $statusRow['declinados'] = (int)$statusRow['declinados'];
         }
         unset($statusRow);
-        return self::resumir($headers, $lines, $divisor, (int)(new DateTimeImmutable($start))->format('t'))
+        return self::resumir($headers, $divisor)
             + [
                 'cantidades' => $quantities,
                 'proyectos_por_vendedor' => $projectsBySeller,
@@ -282,105 +253,21 @@ class ReportesmensualesModel extends Mysql
         ];
     }
 
-    public static function resumir(array $headers, array $lines, float $divisor, int $days): array
+    /** Totales del comparativo, con la misma conversion y redondeo por proyecto. */
+    public static function resumir(array $headers, float $divisor): array
     {
-        $result = [
-            'cotizado' => 0.0,
-            'colocado' => 0.0,
-            'proyectos' => 0,
-            'cotizaciones_enviadas' => 0,
-            'proyectos_cotizados' => 0,
-            'proyectos_colocados' => 0,
-            'vendedores' => [],
-            'productos' => [],
-            'cruce' => [],
-            'diario' => []
-        ];
-        for ($day = 1; $day <= $days; $day++) $result['diario'][] = ['dia' => $day, 'cotizado' => 0.0, 'colocado' => 0.0];
-        $index = [];
+        $result = ['cotizado'=>0.0, 'colocado'=>0.0, 'proyectos'=>0,
+            'cotizaciones_enviadas'=>0, 'proyectos_cotizados'=>0, 'proyectos_colocados'=>0];
         $unique = [];
-        $sums = [];
-        foreach ($headers as $h) {
-            $type = $h['tipo'];
-            $id = (string)$h['id'];
-            $seller = (string)$h['vendedor_id'];
-            $factor = (int)$h['moneda_id'] === 1 ? 1 / $divisor : 1;
-            $h['factor'] = $factor;
-            $h['usd'] = round((float)$h['monto'] * $factor, 2);
-            $index[$type][$id] = $h;
-            $unique[$id] = true;
-            $result[$type] += $h['usd'];
-            $result['proyectos_' . $type . 's']++;
-            if ($type === 'cotizado') $result['cotizaciones_enviadas'] += (int)($h['cotizaciones'] ?? 0);
-            if (!isset($result['vendedores'][$seller])) $result['vendedores'][$seller] = ['nombre' => $h['vendedor'], 'cotizado' => 0.0, 'colocado' => 0.0];
-            $result['vendedores'][$seller][$type] += $h['usd'];
-            $day = (int)substr((string)$h['fecha'], 8, 2);
-            if ($day >= 1 && $day <= $days) $result['diario'][$day - 1][$type] += $h['usd'];
-        }
-        foreach ($lines as $line) {
-            $type = $line['tipo'];
-            $id = (string)$line['venta_id'];
-            if (!isset($index[$type][$id])) continue;
-            $h = $index[$type][$id];
-            $amount = (float)$line['monto'] * $h['factor'];
-            $sums[$type][$id] = ($sums[$type][$id] ?? 0) + $amount;
-            self::agregarPartida($result, $h, $line, $amount);
-        }
-        foreach ($index as $type => $rows) foreach ($rows as $id => $h) {
-            $difference = $h['usd'] - ($sums[$type][$id] ?? 0);
-            if (abs($difference) > 0.000001) self::agregarPartida(
-                $result,
-                $h,
-                ['subclasificacion_id' => 'conciliacion', 'subclasificacion' => 'Sin desglose / diferencia con total de proyecto', 'partida_id' => null, 'cantidad' => 0, 'unidad' => ''],
-                $difference
-            );
+        foreach ($headers as $row) {
+            $type = $row['tipo'];
+            $factor = (int)$row['moneda_id'] === 1 ? 1 / $divisor : 1;
+            $result[$type] += round((float)$row['monto'] * $factor, 2);
+            $result['proyectos_'.$type.'s']++;
+            if ($type === 'cotizado') $result['cotizaciones_enviadas'] += (int)($row['cotizaciones'] ?? 0);
+            $unique[(string)$row['id']] = true;
         }
         $result['proyectos'] = count($unique);
-        foreach (['productos', 'cruce'] as $section) {
-            foreach ($result[$section] as &$row) {
-                $row['partidas'] = count($row['partidas']);
-                $row['unidades_cotizadas'] = self::unidades($row['unidades_cotizadas']);
-                $row['unidades_vendidas'] = self::unidades($row['unidades_vendidas']);
-                $row['participacion'] = $result['colocado'] != 0 ? $row['colocado'] / $result['colocado'] * 100 : 0;
-            }
-            unset($row);
-            $result[$section] = array_values($result[$section]);
-        }
-        $result['vendedores'] = array_values($result['vendedores']);
         return $result;
-    }
-
-    private static function agregarPartida(array &$result, array $h, array $line, float $amount): void
-    {
-        $sub = (string)($line['subclasificacion_id'] ?? 'sin');
-        $name = $line['subclasificacion'] ?: 'Sin subclasificación';
-        foreach (['productos' => $sub, 'cruce' => json_encode([(string)$h['vendedor_id'], $sub])] as $section => $key) {
-            if (!isset($result[$section][$key])) $result[$section][$key] = [
-                'nombre' => $name,
-                'subclasificacion_id' => $sub,
-                'vendedor' => $h['vendedor'],
-                'vendedor_id' => (string)$h['vendedor_id'],
-                'partidas' => [],
-                'unidades_cotizadas' => [],
-                'unidades_vendidas' => [],
-                'cotizado' => 0.0,
-                'colocado' => 0.0
-            ];
-            $row = &$result[$section][$key];
-            $row[$h['tipo']] += $amount;
-            if ($line['partida_id'] !== null) $row['partidas'][(string)$line['partida_id']] = true;
-            $unit = trim((string)$line['unidad']) ?: 'Sin unidad';
-            $field = $h['tipo'] === 'colocado' ? 'unidades_vendidas' : 'unidades_cotizadas';
-            if ((float)$line['cantidad'] != 0) $row[$field][$unit] = ($row[$field][$unit] ?? 0) + (float)$line['cantidad'];
-            unset($row);
-        }
-    }
-
-    private static function unidades(array $units): string
-    {
-        ksort($units);
-        $labels = [];
-        foreach ($units as $unit => $quantity) $labels[] = rtrim(rtrim(number_format($quantity, 4, '.', ','), '0'), '.') . ' ' . $unit;
-        return implode(' · ', $labels) ?: '—';
     }
 }

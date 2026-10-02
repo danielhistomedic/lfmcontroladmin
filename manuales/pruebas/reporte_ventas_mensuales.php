@@ -17,33 +17,12 @@ $headers = [
     ['id'=>1,'proyecto_id'=>'A','vendedor_id'=>'V1','vendedor'=>'José','moneda_id'=>1,'tipo'=>'colocado','monto'=>1600,'fecha'=>'2024-02-20'],
     ['id'=>2,'proyecto_id'=>'B','vendedor_id'=>'V2','vendedor'=>'Ana','moneda_id'=>3,'tipo'=>'cotizado','monto'=>30,'fecha'=>'2024-02-29'],
 ];
-$lines = [
-    ['venta_id'=>1,'tipo'=>'cotizado','partida_id'=>10,'subclasificacion_id'=>5,'subclasificacion'=>'Bombas','unidad'=>'PZA','cantidad'=>2,'monto'=>1000],
-    ['venta_id'=>1,'tipo'=>'cotizado','partida_id'=>10,'subclasificacion_id'=>5,'subclasificacion'=>'Bombas','unidad'=>'PZA','cantidad'=>1,'monto'=>500],
-    ['venta_id'=>1,'tipo'=>'colocado','partida_id'=>10,'subclasificacion_id'=>5,'subclasificacion'=>'Bombas','unidad'=>'PZA','cantidad'=>2,'monto'=>2000],
-    ['venta_id'=>2,'tipo'=>'cotizado','partida_id'=>20,'subclasificacion_id'=>null,'subclasificacion'=>null,'unidad'=>'HR','cantidad'=>4,'monto'=>0],
-    // Una fila fuera del conjunto autorizado no debe agregarse.
-    ['venta_id'=>99,'tipo'=>'cotizado','partida_id'=>90,'subclasificacion_id'=>5,'subclasificacion'=>'Bombas','unidad'=>'PZA','cantidad'=>100,'monto'=>9000],
-];
-$report=ReportesmensualesModel::resumir($headers,$lines,20,29);
+$report=ReportesmensualesModel::resumir($headers,20);
 cerca($report['cotizado'],130,'Total cotizado convertido');
-cerca($report['colocado'],80,'Total colocado del proyecto, sin multiplicarlo por pedidos');
-verificar($report['proyectos']===2 && $report['proyectos_cotizados']===2 && $report['proyectos_colocados']===1,'Conteos únicos y por concepto');
-verificar($report['cotizaciones_enviadas']===2,'Contar documentos enviados sin confundirlos con proyectos ni respaldos');
-foreach (['productos','cruce','vendedores','diario'] as $section) {
-    cerca(array_sum(array_column($report[$section],'cotizado')),130,'Conciliación cotizado '.$section);
-    cerca(array_sum(array_column($report[$section],'colocado')),80,'Conciliación colocado '.$section);
-}
-$bombas=array_values(array_filter($report['productos'],fn($r)=>$r['subclasificacion_id']==='5'))[0];
-verificar($bombas['partidas']===1,'No duplicar partidas por documentos ni conceptos');
-verificar($bombas['unidades_cotizadas']==='3 PZA' && $bombas['unidades_vendidas']==='2 PZA','Cantidades comerciales por concepto');
-$delta=array_values(array_filter($report['productos'],fn($r)=>$r['subclasificacion_id']==='conciliacion'))[0];
-cerca($delta['colocado'],-20,'Conservar diferencias negativas sin inventar asignación');
-cerca($delta['cotizado'],55,'Respaldo sin partidas valoradas y diferencia cotizada');
-cerca(array_sum(array_column($report['productos'],'participacion')),100,'Participación colocada conciliada');
-verificar(count($report['diario'])===29 && $report['diario'][28]['cotizado']===30.0,'Febrero bisiesto');
-$empty=ReportesmensualesModel::resumir([],[],1,31);
-verificar($empty['proyectos']===0 && $empty['productos']===[] && count($empty['diario'])===31,'Mes vacío');
+cerca($report['colocado'],80,'Total colocado sin duplicar pedidos');
+verificar($report['proyectos']===2 && $report['proyectos_cotizados']===2 && $report['proyectos_colocados']===1,'Conteos por proyecto');
+verificar($report['cotizaciones_enviadas']===2,'Documentos enviados');
+verificar(ReportesmensualesModel::resumir([],1)['proyectos']===0,'Mes vacio');
 
 // Simula la conexión central y verifica parámetros y ramas sin conectarse a MySQL.
 class ConexionSimulada
@@ -68,13 +47,13 @@ class ModeloSimulado extends ReportesmensualesModel
     public function getConexion() { return $this->fake; }
 }
 $quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3,'interna_sin_cliente'=>4];
-$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$lines[0]],[$lines[2]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']]]);
+$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']]]);
 $model=new ModeloSimulado($db);
 $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
-verificar($db->calls[6][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[6][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[6][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
-verificar(count($db->calls)===9,'Consultas por conjunto');
-foreach ([1,2,5,6,7,8] as $queryIndex) {
+verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
+verificar(count($db->calls)===7,'Consultas por conjunto');
+foreach ([1,2,3,4,5,6] as $queryIndex) {
     verificar(str_contains($db->calls[$queryIndex][0], 'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)'),
         'Filtro global en cotizados, colocados, cantidades y proyectos por vendedor');
 }
@@ -84,22 +63,21 @@ $sellerModel->vendedores('V1');
 $sellerModel->proyectoDeclinadoAutorizado(633,'V1');
 foreach ($sellerDb->calls as [$sql]) verificar(str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)'), 'Clasificaciones en vendedores e historial declinado');
 verificar($db->calls[1][1]===['2024-02-01','2024-03-01',"V'1"],'Límites del mes y vendedor parametrizado');
-verificar(str_contains($db->calls[1][0],'cc.enviado = 1') && str_contains($db->calls[3][0],'cc.enviado=1'),'Sólo cotizaciones enviadas en importes y partidas');
 verificar(str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados de importes cotizados conservando activo NULL');
 verificar(!str_contains($db->calls[2][0],'v.activo'),'Conservar las condiciones de colocados');
 cerca($actual['cotizado'],2000,'Tipo de cambio cero usa divisor 1');
 verificar($actual['cantidades']===$quantities,'Cantidades independientes de los conjuntos cotizado y colocado');
-verificar($db->calls[5][1]===['2024-02-01','2024-03-01',"V'1"],'Cantidades con mes de proyecto y alcance autorizado');
-verificar(str_contains($db->calls[5][0], 'WHERE enviado = 1 GROUP BY venta_id'), 'Contar proyectos con cotización enviada en cualquier fecha según la consulta solicitada');
-verificar(substr_count($db->calls[5][0],'GROUP BY venta_id')===2,'Agrupar documentos por proyecto antes del JOIN');
-verificar(str_contains($db->calls[5][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS") &&
-    str_contains($db->calls[5][0], 'WHERE ci.venta_id = v.id AND ci.enviado = 1 AND NOT EXISTS') &&
-    str_contains($db->calls[5][0], 'WHERE cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1'),
+verificar($db->calls[3][1]===['2024-02-01','2024-03-01',"V'1"],'Cantidades con mes de proyecto y alcance autorizado');
+verificar(str_contains($db->calls[3][0], 'WHERE enviado = 1 GROUP BY venta_id'), 'Contar proyectos con cotización enviada en cualquier fecha según la consulta solicitada');
+verificar(substr_count($db->calls[3][0],'GROUP BY venta_id')===2,'Agrupar documentos por proyecto antes del JOIN');
+verificar(str_contains($db->calls[3][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS") &&
+    str_contains($db->calls[3][0], 'WHERE ci.venta_id = v.id AND ci.enviado = 1 AND NOT EXISTS') &&
+    str_contains($db->calls[3][0], 'WHERE cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1'),
     'Contar proyectos no declinados con interna enviada sin cotización a cliente enviada vinculada');
-verificar(substr_count($db->calls[5][0],'WHERE enviado = 1 GROUP BY venta_id')===2,'Cotizaciones y pedidos deben estar enviados, sin restringir su fecha');
-verificar(str_contains($db->calls[5][0], "pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados del conteo de pedidos, conservando el total de proyectos');
-verificar(str_contains($db->calls[5][0],"v.activo = 'CERRADO'"),'Usar el estatus explícito solicitado');
-verificar(str_contains($db->calls[5][0], "cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados sólo del conteo de cotizaciones, conservando total y declinados');
+verificar(substr_count($db->calls[3][0],'WHERE enviado = 1 GROUP BY venta_id')===2,'Cotizaciones y pedidos deben estar enviados, sin restringir su fecha');
+verificar(str_contains($db->calls[3][0], "pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados del conteo de pedidos, conservando el total de proyectos');
+verificar(str_contains($db->calls[3][0],"v.activo = 'CERRADO'"),'Usar el estatus explícito solicitado');
+verificar(str_contains($db->calls[3][0], "cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados sólo del conteo de cotizaciones, conservando total y declinados');
 verificar(!str_contains($db->calls[2][0],'v.fecha >=') && str_contains($db->calls[2][0],'fecha_pedido >= ?'),'Colocados incluyen proyectos anteriores con pedido en el mes');
 $dup=$headers[1]; $dup['id']=3;
 $duplicateModel=new ModeloSimulado(new ConexionSimulada([[],[],[$headers[1],$dup]]));
@@ -107,9 +85,9 @@ try { $duplicateModel->dashboard(2024,2,''); verificar(false,'Rechazar folios am
 catch (RuntimeException $ex) { verificar(str_contains($ex->getMessage(),'duplicados'),'Error identificable de folios duplicados'); }
 
 verificar($actual['clasificaciones_por_vendedor'][0]['proyectos']===10 && $actual['clasificaciones_por_vendedor'][0]['clasificacion']==='Bombas', 'Desglose por vendedor con nombre real de estatus');
-verificar($db->calls[7][1]===$db->calls[6][1] && str_contains($db->calls[7][0],'s.id = v.clasificacion_proyecto_id') && str_contains($db->calls[7][0],'s.clasificacion'), 'Desglose usa catalogo y filtros de la grafica general');
-verificar($actual['clasificaciones_por_vendedor'][0]['declinados']===2 && str_contains($db->calls[7][0], "v.activo = 'CERRADO'"), 'Declinados como subconjunto del total');
-verificar($actual['estatus_por_vendedor'][0]['declinados']===2 && $db->calls[8][1]===$db->calls[6][1] && str_contains($db->calls[8][0],'ORDER BY v.estatus_proyecto_id ASC'), 'Estatus ordenados por ID y filtros compartidos');
+verificar($db->calls[5][1]===$db->calls[4][1] && str_contains($db->calls[5][0],'s.id = v.clasificacion_proyecto_id') && str_contains($db->calls[5][0],'s.clasificacion'), 'Desglose usa catalogo y filtros de la grafica general');
+verificar($actual['clasificaciones_por_vendedor'][0]['declinados']===2 && str_contains($db->calls[5][0], "v.activo = 'CERRADO'"), 'Declinados como subconjunto del total');
+verificar($actual['estatus_por_vendedor'][0]['declinados']===2 && $db->calls[6][1]===$db->calls[4][1] && str_contains($db->calls[6][0],'ORDER BY v.estatus_proyecto_id ASC'), 'Estatus ordenados por ID y filtros compartidos');
 // La lista conserva fecha, estado y alcance; no multiplica proyectos por documentos.
 $listDb = new ConexionSimulada([[['total'=>21]], [['id'=>21,'proyecto_id'=>'P21']]]);
 $list = (new ModeloSimulado($listDb))->declinados(2024,2,"V'1",100);
@@ -227,7 +205,7 @@ function assets() { return '/portal/Assets'; }
 function version() { return 'test'; }
 $report['tipo_cambio']=20; $report['fecha_tipo_cambio']='2024-02-01';
 $report['cantidades']=$quantities;
-$report['productos'][0]['nombre']='<script>alert("XSS")</script>';
+$report['proyectos_por_vendedor'][0]['nombre']='<script>alert("XSS")</script>';
 $data=['page_form_title'=>'Reporte ventas','page_breadcrumb'=>'Ventas','filtros'=>['anio'=>2024,'mes'=>2,'vendedor'=>''],
     'reporte'=>$report,'reporte_error'=>'','vendedores'=>[['id'=>'V1','nombre'=>'José']], 'usuario'=>['rol_id'=>4]];
 $view=file_get_contents(__DIR__.'/../../Views/Reportesmensuales/reporte_ventas.php');
@@ -237,8 +215,10 @@ verificar(str_contains($html,'&lt;script&gt;alert'),'Escape HTML de subclasifica
 verificar(!str_contains($html,'<script>alert'),'Sin inyección HTML');
 verificar(str_contains($html,'\\u003Cscript\\u003E'),'Escape de JSON incrustado');
 verificar(str_contains($html,'TODOS') && str_contains($html,'José'),'UTF-8 y filtros');
-verificar(str_contains($html,'Cantidades') && !str_contains($html,'>Importes</h4>') && str_contains($html,'Orden Compra Cliente'),'Conservar Cantidades y retirar el bloque Importes');
+verificar(str_contains($html,'Cantidades') && !str_contains($html,'>Importes</h4>') && str_contains($html,'Pedidos Colocados'),'Conservar Cantidades y retirar el bloque Importes');
 verificar(str_contains($html,'Cantidades (crítico)') && str_contains($html,'col-12 col-md-3') && str_contains($html,'sin cotización a cliente enviada vinculada'), 'Tarjeta crítica en el primer cuarto de la fila');
 verificar(substr_count($html,'data-bs-target="#modal-declinados-ventas"')===2, 'Ambas tarjetas abren el modal de declinados solicitado');
 verificar(!str_contains($html,'Colocado / cotizado'),'Retirar el indicador de relación anterior');
+verificar(!str_contains($html,'Ventas por vendedor') && !str_contains($html,'ventas-productos') && !str_contains($html,'ventas-cruce') && !str_contains($html,'Criterios del reporte'), 'Secciones inferiores retiradas');
+foreach ($db->calls as [$sql]) verificar(!str_contains($sql,'tb_ventas_detalle') && !str_contains($sql,'tb_ventas_cotizacion_cliente_detalle'), 'Sin consultas de partidas para secciones retiradas');
 echo "OK: agregaciones, conciliación, permisos por conjunto, consultas parametrizadas, vacío, bisiesto, divisor de respaldo, folios ambiguos y renderizado seguro.\n";
