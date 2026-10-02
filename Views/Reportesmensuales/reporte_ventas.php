@@ -130,7 +130,7 @@
                         <div class="card-body">
                             <h4 class="mt-0">Cantidades por Vendedor</h4>
                             <p class="text-muted">Proyectos registrados en los meses seleccionados, incluidos los declinados.</p>
-                            <label for="ventas-vendedor-desglose" class="form-label">Selecciona una barra o un vendedor para ver su evolución mensual y sus desgloses</label>
+                            <label for="ventas-vendedor-desglose" class="form-label">Selecciona una barra o un vendedor para ver sus desgloses</label>
                             <select id="ventas-vendedor-desglose" class="form-select mb-3" aria-controls="ventas-estatus-panel">
                                 <option value="">Selecciona un vendedor</option>
                                 <?php foreach ($report['proyectos_por_vendedor'] ?? [] as $index => $seller): ?>
@@ -142,17 +142,22 @@
                             </div>
                             <p id="ventas-cascada-vacio" class="text-muted" hidden>Sin proyectos para los filtros seleccionados.</p>
                             <div id="ventas-estatus-panel" class="mt-4 pt-3 border-top" hidden>
+                              <div class="ventas-desgloses-vendedor">
+                               <section class="ventas-desglose-vendedor" aria-labelledby="ventas-estatus-titulo">
                                 <h4 id="ventas-estatus-titulo" class="mt-0" aria-live="polite"></h4>
                                 <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                 <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de clasificaciones del vendedor; desplazamiento horizontal">
                                     <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por clasificación, con declinados apilados en rojo"></div>
                                 </div>
-                                <hr class="ventas-separador">
+                               </section>
+                               <section class="ventas-desglose-vendedor" aria-labelledby="ventas-desglose-estatus-titulo">
                                 <h4 id="ventas-desglose-estatus-titulo" aria-live="polite"></h4>
                                 <p id="ventas-desglose-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                 <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica por estatus del proyecto; desplazamiento horizontal">
                                     <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos por estatus, con declinados apilados en rojo"></div>
                                 </div>
+                               </section>
+                              </div>
                             </div>
                         </div>
                     </div>
@@ -465,6 +470,11 @@
         #ventas-mensuales { font-size: 13px; line-height: 1.4; background: #f3f5f7; padding: 10px; border-radius: 4px; }
         #ventas-mensuales .card { border: 1px solid #dbe3e8; border-radius: 5px; background-color: #fff; }
         #ventas-mensuales .shadow { box-shadow: 0 2px 7px rgba(36,52,71,.12) !important; }
+        #ventas-mensuales .ventas-desgloses-vendedor { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-left: 20px; padding-left: 12px; border-left: 2px solid #b9d9e6; }
+        #ventas-mensuales .ventas-desglose-vendedor { min-width: 0; padding: 10px; border: 1px solid #dbe3e8; border-radius: 5px; }
+        @media (max-width: 767px) {
+            #ventas-mensuales .ventas-desgloses-vendedor { grid-template-columns: minmax(0,1fr); margin-left: 8px; padding-left: 8px; }
+        }
         #ventas-mensuales .ventas-paneles { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; margin-bottom: 14px; }
         #ventas-mensuales .ventas-paneles > .card { min-width: 0; margin-bottom: 0 !important; }
         #ventas-mensuales .ventas-paneles > .ventas-separador { display: none; }
