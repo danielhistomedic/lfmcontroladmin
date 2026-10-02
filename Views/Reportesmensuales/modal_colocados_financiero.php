@@ -14,21 +14,21 @@
                 <button id="colocados-financiero-reintentar" type="button" class="btn btn-outline-primary btn-sm mb-3" hidden>Reintentar</button>
                 <div id="colocados-financiero-resumen" hidden>
                     <section class="colocados-resumen-seccion" aria-labelledby="colocados-totales-titulo">
-                        <h6 id="colocados-totales-titulo">Total colocado por moneda</h6>
+                        <h6 id="colocados-totales-titulo"><i class="fa-solid fa-coins colocados-icono" aria-hidden="true"></i>Total colocado por moneda</h6>
                         <div id="colocados-totales" class="colocados-monedas"></div>
                     </section>
                     <div class="colocados-grupos">
-                        <section class="colocados-resumen-seccion" aria-labelledby="colocados-flowserve-titulo"><h6 id="colocados-flowserve-titulo">Total Flowserve</h6><div id="colocados-flowserve" class="colocados-monedas"></div></section>
-                        <section class="colocados-resumen-seccion" aria-labelledby="colocados-diversos-titulo"><h6 id="colocados-diversos-titulo">Total Diversos</h6><div id="colocados-diversos" class="colocados-monedas"></div></section>
+                        <section class="colocados-resumen-seccion" aria-labelledby="colocados-flowserve-titulo"><h6 id="colocados-flowserve-titulo"><i class="fa-solid fa-industry colocados-icono" aria-hidden="true"></i>Total Flowserve</h6><div id="colocados-flowserve" class="colocados-monedas"></div></section>
+                        <section class="colocados-resumen-seccion" aria-labelledby="colocados-diversos-titulo"><h6 id="colocados-diversos-titulo"><i class="fa-solid fa-boxes-stacked colocados-icono" aria-hidden="true"></i>Total Diversos</h6><div id="colocados-diversos" class="colocados-monedas"></div></section>
                     </div>
                 </div>
                 <div class="colocados-grupos colocados-listados">
                     <?php foreach (['clientes'=>'Total por cliente','vendedores'=>'Total por vendedor'] as $section => $title): ?>
                         <section class="colocados-resumen-seccion" aria-labelledby="colocados-<?= $section; ?>-titulo">
-                            <h6 id="colocados-<?= $section; ?>-titulo"><?= $title; ?></h6>
+                            <h6 id="colocados-<?= $section; ?>-titulo"><i class="fa-solid <?= $section === 'clientes' ? 'fa-building' : 'fa-user-tie'; ?> colocados-icono" aria-hidden="true"></i><?= $title; ?></h6>
                             <div class="colocados-tabla-controles">
                                 <label>Buscar<input id="colocados-<?= $section; ?>-buscar" type="search" maxlength="200" placeholder="Nombre o moneda" class="form-control form-control-sm"></label>
-                                <label>Ordenar<select id="colocados-<?= $section; ?>-orden" class="form-select form-select-sm"><option value="1:asc">Moneda</option><option value="2:desc">Mayor importe</option><option value="2:asc">Menor importe</option><option value="0:asc">Nombre A–Z</option></select></label>
+                                <label>Ordenar<select id="colocados-<?= $section; ?>-orden" class="form-select form-select-sm"><option value="2:desc">Mayor importe</option><option value="1:asc">Moneda</option><option value="2:asc">Menor importe</option><option value="0:asc">Nombre A–Z</option></select></label>
                             </div>
                             <div id="colocados-<?= $section; ?>-estado" class="text-danger" role="status" aria-live="polite"></div>
                             <div class="table-responsive"><table id="colocados-<?= $section; ?>-tabla" class="table colocados-tabla w-100">

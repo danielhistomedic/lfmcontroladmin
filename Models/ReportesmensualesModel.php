@@ -372,13 +372,15 @@ class ReportesmensualesModel extends Mysql
         }
         $filtered = $search === '' ? $totalRows : $this->consultar("SELECT COUNT(*) AS total FROM (
             SELECT $entity, pc.moneda_id $joins WHERE $filteredWhere GROUP BY $group) grupos", $filteredParams);
-        $order = [0=>'nombre',1=>'moneda',2=>'total'][(int)($options['order_column'] ?? 1)] ?? 'moneda';
-        $direction = ($options['order_dir'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+        $order = [0=>'nombre',1=>'moneda',2=>'total'][(int)($options['order_column'] ?? 2)] ?? 'total';
+        $direction = ($options['order_dir'] ?? 'desc') === 'desc' ? 'DESC' : 'ASC';
         $length = max(5,min(100,(int)($options['length'] ?? 10)));
         $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
         $rows = $this->consultar("SELECT $entity AS entidad_id, MAX($name) AS nombre, pc.moneda_id,
             $currency AS moneda, SUM(COALESCE(pc.subtotal,0)) AS total, COUNT(*) AS pedidos
-            $joins WHERE $filteredWhere GROUP BY $group ORDER BY $order $direction, entidad_id ASC, pc.moneda_id ASC
+            $joins WHERE $filteredWhere GROUP BY $group
+            ORDER BY CASE pc.moneda_id WHEN 3 THEN 0 WHEN 1 THEN 1 ELSE 2 END ASC,
+                $order $direction, entidad_id ASC, pc.moneda_id ASC
             LIMIT $length OFFSET $offset", $filteredParams);
         return ['draw'=>(int)($options['draw'] ?? 1),'recordsTotal'=>(int)($totalRows[0]['total'] ?? 0),
             'recordsFiltered'=>(int)($filtered[0]['total'] ?? 0),'data'=>$rows];

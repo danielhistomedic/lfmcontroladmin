@@ -25,8 +25,9 @@ $clientRows = (new ModeloSimulado($clientDb))->colocadosFinanciero(2026,9,'V1','
 verificar($clientRows['draw']===4 && $clientRows['recordsTotal']===4 && $clientRows['recordsFiltered']===1, 'Paginacion de clientes');
 verificar(str_contains($clientDb->calls[2][0],'SUM(COALESCE(pc.subtotal,0))') && !str_contains($clientDb->calls[2][0],'pc.total'), 'Clientes muestran subtotales sin IVA');
 verificar(str_contains($clientDb->calls[2][0],'GROUP BY pc.cliente_id, pc.moneda_id') &&
-    str_contains($clientDb->calls[2][0],'ORDER BY total DESC, entidad_id ASC, pc.moneda_id ASC') &&
+    str_contains($clientDb->calls[2][0],'total DESC, entidad_id ASC, pc.moneda_id ASC') &&
     str_contains($clientDb->calls[2][0],'LIMIT 10 OFFSET 10') && in_array('%a!%!_%',$clientDb->calls[2][1],true), 'Cliente del pedido, monedas separadas y busqueda literal');
+verificar(str_contains($clientDb->calls[2][0], 'ORDER BY CASE pc.moneda_id WHEN 3 THEN 0 WHEN 1 THEN 1 ELSE 2 END ASC'), 'USD primero, MXN despues antes del importe descendente');
 $sellerDb = new ConexionSimulada([[['total'=>1]],[]]);
 (new ModeloSimulado($sellerDb))->colocadosFinanciero(2026,9,'V1','vendedores',['search'=>'']);
 verificar(str_contains($sellerDb->calls[1][0],'SUM(COALESCE(pc.subtotal,0))') && !str_contains($sellerDb->calls[1][0],'pc.total'), 'Vendedores muestran subtotales sin IVA');

@@ -7,6 +7,7 @@
 #modal-colocados-financiero .modal-title { font-size: 15px; font-weight: 600; color: #fff; }
 #modal-colocados-financiero .modal-body { padding: 16px; }
 #modal-colocados-financiero h6 { font-size: 13px; font-weight: 600; color: #174b66; margin: 0 0 10px; }
+#modal-colocados-financiero .colocados-icono { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-right: 8px; border-radius: 6px; background: #eaf3fb; color: #2385bd; font-size: 13px; vertical-align: middle; }
 #modal-colocados-financiero .colocados-nota { color: #62758e; font-size: 11px; margin-bottom: 14px; }
 #modal-colocados-financiero .colocados-monedas,
 #modal-colocados-financiero .colocados-grupos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }

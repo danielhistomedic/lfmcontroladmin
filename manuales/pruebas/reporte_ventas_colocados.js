@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const code = fs.readFileSync(__dirname + '/../../Assets/app/js/reporte_ventas_colocados.js','utf8');
 const nodes = new Map(), queries = [];
 function node(id) {
-    if (!nodes.has(id)) nodes.set(id,{id,dataset:{},events:{},children:[],hidden:false,textContent:'',value:id.endsWith('-orden')?'1:asc':'',disabled:false,
+    if (!nodes.has(id)) nodes.set(id,{id,dataset:{},events:{},children:[],hidden:false,textContent:'',value:id.endsWith('-orden')?'2:desc':'',disabled:false,
         setAttribute(name,value){this[name]=value;},querySelector(){return node(this.id+'-body');},
         addEventListener(name,fn){this.events[name]=fn;},replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);},click(){this.clicked=true;}});
     return nodes.get(id);
