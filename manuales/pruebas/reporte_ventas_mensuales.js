@@ -12,8 +12,10 @@ function ejecutar(empty, width, theme) {
     const vendors = empty ? [] : [{ nombre: 'José', cotizado: 130, colocado: 80 }, { nombre: 'Ana', cotizado: 20, colocado: 40 }];
     const rows = empty ? [] : Array.from({ length: 12 }, (_, i) => ({ nombre: 'Servicio '+i, subclasificacion_id: String(i),
         vendedor_id: i % 2 ? 'V2' : 'V1', vendedor: i % 2 ? 'Ana' : 'José', cotizado: i+10, colocado: i+5 }));
-    const data = { cotizado: empty ? 0 : 150, colocado: empty ? 0 : 120, vendedores: vendors, proyectos_por_vendedor: empty ? [] : [{nombre:'Vendedor 1',proyectos:8},{nombre:'Vendedor 2',proyectos:2}], productos: rows, cruce: rows,
+    const data = { cotizado: empty ? 0 : 150, colocado: empty ? 0 : 120, vendedores: vendors, proyectos_por_vendedor: empty ? [] : [{vendedor_id:'V1',nombre:'Vendedor 1',proyectos:8},{vendedor_id:'V2',nombre:'Vendedor 2',proyectos:2}], productos: rows, cruce: rows,
         diario: Array.from({ length: 29 }, (_, i) => ({ dia: i+1, cotizado: i === 0 && !empty ? 150 : 0, colocado: i === 1 && !empty ? 120 : 0 })) };
+    data.estatus_por_vendedor=empty?[]:[{vendedor_id:'V1',estatus:'Pedido',proyectos:5},{vendedor_id:'V1',estatus:'Cotizacion',proyectos:3},{vendedor_id:'V2',estatus:'Pedido',proyectos:2}];
+    const nodes=new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
     const form = { addEventListener: (name, cb) => { formEvents[name] = cb; }, querySelector: () => button,
@@ -22,7 +24,7 @@ function ejecutar(empty, width, theme) {
         document: {
             addEventListener: (name, cb) => { events[name] = cb; },
             getElementById: id => id === 'modal-declinados-ventas' ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
-                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : { id, clientWidth: width, style: {} },
+                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : (nodes.has(id)?nodes.get(id):(nodes.set(id,{ id, clientWidth: width, style: {}, events:{}, addEventListener(name,cb){this.events[name]=cb;} }),nodes.get(id))),
             querySelectorAll: () => []
         },
         window: { addEventListener: (name, cb) => { events[name] = cb; } },
@@ -43,16 +45,29 @@ function ejecutar(empty, width, theme) {
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
     const counts=charts[0].getOption();
-    assert.equal(counts.xAxis[0].name,'Proyectos');
-    assert.equal(counts.xAxis[0].minInterval,1);
+    assert.equal(counts.yAxis[0].name,'Proyectos');
+    assert.equal(counts.yAxis[0].minInterval,1);
     assert.equal((counts.dataZoom || []).length,0,'Sin control lateral en cantidades por vendedor');
     if (!empty) {
-        assert.deepEqual(counts.series[0].data,[8,2]);
+        assert.deepEqual(counts.series[0].data.map(row=>row.value),[8,2]);
         const comparison = charts[4].getOption();
         assert.equal(comparison.series.length, 2, 'Cruce con una serie por vendedor');
         assert.equal(comparison.series[0].data[0], 5, 'Asignar ventas a su vendedor y subclasificación');
         assert.equal(comparison.series[1].data[0], 0, 'Mantener cero para combinaciones sin ventas');
         assert.ok(comparison.dataZoom.length > 0, 'Permitir recorrer subclasificaciones numerosas');
+    }
+    if (!empty) {
+        const dropdown=nodes.get('ventas-vendedor-desglose');
+        charts[0].trigger('click',{componentType:'series',dataIndex:0});
+        assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
+        dropdown.value='0'; dropdown.events.change();
+        assert.equal(charts.length,6,'Segunda grafica debajo sin reemplazar la primera');
+        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Pedido','Cotizacion']);
+        assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
+        assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
+        dropdown.value='1'; dropdown.events.change();
+        assert.equal(charts.length,6,'Reutilizar grafica secundaria');
+        assert.deepEqual(charts[5].getOption().series[0].data.map(row=>row.value),[2]);
     }
     change(); change();
     assert.equal(requests, 1, 'Un solo envío global mientras está cargando');
@@ -103,7 +118,7 @@ async function probarModal(critical = false) {
             querySelectorAll: selector => selector.includes('.ventas-abrir-declinados') ? cards : [] },
         window: { addEventListener() {}, verSeguimientosProyecto(id,project) { context.selected=[id,project]; } }, jQuery: jquery,
         bootstrap: { Modal: { getOrCreateInstance: () => ({hide() {}, show() {}}) } },
-        echarts: { init: () => ({ setOption() {}, resize() {} }) },
+        echarts: { init: () => ({ setOption() {}, resize() {}, on() {} }) },
         fetch: async (url, settings) => { calls.push([url, settings]); return { ok: response.status, json: async () => response }; },
         AbortController, URLSearchParams, Intl, Map, JSON, setTimeout, clearTimeout
     };

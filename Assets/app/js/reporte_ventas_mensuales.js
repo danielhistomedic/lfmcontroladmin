@@ -188,27 +188,90 @@ document.addEventListener('DOMContentLoaded', function () {
     const colors = ['#2385bd', '#27a58c', '#e5a543', '#8c6bb1', '#cf6478', '#428582', '#718bbd', '#ad7e56'];
     function chart(id, labels, series, horizontal, unit = 'USD') {
         const el = document.getElementById(id);
-        const projectCountsChart = id === 'ventas-cantidades-vendedores';
-        if (projectCountsChart) el.style.height = Math.max(340, labels.length * 38 + 110) + 'px';
         const instance = echarts.init(el, typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? 'dark' : null);
         const compact = el.clientWidth < 500;
         const chartText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
         const category = { type: 'category', data: labels, axisLabel: { color: chartText, width: compact ? 95 : 150, overflow: 'truncate' } };
         const value = { type: 'value', name: unit, nameTextStyle: { color: chartText }, axisLabel: { color: chartText, formatter: v => amount.format(v) } };
         if (unit === 'Proyectos') value.minInterval = 1;
-        const zoom = labels.length > 10 && !projectCountsChart ? [{ type: 'slider', orient: horizontal ? 'vertical' : 'horizontal',
+        const zoom = labels.length > 10 ? [{ type: 'slider', orient: horizontal ? 'vertical' : 'horizontal',
             [horizontal ? 'yAxisIndex' : 'xAxisIndex']: 0, start: 0, end: Math.min(100, 1000 / labels.length) }] : [];
         instance.setOption({ color: colors, backgroundColor: 'transparent',
             tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: v => amount.format(v) + ' ' + unit },
-            legend: { top: 0, type: 'scroll', textStyle: { color: chartText } }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal && !projectCountsChart ? 60 : 25, top: 50, bottom: 60 },
+            legend: { top: 0, type: 'scroll', textStyle: { color: chartText } }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal ? 60 : 25, top: 50, bottom: 60 },
             xAxis: horizontal ? value : category, yAxis: horizontal ? category : value,
             dataZoom: zoom, series: series, aria: { enabled: true } });
         charts.push(instance);
     }
     const bars = rows => ['cotizado', 'colocado'].map((key, i) => ({ name: i === 0 ? 'Cotizado' : 'Colocado', type: 'bar', data: rows.map(r => r[key]) }));
-    const projectCounts = data.proyectos_por_vendedor || [];
-    chart('ventas-cantidades-vendedores', projectCounts.map(r => r.nombre), [{ name: 'Proyectos', type: 'bar',
-        data: projectCounts.map(r => r.proyectos), label: { show: true, position: 'right' } }], true, 'Proyectos');
+    const projectCounts = [...(data.proyectos_por_vendedor || [])].sort((a, b) => b.proyectos - a.proyectos);
+    const statusCounts = data.estatus_por_vendedor || [];
+    const selector = document.getElementById('ventas-vendedor-desglose');
+    const statusPanel = document.getElementById('ventas-estatus-panel');
+    const cascadeCharts = [];
+    let selectedIndex = -1;
+    let statusChart = null;
+    const cascadeText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
+    function cascade(id) {
+        const element = document.getElementById(id);
+        element.style.height = '460px';
+        const instance = echarts.init(element, typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? 'dark' : null);
+        const entry = { element, instance, count: 0 };
+        cascadeCharts.push(entry);
+        charts.push(instance);
+        return entry;
+    }
+    function fitCascade(entry) {
+        const available = entry.element.parentElement ? entry.element.parentElement.clientWidth : entry.element.clientWidth;
+        const width = Math.max(available || 320, entry.count * 160 + 90);
+        entry.element.style.width = width + 'px';
+        entry.instance.resize({ width, height: 460 });
+    }
+    function cascadeOption(rows, selected = -1) {
+        return {
+            backgroundColor: 'transparent',
+            tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: value => amount.format(value) + ' proyectos' },
+            grid: { left: 60, right: 30, top: 45, bottom: 130 },
+            xAxis: { type: 'category', data: rows.map(row => row.nombre), axisLabel: {
+                interval: 0, color: cascadeText, width: 140, overflow: 'break', lineHeight: 17
+            } },
+            yAxis: { type: 'value', name: 'Proyectos', minInterval: 1,
+                nameTextStyle: { color: cascadeText }, axisLabel: { color: cascadeText } },
+            series: [{ name: 'Proyectos', type: 'bar', barMaxWidth: 65,
+                label: { show: true, position: 'top', color: cascadeText },
+                data: rows.map((row, index) => ({ value: row.proyectos, itemStyle: {
+                    color: index === selected ? '#d48825' : '#2385bd',
+                    borderColor: index === selected ? '#80510f' : '#2385bd', borderWidth: index === selected ? 2 : 0
+                } }))
+            }], aria: { enabled: true }
+        };
+    }
+    const sellerChart = cascade('ventas-cantidades-vendedores');
+    sellerChart.count = projectCounts.length;
+    sellerChart.instance.setOption(cascadeOption(projectCounts));
+    fitCascade(sellerChart);
+    document.getElementById('ventas-cascada-vacio').hidden = projectCounts.length > 0;
+    function selectSeller(index) {
+        selectedIndex = Number.isInteger(index) && index >= 0 && index < projectCounts.length ? index : -1;
+        selector.value = selectedIndex < 0 ? '' : String(selectedIndex);
+        sellerChart.instance.setOption({ series: cascadeOption(projectCounts, selectedIndex).series });
+        statusPanel.hidden = selectedIndex < 0;
+        if (selectedIndex < 0) return;
+        const seller = projectCounts[selectedIndex];
+        const statuses = statusCounts.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))
+            .sort((a, b) => b.proyectos - a.proyectos);
+        document.getElementById('ventas-estatus-titulo').textContent = seller.nombre + ' — ' + seller.proyectos + ' proyectos';
+        document.getElementById('ventas-estatus-resumen').textContent = statuses.length
+            ? statuses.map(row => row.estatus + ': ' + row.proyectos).join(' | ') : 'Sin estatus registrados.';
+        if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
+        statusChart.count = statuses.length;
+        statusChart.instance.setOption(cascadeOption(statuses.map(row => ({ nombre: row.estatus, proyectos: row.proyectos }))), true);
+        fitCascade(statusChart);
+    }
+    sellerChart.instance.on('click', event => {
+        if (event.componentType === 'series') selectSeller(event.dataIndex);
+    });
+    selector.addEventListener('change', () => selectSeller(selector.value === '' ? -1 : Number(selector.value)));
     chart('ventas-comparativo', ['Mes seleccionado'], bars([data]), false);
     chart('ventas-vendedores', data.vendedores.map(r => r.nombre), bars(data.vendedores), true);
     chart('ventas-productos', data.productos.map(r => r.nombre), bars(data.productos), true);
@@ -218,6 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const matrix = new Map(data.cruce.map(r => [JSON.stringify([r.vendedor_id, r.subclasificacion_id]), r.colocado]));
     chart('ventas-cruce', products.map(r => r[1]), sellers.map(([id, name]) => ({ name, type: 'bar',
         data: products.map(([sub]) => matrix.get(JSON.stringify([id, sub])) || 0) })), true);
-    window.addEventListener('resize', function () { charts.forEach(c => c.resize()); });
+    window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
     document.querySelectorAll('#ventas-mensuales details').forEach(el => el.addEventListener('toggle', () => charts.forEach(c => c.resize())));
 });

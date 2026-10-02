@@ -90,7 +90,24 @@
                         <div class="card-body">
                             <h4 class="mt-0">Cantidades por Vendedor</h4>
                             <p class="text-muted">Proyectos registrados en el mes seleccionado, incluidos los declinados.</p>
-                            <div id="ventas-cantidades-vendedores" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por vendedor, con cantidades indicadas en las barras"></div>
+                            <label for="ventas-vendedor-desglose" class="form-label">Selecciona una barra o un vendedor para ver sus estatus</label>
+                            <select id="ventas-vendedor-desglose" class="form-select mb-3" aria-controls="ventas-estatus-panel">
+                                <option value="">Selecciona un vendedor</option>
+                                <?php foreach ($report['proyectos_por_vendedor'] ?? [] as $index => $seller): ?>
+                                    <option value="<?= $esc($index); ?>"><?= $esc($seller['nombre']); ?> — <?= $esc($seller['proyectos']); ?> proyectos</option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de proyectos por vendedor; desplazamiento horizontal">
+                                <div id="ventas-cantidades-vendedores" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por vendedor; selecciona una barra para ver sus estatus"></div>
+                            </div>
+                            <p id="ventas-cascada-vacio" class="text-muted" hidden>Sin proyectos para los filtros seleccionados.</p>
+                            <div id="ventas-estatus-panel" class="mt-4 pt-3 border-top" hidden>
+                                <h4 id="ventas-estatus-titulo" class="mt-0" aria-live="polite"></h4>
+                                <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
+                                <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de estatus del vendedor; desplazamiento horizontal">
+                                    <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por estatus actual"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -239,6 +256,14 @@
         <?php endif; ?>
     </div>
     <style>
+        #ventas-mensuales .ventas-cascada-scroll {
+            width: 100%;
+            overflow-x: auto;
+        }
+        #ventas-mensuales .ventas-cascada-scroll:focus-visible {
+            outline: 2px solid var(--primary, #0088cc);
+            outline-offset: 2px;
+        }
         #ventas-mensuales .ventas-separador {
             border: 0;
             border-top: 2px solid #c5d6df;

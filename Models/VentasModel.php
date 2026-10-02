@@ -240,7 +240,7 @@ class VentasModel extends Mysql
 
             $sql .= "WHERE YEAR(v.fecha) = YEAR(CURDATE()) ";
             $sql .= "  AND v.estatus_proyecto_id >= 6 ";
-            $sql .= "  AND v.clasificacion_proyecto_id IN (2,3,5) ";
+            $sql .= "  AND v.clasificacion_proyecto_id IN (2,3,4,5) ";
 
             $sql .= $filtro;
             /*-------------------------------------------
@@ -353,7 +353,7 @@ class VentasModel extends Mysql
 
             $sql .= "WHERE ";
             $sql .= "    v.estatus_proyecto_id >= 6 ";
-            $sql .= "    AND v.clasificacion_proyecto_id IN (2,3,5) ";
+            $sql .= "    AND v.clasificacion_proyecto_id IN (2,3,4,5) ";
             $sql .= "    AND YEAR(v.fecha) = YEAR(CURDATE()) ";
 
             $sql .= "GROUP BY ";
@@ -1822,4 +1822,3 @@ class VentasModel extends Mysql
         return $arrResponse;
     }
 }
-
