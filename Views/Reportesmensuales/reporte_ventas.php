@@ -23,24 +23,36 @@
     $filters = $data['filtros'];
     $report = $data['reporte'];
     $months = [1 => 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    $selectedMonths = is_array($filters['mes']) ? $filters['mes'] : [$filters['mes']];
+    $selectedYears = is_array($filters['anio']) ? $filters['anio'] : [$filters['anio']];
+    $yearNames = implode(', ', $selectedYears);
+    $monthNames = implode(', ', array_map(static fn($month) => $months[$month], $selectedMonths));
+    $periods = [];
+    foreach ($selectedYears as $year) {
+        foreach ($selectedMonths as $month) {
+            $start = new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month));
+            $periods[] = $start->format('d/m/Y') . ' al ' . $start->modify('last day of this month')->format('d/m/Y');
+        }
+    }
+    $periodLabel = implode(' | ', $periods);
     ?>
     <div id="ventas-mensuales">
         <div class="card mb-4">
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
                     <div>
-                        <h3 class="mt-0 mb-1">Reportes de Ventas</h3><span class="text-muted">Resultados de <?= $esc($months[$filters['mes']]); ?> <?= $esc($filters['anio']); ?> · Importes con IVA en USD</span>
+                        <h3 class="mt-0 mb-1">Reportes de Ventas</h3><span class="text-muted">Resultados de <?= $esc($monthNames); ?> <?= $esc($yearNames); ?> · Importes con IVA en USD</span>
                     </div>
                     <span class="badge bg-primary align-self-start">REPORTE MENSUAL</span>
                 </div>
                 <form id="filtros-ventas-mensuales" method="get" action="<?= base_url(); ?>/reportesmensuales/ventas" class="row g-3 align-items-end">
-                    <div class="col-md-3"><label for="ventas-anio" class="form-label">Año</label><select id="ventas-anio" name="anio" class="form-control" data-plugin-selectTwo>
-                            <?php for ($y = max((int)date('Y') + 1, $filters['anio']); $y >= 2000; $y--): ?>
-                                <option value="<?= $y; ?>" <?= $y === $filters['anio'] ? 'selected' : ''; ?>><?= $y; ?></option>
+                    <div class="col-md-3"><label for="ventas-anio" class="form-label">Años</label><select id="ventas-anio" name="anio[]" class="form-control" multiple required data-plugin-selectTwo data-plugin-options='{"closeOnSelect":false}'>
+                            <?php for ($y = max((int)date('Y') + 1, max($selectedYears)); $y >= 2000; $y--): ?>
+                                <option value="<?= $y; ?>" <?= in_array($y, $selectedYears, true) ? 'selected' : ''; ?>><?= $y; ?></option>
                             <?php endfor; ?>
                         </select></div>
-                    <div class="col-md-3"><label for="ventas-mes" class="form-label">Mes</label><select id="ventas-mes" name="mes" class="form-control" data-plugin-selectTwo>
-                            <?php foreach ($months as $number => $name): ?><option value="<?= $number; ?>" <?= $number === $filters['mes'] ? 'selected' : ''; ?>><?= $name; ?></option><?php endforeach; ?>
+                    <div class="col-md-3"><label for="ventas-mes" class="form-label">Meses</label><select id="ventas-mes" name="mes[]" class="form-control" multiple required data-plugin-selectTwo data-plugin-options='{"closeOnSelect":false}'>
+                            <?php foreach ($months as $number => $name): ?><option value="<?= $number; ?>" <?= in_array($number, $selectedMonths, true) ? 'selected' : ''; ?>><?= $name; ?></option><?php endforeach; ?>
                         </select></div>
                     <div class="col-md-4"><label for="ventas-vendedor" class="form-label">Vendedor</label><select id="ventas-vendedor" name="vendedor" class="form-control" data-plugin-selectTwo>
                             <option value="">TODOS</option>
@@ -48,6 +60,7 @@
                         </select></div>
                     <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Actualizar</button></div>
                 </form>
+                <small class="d-block mt-2">Selecciona uno o varios años y meses y pulsa Actualizar para aplicar la selección.</small>
                 <div id="ventas-cargando" class="mt-2 text-primary" role="status" hidden>Actualizando todos los indicadores…</div>
                 <?php if ((int)$data['usuario']['rol_id'] === 4): ?><small class="d-block mt-2 text-muted">TODOS incluye únicamente tus proyectos autorizados.</small><?php endif; ?>
             </div>
@@ -62,7 +75,7 @@
             </div>
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
-                <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en el mes seleccionado'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos del mes declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos del mes con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos del mes con orden de compra de cliente']] as $kpi): ?>
+                <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos de los meses seleccionados declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos de los meses seleccionados con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos de los meses seleccionados con orden de compra de cliente']] as $kpi): ?>
                     <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
                         <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ''; ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php endif; ?>>
@@ -82,7 +95,7 @@
                         <div class="card-body">
                             <div class="text-muted mb-2">Proyectos con cotización interna sin cotización a cliente</div>
                             <div class="ventas-valor"><?= $esc($report['cantidades']['interna_sin_cliente']); ?></div>
-                            <small class="text-muted">Proyectos del mes no declinados, con cotización interna enviada y sin cotización a cliente enviada vinculada</small>
+                            <small class="text-muted">Proyectos de los meses seleccionados no declinados, con cotización interna enviada y sin cotización a cliente enviada vinculada</small>
                         </div>
                     </div>
                 </div>
@@ -91,7 +104,7 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <h4 class="mt-0">Proyectos por clasificación</h4>
-                    <p class="text-muted">Proyectos del mes seleccionado, con declinados apilados en rojo.</p>
+                    <p class="text-muted">Proyectos por clasificación, año y mes seleccionado, con declinados apilados en rojo. Selecciona una barra para ver su período.</p>
                     <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
                         <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
                     </div>
@@ -125,7 +138,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h4 class="mt-0">Cantidades por Vendedor</h4>
-                            <p class="text-muted">Proyectos registrados en el mes seleccionado, incluidos los declinados.</p>
+                            <p class="text-muted">Proyectos registrados en los meses seleccionados, incluidos los declinados.</p>
                             <label for="ventas-vendedor-desglose" class="form-label">Selecciona una barra o un vendedor para ver sus clasificaciones</label>
                             <select id="ventas-vendedor-desglose" class="form-select mb-3" aria-controls="ventas-estatus-panel">
                                 <option value="">Selecciona un vendedor</option>
@@ -169,7 +182,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal fade" id="modal-declinados-ventas" tabindex="-1" aria-labelledby="modal-declinados-titulo" aria-hidden="true" data-url="<?= base_url(); ?>/reportesmensuales/declinados" data-anio="<?= $esc($filters['anio']); ?>" data-mes="<?= $esc($filters['mes']); ?>" data-vendedor="<?= $esc($filters['vendedor']); ?>">
+            <div class="modal fade" id="modal-declinados-ventas" tabindex="-1" aria-labelledby="modal-declinados-titulo" aria-hidden="true" data-url="<?= base_url(); ?>/reportesmensuales/declinados" data-anio="<?= $esc(implode(',', $selectedYears)); ?>" data-mes="<?= $esc(implode(',', $selectedMonths)); ?>" data-vendedor="<?= $esc($filters['vendedor']); ?>">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content border-0 shadow">
                         <div class="modal-header bg-primary text-white py-3" style="border-radius: 6px 6px 0 0;">
@@ -178,7 +191,7 @@
                         </div>
                         <div class="modal-body p-3">
                             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1" aria-hidden="true"></i> Periodo: <strong class="text-dark"><?= sprintf('01/%02d/%04d', $filters['mes'], $filters['anio']); ?> al <?= (new DateTimeImmutable(sprintf('%04d-%02d-01', $filters['anio'], $filters['mes'])))->modify('last day of this month')->format('d/m/Y'); ?></strong></span>
+                                <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1" aria-hidden="true"></i> Periodo: <strong id="declinados-periodo" class="text-dark"><?= $esc($periodLabel); ?></strong></span>
                                 <span class="badge bg-primary text-white text-3 px-3 py-2" id="declinados-total">0 Proyectos</span>
                             </div>
                             <div id="declinados-estado" class="mb-2" role="status" aria-live="polite"></div>

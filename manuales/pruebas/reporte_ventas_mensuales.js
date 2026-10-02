@@ -8,7 +8,7 @@ Object.defineProperty(globalThis, 'navigator', { value: undefined });
 const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
-function ejecutar(empty, width, theme) {
+function ejecutar(empty, width, theme, periods = false) {
     const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -24,6 +24,10 @@ function ejecutar(empty, width, theme) {
         {vendedor_id:'V1',estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},
         {vendedor_id:'V2',estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2}];
     data.estatus_por_clasificacion = empty ? [] : [{clasificacion_id:3,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2},{clasificacion_id:3,estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},{clasificacion_id:5,estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2}];
+    if (periods) data.estatus_por_clasificacion = [
+        {clasificacion_id:3,anio:2026,mes:9,estatus_id:3,estatus:'Cotizacion',proyectos:4,declinados:1},
+        {clasificacion_id:3,anio:2024,mes:2,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:1},
+        {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:3,declinados:0}];
     const context = {
         document: {
             addEventListener: (name, cb) => { events[name] = cb; },
@@ -48,6 +52,23 @@ function ejecutar(empty, width, theme) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
+    }
+    if (periods) {
+        assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Bombas\nFebrero 2024','Bombas\nSeptiembre 2026']);
+        assert.deepEqual(charts[2].getOption().series[0].data,[1,6]);
+        assert.deepEqual(charts[2].getOption().series[1].data,[1,1]);
+        charts[2].trigger('click',{componentType:'series',dataIndex:1});
+        assert.ok(nodes.get('ventas-clasificacion-card-titulo').textContent.includes('Septiembre 2026'));
+        assert.deepEqual(charts[3].getOption().series[0].data,[3,3]);
+        charts[3].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
+        const drillModal=nodes.get('modal-declinados-ventas');
+        assert.equal(drillModal.dataset.desgloseAnio,'2026');
+        assert.equal(drillModal.dataset.desgloseMes,'9');
+        const dropdown=nodes.get('ventas-clasificacion-desglose');
+        dropdown.value='3'; dropdown.events.change();
+        assert.deepEqual(charts[3].getOption().series[0].data,[3,4],'Selector general suma los periodos por estatus');
+        charts.forEach(chart=>chart.dispose());
+        return;
     }
     if (!empty) {
         assert.deepEqual(charts[2].getOption().xAxis[0].data,['Bombas','Sellos']);
@@ -100,6 +121,9 @@ function ejecutar(empty, width, theme) {
         assert.equal(charts.length,6,'Reutilizar desglose de clasificacion');
         assert.deepEqual(charts[5].getOption().series[1].data,[2]);
     }
+    change.call({id:'ventas-mes'}); change.call({id:'ventas-mes'});
+    change.call({id:'ventas-anio'}); change.call({id:'ventas-anio'});
+    assert.equal(requests, 0, 'Elegir varios meses antes de aplicar la seleccion');
     change(); change();
     assert.equal(requests, 1, 'Un solo envío global mientras está cargando');
     assert.equal(loading.hidden, false, 'Mostrar estado de carga');
@@ -109,6 +133,8 @@ function ejecutar(empty, width, theme) {
     events.resize();
     charts.forEach(chart => chart.dispose());
 }
+ejecutar(false, 900, 'walden', true);
+ejecutar(false, 320, 'dark', true);
 ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');
 ejecutar(true, 900, 'walden');
@@ -167,7 +193,16 @@ async function probarModal(critical = false) {
     assert.ok(options.dom.includes('declinados-length"l') && options.dom.includes('declinados-buttons"B') && options.dom.includes('declinados-search ms-auto"f'), 'Separar cantidad, botones y búsqueda en la barra');
     assert.equal(options.buttons[1].extend, 'colvis');
     assert.equal(tableNode.tHead.filterRow.children.length, 9, 'Cabecera con filtros');
-    assert.ok(calls[0][0].includes('datatable=1&anio=2026&mes=9&vendedor=V1'), 'Filtrar período y vendedor');
+    const query = new URL(calls[0][0], 'http://localhost').searchParams;
+    assert.deepEqual(query.getAll('anio[]'), ['2026']);
+    assert.equal(query.get('vendedor'), 'V1');
+    assert.deepEqual(query.getAll('mes[]'), ['9'], 'Filtrar meses y vendedor');
+    modal.dataset.mes = '2,9,12';
+    modal.dataset.anio = '2024,2026';
+    await dt.ajax.reload();
+    const multiQuery = new URL(calls.pop()[0], 'http://localhost').searchParams;
+    assert.deepEqual(multiQuery.getAll('mes[]'), ['2','9','12'], 'Enviar todos los meses a los modales');
+    assert.deepEqual(multiQuery.getAll('anio[]'), ['2024','2026'], 'Enviar todos los anios a los modales');
     assert.equal(node('declinados-total').textContent, '8 Proyectos');
     assert.equal(options.columns[6].render(response.data.data[0].titulo,'display'), '&lt;img src=x onerror=alert(1)&gt;', 'Salida escapada');
     assert.equal(options.columns[2].render('2026-09-30','display'), '30/09/2026');

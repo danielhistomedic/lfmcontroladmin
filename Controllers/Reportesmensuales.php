@@ -7,6 +7,23 @@ class Reportesmensuales extends Controllers
 {
     private $session;
 
+    /** Acepta enlaces antiguos escalares y filtros Select2 multiples. */
+    private static function seleccionNumerica($input, int $min, int $max): array|false
+    {
+        $values = is_array($input) ? $input : [$input];
+        if (!$values || count($values) > $max - $min + 1) return false;
+        $months = [];
+        foreach ($values as $value) {
+            if (!is_string($value) && !is_int($value)) return false;
+            $month = filter_var($value, FILTER_VALIDATE_INT, ['options'=>['min_range'=>$min,'max_range'=>$max]]);
+            if ($month === false) return false;
+            $months[] = $month;
+        }
+        $months = array_values(array_unique($months));
+        sort($months, SORT_NUMERIC);
+        return $months;
+    }
+
     public function __construct()
     {
         parent::__construct();
@@ -114,15 +131,13 @@ class Reportesmensuales extends Controllers
             $data['page_card_description'] = $menu['descripcion'];
             $data['page_functions_js'] = 'reporte_ventas_mensuales.js';
 
-            $year = filter_var($_GET['anio'] ?? date('Y'), FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 2000, 'max_range' => 2100]]);
-            $month = filter_var($_GET['mes'] ?? date('n'), FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 1, 'max_range' => 12]]);
+            $year = self::seleccionNumerica($_GET['anio'] ?? (int)date('Y'), 2000, 2100);
+            $month = self::seleccionNumerica($_GET['mes'] ?? (int)date('n'), 1, 12);
             $sellerInput = $_GET['vendedor'] ?? '';
             $data['reporte_error'] = '';
             $data['reporte'] = null;
             $data['vendedores'] = [];
-            $data['filtros'] = ['anio' => $year ?: (int)date('Y'), 'mes' => $month ?: (int)date('n'), 'vendedor' => ''];
+            $data['filtros'] = ['anio' => $year ?: [(int)date('Y')], 'mes' => $month ?: [(int)date('n')], 'vendedor' => ''];
             try {
                 if ($year === false || $month === false || !is_string($sellerInput) || strlen($sellerInput) > 100) {
                     throw new InvalidArgumentException('Los filtros del reporte no son válidos.');
@@ -138,7 +153,7 @@ class Reportesmensuales extends Controllers
                     throw new InvalidArgumentException('El vendedor seleccionado no está disponible.');
                 }
                 $data['filtros']['vendedor'] = $sellerInput;
-                $data['reporte'] = $this->model->dashboard($year, $month, $scope !== '' ? $scope : $sellerInput);
+                $data['reporte'] = $this->model->dashboard(count($year) === 1 ? $year[0] : $year, count($month) === 1 ? $month[0] : $month, $scope !== '' ? $scope : $sellerInput);
             } catch (InvalidArgumentException $ex) {
                 http_response_code(400);
                 $data['reporte_error'] = $ex->getMessage();
@@ -178,10 +193,8 @@ class Reportesmensuales extends Controllers
                 echo json_encode(['status'=>false, 'message'=>'Acceso restringido.']);
                 return;
             }
-            $year = filter_var($_GET['anio'] ?? null, FILTER_VALIDATE_INT,
-                ['options'=>['min_range'=>2000, 'max_range'=>2100]]);
-            $month = filter_var($_GET['mes'] ?? null, FILTER_VALIDATE_INT,
-                ['options'=>['min_range'=>1, 'max_range'=>12]]);
+            $year = self::seleccionNumerica($_GET['anio'] ?? null, 2000, 2100);
+            $month = self::seleccionNumerica($_GET['mes'] ?? null, 1, 12);
             $page = filter_var($_GET['pagina'] ?? 1, FILTER_VALIDATE_INT,
                 ['options'=>['min_range'=>1, 'max_range'=>1000000]]);
             $seller = $_GET['vendedor'] ?? '';
@@ -237,9 +250,9 @@ class Reportesmensuales extends Controllers
                     echo json_encode(['status'=>false,'message'=>'Los filtros de la tabla no son válidos.']);
                     return;
                 }
-                $result = $this->model->declinadosTabla($year,$month,$seller,$options,$lista);
+                $result = $this->model->declinadosTabla(count($year) === 1 ? $year[0] : $year, count($month) === 1 ? $month[0] : $month,$seller,$options,$lista);
             } else {
-                $result = $this->model->declinados($year, $month, $seller, $page);
+                $result = $this->model->declinados(count($year) === 1 ? $year[0] : $year, count($month) === 1 ? $month[0] : $month, $seller, $page);
             }
             echo json_encode(['status'=>true, 'data'=>$result], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
         } catch (\Throwable $ex) {

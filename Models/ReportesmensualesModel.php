@@ -4,6 +4,31 @@
 class ReportesmensualesModel extends Mysql
 {
     private const FILTRO_PROYECTOS = 'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)';
+
+    /** Rangos separados para cada combinacion de anio y mes seleccionados. */
+    private static function periodo(string $column, int|array $years, int|array $months, array &$params): string
+    {
+        $months = array_values(array_unique(is_array($months) ? $months : [$months]));
+        $years = array_values(array_unique(is_array($years) ? $years : [$years]));
+        if (!$years || count($years) > 101 || !$months || count($months) > 12) {
+            throw new InvalidArgumentException('Periodo no valido.');
+        }
+        sort($months, SORT_NUMERIC);
+        sort($years, SORT_NUMERIC);
+        $ranges = [];
+        $params = [];
+        foreach ($years as $year) {
+            if (!is_int($year) || $year < 2000 || $year > 2100) throw new InvalidArgumentException('Anio no valido.');
+            foreach ($months as $month) {
+                if (!is_int($month) || $month < 1 || $month > 12) throw new InvalidArgumentException('Mes no valido.');
+                $start = sprintf('%04d-%02d-01', $year, $month);
+                $params[] = $start;
+                $params[] = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
+                $ranges[] = "$column >= ? AND $column < ?";
+            }
+        }
+        return count($ranges) === 1 ? $ranges[0] : '(' . implode(' OR ', array_map(static fn($range) => "($range)", $ranges)) . ')';
+    }
     // Usa la conexión central; propaga errores para distinguir error de un mes vacío.
     private function consultar(string $sql, array $params = []): array
     {
@@ -57,12 +82,15 @@ class ReportesmensualesModel extends Mysql
         ) !== [];
     }
 
-    public function dashboard(int $year, int $month, string $seller): array
+    public function dashboard(int|array $year, int|array $month, string $seller): array
     {
-        $start = sprintf('%04d-%02d-01', $year, $month);
-        $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
+        $dateParams = [];
+        $projectPeriod = self::periodo('v.fecha', $year, $month, $dateParams);
         $scope = ' AND ' . self::FILTRO_PROYECTOS . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
-        $params = $seller === '' ? [$start, $end] : [$start, $end, $seller];
+        $params = $seller === '' ? $dateParams : [...$dateParams, $seller];
+        $periodParams = [];
+        $sentPeriod = self::periodo('COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha)', $year, $month, $periodParams);
+        $placedPeriod = self::periodo('fecha_pedido', $year, $month, $periodParams);
         $rateRows = $this->consultar('SELECT valor, fecha FROM tb_historial_tipos_cambio WHERE idMoneda = 3 ORDER BY fecha DESC, id DESC LIMIT 1');
         $rate = (float)($rateRows[0]['valor'] ?? 0);
         $divisor = $rate == 0 ? 1.0 : $rate;
@@ -76,14 +104,13 @@ class ReportesmensualesModel extends Mysql
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE cc.enviado = 1 AND v.estatus_pedido_reporte IN (1,2)
             AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
-            AND COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha) >= ?
-            AND COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha) < ? $scope
+            AND $sentPeriod $scope
             GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido", $params);
         // Una fila por proyecto como en el listado de escritorio; los pedidos sólo determinan pertenencia al período.
         $placed = $this->consultar("SELECT $columns, 'colocado' AS tipo, COALESCE(v.total,0) AS monto,
             p.fecha AS fecha FROM tb_ventas v
             INNER JOIN (SELECT venta_id, MIN(fecha_pedido) AS fecha FROM tb_pedidos_cliente
-                WHERE fecha_pedido >= ? AND fecha_pedido < ? GROUP BY venta_id) p ON p.venta_id=v.id
+                WHERE $placedPeriod GROUP BY venta_id) p ON p.venta_id=v.id
             INNER JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id
             INNER JOIN cat_estatus_proyecto e ON e.Id=v.estatus_proyecto_id
             INNER JOIN cat_clientes c ON c.id=v.cliente_id
@@ -114,14 +141,14 @@ class ReportesmensualesModel extends Mysql
                 WHERE enviado = 1 GROUP BY venta_id) cc ON cc.venta_id=v.id
             LEFT JOIN (SELECT venta_id FROM tb_pedidos_cliente
                 WHERE enviado = 1 GROUP BY venta_id) pc ON pc.venta_id=v.id
-            WHERE v.fecha >= ? AND v.fecha < ? $scope", $params);
+            WHERE $projectPeriod $scope", $params);
         if (!$counts) throw new RuntimeException('No se pudieron obtener las cantidades de proyectos.');
         $quantities = array_map('intval', $counts[0]);
         $projectsBySeller = $this->consultar("SELECT v.ccveusuario_vendedor AS vendedor_id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS nombre,
             COUNT(*) AS proyectos
             FROM tb_ventas v LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
-            WHERE v.fecha >= ? AND v.fecha < ? $scope
+            WHERE $projectPeriod $scope
             GROUP BY v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido
             ORDER BY proyectos DESC, nombre ASC, v.ccveusuario_vendedor ASC", $params);
         foreach ($projectsBySeller as &$sellerRow) $sellerRow['proyectos'] = (int)$sellerRow['proyectos'];
@@ -132,7 +159,7 @@ class ReportesmensualesModel extends Mysql
             COUNT(*) AS proyectos,
             SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
             FROM tb_ventas v LEFT JOIN cat_clasificacion_proyectos s ON s.id = v.clasificacion_proyecto_id
-            WHERE v.fecha >= ? AND v.fecha < ? $scope
+            WHERE $projectPeriod $scope
             GROUP BY v.ccveusuario_vendedor, v.clasificacion_proyecto_id, s.clasificacion
             ORDER BY v.clasificacion_proyecto_id ASC, v.ccveusuario_vendedor ASC", $params);
         foreach ($statusesBySeller as &$statusRow) {
@@ -144,7 +171,7 @@ class ReportesmensualesModel extends Mysql
             v.estatus_proyecto_id AS estatus_id, COALESCE(s.cEstatusReporte, 'Sin Estatus') AS estatus,
             COUNT(*) AS proyectos, SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
             FROM tb_ventas v LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
-            WHERE v.fecha >= ? AND v.fecha < ? $scope
+            WHERE $projectPeriod $scope
             GROUP BY v.ccveusuario_vendedor, v.estatus_proyecto_id, s.cEstatusReporte
             ORDER BY v.estatus_proyecto_id ASC, v.ccveusuario_vendedor ASC", $params);
         foreach ($projectStatuses as &$statusRow) {
@@ -159,21 +186,22 @@ class ReportesmensualesModel extends Mysql
                 'proyectos_por_vendedor' => $projectsBySeller,
                 'clasificaciones_por_vendedor' => $statusesBySeller,
                 'estatus_por_vendedor' => $projectStatuses,
-                'estatus_por_clasificacion' => $this->estatusPorClasificacion($scope, $params),
+                'estatus_por_clasificacion' => $this->estatusPorClasificacion($scope, $params, $projectPeriod),
                 'tipo_cambio' => $rate,
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
     }
 
-    private function estatusPorClasificacion(string $scope, array $params): array
+    private function estatusPorClasificacion(string $scope, array $params, string $projectPeriod): array
     {
         $rows = $this->consultar("SELECT v.clasificacion_proyecto_id AS clasificacion_id,
+            YEAR(v.fecha) AS anio, MONTH(v.fecha) AS mes,
             v.estatus_proyecto_id AS estatus_id, COALESCE(s.cEstatusReporte, 'Sin Estatus') AS estatus,
             COUNT(*) AS proyectos, SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
             FROM tb_ventas v LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
-            WHERE v.fecha >= ? AND v.fecha < ? $scope
-            GROUP BY v.clasificacion_proyecto_id, v.estatus_proyecto_id, s.cEstatusReporte
-            ORDER BY v.clasificacion_proyecto_id ASC, v.estatus_proyecto_id ASC", $params);
+            WHERE $projectPeriod $scope
+            GROUP BY v.clasificacion_proyecto_id, YEAR(v.fecha), MONTH(v.fecha), v.estatus_proyecto_id, s.cEstatusReporte
+            ORDER BY v.clasificacion_proyecto_id ASC, anio ASC, mes ASC, v.estatus_proyecto_id ASC", $params);
         foreach ($rows as &$row) {
             $row['proyectos'] = (int)$row['proyectos'];
             $row['declinados'] = (int)$row['declinados'];
@@ -183,12 +211,12 @@ class ReportesmensualesModel extends Mysql
     }
 
     /** Lista paginada con las mismas condiciones del indicador Declinados. */
-    public function declinados(int $year, int $month, string $seller, int $page): array
+    public function declinados(int|array $year, int|array $month, string $seller, int $page): array
     {
-        $start = sprintf('%04d-%02d-01', $year, $month);
-        $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
-        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO' AND " . self::FILTRO_PROYECTOS;
-        $params = [$start, $end];
+        $dateParams = [];
+        $projectPeriod = self::periodo('v.fecha', $year, $month, $dateParams);
+        $where = "$projectPeriod AND v.activo = 'CERRADO' AND " . self::FILTRO_PROYECTOS;
+        $params = $dateParams;
         if ($seller !== '') {
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
@@ -210,20 +238,20 @@ class ReportesmensualesModel extends Mysql
     }
 
     /** DataTables: búsqueda y paginación en servidor, dentro del alcance autorizado. */
-    public function declinadosTabla(int $year, int $month, string $seller, array $options, string $lista = 'declinados'): array
+    public function declinadosTabla(int|array $year, int|array $month, string $seller, array $options, string $lista = 'declinados'): array
     {
-        $start = sprintf('%04d-%02d-01', $year, $month);
-        $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
+        $dateParams = [];
+        $projectPeriod = self::periodo('v.fecha', $year, $month, $dateParams);
         $condition = $lista === 'interna_sin_cliente' ? self::condicionInternaSinCliente() : "v.activo = 'CERRADO'";
-        $where = "v.fecha >= ? AND v.fecha < ? AND $condition AND " . self::FILTRO_PROYECTOS;
-        $params = [$start, $end];
+        $where = "$projectPeriod AND $condition AND " . self::FILTRO_PROYECTOS;
+        $params = $dateParams;
         if ($seller !== '') {
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
         }
         if ($lista === 'estatus_clasificacion') {
-            $where = 'v.fecha >= ? AND v.fecha < ? AND ' . self::FILTRO_PROYECTOS;
-            $params = [$start, $end];
+            $where = "$projectPeriod AND " . self::FILTRO_PROYECTOS;
+            $params = $dateParams;
             if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
             $where .= ' AND v.clasificacion_proyecto_id = ?';
             $params[] = $options['clasificacion_id'];

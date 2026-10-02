@@ -53,6 +53,38 @@ $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
 verificar(count($db->calls)===8,'Consultas por conjunto');
+verificar(str_contains($db->calls[7][0], 'YEAR(v.fecha) AS anio')
+    && str_contains($db->calls[7][0], 'MONTH(v.fecha) AS mes')
+    && str_contains($db->calls[7][0], 'GROUP BY v.clasificacion_proyecto_id, YEAR(v.fecha), MONTH(v.fecha)'),
+    'Separar cantidades por clasificacion, anio, mes y estatus sin nuevas consultas');
+
+// Meses no consecutivos, sin duplicar meses ni proyectos al agregar el periodo.
+$multiDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], []]);
+(new ModeloSimulado($multiDb))->dashboard(2024, [12,2,9,2], 'V1');
+$multiParams = ['2024-02-01','2024-03-01','2024-09-01','2024-10-01','2024-12-01','2025-01-01','V1'];
+foreach (array_slice($multiDb->calls, 1) as [$sql,$params]) {
+    verificar($params === $multiParams, 'Todos los indicadores usan solo los meses seleccionados y el vendedor');
+    verificar(substr_count($sql, ' OR ') >= 2, 'Rangos de meses separados');
+    verificar(str_contains($sql, 'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Conservar clasificaciones globales');
+    verificar(str_contains($sql, 'v.estatus_proyecto_id <> 2'), 'Conservar exclusion de estatus');
+}
+$multiListDb = new ConexionSimulada([[['total'=>0]], [['total'=>0]], []]);
+(new ModeloSimulado($multiListDb))->declinadosTabla(2024, [2,9,12], 'V1',
+    ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[]]);
+foreach ($multiListDb->calls as [$sql,$params]) verificar($params === $multiParams, 'Modal y total mantienen la seleccion multiple');
+
+$yearsDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], []]);
+(new ModeloSimulado($yearsDb))->dashboard([2026,2024,2026], [2,12], 'V1');
+$yearsParams = ['2024-02-01','2024-03-01','2024-12-01','2025-01-01',
+    '2026-02-01','2026-03-01','2026-12-01','2027-01-01','V1'];
+foreach (array_slice($yearsDb->calls,1) as [$sql,$params]) {
+    verificar($params === $yearsParams, 'Combinar solo los anios y meses seleccionados sin duplicados');
+    verificar(str_contains($sql, ' OR ') && str_contains($sql,'v.estatus_proyecto_id <> 2'), 'Conservar filtros sobre todos los rangos');
+}
+$yearsListDb = new ConexionSimulada([[['total'=>0]], [['total'=>0]], []]);
+(new ModeloSimulado($yearsListDb))->declinadosTabla([2024,2026], [2,12], 'V1',
+    ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[]]);
+foreach ($yearsListDb->calls as [$sql,$params]) verificar($params === $yearsParams, 'Modal conserva multiples anios y meses');
 foreach ([1,2,3,4,5,6,7] as $queryIndex) {
     verificar(str_contains($db->calls[$queryIndex][0], 'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)'),
         'Filtro global en cotizados, colocados, cantidades y proyectos por vendedor');
@@ -177,6 +209,23 @@ $_GET['clasificacion_id']=['5']; verificar(llamarLista($api)[0]===400,'Rechazar 
 $_GET['lista']='invalida'; verificar(llamarLista($api)[0]===400,'Rechazar tipo de lista desconocido');
 http_response_code(200);
 
+$_SERVER['REQUEST_METHOD'] = 'GET';
+Session::$active = true;
+$testPermissions = [139=>['r'=>1]];
+$_GET = ['anio'=>'2024','mes'=>['12','2','9','2'],'vendedor'=>'','pagina'=>'1'];
+verificar(llamarLista($api)[0]===200 && end($api->model->calls)[1]===[2,9,12], 'Endpoint normaliza meses multiples sin duplicados');
+foreach ([[], ['2','13'], [['2']], ['2 OR 1=1']] as $invalidMonths) {
+    $_GET['mes'] = $invalidMonths;
+    verificar(llamarLista($api)[0]===400, 'Rechazar seleccion multiple malformada');
+}
+$_GET = ['anio'=>['2026','2024','2026'],'mes'=>['2','12'],'vendedor'=>'','pagina'=>'1'];
+verificar(llamarLista($api)[0]===200 && end($api->model->calls)[0]===[2024,2026], 'Endpoint normaliza anios multiples');
+foreach ([[], ['2024','2101'], [['2024']], ['2024 OR 1=1']] as $invalidYears) {
+    $_GET['anio'] = $invalidYears;
+    verificar(llamarLista($api)[0]===400, 'Rechazar seleccion de anios malformada');
+}
+$_GET = ['anio'=>'2024','mes'=>'2','vendedor'=>'','pagina'=>'1'];
+
 // Historial: contrato compartido y permisos por proyecto.
 class VentasModel {
     public static array $calls=[];
@@ -215,6 +264,7 @@ function version() { return 'test'; }
 $report['tipo_cambio']=20; $report['fecha_tipo_cambio']='2024-02-01';
 $report['cantidades']=$quantities;
 $report['proyectos_por_vendedor'][0]['nombre']='<script>alert("XSS")</script>';
+$report['proyectos_por_vendedor'][0]['proyectos']=10;
 $data=['page_form_title'=>'Reporte ventas','page_breadcrumb'=>'Ventas','filtros'=>['anio'=>2024,'mes'=>2,'vendedor'=>''],
     'reporte'=>$report,'reporte_error'=>'','vendedores'=>[['id'=>'V1','nombre'=>'José']], 'usuario'=>['rol_id'=>4]];
 $view=file_get_contents(__DIR__.'/../../Views/Reportesmensuales/reporte_ventas.php');
@@ -230,4 +280,14 @@ verificar(substr_count($html,'data-bs-target="#modal-declinados-ventas"')===2, '
 verificar(!str_contains($html,'Colocado / cotizado'),'Retirar el indicador de relación anterior');
 verificar(!str_contains($html,'Ventas por vendedor') && !str_contains($html,'ventas-productos') && !str_contains($html,'ventas-cruce') && !str_contains($html,'Criterios del reporte'), 'Secciones inferiores retiradas');
 foreach ($db->calls as [$sql]) verificar(!str_contains($sql,'tb_ventas_detalle') && !str_contains($sql,'tb_ventas_cotizacion_cliente_detalle'), 'Sin consultas de partidas para secciones retiradas');
+
+$data['filtros']['mes'] = [2,9,12];
+ob_start(); eval('?>'.$view); $multiHtml=ob_get_clean();
+verificar(str_contains($multiHtml, 'name="mes[]"') && str_contains($multiHtml, 'multiple required'), 'Select2 permite varios meses');
+verificar(str_contains($multiHtml, 'Febrero, Septiembre, Diciembre') && str_contains($multiHtml, 'data-mes="2,9,12"'), 'Vista y modal conservan meses seleccionados');
+verificar(str_contains($multiHtml, '01/02/2024 al 29/02/2024 | 01/09/2024 al 30/09/2024 | 01/12/2024 al 31/12/2024'), 'Periodo exacto sin meses intermedios');
+$data['filtros']['anio'] = [2024,2026];
+ob_start(); eval('?>'.$view); $yearsHtml=ob_get_clean();
+verificar(str_contains($yearsHtml,'name="anio[]"') && str_contains($yearsHtml,'data-anio="2024,2026"'), 'Select2 y modal conservan multiples anios');
+verificar(str_contains($yearsHtml,'Febrero, Septiembre, Diciembre 2024, 2026') && str_contains($yearsHtml,'01/02/2026 al 28/02/2026'), 'Titulos y periodos corresponden a todos los anios');
 echo "OK: agregaciones, conciliación, permisos por conjunto, consultas parametrizadas, vacío, bisiesto, divisor de respaldo, folios ambiguos y renderizado seguro.\n";

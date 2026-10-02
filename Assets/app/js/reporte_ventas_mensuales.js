@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', function () {
         form.querySelector('button').disabled = true;
     });
     // La plantilla inicializa Select2; change se enlaza mediante jQuery para sus eventos.
-    jQuery(form).find('select').on('change', function () { if (!submitting) form.requestSubmit(); });
+    jQuery(form).find('select').on('change', function () {
+        if (this.id !== 'ventas-mes' && this.id !== 'ventas-anio' && !submitting) form.requestSubmit();
+    });
     window.addEventListener('pageshow', function () {
         submitting = false;
         document.getElementById('ventas-cargando').hidden = true;
@@ -19,6 +21,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!source) return;
     const modal = document.getElementById('modal-declinados-ventas');
     if (modal) {
+        const periodLabel = document.getElementById('declinados-periodo');
+        const globalPeriodLabel = periodLabel ? periodLabel.textContent : '';
         const status = document.getElementById('declinados-estado');
         const badge = document.getElementById('declinados-total');
         const retry = document.getElementById('declinados-reintentar');
@@ -118,10 +122,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     status.className = 'mb-2 text-muted';
                     retry.hidden = true;
                     const order = data.order[0] || { column: 2, dir: 'desc' };
-                    const params = new URLSearchParams({ datatable: '1', anio: modal.dataset.anio, mes: modal.dataset.mes,
+                    const params = new URLSearchParams({ datatable: '1',
                         vendedor: modal.dataset.vendedor, draw: String(data.draw), start: String(data.start), length: String(data.length),
                         search: data.search.value, order_column: String(order.column), order_dir: order.dir });
                     params.set('lista', lista);
+                    const years = lista === 'estatus_clasificacion' && modal.dataset.desgloseAnio ? modal.dataset.desgloseAnio : modal.dataset.anio;
+                    const months = lista === 'estatus_clasificacion' && modal.dataset.desgloseMes ? modal.dataset.desgloseMes : modal.dataset.mes;
+                    years.split(',').forEach(year => params.append('anio[]', year));
+                    months.split(',').forEach(month => params.append('mes[]', month));
                     if (lista === 'estatus_clasificacion') {
                         params.set('clasificacion_id', modal.dataset.clasificacionId);
                         params.set('estatus_id', modal.dataset.estatusId);
@@ -185,6 +193,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 table.order([]);
             }
             lista = next;
+            if (periodLabel) {
+                const year = Number(modal.dataset.desgloseAnio);
+                const month = Number(modal.dataset.desgloseMes);
+                periodLabel.textContent = next === 'estatus_clasificacion' && year && month
+                    ? '01/' + String(month).padStart(2, '0') + '/' + year + ' al ' +
+                        new Date(year, month, 0).getDate() + '/' + String(month).padStart(2, '0') + '/' + year
+                    : globalPeriodLabel;
+            }
             document.getElementById('modal-declinados-titulo').textContent = listTitle();
             if (table) table.column(8).visible(lista === 'interna_sin_cliente');
         });
@@ -314,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (event.componentType === 'series') selectSeller(event.dataIndex);
     });
     selector.addEventListener('change', () => selectSeller(selector.value === '' ? -1 : Number(selector.value)));
-    chart('ventas-comparativo', ['Mes seleccionado'], bars([data]), false);
+    chart('ventas-comparativo', ['Meses seleccionados'], bars([data]), false);
     // Consolida las clasificaciones del mismo conjunto filtrado, sin otra consulta.
     const classificationTotals = new Map();
     statusCounts.forEach(row => {
@@ -328,27 +344,53 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     const generalClassifications = [...classificationTotals.values()]
         .sort((a, b) => Number(a.clasificacion_id) - Number(b.clasificacion_id));
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const periodTotals = new Map();
+    (data.estatus_por_clasificacion || []).forEach(row => {
+        if (!row.anio || !row.mes) return;
+        const key = [row.clasificacion_id, row.anio, row.mes].join(':');
+        if (!periodTotals.has(key)) periodTotals.set(key, { ...row, proyectos: 0, declinados: 0,
+            clasificacion: classificationTotals.get(String(row.clasificacion_id))?.clasificacion || 'Sin clasificación' });
+        const total = periodTotals.get(key);
+        total.proyectos += Number(row.proyectos);
+        total.declinados += Number(row.declinados);
+    });
+    const classificationPeriods = [...periodTotals.values()].sort((a, b) =>
+        Number(a.clasificacion_id) - Number(b.clasificacion_id) || Number(a.anio) - Number(b.anio) || Number(a.mes) - Number(b.mes));
+    const classificationBars = classificationPeriods.length ? classificationPeriods.map(row => ({ ...row,
+        etiqueta: row.clasificacion + '\n' + monthNames[Number(row.mes) - 1] + ' ' + row.anio
+    })) : generalClassifications.map(row => ({ ...row, etiqueta: row.clasificacion }));
     const classificationChart = cascade('ventas-clasificaciones-general');
-    classificationChart.count = generalClassifications.length;
-    classificationChart.instance.setOption(stackedOption(generalClassifications, 'clasificacion'));
+    classificationChart.count = classificationBars.length;
+    classificationChart.instance.setOption(stackedOption(classificationBars, 'etiqueta'));
     fitCascade(classificationChart);
     const classificationCard = document.getElementById('ventas-clasificacion-card');
     const classificationSelect = document.getElementById('ventas-clasificacion-desglose');
     let classificationStatusChart = null;
     let selectedClassification = null;
     let selectedClassificationStatuses = [];
-    function selectClassification(id) {
-        const classification = generalClassifications.find(row => String(row.clasificacion_id) === String(id));
+    function selectClassification(id, period = null) {
+        const classification = period || generalClassifications.find(row => String(row.clasificacion_id) === String(id));
         classificationCard.hidden = !classification;
         classificationSelect.value = classification ? String(classification.clasificacion_id) : '';
         if (!classification) return;
         selectedClassification = classification;
         classificationCard.open = true;
-        const statuses = (data.estatus_por_clasificacion || [])
-            .filter(row => String(row.clasificacion_id) === String(classification.clasificacion_id))
-            .sort((a, b) => Number(a.estatus_id) - Number(b.estatus_id));
+        const statusTotals = new Map();
+        (data.estatus_por_clasificacion || [])
+            .filter(row => String(row.clasificacion_id) === String(classification.clasificacion_id)
+                && (!period || (Number(row.anio) === Number(period.anio) && Number(row.mes) === Number(period.mes))))
+            .forEach(row => {
+                const key = String(row.estatus_id);
+                if (!statusTotals.has(key)) statusTotals.set(key, { ...row, proyectos: 0, declinados: 0 });
+                const total = statusTotals.get(key);
+                total.proyectos += Number(row.proyectos);
+                total.declinados += Number(row.declinados);
+            });
+        const statuses = [...statusTotals.values()].sort((a, b) => Number(a.estatus_id) - Number(b.estatus_id));
         selectedClassificationStatuses = statuses;
-        document.getElementById('ventas-clasificacion-card-titulo').textContent = classification.clasificacion +
+        const periodTitle = period ? ' · ' + monthNames[Number(period.mes) - 1] + ' ' + period.anio : '';
+        document.getElementById('ventas-clasificacion-card-titulo').textContent = classification.clasificacion + periodTitle +
             ' — ' + classification.proyectos + ' proyectos · Desglose por estatus';
         document.getElementById('ventas-clasificacion-card-resumen').textContent = statuses.length
             ? statuses.map(row => row.estatus + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ')
@@ -365,9 +407,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 const modal = document.getElementById('modal-declinados-ventas');
                 modal.dataset.desglose = '1';
                 modal.dataset.clasificacionId = String(selectedClassification.clasificacion_id);
+                modal.dataset.desgloseAnio = selectedClassification.anio ? String(selectedClassification.anio) : '';
+                modal.dataset.desgloseMes = selectedClassification.mes ? String(selectedClassification.mes) : '';
                 modal.dataset.estatusId = status.estatus_id == null ? 'sin_estatus' : String(status.estatus_id);
                 modal.dataset.segmento = event.seriesIndex === 1 ? 'declinados' : 'no_declinados';
-                modal.dataset.desgloseTitulo = selectedClassification.clasificacion + ' — ' + status.estatus +
+                modal.dataset.desgloseTitulo = selectedClassification.clasificacion +
+                    (selectedClassification.anio ? ' · ' + monthNames[Number(selectedClassification.mes) - 1] + ' ' + selectedClassification.anio : '') + ' — ' + status.estatus +
                     (event.seriesIndex === 1 ? ' · Declinados' : ' · No declinados');
                 bootstrap.Modal.getOrCreateInstance(modal).show();
             });
@@ -386,8 +431,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     classificationChart.instance.on('click', event => {
         if (event.componentType !== 'series') return;
-        const row = generalClassifications[event.dataIndex];
-        if (row) selectClassification(row.clasificacion_id);
+        const row = classificationBars[event.dataIndex];
+        if (row) selectClassification(row.clasificacion_id, row.anio ? row : null);
     });
     classificationSelect.addEventListener('change', () => selectClassification(classificationSelect.value));
     classificationCard.addEventListener('toggle', () => {
