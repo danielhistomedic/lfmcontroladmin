@@ -30,6 +30,26 @@ class ReportesmensualesModel extends Mysql
             $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
     }
 
+    /** Condición única para el KPI crítico, su listado y acceso al historial. */
+    private static function condicionInternaSinCliente(): string
+    {
+        return "COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS (
+            SELECT 1 FROM tb_compras_cotizacion_interna ci
+            WHERE ci.venta_id = v.id AND ci.enviado = 1 AND NOT EXISTS (
+                SELECT 1 FROM tb_ventas_cotizacion_cliente cliente
+                WHERE cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1
+            )
+        )";
+    }
+
+    public function proyectoInternaSinClienteAutorizado(int $ventaId, string $seller): bool
+    {
+        $condition = self::condicionInternaSinCliente();
+        $scope = $seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?';
+        return $this->consultar("SELECT v.id FROM tb_ventas v WHERE v.id = ? AND $condition$scope",
+            $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
+    }
+
     public function dashboard(int $year, int $month, string $seller): array
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
@@ -103,19 +123,14 @@ class ReportesmensualesModel extends Mysql
         }
         // Cantidades independientes del pipeline: todos los proyectos registrados en el mes.
         // Los documentos se agrupan por venta_id para contar proyectos, no documentos ni partidas.
+        $criticalCondition = self::condicionInternaSinCliente();
         $counts = $this->consultar("SELECT COUNT(*) AS total_proyectos,
             COALESCE(SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END),0) AS declinados,
             COALESCE(SUM(CASE WHEN cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
                 THEN 1 ELSE 0 END),0) AS cotizacion_cliente,
             COALESCE(SUM(CASE WHEN pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
                 THEN 1 ELSE 0 END),0) AS orden_compra_cliente,
-            COALESCE(SUM(CASE WHEN COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS (
-                SELECT 1 FROM tb_compras_cotizacion_interna ci
-                WHERE ci.venta_id = v.id AND ci.enviado = 1 AND NOT EXISTS (
-                    SELECT 1 FROM tb_ventas_cotizacion_cliente cliente
-                    WHERE cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1
-                )
-            ) THEN 1 ELSE 0 END),0) AS interna_sin_cliente
+            COALESCE(SUM(CASE WHEN $criticalCondition THEN 1 ELSE 0 END),0) AS interna_sin_cliente
             FROM tb_ventas v
             LEFT JOIN (SELECT venta_id FROM tb_ventas_cotizacion_cliente
                 WHERE enviado = 1 GROUP BY venta_id) cc ON cc.venta_id=v.id
@@ -153,11 +168,12 @@ class ReportesmensualesModel extends Mysql
     }
 
     /** DataTables: búsqueda y paginación en servidor, dentro del alcance autorizado. */
-    public function declinadosTabla(int $year, int $month, string $seller, array $options): array
+    public function declinadosTabla(int $year, int $month, string $seller, array $options, string $lista = 'declinados'): array
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
-        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO'";
+        $condition = $lista === 'interna_sin_cliente' ? self::condicionInternaSinCliente() : "v.activo = 'CERRADO'";
+        $where = "v.fecha >= ? AND v.fecha < ? AND $condition";
         $params = [$start, $end];
         if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
         $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id

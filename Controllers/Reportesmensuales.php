@@ -13,7 +13,7 @@ class Reportesmensuales extends Controllers
         $this->session = new Session;
     }
 
-    /** Lectura del historial desde el listado de declinados; conserva el contrato del modal compartido. */
+    /** Historial desde los listados de proyectos; conserva el contrato del modal compartido. */
     public function seguimientos()
     {
         header('Content-Type: application/json; charset=UTF-8');
@@ -45,7 +45,16 @@ class Reportesmensuales extends Controllers
             }
             $restricted = (int)$this->session->get('rol_id') === 4;
             $seller = $restricted ? (string)$this->session->get('ccveusuario') : '';
-            if (($restricted && $seller === '') || !$this->model->proyectoDeclinadoAutorizado($ventaId, $seller)) {
+            $lista = $_POST['lista'] ?? 'declinados';
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente'], true)) {
+                http_response_code(400);
+                echo json_encode(['respuesta'=>'error', 'data'=>[]]);
+                return;
+            }
+            $authorized = !($restricted && $seller === '') && ($lista === 'interna_sin_cliente'
+                ? $this->model->proyectoInternaSinClienteAutorizado($ventaId, $seller)
+                : $this->model->proyectoDeclinadoAutorizado($ventaId, $seller));
+            if (!$authorized) {
                 http_response_code(403);
                 echo json_encode(['respuesta'=>'error', 'data'=>[]]);
                 return;
@@ -57,7 +66,7 @@ class Reportesmensuales extends Controllers
             echo json_encode(['respuesta'=>'ok', 'data'=>$ventas->selectSeguimientoVenta($ventaId)],
                 JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
         } catch (\Throwable $ex) {
-            getLoggerSystem()->error('No se pudo consultar el seguimiento del proyecto declinado.');
+            getLoggerSystem()->error('No se pudo consultar el seguimiento del proyecto del reporte.');
             http_response_code(500);
             echo json_encode(['respuesta'=>'error', 'data'=>[]]);
         }
@@ -190,6 +199,13 @@ class Reportesmensuales extends Controllers
                 }
                 $seller = $scope;
             }
+            $lista = $_GET['lista'] ?? 'declinados';
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente'], true)
+                || ($lista === 'interna_sin_cliente' && ($_GET['datatable'] ?? '') !== '1')) {
+                http_response_code(400);
+                echo json_encode(['status'=>false, 'message'=>'La lista solicitada no es válida.']);
+                return;
+            }
             if (($_GET['datatable'] ?? '') === '1') {
                 $integer = static fn($key,$default,$min,$max) => filter_var($_GET[$key] ?? $default,
                     FILTER_VALIDATE_INT, ['options'=>['min_range'=>$min,'max_range'=>$max]]);
@@ -209,7 +225,7 @@ class Reportesmensuales extends Controllers
                     echo json_encode(['status'=>false,'message'=>'Los filtros de la tabla no son válidos.']);
                     return;
                 }
-                $result = $this->model->declinadosTabla($year,$month,$seller,$options);
+                $result = $this->model->declinadosTabla($year,$month,$seller,$options,$lista);
             } else {
                 $result = $this->model->declinados($year, $month, $seller, $page);
             }

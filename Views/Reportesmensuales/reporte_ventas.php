@@ -73,7 +73,7 @@
             <h4 class="mt-0 mb-3">Cantidades (crítico)</h4>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-md-3">
-                    <div class="card h-100 ventas-kpi shadow rounded-3 ventas-abrir-declinados" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados">
+                    <div class="card h-100 ventas-kpi shadow rounded-3 ventas-abrir-declinados" role="button" tabindex="0" data-lista="interna_sin_cliente" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver proyectos con cotización interna sin cotización a cliente">
                         <div class="card-body">
                             <div class="text-muted mb-2">Proyectos con cotización interna sin cotización a cliente</div>
                             <div class="ventas-valor"><?= $esc($report['cantidades']['interna_sin_cliente']); ?></div>
@@ -198,9 +198,9 @@
                             <button type="button" id="declinados-reintentar" class="btn btn-outline-primary mb-3" hidden>Reintentar</button>
                             <div class="table-responsive export-table">
                                 <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
-                                    <caption class="visually-hidden">Lista de proyectos con activo CERRADO del período y vendedor seleccionados</caption>
+                                    <caption class="visually-hidden">Lista de proyectos del período y vendedor seleccionados</caption>
                                     <thead><tr>
-                                        <?php foreach (['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo'] as $heading): ?>
+                                        <?php foreach (['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo','Seguimientos'] as $heading): ?>
                                             <th class="border-bottom-0 fw-semibold text-center"><?= $esc($heading); ?></th>
                                         <?php endforeach; ?>
                                     </tr></thead>

@@ -23,6 +23,7 @@
         bootstrap.Modal.getOrCreateInstance(modal).show();
         const form = new FormData();
         form.append('venta_id', ventaId);
+        if (modal.dataset.lista) form.append('lista', modal.dataset.lista);
         try {
             const response = await fetch(modal.dataset.url, { method: 'POST', body: form,
                 credentials: 'same-origin', headers: { Accept: 'application/json' }, signal: current.signal });

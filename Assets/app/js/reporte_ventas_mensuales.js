@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
         let filterTimer;
         let restoreList = false;
         let openingFollowup = false;
+        let lista = 'declinados';
+        const listTitle = () => lista === 'interna_sin_cliente'
+            ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
         const text = value => escape(String(value == null ? '' : value));
         function initialize() {
@@ -44,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
             Array.from(tableElement.tHead.rows[0].cells).forEach((header, index) => {
                 const th = document.createElement('th');
                 th.className = 'text-center p-1';
-                if (index > 0) {
+                if (index > 0 && index < 8) {
                     const input = document.createElement('input');
                     input.type = 'search';
                     input.className = 'form-control form-control-sm';
@@ -63,12 +66,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 dom: '<"declinados-toolbar d-flex flex-wrap align-items-center gap-3 mb-2"<"declinados-length"l><"declinados-buttons"B><"declinados-search ms-auto"f>>rt<"d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2"ip>',
                 buttons: [
                     { extend: 'excelHtml5', text: 'Excel (página actual)', autoFilter: true,
-                        sheetName: 'Declinados', title: 'Listado de Proyectos Declinados',
-                        exportOptions: { columns: ':visible' } },
-                    { extend: 'colvis', text: '<i class="fa-solid fa-table-columns me-1"></i> Columnas', postfixButtons: ['colvisRestore'] }
+                        sheetName: 'Proyectos', title: listTitle,
+                        exportOptions: { columns: ':visible:not(.ventas-col-seguimientos)' } },
+                    { extend: 'colvis', columns: ':not(.ventas-col-seguimientos)', text: '<i class="fa-solid fa-table-columns me-1"></i> Columnas' }
                 ],
                 language: typeof idioma_espanol !== 'undefined' ? idioma_espanol : {
-                    processing: 'Cargando…', emptyTable: 'Sin proyectos declinados', zeroRecords: 'No hay coincidencias',
+                    processing: 'Cargando…', emptyTable: 'Sin proyectos para esta lista', zeroRecords: 'No hay coincidencias',
                     search: 'Buscar:', lengthMenu: 'Mostrar _MENU_ registros', info: 'Registros del _START_ al _END_ de un total de _TOTAL_ registros',
                     infoEmpty: 'Sin registros', infoFiltered: '(filtrado de _MAX_ registros)',
                     paginate: { previous: 'Anterior', next: 'Siguiente' }
@@ -85,21 +88,30 @@ document.addEventListener('DOMContentLoaded', function () {
                     { data: 'vendedor', render: (v, type) => type === 'display' ? text(v) : v },
                     { data: 'clasificacion', render: (v, type) => type === 'display' ? '<span class="badge border text-dark bg-light">' + text(v) + '</span>' : v },
                     { data: 'titulo', render: (v, type) => type === 'display' ? text(v) : v },
-                    { data: 'activo', render: (v, type) => type === 'display' ? '<button type="button" class="badge border text-danger bg-light ventas-ver-seguimientos" title="Ver seguimientos del proyecto" aria-label="Ver seguimientos del proyecto">' + text(v) + ' <i class="fa-solid fa-eye ms-1" aria-hidden="true"></i></button>' : v }
+                    { data: 'activo', render: (v, type) => {
+                        if (type !== 'display') return v;
+                        return lista === 'declinados'
+                            ? '<button type="button" class="badge border text-danger bg-light ventas-ver-seguimientos" title="Ver seguimientos del proyecto" aria-label="Ver seguimientos del proyecto">' + text(v) + ' <i class="fa-solid fa-eye ms-1" aria-hidden="true"></i></button>'
+                            : '<span class="badge border text-dark bg-light">' + text(v || 'ACTIVO') + '</span>';
+                    } },
+                    { data: null, orderable: false, searchable: false, visible: lista === 'interna_sin_cliente',
+                        className: 'text-center ventas-col-seguimientos', render: (v, type) => type === 'display'
+                            ? '<button type="button" class="btn btn-outline-primary btn-sm ventas-ver-seguimientos"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i> Ver seguimientos</button>' : '' }
                 ],
                 columnDefs: [{ className: 'text-center', targets: [0, 1, 2, 7] }, { className: 'text-start', targets: [3, 4, 5, 6] }],
                 ajax: async function (data, callback) {
                     if (request) request.abort();
                     const current = new AbortController();
                     request = current;
-                    status.textContent = 'Cargando proyectos declinados…';
+                    status.textContent = 'Cargando proyectos…';
                     status.className = 'mb-2 text-muted';
                     retry.hidden = true;
                     const order = data.order[0] || { column: 2, dir: 'desc' };
                     const params = new URLSearchParams({ datatable: '1', anio: modal.dataset.anio, mes: modal.dataset.mes,
                         vendedor: modal.dataset.vendedor, draw: String(data.draw), start: String(data.start), length: String(data.length),
                         search: data.search.value, order_column: String(order.column), order_dir: order.dir });
-                    data.columns.forEach((column, index) => { if (index > 0) params.set('f' + index, column.search.value); });
+                    params.set('lista', lista);
+                    data.columns.forEach((column, index) => { if (index > 0 && index < 8) params.set('f' + index, column.search.value); });
                     try {
                         const response = await fetch(modal.dataset.url + '?' + params, {
                             signal: current.signal, headers: { Accept: 'application/json' }, credentials: 'same-origin'
@@ -136,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
             event.stopPropagation();
             openingFollowup = true;
             const followup = document.getElementById('modalSeguimientosVenta');
+            followup.dataset.lista = lista;
             restoreList = true;
             followup.addEventListener('hidden.bs.modal', () => {
                 openingFollowup = false;
@@ -144,6 +157,19 @@ document.addEventListener('DOMContentLoaded', function () {
             }, { once: true });
             modal.addEventListener('hidden.bs.modal', () => window.verSeguimientosProyecto(row.id, row.proyecto_id), { once: true });
             bootstrap.Modal.getOrCreateInstance(modal).hide();
+        });
+        modal.addEventListener('show.bs.modal', event => {
+            if (!event.relatedTarget) return;
+            const next = event.relatedTarget.dataset.lista || 'declinados';
+            if (next !== lista && table) {
+                table.search('');
+                table.columns().search('');
+                jQuery(table.table().container()).find('thead input').val('');
+                table.order([]);
+            }
+            lista = next;
+            document.getElementById('modal-declinados-titulo').textContent = listTitle();
+            if (table) table.column(8).visible(lista === 'interna_sin_cliente');
         });
         modal.addEventListener('shown.bs.modal', initialize);
         modal.addEventListener('hidden.bs.modal', () => {

@@ -64,7 +64,7 @@ ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
 console.log('OK: cuatro gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');
 
-async function probarModal() {
+async function probarModal(critical = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;
     function node(id) {
         if (!nodes.has(id)) nodes.set(id, { id, children: [], events: {}, textContent: '', dataset: {}, disabled: false,
@@ -81,7 +81,7 @@ async function probarModal() {
     source.textContent = JSON.stringify({ cotizado: 0, colocado: 0, vendedores: [], productos: [], cruce: [] });
     const cards = [node('declinados-card'), node('critico-card')];
     const tableNode = node('table-declinados-ventas');
-    tableNode.tHead = { rows: [{ cells: ['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo'].map(textContent => ({textContent})) }], appendChild(child) { this.filterRow=child; } };
+    tableNode.tHead = { rows: [{ cells: ['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo','Seguimientos'].map(textContent => ({textContent})) }], appendChild(child) { this.filterRow=child; } };
     const requestData = { draw: 1, start: 0, length: 10, search: { value: '' }, order: [],
         columns: Array.from({ length: 8 }, () => ({ search: { value: '' } })) };
     let result;
@@ -110,20 +110,23 @@ async function probarModal() {
     }
     response = { status: true, data: { draw: 1, recordsTotal: 8, recordsFiltered: 8,
         data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
+    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'interna_sin_cliente'}:{}}});
     modal.events['shown.bs.modal'](); await pending;
     assert.equal(options.serverSide, true);
     assert.ok(options.dom.includes('declinados-length"l') && options.dom.includes('declinados-buttons"B') && options.dom.includes('declinados-search ms-auto"f'), 'Separar cantidad, botones y búsqueda en la barra');
     assert.equal(options.buttons[1].extend, 'colvis');
-    assert.equal(tableNode.tHead.filterRow.children.length, 8, 'Cabecera con filtros');
+    assert.equal(tableNode.tHead.filterRow.children.length, 9, 'Cabecera con filtros');
     assert.ok(calls[0][0].includes('datatable=1&anio=2026&mes=9&vendedor=V1'), 'Filtrar período y vendedor');
     assert.equal(node('declinados-total').textContent, '8 Proyectos');
     assert.equal(options.columns[6].render(response.data.data[0].titulo,'display'), '&lt;img src=x onerror=alert(1)&gt;', 'Salida escapada');
     assert.equal(options.columns[2].render('2026-09-30','display'), '30/09/2026');
-    assert.ok(options.columns[7].render('CERRADO','display').includes('ventas-ver-seguimientos'), 'Activo como boton de seguimiento');
+    assert.ok(options.columns[critical ? 8 : 7].render('CERRADO','display').includes('ventas-ver-seguimientos'), 'Activo como boton de seguimiento');
     const selectedButton = { closest: () => ({}), focus() {} };
     tableNode.events.click({ target: { closest: () => selectedButton }, stopPropagation() {} });
     modal.events['hidden.bs.modal']();
     assert.deepEqual(context.selected,[633,'PV-2026-20035'],'Historial del proyecto seleccionado');
+    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'interna_sin_cliente':'declinados');
+    assert.ok(calls[0][0].includes('lista='+(critical?'interna_sin_cliente':'declinados')));
     requestData.start = 10; await dt.ajax.reload();
     assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
     delegated.call({ dataset: { column: '3' }, value: 'Cliente' });
@@ -138,4 +141,4 @@ async function probarModal() {
     modal.events['hidden.bs.modal']();
     console.log('OK: modal DataTables, teclado, filtros, paginación, columnas, error, reintento y salida segura.');
 }
-probarModal().catch(error => { console.error(error); process.exitCode = 1; });
+probarModal().then(() => probarModal(true)).catch(error => { console.error(error); process.exitCode = 1; });

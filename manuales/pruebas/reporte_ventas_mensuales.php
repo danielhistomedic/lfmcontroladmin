@@ -112,6 +112,19 @@ verificar($tableDb->calls[0][1]===['2024-02-01','2024-03-01','V1'] &&
 verificar(str_contains($tableDb->calls[2][0],'ORDER BY v.fecha ASC, v.id DESC LIMIT 10 OFFSET 0'), 'Orden real de fecha y paginación DataTables');
 
 // Ejecuta el endpoint con sesión/modelo simulados, sin cargar el bootstrap real.
+$criticalDb = new ConexionSimulada([[['total'=>10]],[['total'=>10]],[['id'=>633,'proyecto_id'=>'P633']]]);
+$criticalModel = new ModeloSimulado($criticalDb);
+$criticalTable = $criticalModel->declinadosTabla(2026,9,'V1',$tableOptions,'interna_sin_cliente');
+verificar($criticalTable['recordsTotal']===10 && $criticalDb->calls[0][1]===['2026-09-01','2026-10-01','V1'], 'Lista critica dentro del mes y vendedor');
+foreach ($criticalDb->calls as [$sql]) {
+    verificar(str_contains($sql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS")
+        && str_contains($sql,'ci.enviado = 1 AND NOT EXISTS')
+        && str_contains($sql,'cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1'), 'Total y lista usan la condicion critica del KPI');
+}
+$accessDb = new ConexionSimulada([[['id'=>633]],[]]);
+$accessModel = new ModeloSimulado($accessDb);
+verificar($accessModel->proyectoInternaSinClienteAutorizado(633,'V1') && !$accessModel->proyectoInternaSinClienteAutorizado(633,'V2'), 'Historial critico verifica proyecto y vendedor');
+verificar($accessDb->calls[0][1]===[633,'V1'], 'Acceso por ID parametrizado');
 class Controllers { public $model; public function __construct() {} }
 class Session {
     public static bool $active = true;
@@ -131,9 +144,9 @@ $api->model = new class {
         $this->calls[]=[$year,$month,$seller,$page];
         return ['proyectos'=>[],'total'=>0,'pagina'=>1,'paginas'=>1,'por_pagina'=>20];
     }
-    public function declinadosTabla($year,$month,$seller,$options) {
+    public function declinadosTabla($year,$month,$seller,$options,$lista='declinados') {
         $this->calls[]=[$year,$month,$seller,$options];
-        return ['draw'=>$options['draw'],'recordsTotal'=>0,'recordsFiltered'=>0,'data'=>[]];
+        return ['draw'=>$options['draw'],'recordsTotal'=>0,'recordsFiltered'=>0,'data'=>[], 'lista'=>$lista];
     }
 };
 function llamarLista($api): array {
@@ -154,6 +167,9 @@ $tableResponse=llamarLista($api);
 verificar($tableResponse[0]===200 && $tableResponse[1]['data']['draw']===2, 'Modo DataTables del endpoint');
 $_GET['length']='10000'; verificar(llamarLista($api)[0]===400, 'Limitar filas solicitadas');
 $_GET['length']='10'; $_GET['f3']=['malformado']; verificar(llamarLista($api)[0]===400, 'Rechazar filtro de columna malformado');
+unset($_GET['f3']); $_GET['lista']='interna_sin_cliente';
+verificar(llamarLista($api)[1]['data']['lista']==='interna_sin_cliente', 'Endpoint selecciona lista critica');
+$_GET['lista']='invalida'; verificar(llamarLista($api)[0]===400,'Rechazar tipo de lista desconocido');
 http_response_code(200);
 
 // Historial: contrato compartido y permisos por proyecto.
@@ -165,6 +181,7 @@ $api->model = new class {
     public array $calls=[];
     public bool $allowed=true;
     public function proyectoDeclinadoAutorizado($id,$seller) { $this->calls[]=[$id,$seller]; return $this->allowed; }
+    public function proyectoInternaSinClienteAutorizado($id,$seller) { $this->calls[]=[$id,$seller,'interna']; return $this->allowed; }
 };
 function llamarSeguimientos($api): array {
     http_response_code(200); ob_start(); $api->seguimientos();
@@ -173,6 +190,10 @@ function llamarSeguimientos($api): array {
 $_SERVER['REQUEST_METHOD']='POST'; $_POST=['venta_id'=>'633']; Session::$values=['rol_id'=>4,'ccveusuario'=>'V1'];
 $r=llamarSeguimientos($api);
 verificar($r[0]===200 && $r[1]['respuesta']==='ok' && VentasModel::$calls===[633] && $api->model->calls[0]===[633,'V1'],'Historial del ID elegido y vendedor autenticado');
+$_POST['lista']='interna_sin_cliente';
+verificar(llamarSeguimientos($api)[0]===200 && $api->model->calls[1]===[633,'V1','interna'],'Historial desde la lista critica');
+$_POST['lista']='invalida'; verificar(llamarSeguimientos($api)[0]===400,'Tipo de historial desconocido');
+unset($_POST['lista']); VentasModel::$calls=[633];
 $api->model->allowed=false;
 verificar(llamarSeguimientos($api)[0]===403 && VentasModel::$calls===[633],'Rechazar proyecto ajeno o no declinado');
 $api->model->allowed=true; $_POST['venta_id']=['633']; verificar(llamarSeguimientos($api)[0]===400,'Rechazar ID malformado');

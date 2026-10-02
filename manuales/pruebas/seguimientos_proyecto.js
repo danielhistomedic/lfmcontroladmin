@@ -33,7 +33,9 @@ async function probar() {
     assert.equal(node('lbl_modal_seguimiento_count').textContent,'1 Seguimiento');
     assert.ok(node('tbl_seguimiento_venta_body').innerHTML.includes('&lt;script&gt;'));
     assert.equal(options.order[0][1],'desc');
+    node('modalSeguimientosVenta').dataset.lista='interna_sin_cliente';
     mode='empty'; await context.window.verSeguimientosProyecto(634,'P2');
+    assert.equal(calls[1][1].body.get('lista'),'interna_sin_cliente');
     assert.equal(active,false);
     assert.equal(node('lbl_modal_seguimiento_count').textContent,'0 Seguimientos');
     assert.ok(node('tbl_seguimiento_venta_body').innerHTML.includes('No hay seguimientos'));
