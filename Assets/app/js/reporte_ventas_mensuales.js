@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const listTitle = () => lista === 'interna_sin_cliente'
+        const listTitle = () => lista === 'estatus_clasificacion' ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
         const text = value => escape(String(value == null ? '' : value));
@@ -92,6 +92,24 @@ document.addEventListener('DOMContentLoaded', function () {
                             ? '<button type="button" class="btn btn-outline-primary btn-sm ventas-ver-seguimientos"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i> Ver seguimientos</button>' : '' }
                 ],
                 columnDefs: [{ className: 'text-center', targets: [0, 1, 2, 7] }, { className: 'text-start', targets: [3, 4, 5, 6] }],
+                drawCallback: function () {
+                    if (lista !== 'estatus_clasificacion') return;
+                    const api = this.api();
+                    const nodes = api.rows({ page: 'current' }).nodes();
+                    let previous = '';
+                    api.rows({ page: 'current' }).data().each((row, index) => {
+                        const key = JSON.stringify([row.vendedor_id, row.cliente_id]);
+                        if (key === previous) return;
+                        previous = key;
+                        const heading = document.createElement('tr');
+                        const cell = document.createElement('td');
+                        cell.colSpan = api.columns(':visible').count();
+                        cell.className = 'bg-light fw-bold text-primary text-wrap';
+                        cell.textContent = row.vendedor + ' → ' + row.cliente;
+                        heading.appendChild(cell);
+                        nodes[index].parentNode.insertBefore(heading, nodes[index]);
+                    });
+                },
                 ajax: async function (data, callback) {
                     if (request) request.abort();
                     const current = new AbortController();
@@ -104,6 +122,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         vendedor: modal.dataset.vendedor, draw: String(data.draw), start: String(data.start), length: String(data.length),
                         search: data.search.value, order_column: String(order.column), order_dir: order.dir });
                     params.set('lista', lista);
+                    if (lista === 'estatus_clasificacion') {
+                        params.set('clasificacion_id', modal.dataset.clasificacionId);
+                        params.set('estatus_id', modal.dataset.estatusId);
+                        params.set('segmento', modal.dataset.segmento);
+                    }
                     data.columns.forEach((column, index) => { if (index > 0 && index < 8) params.set('f' + index, column.search.value); });
                     try {
                         const response = await fetch(modal.dataset.url + '?' + params, {
@@ -152,9 +175,10 @@ document.addEventListener('DOMContentLoaded', function () {
             bootstrap.Modal.getOrCreateInstance(modal).hide();
         });
         modal.addEventListener('show.bs.modal', event => {
-            if (!event.relatedTarget) return;
-            const next = event.relatedTarget.dataset.lista || 'declinados';
-            if (next !== lista && table) {
+            if (!event.relatedTarget && modal.dataset.desglose !== '1') return;
+            const next = event.relatedTarget ? (event.relatedTarget.dataset.lista || 'declinados') : 'estatus_clasificacion';
+            if (event.relatedTarget) modal.dataset.desglose = '';
+            if ((next !== lista || next === 'estatus_clasificacion') && table) {
                 table.search('');
                 table.columns().search('');
                 jQuery(table.table().container()).find('thead input').val('');
@@ -311,15 +335,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const classificationCard = document.getElementById('ventas-clasificacion-card');
     const classificationSelect = document.getElementById('ventas-clasificacion-desglose');
     let classificationStatusChart = null;
+    let selectedClassification = null;
+    let selectedClassificationStatuses = [];
     function selectClassification(id) {
         const classification = generalClassifications.find(row => String(row.clasificacion_id) === String(id));
         classificationCard.hidden = !classification;
         classificationSelect.value = classification ? String(classification.clasificacion_id) : '';
         if (!classification) return;
+        selectedClassification = classification;
         classificationCard.open = true;
         const statuses = (data.estatus_por_clasificacion || [])
             .filter(row => String(row.clasificacion_id) === String(classification.clasificacion_id))
             .sort((a, b) => Number(a.estatus_id) - Number(b.estatus_id));
+        selectedClassificationStatuses = statuses;
         document.getElementById('ventas-clasificacion-card-titulo').textContent = classification.clasificacion +
             ' — ' + classification.proyectos + ' proyectos · Desglose por estatus';
         document.getElementById('ventas-clasificacion-card-resumen').textContent = statuses.length
@@ -330,6 +358,19 @@ document.addEventListener('DOMContentLoaded', function () {
             classificationStatusChart.height = 380;
             classificationStatusChart.slotWidth = 145;
             classificationStatusChart.element.style.height = '380px';
+            classificationStatusChart.instance.on('click', event => {
+                if (event.componentType !== 'series') return;
+                const status = selectedClassificationStatuses[event.dataIndex];
+                if (!status || !selectedClassification) return;
+                const modal = document.getElementById('modal-declinados-ventas');
+                modal.dataset.desglose = '1';
+                modal.dataset.clasificacionId = String(selectedClassification.clasificacion_id);
+                modal.dataset.estatusId = status.estatus_id == null ? 'sin_estatus' : String(status.estatus_id);
+                modal.dataset.segmento = event.seriesIndex === 1 ? 'declinados' : 'no_declinados';
+                modal.dataset.desgloseTitulo = selectedClassification.clasificacion + ' — ' + status.estatus +
+                    (event.seriesIndex === 1 ? ' · Declinados' : ' · No declinados');
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            });
         }
         classificationStatusChart.count = statuses.length;
         const option = stackedOption(statuses, 'estatus');

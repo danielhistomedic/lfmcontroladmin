@@ -106,6 +106,11 @@ verificar($tableDb->calls[0][1]===['2024-02-01','2024-03-01','V1'] &&
     in_array("%100!% O'Neil%", $tableDb->calls[1][1],true), 'Búsqueda parametrizada con comodines literales');
 verificar(str_contains($tableDb->calls[2][0],'ORDER BY v.fecha ASC, v.id DESC LIMIT 10 OFFSET 0'), 'Orden real de fecha y paginación DataTables');
 
+$drillDb = new ConexionSimulada([[['total'=>2]],[['total'=>2]],[['id'=>633,'vendedor_id'=>'V1','cliente_id'=>3]]]);
+$drillOptions = $tableOptions + ['clasificacion_id'=>5,'estatus_id'=>3,'segmento'=>'no_declinados'];
+(new ModeloSimulado($drillDb))->declinadosTabla(2026,9,'V1',$drillOptions,'estatus_clasificacion');
+verificar($drillDb->calls[0][1]===['2026-09-01','2026-10-01','V1',5,3], 'Desglose por clase y estatus parametrizados');
+verificar(str_contains($drillDb->calls[0][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'") && str_contains($drillDb->calls[2][0],'v.cliente_id ASC'), 'Segmento no declinado y agrupacion vendedor cliente');
 // Ejecuta el endpoint con sesión/modelo simulados, sin cargar el bootstrap real.
 $criticalDb = new ConexionSimulada([[['total'=>10]],[['total'=>10]],[['id'=>633,'proyecto_id'=>'P633']]]);
 $criticalModel = new ModeloSimulado($criticalDb);
@@ -166,6 +171,9 @@ $_GET['length']='10000'; verificar(llamarLista($api)[0]===400, 'Limitar filas so
 $_GET['length']='10'; $_GET['f3']=['malformado']; verificar(llamarLista($api)[0]===400, 'Rechazar filtro de columna malformado');
 unset($_GET['f3']); $_GET['lista']='interna_sin_cliente';
 verificar(llamarLista($api)[1]['data']['lista']==='interna_sin_cliente', 'Endpoint selecciona lista critica');
+$_GET['lista']='estatus_clasificacion'; $_GET['clasificacion_id']='5'; $_GET['estatus_id']='3'; $_GET['segmento']='declinados';
+verificar(llamarLista($api)[0]===200,'Endpoint de proyectos del estatus');
+$_GET['clasificacion_id']=['5']; verificar(llamarLista($api)[0]===400,'Rechazar clase malformada');
 $_GET['lista']='invalida'; verificar(llamarLista($api)[0]===400,'Rechazar tipo de lista desconocido');
 http_response_code(200);
 

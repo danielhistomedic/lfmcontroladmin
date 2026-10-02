@@ -221,6 +221,17 @@ class ReportesmensualesModel extends Mysql
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
         }
+        if ($lista === 'estatus_clasificacion') {
+            $where = 'v.fecha >= ? AND v.fecha < ? AND ' . self::FILTRO_PROYECTOS;
+            $params = [$start, $end];
+            if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+            $where .= ' AND v.clasificacion_proyecto_id = ?';
+            $params[] = $options['clasificacion_id'];
+            if ($options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
+            else { $where .= ' AND v.estatus_proyecto_id = ?'; $params[] = $options['estatus_id']; }
+            $where .= $options['segmento'] === 'declinados'
+                ? " AND v.activo = 'CERRADO'" : " AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'";
+        }
         $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id
             LEFT JOIN cat_medico m ON m.ccvemedico=v.ccveusuario_vendedor
             LEFT JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id';
@@ -258,12 +269,15 @@ class ReportesmensualesModel extends Mysql
         $orderIndex = (int)$options['order_column'];
         $order = $orderIndex === 2 ? 'v.fecha' : ($fields[$orderIndex] ?? 'v.id');
         $direction = $options['order_dir'] === 'asc' ? 'ASC' : 'DESC';
+        $groupOrder = $lista === 'estatus_clasificacion'
+            ? "$sellerName ASC, v.ccveusuario_vendedor ASC, COALESCE(c.nombre_comercial, 'Sin cliente') ASC, v.cliente_id ASC, " : '';
         $length = max(5, min(100, (int)$options['length']));
         $offset = max(0, min(1000000, (int)$options['start']));
         $rows = $this->consultar("SELECT v.id, v.proyecto_id, v.fecha, v.titulo, v.activo,
+            v.ccveusuario_vendedor AS vendedor_id, v.cliente_id,
             COALESCE(c.nombre_comercial, 'Sin cliente') AS cliente, $sellerName AS vendedor,
             COALESCE(cl.clasificacion, 'Sin clasificación') AS clasificacion
-            $joins WHERE $filteredWhere ORDER BY $order $direction, v.id DESC LIMIT $length OFFSET $offset", $filteredParams);
+            $joins WHERE $filteredWhere ORDER BY $groupOrder$order $direction, v.id DESC LIMIT $length OFFSET $offset", $filteredParams);
         return [
             'draw' => (int)$options['draw'],
             'recordsTotal' => (int)$total[0]['total'],

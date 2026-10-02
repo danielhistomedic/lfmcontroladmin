@@ -27,11 +27,12 @@ function ejecutar(empty, width, theme) {
     const context = {
         document: {
             addEventListener: (name, cb) => { events[name] = cb; },
-            getElementById: id => id === 'modal-declinados-ventas' ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
-                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : (nodes.has(id)?nodes.get(id):(nodes.set(id,{ id, clientWidth: width, style: {}, events:{}, addEventListener(name,cb){this.events[name]=cb;} }),nodes.get(id))),
+            getElementById: id => id === 'modal-declinados-ventas' && !nodes.has('ventas-clasificacion-card') ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
+                id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : (nodes.has(id)?nodes.get(id):(nodes.set(id,{ id, clientWidth: width, style: {}, dataset:{}, events:{}, addEventListener(name,cb){this.events[name]=cb;} }),nodes.get(id))),
             querySelectorAll: () => []
         },
         window: { addEventListener: (name, cb) => { events[name] = cb; } },
+        bootstrap:{Modal:{getOrCreateInstance:el=>({show(){el.shown=true;}})}},
         jQuery: () => ({ find: () => ({ on: (name, cb) => { change = cb; } }), DataTable: () => {} }),
         echarts: { init: (element, selectedTheme) => {
             // ARIA utiliza atributos del contenedor DOM incluso al renderizar SVG en servidor.
@@ -90,6 +91,12 @@ function ejecutar(empty, width, theme) {
         assert.deepEqual(charts[5].getOption().series[1].data,[0,2]);
         assert.equal(charts[5].getOption().xAxis[0].axisLabel.fontSize,10);
         charts[2].trigger('click',{componentType:'series',dataIndex:1});
+        charts[5].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
+        const drillModal=nodes.get('modal-declinados-ventas');
+        assert.equal(drillModal.dataset.clasificacionId,'5');
+        assert.equal(drillModal.dataset.estatusId,'6');
+        assert.equal(drillModal.dataset.segmento,'declinados');
+        assert.equal(drillModal.shown,true);
         assert.equal(charts.length,6,'Reutilizar desglose de clasificacion');
         assert.deepEqual(charts[5].getOption().series[1].data,[2]);
     }
