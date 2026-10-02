@@ -36,7 +36,7 @@ function ejecutar(empty, width, theme, periods = false) {
         document: {
             createElement: () => ({value:'',textContent:''}),
             addEventListener: (name, cb) => { events[name] = cb; },
-            getElementById: id => id === 'modal-declinados-ventas' && !nodes.has('ventas-clasificacion-card') ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
+            getElementById: id => id === 'modal-declinados-ventas' && !nodes.has('ventas-clasificaciones-general') ? null : id === 'filtros-ventas-mensuales' ? form : id === 'ventas-cargando' ? loading :
                 id === 'ventas-mensuales-datos' ? { textContent: JSON.stringify(data) } : (nodes.has(id)?nodes.get(id):(nodes.set(id,{ id, clientWidth: width, style: {}, dataset:{}, children:[], replaceChildren(){this.children=[];}, appendChild(child){this.children.push(child);this.value=this.children[0].value;}, events:{}, addEventListener(name,cb){this.events[name]=cb;} }),nodes.get(id))),
             querySelectorAll: () => []
         },
@@ -52,13 +52,24 @@ function ejecutar(empty, width, theme, periods = false) {
     };
     vm.runInNewContext(code, context, { filename: 'reporte_ventas_mensuales.js' });
     events.DOMContentLoaded();
-    assert.equal(charts.length, 3, 'Inicializar las cinco gráficas restantes');
+    assert.equal(charts.length, 4, 'Inicializar las cinco gráficas restantes');
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
     if (periods) {
+        const statusOption = charts[3].getOption();
+        assert.equal(statusOption.series[0].name,'3 · Cotizacion');
+        assert.equal(statusOption.series[2].name,'6 · Pedido');
+        assert.deepEqual(statusOption.series[0].data,[0,0,0,3]);
+        assert.deepEqual(statusOption.series[1].data,[0,0,0,1]);
+        assert.deepEqual(statusOption.series[2].data,[1,0,0,3]);
+        assert.equal(statusOption.series[1].itemStyle.color,'#dc3545');
+        assert.equal(statusOption.series[0].stack,statusOption.series[1].stack);
+        const tip = statusOption.tooltip[0].formatter({seriesIndex:0,dataIndex:3});
+        assert.ok(tip.includes('Cotizacion') && tip.includes('Septiembre 2026') && tip.includes('Total: 4'));
+
         assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
         assert.deepEqual(charts[2].getOption().xAxis[1].data,['2024','2024','2026','2026']);
         assert.deepEqual(charts[2].getOption().series[2].data,[1,0,0,6]);
@@ -68,38 +79,7 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'declinados');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseAnio,'2026');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseMes,'9');
-        nodes.get('ventas-clasificacion-desglose').value='3';
-        nodes.get('ventas-clasificacion-desglose').events.change();
-        assert.ok(nodes.get('ventas-clasificacion-card-titulo').textContent.includes('2026'));
-        assert.equal(charts[3].getOption().xAxis[0].data.length,12);
-        assert.equal(charts[3].getOption().xAxis[0].data[0],'Enero');
-        assert.equal(charts[3].getOption().xAxis[0].data[11],'Diciembre');
-        assert.equal(charts[3].getOption().series[0].data[8],6);
-        assert.equal(charts[3].getOption().series[1].data[8],1);
-        assert.equal(charts[3].getOption().series[0].data[0],0);
-        const tip = charts[3].getOption().tooltip[0].formatter([{dataIndex:8}]);
-        assert.ok(tip.includes('Septiembre 2026') && tip.includes('Proyectos activos: 6') && tip.includes('Total: 7'));
-        const year = nodes.get('ventas-clasificacion-anio');
-        year.value='2024'; year.events.change();
-        assert.equal(charts.length,4,'Reutilizar evolucion mensual al cambiar anio');
-        assert.equal(charts[3].getOption().series[0].data[1],1);
-        assert.equal(charts[3].getOption().series[1].data[1],1);
-        charts[3].trigger('click',{componentType:'series',dataIndex:1,seriesIndex:0});
-        assert.equal(nodes.get('ventas-clasificacion-vendedores-panel').hidden,false);
-        assert.equal(charts[4].getOption().xAxis[0].data[0],'Vendedor 1');
-        assert.deepEqual(charts[4].getOption().series[0].data,[1]);
-        assert.deepEqual(charts[4].getOption().series[1].data,[1]);
-        charts[4].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
-        const modal=nodes.get('modal-declinados-ventas');
-        assert.equal(modal.dataset.desgloseLista,'vendedor_clasificacion');
-        assert.equal(modal.dataset.desgloseAnio,'2024');
-        assert.equal(modal.dataset.desgloseMes,'2');
-        assert.equal(modal.dataset.desgloseVendedor,'V1');
-        assert.equal(modal.dataset.clasificacionId,'3');
-        assert.equal(modal.dataset.segmento,'declinados');
-        assert.equal(modal.shown,true);
-        year.value='2026'; year.events.change();
-        assert.equal(nodes.get('ventas-clasificacion-vendedores-panel').hidden,true,'Ocultar datos anteriores al cambiar anio');
+        assert.equal(charts.length,4,'Abrir modal sin crear los graficos retirados');
         charts.forEach(chart=>chart.dispose());
         return;
     }
@@ -122,41 +102,36 @@ function ejecutar(empty, width, theme, periods = false) {
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts.length,6,'Segunda grafica debajo sin reemplazar la primera');
-        assert.deepEqual(charts[3].getOption().xAxis[0].data,['Bombas','Sellos']);
-        assert.deepEqual(charts[4].getOption().xAxis[0].data,['Cotizacion','Pedido']);
-        assert.deepEqual(charts[4].getOption().series[1].data,[0,2]);
+        assert.equal(charts.length,7,'Segunda grafica debajo sin reemplazar la primera');
+        assert.deepEqual(charts[4].getOption().xAxis[0].data,['Bombas','Sellos']);
+        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Cotizacion','Pedido']);
+        assert.deepEqual(charts[5].getOption().series[1].data,[0,2]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
-        assert.equal(charts.length,6,'Reutilizar grafica secundaria');
-        assert.equal(charts[5].getOption().xAxis[0].data.length,12);
+        assert.equal(charts.length,7,'Reutilizar grafica secundaria');
+        assert.equal(charts[6].getOption().xAxis[0].data.length,12);
         assert.ok(nodes.get('ventas-vendedor-mensual-titulo').textContent.includes('Vendedor 2'));
-        assert.equal(charts[5].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
+        assert.equal(charts[6].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts[5].getOption().series[0].data[8],6);
-        assert.equal(charts[5].getOption().series[1].data[8],4);
+        assert.equal(charts[6].getOption().series[0].data[8],6);
+        assert.equal(charts[6].getOption().series[1].data[8],4);
         const sellerYear=nodes.get('ventas-vendedor-anio');
         sellerYear.value='2024'; sellerYear.events.change();
-        assert.equal(charts[5].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
+        assert.equal(charts[6].getOption().series[0].data.reduce((a,b)=>a+b,0),0);
         dropdown.value='1'; dropdown.events.change();
-        assert.deepEqual(charts[3].getOption().series[0].data,[0]);
-        assert.deepEqual(charts[3].getOption().series[1].data,[2]);
-        assert.equal(charts[3].getOption().series[1].itemStyle.color,'#dc3545');
-        assert.equal(charts[3].getOption().series[1].stack,'proyectos');
+        assert.deepEqual(charts[4].getOption().series[0].data,[0]);
         assert.deepEqual(charts[4].getOption().series[1].data,[2]);
         assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
+        assert.equal(charts[4].getOption().series[1].stack,'proyectos');
+        assert.deepEqual(charts[5].getOption().series[1].data,[2]);
+        assert.equal(charts[5].getOption().series[1].itemStyle.color,'#dc3545');
     }
     if (!empty) {
         charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'no_declinados');
-        nodes.get('ventas-clasificacion-desglose').value='3';
-        nodes.get('ventas-clasificacion-desglose').events.change();
-        assert.equal(nodes.get('ventas-clasificacion-card').open,true);
-        assert.equal(nodes.get('ventas-clasificacion-card').hidden,false);
-        assert.equal(charts[6].getOption().xAxis[0].data.length,12);
-        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:2});
-        assert.equal(charts.length,7,'Reutilizar evolucion mensual');
+        assert.equal(nodes.get('modal-declinados-ventas').shown,true);
+        assert.equal(charts.length,7,'Modal conserva las graficas existentes sin agregar A ni B');
     }
     change.call({id:'ventas-mes'}); change.call({id:'ventas-mes'});
     change.call({id:'ventas-anio'}); change.call({id:'ventas-anio'});
@@ -244,6 +219,9 @@ async function probarModal(critical = false) {
     assert.equal(options.columns[6].render(response.data.data[0].titulo,'display'), '&lt;img src=x onerror=alert(1)&gt;', 'Salida escapada');
     assert.equal(options.columns[2].render('2026-09-30','display'), '30/09/2026');
     assert.ok(options.columns[critical ? 8 : 7].render('CERRADO','display').includes('ventas-ver-seguimientos'), 'Activo como boton de seguimiento');
+    assert.ok(options.columns[7].render('CERRADO','display').includes('btn-danger'),'Declinados con boton rojo');
+    assert.ok(options.columns[7].render('ACTIVO','display').includes('btn-primary'),'Activos con boton azul');
+    assert.ok(options.columns[7].render('ACTIVO','display').includes('ventas-ver-seguimientos'),'Activos abren historial');
     const selectedButton = { closest: () => ({}), focus() {} };
     tableNode.events.click({ target: { closest: () => selectedButton }, stopPropagation() {} });
     modal.events['hidden.bs.modal']();

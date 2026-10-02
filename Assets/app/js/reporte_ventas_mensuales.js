@@ -88,9 +88,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     { data: 'titulo', render: (v, type) => type === 'display' ? text(v) : v },
                     { data: 'activo', render: (v, type) => {
                         if (type !== 'display') return v;
-                        return lista === 'declinados'
-                            ? '<button type="button" class="badge border text-danger bg-light ventas-ver-seguimientos" title="Ver seguimientos del proyecto" aria-label="Ver seguimientos del proyecto">' + text(v) + ' <i class="fa-solid fa-eye ms-1" aria-hidden="true"></i></button>'
-                            : '<span class="badge border text-dark bg-light">' + text(v || 'ACTIVO') + '</span>';
+                        const color = v === 'CERRADO' ? 'danger' : 'primary';
+                        return '<button type="button" class="btn btn-' + color + ' btn-sm ventas-ver-seguimientos" title="Ver seguimientos del proyecto" aria-label="Ver seguimientos del proyecto">' +
+                            text(v || 'ACTIVO') + ' <i class="fa-solid fa-list-check ms-1" aria-hidden="true"></i></button>';
                     } },
                     { data: null, orderable: false, searchable: false, visible: lista === 'interna_sin_cliente',
                         className: 'text-center ventas-col-seguimientos', render: (v, type) => type === 'display'
@@ -439,124 +439,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }};
     classificationChart.instance.setOption(principalOption);
     fitCascade(classificationChart);
-    const classificationCard = document.getElementById('ventas-clasificacion-card');
-    const classificationSelect = document.getElementById('ventas-clasificacion-desglose');
-    const yearSelect = document.getElementById('ventas-clasificacion-anio');
-    let monthlyChart = null;
-    let selectedClassification = null;
-    const monthlySellersPanel = document.getElementById('ventas-clasificacion-vendedores-panel');
-    const monthlySellerSelect = document.getElementById('ventas-clasificacion-vendedor-lista');
-    let monthlySellersChart = null;
-    let monthlySellers = [];
-    let selectedMonth = null;
-    function openMonthlySeller(index, segment) {
-        const seller = monthlySellers[index];
-        if (!seller || !selectedClassification || !selectedMonth) return;
-        const modal = document.getElementById('modal-declinados-ventas');
-        modal.dataset.desglose = '1';
-        modal.dataset.desgloseLista = 'vendedor_clasificacion';
-        modal.dataset.clasificacionId = String(selectedClassification.clasificacion_id);
-        modal.dataset.desgloseAnio = String(yearSelect.value);
-        modal.dataset.desgloseMes = String(selectedMonth);
-        modal.dataset.desgloseVendedor = String(seller.vendedor_id ?? '');
-        modal.dataset.segmento = segment;
-        modal.dataset.desgloseTitulo = selectedClassification.clasificacion + ' · ' + monthNames[selectedMonth - 1] +
-            ' ' + yearSelect.value + ' — ' + seller.vendedor + (segment === 'declinados' ? ' · Declinados' : ' · No declinados');
-        bootstrap.Modal.getOrCreateInstance(modal).show();
-    }
-    function showMonthlySellers(month) {
-        selectedMonth = month;
-        const totals = new Map();
-        (data.estatus_por_clasificacion || []).filter(row => Number(row.anio) === Number(yearSelect.value)
-            && Number(row.mes) === month && String(row.clasificacion_id) === String(selectedClassification.clasificacion_id))
-            .forEach(row => {
-                const key = String(row.vendedor_id ?? '');
-                if (!totals.has(key)) totals.set(key, { vendedor_id: row.vendedor_id, vendedor: row.vendedor ||
-                    projectCounts.find(seller => String(seller.vendedor_id) === key)?.nombre || 'Sin vendedor', proyectos: 0, declinados: 0 });
-                const total = totals.get(key);
-                total.proyectos += Number(row.proyectos);
-                total.declinados += Number(row.declinados);
-            });
-        monthlySellers = [...totals.values()].sort((a,b) => b.proyectos - a.proyectos || a.vendedor.localeCompare(b.vendedor));
-        monthlySellersPanel.hidden = false;
-        monthlySellersPanel.open = true;
-        document.getElementById('ventas-clasificacion-vendedores-titulo').textContent = selectedClassification.clasificacion +
-            ' — ' + monthNames[month - 1] + ' ' + yearSelect.value + ' · Proyectos por vendedor';
-        monthlySellerSelect.replaceChildren();
-        monthlySellers.forEach((seller,index) => ['no_declinados','declinados'].forEach(segment => {
-            const count = segment === 'declinados' ? seller.declinados : seller.proyectos - seller.declinados;
-            if (!count) return;
-            const option = document.createElement('option');
-            option.value = index + ':' + segment;
-            option.textContent = seller.vendedor + ' · ' + (segment === 'declinados' ? 'Declinados' : 'No declinados') + ': ' + count;
-            monthlySellerSelect.appendChild(option);
-        }));
-        document.getElementById('ventas-clasificacion-ver-proyectos').disabled = monthlySellers.length === 0;
-        if (!monthlySellersChart) {
-            monthlySellersChart = cascade('ventas-clasificacion-vendedores');
-            monthlySellersChart.instance.on('click', event => {
-                if (event.componentType === 'series') openMonthlySeller(event.dataIndex, event.seriesIndex === 1 ? 'declinados' : 'no_declinados');
-            });
-        }
-        monthlySellersChart.count = monthlySellers.length;
-        const option = stackedOption(monthlySellers, 'vendedor');
-        option.tooltip = classificationTooltip(monthlySellers, 'vendedor', () => selectedClassification.clasificacion +
-            ' · ' + monthNames[month - 1] + ' ' + yearSelect.value);
-        monthlySellersChart.instance.setOption(option,true);
-        fitCascade(monthlySellersChart);
-    }
-    document.getElementById('ventas-clasificacion-ver-proyectos').addEventListener('click', () => {
-        const [index,segment] = monthlySellerSelect.value.split(':');
-        openMonthlySeller(Number(index),segment);
-    });
-    monthlySellersPanel.addEventListener('toggle', () => {
-        if (monthlySellersPanel.open && monthlySellersChart) fitCascade(monthlySellersChart);
-    });
-    yearSelect.value = String(selectedYears[selectedYears.length - 1] || '');
-    function updateMonthly() {
-        if (!selectedClassification) return;
-        monthlySellersPanel.hidden = true;
-        selectedMonth = null;
-        const year = Number(yearSelect.value);
-        const rows = monthNames.map((mes, index) => ({ mes, mes_id: index + 1, proyectos: 0, declinados: 0,
-            clasificacion: selectedClassification.clasificacion }));
-        (data.estatus_por_clasificacion || []).filter(row => Number(row.anio) === year &&
-            String(row.clasificacion_id) === String(selectedClassification.clasificacion_id)).forEach(row => {
-            const total = rows[Number(row.mes) - 1];
-            if (!total) return;
-            total.proyectos += Number(row.proyectos);
-            total.declinados += Number(row.declinados);
-        });
-        document.getElementById('ventas-clasificacion-card-titulo').textContent = selectedClassification.clasificacion +
-            ' — Evolución mensual ' + year;
-        document.getElementById('ventas-clasificacion-card-resumen').textContent = 'Enero a diciembre de ' + year +
-            ' · ' + rows.reduce((total, row) => total + row.proyectos, 0) + ' proyectos. Se conservan los filtros de vendedor y proyecto.';
-        if (!monthlyChart) {
-            monthlyChart = cascade('ventas-clasificacion-estatus');
-            monthlyChart.height = 380;
-            monthlyChart.slotWidth = 100;
-            monthlyChart.element.style.height = '380px';
-            monthlyChart.instance.on('click', event => {
-                if (event.componentType === 'series') showMonthlySellers(event.dataIndex + 1);
-            });
-        }
-        monthlyChart.count = rows.length;
-        const option = stackedOption(rows, 'mes');
-        option.tooltip = classificationTooltip(rows, 'clasificacion', row => row.mes + ' ' + year);
-        option.xAxis.axisLabel.fontSize = 11;
-        option.xAxis.axisLabel.width = 90;
-        option.grid.bottom = 65;
-        monthlyChart.instance.setOption(option, true);
-        fitCascade(monthlyChart);
-    }
-    function selectClassification(id) {
-        selectedClassification = generalClassifications.find(row => String(row.clasificacion_id) === String(id));
-        classificationCard.hidden = !selectedClassification;
-        classificationSelect.value = selectedClassification ? String(selectedClassification.clasificacion_id) : '';
-        if (!selectedClassification) return;
-        classificationCard.open = true;
-        updateMonthly();
-    }
     classificationChart.instance.on('click', event => {
         if (event.componentType !== 'series') return;
         const row = generalClassifications[Math.floor(event.seriesIndex / 2)];
@@ -573,11 +455,47 @@ document.addEventListener('DOMContentLoaded', function () {
             (event.seriesIndex % 2 === 1 ? ' · Declinados' : ' · No declinados');
         bootstrap.Modal.getOrCreateInstance(modal).show();
     });
-    classificationSelect.addEventListener('change', () => selectClassification(classificationSelect.value));
-    yearSelect.addEventListener('change', updateMonthly);
-    classificationCard.addEventListener('toggle', () => {
-        if (classificationCard.open && monthlyChart) fitCascade(monthlyChart);
+    // El mismo conjunto autorizado se consolida por estatus, sin consultas adicionales.
+    const statusGroups = new Map();
+    const statusPeriodCounts = new Map();
+    (data.estatus_por_clasificacion || []).forEach(row => {
+        const key = String(row.estatus_id);
+        if (!statusGroups.has(key)) statusGroups.set(key, { id: row.estatus_id,
+            nombre: (row.estatus_id == null ? 'S/E' : row.estatus_id) + ' · ' + row.estatus });
+        const periodKey = [key,row.anio,row.mes].join(':');
+        if (!statusPeriodCounts.has(periodKey)) statusPeriodCounts.set(periodKey,{proyectos:0,declinados:0});
+        const total = statusPeriodCounts.get(periodKey);
+        total.proyectos += Number(row.proyectos);
+        total.declinados += Number(row.declinados);
     });
+    const statuses = [...statusGroups.values()].sort((a,b) => Number(a.id)-Number(b.id));
+    const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
+    const statusOption = { ...principalOption, grid: { ...principalOption.grid },
+        legend: {top:0,type:'scroll',data:statuses.length ? [...statuses.map(row=>row.nombre),'Declinados'] : [],textStyle:{color:cascadeText}},
+        series: statuses.flatMap((status,index) => {
+            const totals = periods.map(period=>statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
+            return [
+                {name:status.nombre,type:'bar',stack:'estatus-'+status.id,barMaxWidth:50,
+                    itemStyle:{color:statusColors[index%statusColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
+                    label:{show:true,position:'bottom',distance:5,color:cascadeText,formatter:()=>status.id == null ? 'S/E' : String(status.id)}},
+                {name:'Declinados',type:'bar',stack:'estatus-'+status.id,barMaxWidth:50,
+                    itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
+                    label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
+            ];
+        }),
+        tooltip:{trigger:'item',renderMode:'richText',formatter:params=>{
+            const status = statuses[Math.floor(params.seriesIndex/2)];
+            const period = periods[params.dataIndex];
+            const total = statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0};
+            return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+                '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
+        }}
+    };
+    const generalStatusChart = cascade('ventas-estatus-general');
+    generalStatusChart.count = periods.length;
+    generalStatusChart.slotWidth = Math.max(180,statuses.length*85);
+    generalStatusChart.instance.setOption(statusOption);
+    fitCascade(generalStatusChart);
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
 });

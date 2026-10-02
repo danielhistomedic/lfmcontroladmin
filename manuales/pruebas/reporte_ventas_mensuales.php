@@ -241,6 +241,7 @@ class VentasModel {
 $api->model = new class {
     public array $calls=[];
     public bool $allowed=true;
+    public function proyectoReporteAutorizado($id,$seller) { $this->calls[]=[$id,$seller,'reporte']; return $this->allowed; }
     public function proyectoDeclinadoAutorizado($id,$seller) { $this->calls[]=[$id,$seller]; return $this->allowed; }
     public function proyectoInternaSinClienteAutorizado($id,$seller) { $this->calls[]=[$id,$seller,'interna']; return $this->allowed; }
 };
@@ -263,6 +264,16 @@ Session::$active=true; $testPermissions=[]; verificar(llamarSeguimientos($api)[0
 $testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='GET'; verificar(llamarSeguimientos($api)[0]===405,'Historial solo acepta POST');
 $_SERVER['REQUEST_METHOD']='POST'; Session::$values=['rol_id'=>1]; verificar(llamarSeguimientos($api)[0]===200,'Administrador autorizado');
 http_response_code(200);
+
+$_SERVER['REQUEST_METHOD']='POST'; $_POST=['venta_id'=>'633','lista'=>'clasificacion_periodo'];
+Session::$values=['rol_id'=>4,'ccveusuario'=>'V1'];
+verificar(llamarSeguimientos($api)[0]===200 && end($api->model->calls)===[633,'V1','reporte'], 'Historial desde clasificaciones aplica alcance del vendedor');
+$api->model->allowed=false;
+verificar(llamarSeguimientos($api)[0]===403,'Historial de clasificacion rechaza proyecto fuera del alcance');
+$api->model->allowed=true;
+$followupDb = new ConexionSimulada([[['id'=>633]]]);
+verificar((new ModeloSimulado($followupDb))->proyectoReporteAutorizado(633,'V1'), 'Proyecto autorizado para historial');
+verificar($followupDb->calls[0][1]===[633,'V1'] && str_contains($followupDb->calls[0][0],'v.estatus_proyecto_id <> 2'), 'Historial conserva filtros del reporte y permisos');
 
 // Renderiza sólo la vista con datos sintéticos y sin cargar las plantillas del portal.
 // El modal por vendedor conserva el alcance autorizado y agrega la seleccion concreta.

@@ -63,14 +63,15 @@ class Reportesmensuales extends Controllers
             $restricted = (int)$this->session->get('rol_id') === 4;
             $seller = $restricted ? (string)$this->session->get('ccveusuario') : '';
             $lista = $_POST['lista'] ?? 'declinados';
-            if (!in_array($lista, ['declinados', 'interna_sin_cliente'], true)) {
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente','estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'], true)) {
                 http_response_code(400);
                 echo json_encode(['respuesta'=>'error', 'data'=>[]]);
                 return;
             }
             $authorized = !($restricted && $seller === '') && ($lista === 'interna_sin_cliente'
                 ? $this->model->proyectoInternaSinClienteAutorizado($ventaId, $seller)
-                : $this->model->proyectoDeclinadoAutorizado($ventaId, $seller));
+                : ($lista === 'declinados' ? $this->model->proyectoDeclinadoAutorizado($ventaId, $seller)
+                    : $this->model->proyectoReporteAutorizado($ventaId, $seller)));
             if (!$authorized) {
                 http_response_code(403);
                 echo json_encode(['respuesta'=>'error', 'data'=>[]]);

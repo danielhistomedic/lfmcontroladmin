@@ -101,51 +101,24 @@
                 </div>
             </div>
             <hr class="ventas-separador">
-            <div class="card mb-4">
+            <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
                 <div class="card-body">
                     <h4 class="mt-0">Proyectos por clasificación</h4>
                     <p class="text-muted">Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. Las letras bajo las barras corresponden a la leyenda.</p>
                     <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
                         <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
                     </div>
-                    <label for="ventas-clasificacion-desglose" class="form-label mt-2">Selecciona una barra o una clasificación para ver su evolución mensual</label>
-                    <select id="ventas-clasificacion-desglose" class="form-select" aria-controls="ventas-clasificacion-card">
-                        <option value="">Selecciona una clasificación</option>
-                        <?php
-                        $classificationOptions = [];
-                        foreach ($report['clasificaciones_por_vendedor'] ?? [] as $classification) {
-                            $classificationOptions[$classification['clasificacion_id']] = $classification['clasificacion'];
-                        }
-                        ksort($classificationOptions, SORT_NUMERIC);
-                        foreach ($classificationOptions as $id => $name): ?>
-                            <option value="<?= $esc($id); ?>"><?= $esc($name); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <details id="ventas-clasificacion-card" class="card shadow-sm ventas-card-desglose mt-3" hidden>
-                        <summary class="card-header fw-semibold" id="ventas-clasificacion-card-titulo">Evolución mensual de la clasificación</summary>
-                        <div class="card-body">
-                            <label for="ventas-clasificacion-anio" class="form-label">Año de la evolución mensual</label>
-                            <select id="ventas-clasificacion-anio" class="form-select mb-3" aria-controls="ventas-clasificacion-estatus">
-                                <?php foreach ($selectedYears as $year): ?><option value="<?= $year; ?>"><?= $year; ?></option><?php endforeach; ?>
-                            </select>
-                            <p id="ventas-clasificacion-card-resumen" class="text-muted" aria-live="polite"></p>
-                            <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Evolución mensual de la clasificación seleccionada">
-                                <div id="ventas-clasificacion-estatus" class="ventas-chart" role="img" aria-label="Proyectos de enero a diciembre, con declinados apilados en rojo"></div>
-                            </div>
-                            <details id="ventas-clasificacion-vendedores-panel" class="card shadow-sm ventas-card-desglose mt-3" hidden>
-                                <summary id="ventas-clasificacion-vendedores-titulo" class="card-header fw-semibold">Vendedores del mes</summary>
-                                <div class="card-body">
-                                    <p>Selecciona la barra de un vendedor para ver sus proyectos y clientes.</p>
-                                    <label for="ventas-clasificacion-vendedor-lista" class="form-label">Vendedor y segmento</label>
-                                    <select id="ventas-clasificacion-vendedor-lista" class="form-select mb-2"></select>
-                                    <button id="ventas-clasificacion-ver-proyectos" type="button" class="btn btn-primary mb-3">Ver proyectos y clientes</button>
-                                    <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Vendedores de la clasificación y mes seleccionados">
-                                        <div id="ventas-clasificacion-vendedores" class="ventas-chart" role="img" aria-label="Proyectos por vendedor con declinados apilados"></div>
-                                    </div>
-                                </div>
-                            </details>
-                        </div>
-                    </details>
+
+                </div>
+            </div>
+            <hr class="ventas-separador">
+            <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
+                <div class="card-body">
+                    <h4 class="mt-0">Proyectos por estatus</h4>
+                    <p class="text-muted">Comparativo por mes y año: una barra por estatus dentro de cada mes, con declinados apilados en rojo. Los números bajo las barras corresponden al ID del estatus en la leyenda.</p>
+                    <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por estatus del proyecto">
+                        <div id="ventas-estatus-general" class="ventas-chart" role="img" aria-label="Proyectos por estatus, mes y año con declinados apilados"></div>
+                    </div>
                 </div>
             </div>
             <hr class="ventas-separador">
@@ -250,6 +223,14 @@
         <?php endif; ?>
     </div>
     <style>
+        #ventas-mensuales .ventas-grafico-clasificaciones {
+            border: 1px solid #cbdde7;
+        }
+
+        html.dark #ventas-mensuales .ventas-grafico-clasificaciones {
+            border-color: #455563;
+        }
+
         #ventas-mensuales .ventas-card-desglose {
             display: block;
             margin-left: 2rem;

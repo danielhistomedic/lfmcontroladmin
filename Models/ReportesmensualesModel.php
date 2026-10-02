@@ -60,6 +60,14 @@ class ReportesmensualesModel extends Mysql
         ) !== [];
     }
 
+    /** Historial de un proyecto del reporte dentro del alcance del usuario. */
+    public function proyectoReporteAutorizado(int $ventaId, string $seller): bool
+    {
+        $scope = self::FILTRO_PROYECTOS . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
+        return $this->consultar("SELECT v.id FROM tb_ventas v WHERE v.id = ? AND $scope",
+            $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
+    }
+
     /** Condición única para el KPI crítico, su listado y acceso al historial. */
     private static function condicionInternaSinCliente(): string
     {
