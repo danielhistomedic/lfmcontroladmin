@@ -1,4 +1,5 @@
 <?php require_once('Template/header_01.php'); ?>
+<link rel="stylesheet" href="<?= assets(); ?>/app/css/reporte_ventas_mensuales.css?v=<?= version(); ?>">
 <?php require_once('Template/header_02.php'); ?>
 
 <section role="main" class="content-body fondo-general">
@@ -35,32 +36,37 @@
         }
     }
     $periodLabel = implode(' | ', $periods);
+    $updatedAt = new DateTimeImmutable('now', new DateTimeZone('America/Mexico_City'));
     ?>
     <div id="ventas-mensuales">
-        <div class="card mb-4">
+        <div class="card ventas-toolbar mb-4">
             <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
-                    <div>
-                        <h3 class="mt-0 mb-1">Reportes de Ventas</h3><span class="text-muted">Resultados de <?= $esc($monthNames); ?> <?= $esc($yearNames); ?> · Importes con IVA en USD</span>
+                <div class="ventas-toolbar-top">
+                    <div class="ventas-identidad">
+                        <span class="ventas-icono ventas-icono-principal"><i class="fa-solid fa-chart-column" aria-hidden="true"></i></span>
+                        <div>
+                            <h3 class="mt-0 mb-1">Reporte de Ventas</h3>
+                            <p class="text-muted mb-0">Análisis de proyectos y desempeño comercial</p>
+                        </div>
                     </div>
-                    <span class="badge bg-primary align-self-start">REPORTE MENSUAL</span>
+                    <div class="ventas-actualizacion"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><span>Última actualización<time datetime="<?= $esc($updatedAt->format(DATE_ATOM)); ?>" title="Hora de Ciudad de México · carga del reporte"><?= $esc($updatedAt->format('d/m/Y H:i')); ?></time></span></div>
                 </div>
                 <form id="filtros-ventas-mensuales" method="get" action="<?= base_url(); ?>/reportesmensuales/ventas" class="row g-3 align-items-end">
-                    <div class="col-md-3"><label for="ventas-anio" class="form-label">Años</label><select id="ventas-anio" name="anio[]" class="form-control" multiple required data-plugin-selectTwo data-plugin-options='{"closeOnSelect":false}'>
+                    <div class="col-md-3"><label for="ventas-anio" class="form-label"><i class="fa-regular fa-calendar" aria-hidden="true"></i>Años</label><select id="ventas-anio" name="anio[]" class="form-control" multiple required data-plugin-selectTwo data-plugin-options='{"closeOnSelect":false}'>
                             <?php for ($y = max((int)date('Y') + 1, max($selectedYears)); $y >= 2000; $y--): ?>
                                 <option value="<?= $y; ?>" <?= in_array($y, $selectedYears, true) ? 'selected' : ''; ?>><?= $y; ?></option>
                             <?php endfor; ?>
                         </select></div>
-                    <div class="col-md-3"><label for="ventas-mes" class="form-label">Meses</label><select id="ventas-mes" name="mes[]" class="form-control" multiple required data-plugin-selectTwo data-plugin-options='{"closeOnSelect":false}'>
+                    <div class="col-md-3"><label for="ventas-mes" class="form-label"><i class="fa-regular fa-calendar-days" aria-hidden="true"></i>Meses</label><select id="ventas-mes" name="mes[]" class="form-control" multiple required data-plugin-selectTwo data-plugin-options='{"closeOnSelect":false}'>
                             <?php foreach ($months as $number => $name): ?><option value="<?= $number; ?>" <?= in_array($number, $selectedMonths, true) ? 'selected' : ''; ?>><?= $name; ?></option><?php endforeach; ?>
                         </select></div>
-                    <div class="col-md-4"><label for="ventas-vendedor" class="form-label">Vendedor</label><select id="ventas-vendedor" name="vendedor" class="form-control" data-plugin-selectTwo>
+                    <div class="col-md-4"><label for="ventas-vendedor" class="form-label"><i class="fa-regular fa-user" aria-hidden="true"></i>Vendedor</label><select id="ventas-vendedor" name="vendedor" class="form-control" data-plugin-selectTwo>
                             <option value="">TODOS</option>
                             <?php foreach ($data['vendedores'] as $seller): ?><option value="<?= $esc($seller['id']); ?>" <?= (string)$seller['id'] === $filters['vendedor'] ? 'selected' : ''; ?>><?= $esc($seller['nombre']); ?></option><?php endforeach; ?>
                         </select></div>
-                    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Actualizar</button></div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button></div>
                 </form>
-                <small class="d-block mt-2">Selecciona uno o varios años y meses y pulsa Actualizar para aplicar la selección.</small>
+                <div class="ventas-contexto"><span class="ventas-periodo"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i>Resultados de <?= $esc($monthNames); ?> <?= $esc($yearNames); ?> · Importes con IVA en USD</span><small>Selecciona uno o varios años y meses y pulsa Actualizar para aplicar la selección.</small></div>
                 <div id="ventas-cargando" class="mt-2 text-primary" role="status" hidden>Actualizando todos los indicadores…</div>
                 <?php if ((int)$data['usuario']['rol_id'] === 4): ?><small class="d-block mt-2 text-muted">TODOS incluye únicamente tus proyectos autorizados.</small><?php endif; ?>
             </div>
@@ -102,27 +108,27 @@
             </div>
             <hr class="ventas-separador">
             <div class="ventas-paneles">
-            <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
-                <div class="card-body">
-                    <h4 class="mt-0">Proyectos por clasificación</h4>
-                    <p class="text-muted">Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. Las letras bajo las barras corresponden a la leyenda.</p>
-                    <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
-                        <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
-                    </div>
+                <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
+                    <div class="card-body">
+                        <h4 class="mt-0">Proyectos por clasificación</h4>
+                        <p class="text-muted">Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. Las letras bajo las barras corresponden a la leyenda.</p>
+                        <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
+                            <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
+                        </div>
 
-                </div>
-            </div>
-            <hr class="ventas-separador">
-            <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
-                <div class="card-body">
-                    <h4 class="mt-0">Proyectos por estatus</h4>
-                    <p class="text-muted">Comparativo por mes y año: una barra por estatus dentro de cada mes, con su nombre debajo y declinados apilados en rojo.</p>
-                    <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por estatus del proyecto">
-                        <div id="ventas-estatus-general" class="ventas-chart" role="img" aria-label="Proyectos por estatus, mes y año con declinados apilados"></div>
                     </div>
                 </div>
-            </div>
-            <hr class="ventas-separador">
+                <hr class="ventas-separador">
+                <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
+                    <div class="card-body">
+                        <h4 class="mt-0">Proyectos por estatus</h4>
+                        <p class="text-muted">Comparativo por mes y año: una barra por estatus dentro de cada mes, con su nombre debajo y declinados apilados en rojo.</p>
+                        <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por estatus del proyecto">
+                            <div id="ventas-estatus-general" class="ventas-chart" role="img" aria-label="Proyectos por estatus, mes y año con declinados apilados"></div>
+                        </div>
+                    </div>
+                </div>
+                <hr class="ventas-separador">
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-12">
@@ -142,22 +148,22 @@
                             </div>
                             <p id="ventas-cascada-vacio" class="text-muted" hidden>Sin proyectos para los filtros seleccionados.</p>
                             <div id="ventas-estatus-panel" class="mt-4 pt-3 border-top" hidden>
-                              <div class="ventas-desgloses-vendedor">
-                               <section class="ventas-desglose-vendedor" aria-labelledby="ventas-estatus-titulo">
-                                <h4 id="ventas-estatus-titulo" class="mt-0" aria-live="polite"></h4>
-                                <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
-                                <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de clasificaciones del vendedor; desplazamiento horizontal">
-                                    <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por clasificación, con declinados apilados en rojo"></div>
+                                <div class="ventas-desgloses-vendedor">
+                                    <section class="ventas-desglose-vendedor" aria-labelledby="ventas-estatus-titulo">
+                                        <h4 id="ventas-estatus-titulo" class="mt-0" aria-live="polite"></h4>
+                                        <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
+                                        <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de clasificaciones del vendedor; desplazamiento horizontal">
+                                            <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por clasificación, con declinados apilados en rojo"></div>
+                                        </div>
+                                    </section>
+                                    <section class="ventas-desglose-vendedor" aria-labelledby="ventas-desglose-estatus-titulo">
+                                        <h4 id="ventas-desglose-estatus-titulo" aria-live="polite"></h4>
+                                        <p id="ventas-desglose-estatus-resumen" class="text-muted" aria-live="polite"></p>
+                                        <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica por estatus del proyecto; desplazamiento horizontal">
+                                            <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos por estatus, con declinados apilados en rojo"></div>
+                                        </div>
+                                    </section>
                                 </div>
-                               </section>
-                               <section class="ventas-desglose-vendedor" aria-labelledby="ventas-desglose-estatus-titulo">
-                                <h4 id="ventas-desglose-estatus-titulo" aria-live="polite"></h4>
-                                <p id="ventas-desglose-estatus-resumen" class="text-muted" aria-live="polite"></p>
-                                <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica por estatus del proyecto; desplazamiento horizontal">
-                                    <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos por estatus, con declinados apilados en rojo"></div>
-                                </div>
-                               </section>
-                              </div>
                             </div>
                         </div>
                     </div>
@@ -231,22 +237,38 @@
             margin-left: 2rem;
             border-left: 3px solid #a8cbdc;
         }
-        #ventas-mensuales .ventas-card-desglose[hidden] { display: none !important; }
-        #ventas-mensuales .ventas-card-desglose summary { cursor: pointer; font-size: .9rem; }
-        #ventas-mensuales .ventas-card-desglose p { font-size: .8rem; }
-        @media (max-width: 575px) {
-            #ventas-mensuales .ventas-card-desglose { margin-left: 0; }
+
+        #ventas-mensuales .ventas-card-desglose[hidden] {
+            display: none !important;
         }
+
+        #ventas-mensuales .ventas-card-desglose summary {
+            cursor: pointer;
+            font-size: .9rem;
+        }
+
+        #ventas-mensuales .ventas-card-desglose p {
+            font-size: .8rem;
+        }
+
+        @media (max-width: 575px) {
+            #ventas-mensuales .ventas-card-desglose {
+                margin-left: 0;
+            }
+        }
+
         #ventas-mensuales .ventas-encabezado-cuantitativo {
             padding: 1rem 1.25rem;
             background-color: #eaf4f8;
             border-left: 4px solid #0085a3;
             border-radius: .35rem;
         }
+
         html.dark #ventas-mensuales .ventas-encabezado-cuantitativo {
             background-color: #203846;
             border-left-color: #6dc2dd;
         }
+
         #ventas-mensuales .ventas-cascada-scroll {
             width: 100%;
             overflow-x: auto;
@@ -466,58 +488,201 @@
                 height: 290px;
             }
         }
+
         /* Densidad del reporte, limitada a esta vista. */
-        #ventas-mensuales { font-size: 13px; line-height: 1.4; background: #f3f5f7; padding: 10px; border-radius: 4px; }
-        #ventas-mensuales .card { border: 1px solid #dbe3e8; border-radius: 5px; background-color: #fff; }
-        #ventas-mensuales .shadow { box-shadow: 0 2px 7px rgba(36,52,71,.12) !important; }
-        #ventas-mensuales .ventas-desgloses-vendedor { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-left: 20px; padding-left: 12px; border-left: 2px solid #b9d9e6; }
-        #ventas-mensuales .ventas-desglose-vendedor { min-width: 0; padding: 10px; border: 1px solid #dbe3e8; border-radius: 5px; }
+        #ventas-mensuales {
+            font-size: 13px;
+            line-height: 1.4;
+            background: #f3f5f7;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        #ventas-mensuales .card {
+            border: 1px solid #dbe3e8;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        #ventas-mensuales .shadow {
+            box-shadow: 0 2px 7px rgba(36, 52, 71, .12) !important;
+        }
+
+        #ventas-mensuales .ventas-desgloses-vendedor {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-left: 20px;
+            padding-left: 12px;
+            border-left: 2px solid #b9d9e6;
+        }
+
+        #ventas-mensuales .ventas-desglose-vendedor {
+            min-width: 0;
+            padding: 10px;
+            border: 1px solid #dbe3e8;
+            border-radius: 5px;
+        }
+
         @media (max-width: 767px) {
-            #ventas-mensuales .ventas-desgloses-vendedor { grid-template-columns: minmax(0,1fr); margin-left: 8px; padding-left: 8px; }
+            #ventas-mensuales .ventas-desgloses-vendedor {
+                grid-template-columns: minmax(0, 1fr);
+                margin-left: 8px;
+                padding-left: 8px;
+            }
         }
-        #ventas-mensuales .ventas-paneles { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; margin-bottom: 14px; }
-        #ventas-mensuales .ventas-paneles > .card { min-width: 0; margin-bottom: 0 !important; }
-        #ventas-mensuales .ventas-paneles > .ventas-separador { display: none; }
-        html.dark #ventas-mensuales { background-color: #17232d; }
-        html.dark #ventas-mensuales .card { background-color: #21313e; border-color: #455563; }
-        #ventas-mensuales .ventas-kpi.bg-danger { background-color: #dc3545 !important; }
-        #ventas-mensuales .ventas-kpi.bg-success { background-color: #198754 !important; }
+
+        #ventas-mensuales .ventas-paneles {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        #ventas-mensuales .ventas-paneles>.card {
+            min-width: 0;
+            margin-bottom: 0 !important;
+        }
+
+        #ventas-mensuales .ventas-paneles>.ventas-separador {
+            display: none;
+        }
+
+        html.dark #ventas-mensuales {
+            background-color: #17232d;
+        }
+
+        html.dark #ventas-mensuales .card {
+            background-color: #21313e;
+            border-color: #455563;
+        }
+
+        #ventas-mensuales .ventas-kpi.bg-danger {
+            background-color: #dc3545 !important;
+        }
+
+        #ventas-mensuales .ventas-kpi.bg-success {
+            background-color: #198754 !important;
+        }
+
         @media (min-width: 1600px) {
-            #ventas-mensuales .ventas-paneles { grid-template-columns: repeat(2,minmax(0,1fr)); }
+            #ventas-mensuales .ventas-paneles {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
-        #ventas-mensuales h3 { font-size: 18px; line-height: 1.3; }
-        #ventas-mensuales h4 { font-size: 15px; line-height: 1.3; margin-bottom: 8px; }
-        #ventas-mensuales p { margin-bottom: 8px; }
-        #ventas-mensuales small { font-size: 11px; line-height: 1.35; }
-        #ventas-mensuales .card-body { padding: 12px 14px; }
-        #ventas-mensuales .card-header { padding: 9px 12px; }
-        #ventas-mensuales .mb-4 { margin-bottom: 14px !important; }
-        #ventas-mensuales .mb-3 { margin-bottom: 10px !important; }
-        #ventas-mensuales .mt-4 { margin-top: 14px !important; }
-        #ventas-mensuales .g-3 { --bs-gutter-x: 12px; --bs-gutter-y: 10px; }
-        #ventas-mensuales .form-label { font-size: 12px; margin-bottom: 4px; }
+
+        #ventas-mensuales h3 {
+            font-size: 18px;
+            line-height: 1.3;
+        }
+
+        #ventas-mensuales h4 {
+            font-size: 15px;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        #ventas-mensuales p {
+            margin-bottom: 8px;
+        }
+
+        #ventas-mensuales small {
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        #ventas-mensuales .card-body {
+            padding: 12px 14px;
+        }
+
+        #ventas-mensuales .card-header {
+            padding: 9px 12px;
+        }
+
+        #ventas-mensuales .mb-4 {
+            margin-bottom: 14px !important;
+        }
+
+        #ventas-mensuales .mb-3 {
+            margin-bottom: 10px !important;
+        }
+
+        #ventas-mensuales .mt-4 {
+            margin-top: 14px !important;
+        }
+
+        #ventas-mensuales .g-3 {
+            --bs-gutter-x: 12px;
+            --bs-gutter-y: 10px;
+        }
+
+        #ventas-mensuales .form-label {
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
         #ventas-mensuales .form-control,
         #ventas-mensuales .form-select,
-        #ventas-mensuales .btn { font-size: 12px; padding: 5px 9px; min-height: 32px; }
-        #ventas-mensuales .select2-selection { min-height: 32px; font-size: 12px; }
-        #ventas-mensuales .select2-selection--single { height: 32px; }
-        #ventas-mensuales .select2-selection--multiple { height: auto; padding: 2px 4px; }
-        #ventas-mensuales .select2-selection--multiple .select2-selection__choice { margin-top: 3px; }
-        #ventas-mensuales .select2-selection--single .select2-selection__rendered { line-height: 30px; }
-        #ventas-mensuales .select2-selection--single .select2-selection__arrow { height: 30px; }
-        #filtros-ventas-mensuales { align-items: flex-start !important; }
-        #filtros-ventas-mensuales .form-label { line-height: 16px; margin-bottom: 4px; }
+        #ventas-mensuales .btn {
+            font-size: 12px;
+            padding: 5px 9px;
+            min-height: 32px;
+        }
+
+        #ventas-mensuales .select2-selection {
+            min-height: 32px;
+            font-size: 12px;
+        }
+
+        #ventas-mensuales .select2-selection--single {
+            height: 32px;
+        }
+
+        #ventas-mensuales .select2-selection--multiple {
+            height: auto;
+            padding: 2px 4px;
+        }
+
+        #ventas-mensuales .select2-selection--multiple .select2-selection__choice {
+            margin-top: 3px;
+        }
+
+        #ventas-mensuales .select2-selection--single .select2-selection__rendered {
+            line-height: 30px;
+        }
+
+        #ventas-mensuales .select2-selection--single .select2-selection__arrow {
+            height: 30px;
+        }
+
+        #filtros-ventas-mensuales {
+            align-items: flex-start !important;
+        }
+
+        #filtros-ventas-mensuales .form-label {
+            line-height: 16px;
+            margin-bottom: 4px;
+        }
+
         #filtros-ventas-mensuales .select2-container .select2-selection {
             box-sizing: border-box;
             min-height: 36px;
             padding: 5px 8px;
         }
-        #filtros-ventas-mensuales .select2-container .select2-selection--single { height: 36px; }
+
+        #filtros-ventas-mensuales .select2-container .select2-selection--single {
+            height: 36px;
+        }
+
         #filtros-ventas-mensuales .select2-selection--single .select2-selection__rendered {
             line-height: 24px;
             padding: 0 20px 0 0;
         }
-        #filtros-ventas-mensuales .select2-selection--single .select2-selection__arrow { height: 34px; }
+
+        #filtros-ventas-mensuales .select2-selection--single .select2-selection__arrow {
+            height: 34px;
+        }
+
         #filtros-ventas-mensuales .select2-selection--multiple .select2-selection__rendered {
             display: flex;
             flex-wrap: wrap;
@@ -527,12 +692,17 @@
             margin: 0;
             padding: 0;
         }
+
         #filtros-ventas-mensuales .select2-selection--multiple .select2-selection__choice {
             margin: 0;
             padding: 1px 5px;
             line-height: 20px;
         }
-        #filtros-ventas-mensuales .select2-search--inline { margin: 0; }
+
+        #filtros-ventas-mensuales .select2-search--inline {
+            margin: 0;
+        }
+
         #filtros-ventas-mensuales .select2-search__field {
             margin: 0 !important;
             padding: 0;
@@ -540,27 +710,73 @@
             min-height: 0;
             line-height: 24px;
         }
-        #filtros-ventas-mensuales button[type="submit"] { height: 36px; margin-top: 20px; }
-        @media (max-width: 767px) {
-            #filtros-ventas-mensuales button[type="submit"] { margin-top: 0; }
-        }
-        #ventas-mensuales .ventas-kpi .card-body { padding: 10px 12px; }
-        #ventas-mensuales .ventas-kpi .mb-2 { margin-bottom: 4px !important; }
-        #ventas-mensuales .ventas-valor { font-size: 25px; line-height: 1.2; margin-bottom: 5px; }
-        #ventas-mensuales .ventas-encabezado-cuantitativo { padding: 10px 14px; }
-        #ventas-mensuales .ventas-separador { margin: 14px 0; border-top-width: 1px; }
-        #ventas-mensuales .ventas-card-desglose { margin-left: 16px; }
-        #ventas-mensuales .ventas-chart { height: 280px; }
-        #modal-declinados-ventas .modal-body { font-size: 12px; }
-        #modal-declinados-ventas .table th,
-        #modal-declinados-ventas .table td { padding: 5px 7px; font-size: 12px; }
-        #modal-declinados-ventas .form-control,
-        #modal-declinados-ventas .btn { font-size: 12px; }
-        @media (max-width: 575px) {
-            #ventas-mensuales .card-body { padding: 10px; }
-            #ventas-mensuales .ventas-card-desglose { margin-left: 0; }
+
+        #filtros-ventas-mensuales button[type="submit"] {
+            height: 36px;
+            margin-top: 20px;
         }
 
+        @media (max-width: 767px) {
+            #filtros-ventas-mensuales button[type="submit"] {
+                margin-top: 0;
+            }
+        }
+
+        #ventas-mensuales .ventas-kpi .card-body {
+            padding: 10px 12px;
+        }
+
+        #ventas-mensuales .ventas-kpi .mb-2 {
+            margin-bottom: 4px !important;
+        }
+
+        #ventas-mensuales .ventas-valor {
+            font-size: 25px;
+            line-height: 1.2;
+            margin-bottom: 5px;
+        }
+
+        #ventas-mensuales .ventas-encabezado-cuantitativo {
+            padding: 10px 14px;
+        }
+
+        #ventas-mensuales .ventas-separador {
+            margin: 14px 0;
+            border-top-width: 1px;
+        }
+
+        #ventas-mensuales .ventas-card-desglose {
+            margin-left: 16px;
+        }
+
+        #ventas-mensuales .ventas-chart {
+            height: 280px;
+        }
+
+        #modal-declinados-ventas .modal-body {
+            font-size: 12px;
+        }
+
+        #modal-declinados-ventas .table th,
+        #modal-declinados-ventas .table td {
+            padding: 5px 7px;
+            font-size: 12px;
+        }
+
+        #modal-declinados-ventas .form-control,
+        #modal-declinados-ventas .btn {
+            font-size: 12px;
+        }
+
+        @media (max-width: 575px) {
+            #ventas-mensuales .card-body {
+                padding: 10px;
+            }
+
+            #ventas-mensuales .ventas-card-desglose {
+                margin-left: 0;
+            }
+        }
     </style>
 </section>
 
