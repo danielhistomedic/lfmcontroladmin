@@ -98,14 +98,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     const nodes = api.rows({ page: 'current' }).nodes();
                     let previous = '';
                     api.rows({ page: 'current' }).data().each((row, index) => {
-                        const key = JSON.stringify([row.vendedor_id, row.cliente_id]);
+                        const key = JSON.stringify([row.vendedor_id]);
                         if (key === previous) return;
                         previous = key;
                         const heading = document.createElement('tr');
                         const cell = document.createElement('td');
                         cell.colSpan = api.columns(':visible').count();
                         cell.className = 'bg-light fw-bold text-primary text-wrap';
-                        cell.textContent = row.vendedor + ' → ' + row.cliente;
+                        cell.textContent = row.vendedor;
                         heading.appendChild(cell);
                         nodes[index].parentNode.insertBefore(heading, nodes[index]);
                     });
