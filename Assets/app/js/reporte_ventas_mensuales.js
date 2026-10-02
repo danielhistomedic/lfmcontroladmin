@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const bars = rows => ['cotizado', 'colocado'].map((key, i) => ({ name: i === 0 ? 'Cotizado' : 'Colocado', type: 'bar', data: rows.map(r => r[key]) }));
     const projectCounts = [...(data.proyectos_por_vendedor || [])].sort((a, b) => b.proyectos - a.proyectos);
-    const statusCounts = data.estatus_por_vendedor || [];
+    const statusCounts = data.clasificaciones_por_vendedor || [];
     const selector = document.getElementById('ventas-vendedor-desglose');
     const statusPanel = document.getElementById('ventas-estatus-panel');
     const cascadeCharts = [];
@@ -259,13 +259,23 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedIndex < 0) return;
         const seller = projectCounts[selectedIndex];
         const statuses = statusCounts.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))
-            .sort((a, b) => b.proyectos - a.proyectos);
+            .sort((a, b) => Number(a.clasificacion_id) - Number(b.clasificacion_id));
         document.getElementById('ventas-estatus-titulo').textContent = seller.nombre + ' — ' + seller.proyectos + ' proyectos';
         document.getElementById('ventas-estatus-resumen').textContent = statuses.length
-            ? statuses.map(row => row.estatus + ': ' + row.proyectos).join(' | ') : 'Sin estatus registrados.';
+            ? statuses.map(row => row.clasificacion + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ') : 'Sin clasificaciones registradas.';
         if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
         statusChart.count = statuses.length;
-        statusChart.instance.setOption(cascadeOption(statuses.map(row => ({ nombre: row.estatus, proyectos: row.proyectos }))), true);
+        const option = cascadeOption(statuses.map(row => ({ nombre: row.clasificacion, proyectos: row.proyectos })));
+        option.legend = { top: 0, textStyle: { color: cascadeText } };
+        option.series = [
+            { name: 'No declinados', type: 'bar', stack: 'proyectos', barMaxWidth: 65,
+                itemStyle: { color: '#2385bd' }, data: statuses.map(row => row.proyectos - row.declinados) },
+            { name: 'Declinados', type: 'bar', stack: 'proyectos', barMaxWidth: 65,
+                itemStyle: { color: '#dc3545' }, data: statuses.map(row => row.declinados),
+                label: { show: true, position: 'top', color: cascadeText,
+                    formatter: params => String(statuses[params.dataIndex].proyectos) } }
+        ];
+        statusChart.instance.setOption(option, true);
         fitCascade(statusChart);
     }
     sellerChart.instance.on('click', event => {

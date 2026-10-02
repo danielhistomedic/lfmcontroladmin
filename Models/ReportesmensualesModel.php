@@ -155,21 +155,25 @@ class ReportesmensualesModel extends Mysql
             ORDER BY proyectos DESC, nombre ASC, v.ccveusuario_vendedor ASC", $params);
         foreach ($projectsBySeller as &$sellerRow) $sellerRow['proyectos'] = (int)$sellerRow['proyectos'];
         unset($sellerRow);
-        // Misma relación de estatus que VentasModel::selectVentasPorEstatus.
+        // Clasificaciones del catálogo, con declinados separados dentro de cada total.
         $statusesBySeller = $this->consultar("SELECT v.ccveusuario_vendedor AS vendedor_id,
-            v.estatus_proyecto_id AS estatus_id, COALESCE(s.cEstatus, 'Sin Estatus') AS estatus,
-            COUNT(*) AS proyectos
-            FROM tb_ventas v LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
+            v.clasificacion_proyecto_id AS clasificacion_id, COALESCE(s.clasificacion, 'Sin clasificación') AS clasificacion,
+            COUNT(*) AS proyectos,
+            SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
+            FROM tb_ventas v LEFT JOIN cat_clasificacion_proyectos s ON s.id = v.clasificacion_proyecto_id
             WHERE v.fecha >= ? AND v.fecha < ? $scope
-            GROUP BY v.ccveusuario_vendedor, v.estatus_proyecto_id, s.cEstatus
-            ORDER BY proyectos DESC, estatus ASC, v.estatus_proyecto_id ASC", $params);
-        foreach ($statusesBySeller as &$statusRow) $statusRow['proyectos'] = (int)$statusRow['proyectos'];
+            GROUP BY v.ccveusuario_vendedor, v.clasificacion_proyecto_id, s.clasificacion
+            ORDER BY v.clasificacion_proyecto_id ASC, v.ccveusuario_vendedor ASC", $params);
+        foreach ($statusesBySeller as &$statusRow) {
+            $statusRow['proyectos'] = (int)$statusRow['proyectos'];
+            $statusRow['declinados'] = (int)$statusRow['declinados'];
+        }
         unset($statusRow);
         return self::resumir($headers, $lines, $divisor, (int)(new DateTimeImmutable($start))->format('t'))
             + [
                 'cantidades' => $quantities,
                 'proyectos_por_vendedor' => $projectsBySeller,
-                'estatus_por_vendedor' => $statusesBySeller,
+                'clasificaciones_por_vendedor' => $statusesBySeller,
                 'tipo_cambio' => $rate,
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
