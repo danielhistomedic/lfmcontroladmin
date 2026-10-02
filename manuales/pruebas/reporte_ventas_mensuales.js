@@ -71,6 +71,21 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(statusOption.series[0].stack,statusOption.series[1].stack);
         const tip = statusOption.tooltip[0].formatter({seriesIndex:0,dataIndex:3});
         assert.ok(tip.includes('Cotizacion') && tip.includes('Septiembre 2026') && tip.includes('Total: 4'));
+        assert.equal(statusOption.series[0].barWidth,26);
+        assert.equal(statusOption.series[0].label.fontSize,9);
+        assert.equal(statusOption.xAxis[1].offset,100);
+        charts[3].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:1});
+        const statusModal = nodes.get('modal-declinados-ventas');
+        assert.equal(statusModal.dataset.desgloseLista,'estatus_periodo');
+        assert.equal(statusModal.dataset.estatusId,'3');
+        assert.equal(statusModal.dataset.segmento,'declinados');
+        assert.equal(statusModal.dataset.desgloseAnio,'2026');
+        assert.equal(statusModal.dataset.desgloseMes,'9');
+        charts[3].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:2});
+        assert.equal(statusModal.dataset.estatusId,'6');
+        assert.equal(statusModal.dataset.segmento,'no_declinados');
+        assert.equal(statusModal.dataset.desgloseAnio,'2024');
+        assert.equal(statusModal.dataset.desgloseMes,'2');
 
         assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
         assert.deepEqual(charts[2].getOption().xAxis[1].data,['2024','2024','2026','2026']);

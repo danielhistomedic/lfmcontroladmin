@@ -63,7 +63,7 @@ class Reportesmensuales extends Controllers
             $restricted = (int)$this->session->get('rol_id') === 4;
             $seller = $restricted ? (string)$this->session->get('ccveusuario') : '';
             $lista = $_POST['lista'] ?? 'declinados';
-            if (!in_array($lista, ['declinados', 'interna_sin_cliente','estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'], true)) {
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente','estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo'], true)) {
                 http_response_code(400);
                 echo json_encode(['respuesta'=>'error', 'data'=>[]]);
                 return;
@@ -214,7 +214,7 @@ class Reportesmensuales extends Controllers
                 $seller = $scope;
             }
             $lista = $_GET['lista'] ?? 'declinados';
-            if (!in_array($lista, ['declinados', 'interna_sin_cliente', 'estatus_clasificacion', 'vendedor_clasificacion', 'clasificacion_periodo'], true)
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente', 'estatus_clasificacion', 'vendedor_clasificacion', 'clasificacion_periodo', 'estatus_periodo'], true)
                 || ($lista !== 'declinados' && ($_GET['datatable'] ?? '') !== '1')) {
                 http_response_code(400);
                 echo json_encode(['status'=>false, 'message'=>'La lista solicitada no es válida.']);
@@ -226,8 +226,8 @@ class Reportesmensuales extends Controllers
                 $options = ['draw'=>$integer('draw',1,0,1000000000), 'start'=>$integer('start',0,0,1000000),
                     'length'=>$integer('length',10,5,100), 'order_column'=>$integer('order_column',2,0,7),
                     'order_dir'=>$_GET['order_dir'] ?? 'desc', 'search'=>$_GET['search'] ?? '', 'filters'=>[]];
-                if ($lista === 'estatus_clasificacion') {
-                    $options['clasificacion_id'] = $integer('clasificacion_id', 0, 1, 2147483647);
+                if (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true)) {
+                    $options['clasificacion_id'] = $lista === 'estatus_periodo' ? null : $integer('clasificacion_id', 0, 1, 2147483647);
                     $options['estatus_id'] = ($_GET['estatus_id'] ?? '') === 'sin_estatus'
                         ? null : $integer('estatus_id', 0, 1, 2147483647);
                     $options['segmento'] = $_GET['segmento'] ?? '';

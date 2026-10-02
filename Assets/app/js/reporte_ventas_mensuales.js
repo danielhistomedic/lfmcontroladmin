@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'].includes(lista);
+        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo'].includes(lista);
         const listTitle = () => isDrill() ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
@@ -132,9 +132,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     years.split(',').forEach(year => params.append('anio[]', year));
                     months.split(',').forEach(month => params.append('mes[]', month));
                     if (isDrill()) {
-                        params.set('clasificacion_id', modal.dataset.clasificacionId);
+                        if (lista !== 'estatus_periodo') params.set('clasificacion_id', modal.dataset.clasificacionId);
                         if (lista === 'vendedor_clasificacion') params.set('vendedor_id', modal.dataset.desgloseVendedor);
-                        else if (lista === 'estatus_clasificacion') params.set('estatus_id', modal.dataset.estatusId);
+                        else if (lista === 'estatus_clasificacion' || lista === 'estatus_periodo') params.set('estatus_id', modal.dataset.estatusId);
                         params.set('segmento', modal.dataset.segmento);
                     }
                     data.columns.forEach((column, index) => { if (index > 0 && index < 8) params.set('f' + index, column.search.value); });
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!event.relatedTarget && modal.dataset.desglose !== '1') return;
             const next = event.relatedTarget ? (event.relatedTarget.dataset.lista || 'declinados') : (modal.dataset.desgloseLista || 'estatus_clasificacion');
             if (event.relatedTarget) modal.dataset.desglose = '';
-            if ((next !== lista || ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'].includes(next)) && table) {
+            if ((next !== lista || ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo'].includes(next)) && table) {
                 table.search('');
                 table.columns().search('');
                 jQuery(table.table().container()).find('thead input').val('');
@@ -476,10 +476,10 @@ document.addEventListener('DOMContentLoaded', function () {
         series: statuses.flatMap((status,index) => {
             const totals = periods.map(period=>statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
             return [
-                {name:status.nombre,type:'bar',stack:'estatus-'+status.id,barWidth:38,barGap:'270%',
+                {name:status.nombre,type:'bar',stack:'estatus-'+status.id,barWidth:26,barGap:'230%',
                     itemStyle:{color:statusColors[index%statusColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
-                    label:{show:true,position:'bottom',distance:8,color:cascadeText,fontSize:10,width:125,overflow:'break',lineHeight:14,formatter:()=>status.nombre}},
-                {name:'Declinados',type:'bar',stack:'estatus-'+status.id,barWidth:50,barGap:'260%',
+                    label:{show:true,position:'bottom',distance:5,color:cascadeText,fontSize:9,width:82,overflow:'break',lineHeight:11,formatter:()=>status.nombre}},
+                {name:'Declinados',type:'bar',stack:'estatus-'+status.id,barWidth:26,barGap:'230%',
                     itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
                     label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
             ];
@@ -493,17 +493,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }}
     };
     const generalStatusChart = cascade('ventas-estatus-general');
-    generalStatusChart.height = 430;
-    generalStatusChart.element.style.height = '430px';
+    generalStatusChart.height = 370;
+    generalStatusChart.element.style.height = '370px';
     generalStatusChart.count = periods.length;
-    generalStatusChart.slotWidth = Math.max(320,statuses.length*145);
+    generalStatusChart.slotWidth = Math.max(280,statuses.length*88);
     statusOption.grid.top = 25;
-    statusOption.grid.bottom = 160;
+    statusOption.grid.bottom = 125;
     statusOption.xAxis = principalOption.xAxis.map(axis => ({...axis,axisLabel:{...axis.axisLabel}}));
-    statusOption.xAxis[0].axisLabel.margin = 100;
-    statusOption.xAxis[1].offset = 125;
+    statusOption.xAxis[0].axisLabel.margin = 83;
+    statusOption.xAxis[0].axisLabel.fontSize = 10;
+    statusOption.xAxis[1].offset = 100;
+    statusOption.xAxis[1].axisLabel.fontSize = 10;
     generalStatusChart.instance.setOption(statusOption);
     fitCascade(generalStatusChart);
+    generalStatusChart.instance.on('click', event => {
+        if (event.componentType !== 'series') return;
+        const status = statuses[Math.floor(event.seriesIndex / 2)];
+        const period = periods[event.dataIndex];
+        const modal = document.getElementById('modal-declinados-ventas');
+        if (!status || !period || !modal) return;
+        modal.dataset.desglose = '1';
+        modal.dataset.desgloseLista = 'estatus_periodo';
+        modal.dataset.estatusId = status.id == null ? 'sin_estatus' : String(status.id);
+        modal.dataset.desgloseAnio = String(period.anio);
+        modal.dataset.desgloseMes = String(period.mes);
+        modal.dataset.segmento = event.seriesIndex % 2 === 1 ? 'declinados' : 'no_declinados';
+        modal.dataset.desgloseTitulo = status.nombre + ' · ' + monthNames[Number(period.mes)-1] + ' ' + period.anio +
+            (event.seriesIndex % 2 === 1 ? ' · Declinados' : ' · No declinados');
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    });
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
 });
