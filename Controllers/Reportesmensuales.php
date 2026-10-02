@@ -213,7 +213,7 @@ class Reportesmensuales extends Controllers
                 $seller = $scope;
             }
             $lista = $_GET['lista'] ?? 'declinados';
-            if (!in_array($lista, ['declinados', 'interna_sin_cliente', 'estatus_clasificacion', 'vendedor_clasificacion'], true)
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente', 'estatus_clasificacion', 'vendedor_clasificacion', 'clasificacion_periodo'], true)
                 || ($lista !== 'declinados' && ($_GET['datatable'] ?? '') !== '1')) {
                 http_response_code(400);
                 echo json_encode(['status'=>false, 'message'=>'La lista solicitada no es válida.']);
@@ -237,12 +237,12 @@ class Reportesmensuales extends Controllers
                         return;
                     }
                 }
-                if ($lista === 'vendedor_clasificacion') {
+                if (in_array($lista,['vendedor_clasificacion','clasificacion_periodo'],true)) {
                     $options['clasificacion_id'] = $integer('clasificacion_id',0,1,2147483647);
                     $options['vendedor_id'] = $_GET['vendedor_id'] ?? null;
                     $options['segmento'] = $_GET['segmento'] ?? '';
-                    if ($options['clasificacion_id'] === false || !is_string($options['vendedor_id'])
-                        || strlen($options['vendedor_id']) > 100
+                    if ($options['clasificacion_id'] === false || ($lista === 'vendedor_clasificacion' && (!is_string($options['vendedor_id'])
+                        || strlen($options['vendedor_id']) > 100))
                         || !in_array($options['segmento'],['declinados','no_declinados'],true)) {
                         http_response_code(400);
                         echo json_encode(['status'=>false,'message'=>'El desglose solicitado no es válido.']);

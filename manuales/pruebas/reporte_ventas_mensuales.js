@@ -63,7 +63,13 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.deepEqual(charts[2].getOption().xAxis[1].data,['2024','2024','2026','2026']);
         assert.deepEqual(charts[2].getOption().series[2].data,[1,0,0,6]);
         assert.deepEqual(charts[2].getOption().series[3].data,[1,0,0,1]);
-        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:2});
+        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:3});
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'clasificacion_periodo');
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'declinados');
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseAnio,'2026');
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseMes,'9');
+        nodes.get('ventas-clasificacion-desglose').value='3';
+        nodes.get('ventas-clasificacion-desglose').events.change();
         assert.ok(nodes.get('ventas-clasificacion-card-titulo').textContent.includes('2026'));
         assert.equal(charts[3].getOption().xAxis[0].data.length,12);
         assert.equal(charts[3].getOption().xAxis[0].data[0],'Enero');
@@ -143,6 +149,9 @@ function ejecutar(empty, width, theme, periods = false) {
     }
     if (!empty) {
         charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'no_declinados');
+        nodes.get('ventas-clasificacion-desglose').value='3';
+        nodes.get('ventas-clasificacion-desglose').events.change();
         assert.equal(nodes.get('ventas-clasificacion-card').open,true);
         assert.equal(nodes.get('ventas-clasificacion-card').hidden,false);
         assert.equal(charts[6].getOption().xAxis[0].data.length,12);

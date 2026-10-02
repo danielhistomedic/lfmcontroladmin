@@ -266,6 +266,14 @@ http_response_code(200);
 
 // Renderiza sólo la vista con datos sintéticos y sin cargar las plantillas del portal.
 // El modal por vendedor conserva el alcance autorizado y agrega la seleccion concreta.
+$classificationModalDb = new ConexionSimulada([[['total'=>1]], [['total'=>1]], []]);
+(new ModeloSimulado($classificationModalDb))->declinadosTabla(2026,9,'V1',
+    ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[],
+    'clasificacion_id'=>3,'segmento'=>'no_declinados'], 'clasificacion_periodo');
+foreach ($classificationModalDb->calls as [$sql,$params]) {
+    verificar($params===['2026-09-01','2026-10-01','V1',3], 'Modal de clasificacion respeta mes, vendedor autorizado y clasificacion');
+    verificar(str_contains($sql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Tramo normal excluye declinados');
+}
 $sellerModalDb = new ConexionSimulada([[['total'=>1]], [['total'=>1]], []]);
 (new ModeloSimulado($sellerModalDb))->declinadosTabla(2026,9,'V1',
     ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[],

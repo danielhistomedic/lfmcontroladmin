@@ -257,7 +257,7 @@ class ReportesmensualesModel extends Mysql
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
         }
-        if (in_array($lista, ['estatus_clasificacion','vendedor_clasificacion'], true)) {
+        if (in_array($lista, ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'], true)) {
             $where = "$projectPeriod AND " . self::FILTRO_PROYECTOS;
             $params = $dateParams;
             if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
@@ -266,8 +266,8 @@ class ReportesmensualesModel extends Mysql
             if ($lista === 'vendedor_clasificacion') {
                 $where .= ' AND v.ccveusuario_vendedor = ?';
                 $params[] = $options['vendedor_id'];
-            } elseif ($options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
-            else { $where .= ' AND v.estatus_proyecto_id = ?'; $params[] = $options['estatus_id']; }
+            } elseif ($lista === 'estatus_clasificacion' && $options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
+            elseif ($lista === 'estatus_clasificacion') { $where .= ' AND v.estatus_proyecto_id = ?'; $params[] = $options['estatus_id']; }
             $where .= $options['segmento'] === 'declinados'
                 ? " AND v.activo = 'CERRADO'" : " AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'";
         }
@@ -308,7 +308,7 @@ class ReportesmensualesModel extends Mysql
         $orderIndex = (int)$options['order_column'];
         $order = $orderIndex === 2 ? 'v.fecha' : ($fields[$orderIndex] ?? 'v.id');
         $direction = $options['order_dir'] === 'asc' ? 'ASC' : 'DESC';
-        $groupOrder = in_array($lista, ['estatus_clasificacion','vendedor_clasificacion'], true)
+        $groupOrder = in_array($lista, ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'], true)
             ? "$sellerName ASC, v.ccveusuario_vendedor ASC, COALESCE(c.nombre_comercial, 'Sin cliente') ASC, v.cliente_id ASC, " : '';
         $length = max(5, min(100, (int)$options['length']));
         $offset = max(0, min(1000000, (int)$options['start']));

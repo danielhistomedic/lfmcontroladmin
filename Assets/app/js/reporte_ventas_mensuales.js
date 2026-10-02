@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion'].includes(lista);
+        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'].includes(lista);
         const listTitle = () => isDrill() ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (isDrill()) {
                         params.set('clasificacion_id', modal.dataset.clasificacionId);
                         if (lista === 'vendedor_clasificacion') params.set('vendedor_id', modal.dataset.desgloseVendedor);
-                        else params.set('estatus_id', modal.dataset.estatusId);
+                        else if (lista === 'estatus_clasificacion') params.set('estatus_id', modal.dataset.estatusId);
                         params.set('segmento', modal.dataset.segmento);
                     }
                     data.columns.forEach((column, index) => { if (index > 0 && index < 8) params.set('f' + index, column.search.value); });
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!event.relatedTarget && modal.dataset.desglose !== '1') return;
             const next = event.relatedTarget ? (event.relatedTarget.dataset.lista || 'declinados') : (modal.dataset.desgloseLista || 'estatus_clasificacion');
             if (event.relatedTarget) modal.dataset.desglose = '';
-            if ((next !== lista || ['estatus_clasificacion','vendedor_clasificacion'].includes(next)) && table) {
+            if ((next !== lista || ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo'].includes(next)) && table) {
                 table.search('');
                 table.columns().search('');
                 jQuery(table.table().container()).find('thead input').val('');
@@ -561,10 +561,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (event.componentType !== 'series') return;
         const row = generalClassifications[Math.floor(event.seriesIndex / 2)];
         const period = periods[event.dataIndex];
-        if (row) {
-            if (period) yearSelect.value=String(period.anio);
-            selectClassification(row.clasificacion_id);
-        }
+        if (!row || !period) return;
+        const modal = document.getElementById('modal-declinados-ventas');
+        modal.dataset.desglose = '1';
+        modal.dataset.desgloseLista = 'clasificacion_periodo';
+        modal.dataset.clasificacionId = String(row.clasificacion_id);
+        modal.dataset.desgloseAnio = String(period.anio);
+        modal.dataset.desgloseMes = String(period.mes);
+        modal.dataset.segmento = event.seriesIndex % 2 === 1 ? 'declinados' : 'no_declinados';
+        modal.dataset.desgloseTitulo = row.clasificacion + ' · ' + monthNames[Number(period.mes)-1] + ' ' + period.anio +
+            (event.seriesIndex % 2 === 1 ? ' · Declinados' : ' · No declinados');
+        bootstrap.Modal.getOrCreateInstance(modal).show();
     });
     classificationSelect.addEventListener('change', () => selectClassification(classificationSelect.value));
     yearSelect.addEventListener('change', updateMonthly);
