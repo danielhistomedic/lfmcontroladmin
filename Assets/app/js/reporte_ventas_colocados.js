@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const tables = new Map();
     const amount = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const displayAmount = value => Number.isFinite(Number(value)) ? '$ ' + amount.format(Number(value)) : '—';
-    const text = jQuery.fn.dataTable.render.text().display;
     function params(section) {
         const result = new URLSearchParams({ seccion: section, vendedor: modal.dataset.vendedor });
         modal.dataset.anio.split(',').forEach(year => result.append('anio[]', year));
@@ -70,44 +69,69 @@ document.addEventListener('DOMContentLoaded', function () {
             retry.hidden = false;
         }
     }
-    function loadTable(section) {
-        if (tables.has(section)) { tables.get(section).columns.adjust(); tables.get(section).ajax.reload(null, true); return; }
-        const element = document.getElementById('colocados-' + section + '-tabla');
-        const tableState = document.getElementById('colocados-' + section + '-estado');
-        const table = jQuery(element).DataTable({
-            serverSide: true, processing: true, searchDelay: 400, pageLength: 10,
-            lengthMenu: [5,10,25,50,100], order: [[1,'asc']],
-            language: typeof idioma_espanol !== 'undefined' ? idioma_espanol : {
-                processing:'Cargando…',emptyTable:'Sin pedidos',zeroRecords:'Sin coincidencias',search:'Buscar:',
-                lengthMenu:'Mostrar _MENU_',info:'_START_ a _END_ de _TOTAL_',infoEmpty:'Sin registros',infoFiltered:'(de _MAX_)',
-                paginate:{previous:'Anterior',next:'Siguiente'}
-            },
-            columns: [
-                {data:'nombre',render:(value,type)=>type === 'display' ? text(String(value ?? '')) : value},
-                {data:'moneda',render:(value,type)=>type === 'display' ? text(String(value ?? '')) : value},
-                {data:'total',className:'text-end',render:(value,type)=>type === 'display' ? displayAmount(value) : value}
-            ],
-            ajax: async function (data, callback) {
-                const query = params(section);
-                const order = data.order[0] || {column:1,dir:'asc'};
-                Object.entries({draw:data.draw,start:data.start,length:data.length,search:data.search.value,
-                    order_column:order.column,order_dir:order.dir}).forEach(([key,value])=>query.set(key,String(value)));
-                tableState.textContent = '';
-                try { callback(await get(section, query)); }
-                catch (error) {
-                    if (error.name === 'AbortError') return;
-                    tableState.textContent = error instanceof SyntaxError ? 'No se pudo cargar la tabla. Intente nuevamente.' : error.message;
-                    retry.hidden = false;
-                    callback({draw:data.draw,recordsTotal:0,recordsFiltered:0,data:[]});
-                }
-            }
-        });
-        tables.set(section, table);
+    async function loadTable(section, reset = false) {
+        const table = tables.get(section);
+        if (reset) table.start = 0;
+        clearTimeout(table.timer);
+        const query = params(section);
+        const [column, direction] = table.order.value.split(':');
+        Object.entries({draw:1,start:table.start,length:10,search:table.search.value,
+            order_column:column,order_dir:direction}).forEach(([key,value])=>query.set(key,String(value)));
+        table.state.textContent = 'Cargando...';
+        table.state.className = 'text-muted';
+        table.element.setAttribute('aria-busy', 'true');
+        table.previous.disabled = table.next.disabled = true;
+        table.body.replaceChildren();
+        table.page.textContent = '';
+        try {
+            const data = await get(section, query);
+            data.data.forEach(row => {
+                const tr = document.createElement('tr');
+                [row.nombre, row.moneda, displayAmount(row.total)].forEach((value, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = String(value ?? '');
+                    if (index === 1) td.className = 'colocados-moneda';
+                    if (index === 2) td.className = 'text-end';
+                    tr.appendChild(td);
+                });
+                table.body.appendChild(tr);
+            });
+            table.state.textContent = data.data.length ? '' : 'Sin resultados para esta selección.';
+            table.page.textContent = data.recordsFiltered ? (table.start + 1) + '–' +
+                (table.start + data.data.length) + ' de ' + data.recordsFiltered : '0 resultados';
+            table.previous.disabled = table.start === 0;
+            table.next.disabled = table.start + 10 >= data.recordsFiltered;
+            table.element.setAttribute('aria-busy', 'false');
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            table.state.textContent = error instanceof SyntaxError ? 'No se pudo cargar la tabla. Intente nuevamente.' : error.message;
+            table.state.className = 'text-danger';
+            table.element.setAttribute('aria-busy', 'false');
+            retry.hidden = false;
+        }
     }
-    function load() { loadSummary(); loadTable('clientes'); loadTable('vendedores'); }
+    ['clientes','vendedores'].forEach(section => {
+        const control = name => document.getElementById('colocados-' + section + '-' + name);
+        const element = control('tabla');
+        const table = {element,body:element.querySelector('tbody'),state:control('estado'),
+            page:control('pagina'),previous:control('anterior'),next:control('siguiente'),
+            search:control('buscar'),order:control('orden'),start:0,timer:null};
+        tables.set(section, table);
+        table.search.addEventListener('input', () => {
+            clearTimeout(table.timer);
+            // Cancel pending results as soon as the search changes.
+            if (requests.has(section)) requests.get(section).abort();
+            table.timer = setTimeout(() => loadTable(section, true), 350);
+        });
+        table.order.addEventListener('change', () => loadTable(section, true));
+        table.previous.addEventListener('click', () => { table.start = Math.max(0, table.start - 10); loadTable(section); });
+        table.next.addEventListener('click', () => { table.start += 10; loadTable(section); });
+    });
+    function load() { loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
     modal.addEventListener('shown.bs.modal', load);
     modal.addEventListener('hidden.bs.modal', () => {
         requests.forEach(request => request.abort()); requests.clear(); summary.hidden = true;
+        tables.forEach(table => clearTimeout(table.timer));
     });
     retry.addEventListener('click', load);
     document.querySelectorAll('#ventas-mensuales .ventas-abrir-colocados').forEach(card => {

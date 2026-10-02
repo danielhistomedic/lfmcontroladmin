@@ -10,7 +10,7 @@
 #modal-colocados-financiero .colocados-nota { color: #62758e; font-size: 11px; margin-bottom: 14px; }
 #modal-colocados-financiero .colocados-monedas,
 #modal-colocados-financiero .colocados-grupos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-#modal-colocados-financiero .colocados-resumen-seccion { min-width: 0; margin-bottom: 14px; padding: 12px; border: 1px solid #dfe8f2; border-radius: 6px; }
+#modal-colocados-financiero .colocados-resumen-seccion { min-width: 0; margin-bottom: 14px; padding: 12px; border: 1px solid #dfe8f2; border-radius: 6px; box-shadow: 0 2px 8px rgba(23, 75, 102, .08); }
 #modal-colocados-financiero .colocados-total { padding: 10px; background: #f3f7fa; border-left: 3px solid #2385bd; border-radius: 4px; min-width: 0; }
 #modal-colocados-financiero .colocados-total strong { display: block; font-size: 20px; color: #174b66; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 #modal-colocados-financiero .colocados-total small { display: block; font-size: 11px; color: #62758e; }
@@ -18,12 +18,21 @@
 #modal-colocados-financiero .table th { background: #eaf1fa !important; color: #174b66 !important; font-weight: 600; }
 #modal-colocados-financiero .table td { padding: 6px 8px; font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
 #modal-colocados-financiero .table td.text-end { font-variant-numeric: tabular-nums; white-space: nowrap; }
-#modal-colocados-financiero .dataTables_wrapper .row { --bs-gutter-x: 8px; --bs-gutter-y: 8px; }
-#modal-colocados-financiero .dataTables_filter input { width: 120px; }
+#modal-colocados-financiero .colocados-tabla-controles { display: flex; gap: 12px; margin-bottom: 12px; }
+#modal-colocados-financiero .colocados-tabla-controles label { flex: 1; min-width: 0; color: #62758e; font-size: 10px; }
+#modal-colocados-financiero .colocados-tabla-controles input,
+#modal-colocados-financiero .colocados-tabla-controles select { margin-top: 4px; border-radius: 5px; border-color: #dfe8f2; }
+#modal-colocados-financiero .colocados-tabla { margin: 0; border-collapse: separate; border-spacing: 0; }
+#modal-colocados-financiero .colocados-tabla th { padding: 9px 8px; border: 0; }
+#modal-colocados-financiero .colocados-tabla td { padding: 9px 8px; border: 0; border-bottom: 1px solid #edf1f6; }
+#modal-colocados-financiero .colocados-tabla tbody tr:hover { background: #f5f9fc; }
+#modal-colocados-financiero .colocados-moneda { color: #62758e; font-weight: 600; }
+#modal-colocados-financiero .colocados-tabla-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; color: #62758e; font-size: 10px; }
+#modal-colocados-financiero .colocados-tabla-pie nav { display: flex; gap: 6px; }
+#modal-colocados-financiero .colocados-tabla-pie button { border: 1px solid #dfe8f2; border-radius: 5px; color: #174b66; }
 #modal-colocados-financiero .form-control,
 #modal-colocados-financiero .form-select,
 #modal-colocados-financiero .btn { font-size: 11px; }
-#modal-colocados-financiero .dataTables_processing { z-index: 10; background: #fff !important; color: #334765 !important; border: 1px solid #dfe8f2; box-shadow: 0 3px 12px rgba(0,0,0,.15); }
 html.dark #modal-colocados-financiero .modal-content { background: #21313e; color: #edf2f7; }
 html.dark #modal-colocados-financiero .colocados-resumen-seccion { border-color: #455563; }
 html.dark #modal-colocados-financiero h6,
