@@ -58,8 +58,8 @@
             <?php if ($report['cantidades']['total_proyectos'] === 0 && $report['proyectos'] === 0): ?><div class="alert alert-info" role="status">No hay proyectos ni ventas cotizadas o colocadas para los filtros seleccionados.</div><?php endif; ?>
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
-                <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en el mes seleccionado'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos del mes declinados'], ['Cotización Cliente', $report['cantidades']['cotizacion_cliente'], 'Proyectos del mes con cotización enviada'], ['Orden Compra Cliente', $report['cantidades']['orden_compra_cliente'], 'Proyectos del mes con orden de compra de cliente']] as $kpi): ?>
-                    <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Orden Compra Cliente' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
+                <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en el mes seleccionado'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos del mes declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos del mes con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos del mes con orden de compra de cliente']] as $kpi): ?>
+                    <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
                         <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ''; ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php endif; ?>>
                             <div class="card-body">
@@ -106,6 +106,12 @@
                                 <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                 <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de clasificaciones del vendedor; desplazamiento horizontal">
                                     <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por clasificación, con declinados apilados en rojo"></div>
+                                </div>
+                                <hr class="ventas-separador">
+                                <h4 id="ventas-desglose-estatus-titulo" aria-live="polite"></h4>
+                                <p id="ventas-desglose-estatus-resumen" class="text-muted" aria-live="polite"></p>
+                                <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica por estatus del proyecto; desplazamiento horizontal">
+                                    <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos por estatus, con declinados apilados en rojo"></div>
                                 </div>
                             </div>
                         </div>
@@ -260,52 +266,64 @@
             width: 100%;
             overflow-x: auto;
         }
+
         #ventas-mensuales .ventas-cascada-scroll:focus-visible {
             outline: 2px solid var(--primary, #0088cc);
             outline-offset: 2px;
         }
+
         #ventas-mensuales .ventas-separador {
             border: 0;
             border-top: 2px solid #c5d6df;
             opacity: 1;
             margin: 1.5rem 0;
         }
+
         html.dark #ventas-mensuales .ventas-separador {
             border-top-color: #465a68;
         }
+
         #ventas-mensuales {
             --ventas-texto: #243447;
             --ventas-texto-secundario: #46566a;
             --ventas-titulo: #174b66;
             color: var(--ventas-texto);
         }
+
         html.dark #ventas-mensuales {
             --ventas-texto: #edf2f7;
             --ventas-texto-secundario: #cbd5e1;
             --ventas-titulo: #9ddaf0;
         }
+
         #ventas-mensuales .card-body,
         #ventas-mensuales p,
         #ventas-mensuales .form-label {
             color: var(--ventas-texto);
         }
+
         #ventas-mensuales .text-muted {
             color: var(--ventas-texto-secundario) !important;
         }
+
         #ventas-mensuales h3,
         #ventas-mensuales h4,
         #ventas-mensuales summary {
             color: var(--ventas-titulo);
         }
+
         #ventas-mensuales .ventas-valor {
             color: inherit;
         }
+
         #modalSeguimientosVenta .text-muted {
             color: #46566a !important;
         }
+
         html.dark #modalSeguimientosVenta .text-muted {
             color: #cbd5e1 !important;
         }
+
         /* El indicador debe quedar por encima de las filas y ocultar el texto de fondo. */
         #modal-declinados-ventas .dataTables_processing,
         #modalSeguimientosVenta .dataTables_processing {

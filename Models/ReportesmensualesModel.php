@@ -169,11 +169,24 @@ class ReportesmensualesModel extends Mysql
             $statusRow['declinados'] = (int)$statusRow['declinados'];
         }
         unset($statusRow);
+        $projectStatuses = $this->consultar("SELECT v.ccveusuario_vendedor AS vendedor_id,
+            v.estatus_proyecto_id AS estatus_id, COALESCE(s.cEstatusReporte, 'Sin Estatus') AS estatus,
+            COUNT(*) AS proyectos, SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END) AS declinados
+            FROM tb_ventas v LEFT JOIN cat_estatus_proyecto s ON s.Id = v.estatus_proyecto_id
+            WHERE v.fecha >= ? AND v.fecha < ? $scope
+            GROUP BY v.ccveusuario_vendedor, v.estatus_proyecto_id, s.cEstatusReporte
+            ORDER BY v.estatus_proyecto_id ASC, v.ccveusuario_vendedor ASC", $params);
+        foreach ($projectStatuses as &$statusRow) {
+            $statusRow['proyectos'] = (int)$statusRow['proyectos'];
+            $statusRow['declinados'] = (int)$statusRow['declinados'];
+        }
+        unset($statusRow);
         return self::resumir($headers, $lines, $divisor, (int)(new DateTimeImmutable($start))->format('t'))
             + [
                 'cantidades' => $quantities,
                 'proyectos_por_vendedor' => $projectsBySeller,
                 'clasificaciones_por_vendedor' => $statusesBySeller,
+                'estatus_por_vendedor' => $projectStatuses,
                 'tipo_cambio' => $rate,
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];

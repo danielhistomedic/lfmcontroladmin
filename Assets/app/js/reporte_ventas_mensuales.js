@@ -211,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const cascadeCharts = [];
     let selectedIndex = -1;
     let statusChart = null;
+    let projectStatusChart = null;
     const cascadeText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
     function cascade(id) {
         const element = document.getElementById(id);
@@ -265,7 +266,22 @@ document.addEventListener('DOMContentLoaded', function () {
             ? statuses.map(row => row.clasificacion + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ') : 'Sin clasificaciones registradas.';
         if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
         statusChart.count = statuses.length;
-        const option = cascadeOption(statuses.map(row => ({ nombre: row.clasificacion, proyectos: row.proyectos })));
+        statusChart.instance.setOption(stackedOption(statuses, 'clasificacion'), true);
+        fitCascade(statusChart);
+        const projectStatuses = (data.estatus_por_vendedor || [])
+            .filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))
+            .sort((a, b) => Number(a.estatus_id) - Number(b.estatus_id));
+        document.getElementById('ventas-desglose-estatus-titulo').textContent = seller.nombre + ' — Estatus de proyectos';
+        document.getElementById('ventas-desglose-estatus-resumen').textContent = projectStatuses.length
+            ? projectStatuses.map(row => row.estatus + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ')
+            : 'Sin estatus registrados.';
+        if (!projectStatusChart) projectStatusChart = cascade('ventas-desglose-estatus');
+        projectStatusChart.count = projectStatuses.length;
+        projectStatusChart.instance.setOption(stackedOption(projectStatuses, 'estatus'), true);
+        fitCascade(projectStatusChart);
+    }
+    function stackedOption(statuses, nameField) {
+        const option = cascadeOption(statuses.map(row => ({ nombre: row[nameField], proyectos: row.proyectos })));
         option.legend = { top: 0, textStyle: { color: cascadeText } };
         option.series = [
             { name: 'No declinados', type: 'bar', stack: 'proyectos', barMaxWidth: 65,
@@ -275,8 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 label: { show: true, position: 'top', color: cascadeText,
                     formatter: params => String(statuses[params.dataIndex].proyectos) } }
         ];
-        statusChart.instance.setOption(option, true);
-        fitCascade(statusChart);
+        return option;
     }
     sellerChart.instance.on('click', event => {
         if (event.componentType === 'series') selectSeller(event.dataIndex);
