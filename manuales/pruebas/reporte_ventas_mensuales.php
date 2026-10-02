@@ -74,6 +74,15 @@ $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[6][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[6][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[6][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
 verificar(count($db->calls)===7,'Consultas por conjunto');
+foreach ([1,2,5,6] as $queryIndex) {
+    verificar(str_contains($db->calls[$queryIndex][0], 'v.clasificacion_proyecto_id IN (2,3,4,5)'),
+        'Filtro global en cotizados, colocados, cantidades y proyectos por vendedor');
+}
+$sellerDb = new ConexionSimulada([[],[]]);
+$sellerModel = new ModeloSimulado($sellerDb);
+$sellerModel->vendedores('V1');
+$sellerModel->proyectoDeclinadoAutorizado(633,'V1');
+foreach ($sellerDb->calls as [$sql]) verificar(str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Clasificaciones en vendedores e historial declinado');
 verificar($db->calls[1][1]===['2024-02-01','2024-03-01',"V'1"],'Límites del mes y vendedor parametrizado');
 verificar(str_contains($db->calls[1][0],'cc.enviado = 1') && str_contains($db->calls[3][0],'cc.enviado=1'),'Sólo cotizaciones enviadas en importes y partidas');
 verificar(str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados de importes cotizados conservando activo NULL');
@@ -103,6 +112,7 @@ $list = (new ModeloSimulado($listDb))->declinados(2024,2,"V'1",100);
 verificar($list['pagina']===2 && $list['paginas']===2 && $list['total']===21, 'Paginación limitada al último resultado');
 verificar($listDb->calls[0][1]===['2024-02-01','2024-03-01',"V'1"] && $listDb->calls[1][1]===$listDb->calls[0][1], 'Lista y total comparten mes y vendedor');
 verificar(str_contains($listDb->calls[1][0], "v.activo = 'CERRADO'") && str_contains($listDb->calls[1][0], 'LIMIT 20 OFFSET 20'), 'Estado y tamaño de página controlados');
+foreach ($listDb->calls as [$sql]) verificar(str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Clasificaciones en listado y total de declinados');
 $emptyList = (new ModeloSimulado(new ConexionSimulada([[['total'=>0]],[]])))->declinados(2024,2,'',1);
 verificar($emptyList['proyectos']===[] && $emptyList['paginas']===1, 'Lista vacía válida');
 $tableDb = new ConexionSimulada([[['total'=>8]],[['total'=>1]],[['id'=>5,'proyecto_id'=>'P5']]]);
@@ -119,6 +129,7 @@ $criticalModel = new ModeloSimulado($criticalDb);
 $criticalTable = $criticalModel->declinadosTabla(2026,9,'V1',$tableOptions,'interna_sin_cliente');
 verificar($criticalTable['recordsTotal']===10 && $criticalDb->calls[0][1]===['2026-09-01','2026-10-01','V1'], 'Lista critica dentro del mes y vendedor');
 foreach ($criticalDb->calls as [$sql]) {
+    verificar(str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Clasificaciones en lista critica');
     verificar(str_contains($sql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND EXISTS")
         && str_contains($sql,'ci.enviado = 1 AND NOT EXISTS')
         && str_contains($sql,'cliente.cotizacion_interna_id = ci.id AND cliente.enviado = 1'), 'Total y lista usan la condicion critica del KPI');
@@ -127,6 +138,7 @@ $accessDb = new ConexionSimulada([[['id'=>633]],[]]);
 $accessModel = new ModeloSimulado($accessDb);
 verificar($accessModel->proyectoInternaSinClienteAutorizado(633,'V1') && !$accessModel->proyectoInternaSinClienteAutorizado(633,'V2'), 'Historial critico verifica proyecto y vendedor');
 verificar($accessDb->calls[0][1]===[633,'V1'], 'Acceso por ID parametrizado');
+verificar(str_contains($accessDb->calls[0][0],'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Clasificaciones en historial critico');
 class Controllers { public $model; public function __construct() {} }
 class Session {
     public static bool $active = true;

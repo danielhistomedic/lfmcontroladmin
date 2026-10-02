@@ -3,6 +3,7 @@
 /** Reporte mensual: reglas de MOSTRAR_ESTATUS_PEDIDOS en frmRegistrarProyecto. */
 class ReportesmensualesModel extends Mysql
 {
+    private const FILTRO_CLASIFICACION = 'v.clasificacion_proyecto_id IN (2,3,4,5)';
     // Usa la conexión central; propaga errores para distinguir error de un mes vacío.
     private function consultar(string $sql, array $params = []): array
     {
@@ -15,7 +16,7 @@ class ReportesmensualesModel extends Mysql
 
     public function vendedores(string $alcance): array
     {
-        $where = $alcance === '' ? '' : 'WHERE v.ccveusuario_vendedor = ?';
+        $where = 'WHERE ' . self::FILTRO_CLASIFICACION . ($alcance === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
         return $this->consultar("SELECT v.ccveusuario_vendedor AS id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS nombre
             FROM tb_ventas v LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
@@ -25,8 +26,8 @@ class ReportesmensualesModel extends Mysql
 
     public function proyectoDeclinadoAutorizado(int $ventaId, string $seller): bool
     {
-        $scope = $seller === '' ? '' : ' AND ccveusuario_vendedor = ?';
-        return $this->consultar("SELECT id FROM tb_ventas WHERE id = ? AND activo = 'CERRADO'$scope",
+        $scope = ' AND ' . self::FILTRO_CLASIFICACION . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
+        return $this->consultar("SELECT v.id FROM tb_ventas v WHERE v.id = ? AND v.activo = 'CERRADO'$scope",
             $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
     }
 
@@ -45,7 +46,7 @@ class ReportesmensualesModel extends Mysql
     public function proyectoInternaSinClienteAutorizado(int $ventaId, string $seller): bool
     {
         $condition = self::condicionInternaSinCliente();
-        $scope = $seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?';
+        $scope = ' AND ' . self::FILTRO_CLASIFICACION . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
         return $this->consultar("SELECT v.id FROM tb_ventas v WHERE v.id = ? AND $condition$scope",
             $seller === '' ? [$ventaId] : [$ventaId, $seller]) !== [];
     }
@@ -54,7 +55,7 @@ class ReportesmensualesModel extends Mysql
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
-        $scope = $seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?';
+        $scope = ' AND ' . self::FILTRO_CLASIFICACION . ($seller === '' ? '' : ' AND v.ccveusuario_vendedor = ?');
         $params = $seller === '' ? [$start, $end] : [$start, $end, $seller];
         $rateRows = $this->consultar('SELECT valor, fecha FROM tb_historial_tipos_cambio WHERE idMoneda = 3 ORDER BY fecha DESC, id DESC LIMIT 1');
         $rate = (float)($rateRows[0]['valor'] ?? 0);
@@ -158,7 +159,7 @@ class ReportesmensualesModel extends Mysql
     {
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
-        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO'";
+        $where = "v.fecha >= ? AND v.fecha < ? AND v.activo = 'CERRADO' AND " . self::FILTRO_CLASIFICACION;
         $params = [$start, $end];
         if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
         $count = $this->consultar("SELECT COUNT(*) AS total FROM tb_ventas v WHERE $where", $params);
@@ -183,7 +184,7 @@ class ReportesmensualesModel extends Mysql
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = (new DateTimeImmutable($start))->modify('+1 month')->format('Y-m-d');
         $condition = $lista === 'interna_sin_cliente' ? self::condicionInternaSinCliente() : "v.activo = 'CERRADO'";
-        $where = "v.fecha >= ? AND v.fecha < ? AND $condition";
+        $where = "v.fecha >= ? AND v.fecha < ? AND $condition AND " . self::FILTRO_CLASIFICACION;
         $params = [$start, $end];
         if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
         $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id
