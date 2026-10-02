@@ -29,7 +29,7 @@
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
                     <div>
-                        <h3 class="mt-0 mb-1">Seguimiento comercial</h3><span class="text-muted">Resultados de <?= $esc($months[$filters['mes']]); ?> <?= $esc($filters['anio']); ?> · Importes con IVA en USD</span>
+                        <h3 class="mt-0 mb-1">Reportes de Ventas</h3><span class="text-muted">Resultados de <?= $esc($months[$filters['mes']]); ?> <?= $esc($filters['anio']); ?> · Importes con IVA en USD</span>
                     </div>
                     <span class="badge bg-primary align-self-start">REPORTE MENSUAL</span>
                 </div>
@@ -61,7 +61,7 @@
                 <?php foreach ([['Total de Proyectos', $report['cantidades']['total_proyectos'], 'Proyectos registrados en el mes seleccionado'], ['Declinados', $report['cantidades']['declinados'], 'Proyectos del mes declinados'], ['Cotización Cliente', $report['cantidades']['cotizacion_cliente'], 'Proyectos del mes con cotización enviada'], ['Orden Compra Cliente', $report['cantidades']['orden_compra_cliente'], 'Proyectos del mes con orden de compra de cliente']] as $kpi): ?>
                     <?php $colorClass = $kpi[0] === 'Declinados' ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Orden Compra Cliente' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
-                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ''; ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados"<?php endif; ?>>
+                        <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= $kpi[0] === 'Declinados' ? ' ventas-abrir-declinados' : ''; ?>" <?php if ($kpi[0] === 'Declinados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php endif; ?>>
                             <div class="card-body">
                                 <div class="text-muted mb-2"><?= $esc($kpi[0]); ?></div>
                                 <div class="ventas-valor"><?= $esc($kpi[1]); ?></div><small class="text-muted"><?= $esc($kpi[2]); ?></small>
@@ -70,10 +70,11 @@
                     </div>
                 <?php endforeach; ?>
             </div>
+            <hr class="ventas-separador">
             <h4 class="mt-0 mb-3">Cantidades (crítico)</h4>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-md-3">
-                    <div class="card h-100 ventas-kpi shadow rounded-3 ventas-abrir-declinados" role="button" tabindex="0" data-lista="interna_sin_cliente" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver proyectos con cotización interna sin cotización a cliente">
+                    <div class="card h-100 ventas-kpi ventas-kpi-critico shadow rounded-3 ventas-abrir-declinados" role="button" tabindex="0" data-lista="interna_sin_cliente" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver proyectos con cotización interna sin cotización a cliente">
                         <div class="card-body">
                             <div class="text-muted mb-2">Proyectos con cotización interna sin cotización a cliente</div>
                             <div class="ventas-valor"><?= $esc($report['cantidades']['interna_sin_cliente']); ?></div>
@@ -82,6 +83,7 @@
                     </div>
                 </div>
             </div>
+            <hr class="ventas-separador">
             <div class="row g-3 mb-4">
                 <div class="col-12">
                     <div class="card h-100">
@@ -92,6 +94,7 @@
                     </div>
                 </div>
             </div>
+            <hr class="ventas-separador">
             <div class="card mb-4">
                 <div class="card-body">
                     <h4 class="mt-0">Ventas por vendedor</h4>
@@ -127,6 +130,7 @@
                 </div>
             </div>
             <?php foreach (['productos' => 'Productos / servicios por subclasificación', 'cruce' => 'Vendedores por subclasificación'] as $section => $title): ?>
+                <hr class="ventas-separador">
                 <div class="card mb-4">
                     <div class="card-body">
                         <h4 class="mt-0"><?= $title; ?></h4>
@@ -172,6 +176,7 @@
                     </div>
                 </div>
             <?php endforeach; ?>
+            <hr class="ventas-separador">
             <div class="card mb-4">
                 <div class="card-body">
                     <details>
@@ -199,11 +204,13 @@
                             <div class="table-responsive export-table">
                                 <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
                                     <caption class="visually-hidden">Lista de proyectos del período y vendedor seleccionados</caption>
-                                    <thead><tr>
-                                        <?php foreach (['No.','ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo','Seguimientos'] as $heading): ?>
-                                            <th class="border-bottom-0 fw-semibold text-center"><?= $esc($heading); ?></th>
-                                        <?php endforeach; ?>
-                                    </tr></thead>
+                                    <thead>
+                                        <tr>
+                                            <?php foreach (['No.', 'ID Proyecto', 'Fecha', 'Cliente', 'Vendedor', 'Clasificación', 'Título', 'Activo', 'Seguimientos'] as $heading): ?>
+                                                <th class="border-bottom-0 fw-semibold text-center"><?= $esc($heading); ?></th>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    </thead>
                                     <tbody id="declinados-proyectos"></tbody>
                                 </table>
                             </div>
@@ -220,7 +227,74 @@
         <?php endif; ?>
     </div>
     <style>
-        #modal-declinados-ventas .declinados-buttons > .dt-buttons.btn-group {
+        #ventas-mensuales .ventas-separador {
+            border: 0;
+            border-top: 2px solid #c5d6df;
+            opacity: 1;
+            margin: 1.5rem 0;
+        }
+        html.dark #ventas-mensuales .ventas-separador {
+            border-top-color: #465a68;
+        }
+        #ventas-mensuales {
+            --ventas-texto: #243447;
+            --ventas-texto-secundario: #46566a;
+            --ventas-titulo: #174b66;
+            color: var(--ventas-texto);
+        }
+        html.dark #ventas-mensuales {
+            --ventas-texto: #edf2f7;
+            --ventas-texto-secundario: #cbd5e1;
+            --ventas-titulo: #9ddaf0;
+        }
+        #ventas-mensuales .card-body,
+        #ventas-mensuales p,
+        #ventas-mensuales .form-label {
+            color: var(--ventas-texto);
+        }
+        #ventas-mensuales .text-muted {
+            color: var(--ventas-texto-secundario) !important;
+        }
+        #ventas-mensuales h3,
+        #ventas-mensuales h4,
+        #ventas-mensuales summary {
+            color: var(--ventas-titulo);
+        }
+        #ventas-mensuales .ventas-valor {
+            color: inherit;
+        }
+        #modalSeguimientosVenta .text-muted {
+            color: #46566a !important;
+        }
+        html.dark #modalSeguimientosVenta .text-muted {
+            color: #cbd5e1 !important;
+        }
+        /* El indicador debe quedar por encima de las filas y ocultar el texto de fondo. */
+        #modal-declinados-ventas .dataTables_processing,
+        #modalSeguimientosVenta .dataTables_processing {
+            z-index: 100;
+            top: 50%;
+            left: 50%;
+            width: min(260px, calc(100% - 2rem));
+            margin: 0;
+            transform: translate(-50%, -50%);
+            padding: 1.25rem;
+            background: #fff !important;
+            color: #212529 !important;
+            opacity: 1;
+            border: 1px solid #cbd5e1;
+            border-radius: .5rem;
+            box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .3);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        #modal-declinados-ventas .dataTables_processing>div>div,
+        #modalSeguimientosVenta .dataTables_processing>div>div {
+            background: #0085a3 !important;
+        }
+
+        #modal-declinados-ventas .declinados-buttons>.dt-buttons.btn-group {
             position: static;
             top: auto;
             left: auto;
@@ -229,17 +303,24 @@
             display: inline-flex;
             gap: .5rem;
         }
+
         #modal-declinados-ventas .declinados-buttons .buttons-excel {
             display: inline-block;
             margin-left: 0;
         }
+
         #modal-declinados-ventas .declinados-buttons .btn {
             margin: 0;
             white-space: nowrap;
             border-radius: .25rem;
         }
+
         #modal-declinados-ventas .dataTables_length,
-        #modal-declinados-ventas .dataTables_filter { float: none; margin: 0; }
+        #modal-declinados-ventas .dataTables_filter {
+            float: none;
+            margin: 0;
+        }
+
         #modal-declinados-ventas .dataTables_length label,
         #modal-declinados-ventas .dataTables_filter label {
             display: flex;
@@ -248,18 +329,48 @@
             margin: 0;
             white-space: nowrap;
         }
-        #modal-declinados-ventas .dataTables_length select { width: 80px; }
-        #modal-declinados-ventas .dataTables_length .select2-container { width: 80px !important; }
-        #modal-declinados-ventas .dataTables_filter input { width: 200px; margin-left: 0; }
-        @media (max-width: 575px) {
-            #modal-declinados-ventas .declinados-search { width: 100%; }
-            #modal-declinados-ventas .dataTables_filter input { flex: 1; width: auto; min-width: 0; }
+
+        #modal-declinados-ventas .dataTables_length select {
+            width: 80px;
         }
-        #ventas-mensuales .ventas-abrir-declinados { cursor: pointer; }
-        #ventas-mensuales .ventas-abrir-declinados:focus-visible { outline: 3px solid var(--primary, #0088cc); outline-offset: 4px; }
+
+        #modal-declinados-ventas .dataTables_length .select2-container {
+            width: 80px !important;
+        }
+
+        #modal-declinados-ventas .dataTables_filter input {
+            width: 200px;
+            margin-left: 0;
+        }
+
+        @media (max-width: 575px) {
+            #modal-declinados-ventas .declinados-search {
+                width: 100%;
+            }
+
+            #modal-declinados-ventas .dataTables_filter input {
+                flex: 1;
+                width: auto;
+                min-width: 0;
+            }
+        }
+
+        #ventas-mensuales .ventas-abrir-declinados {
+            cursor: pointer;
+        }
+
+        #ventas-mensuales .ventas-abrir-declinados:focus-visible {
+            outline: 3px solid var(--primary, #0088cc);
+            outline-offset: 4px;
+        }
+
         #ventas-mensuales .ventas-kpi {
             border: 1px solid var(--bs-border-color, #dee2e6);
             border-top: 3px solid var(--primary, #0088cc);
+        }
+
+        #ventas-mensuales .ventas-kpi-critico {
+            border-top-color: var(--bs-danger, #dc3545);
         }
 
         #ventas-mensuales .ventas-kpi-declinados {

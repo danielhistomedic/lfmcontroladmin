@@ -190,13 +190,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const el = document.getElementById(id);
         const instance = echarts.init(el, typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? 'dark' : null);
         const compact = el.clientWidth < 500;
-        const category = { type: 'category', data: labels, axisLabel: { width: compact ? 95 : 150, overflow: 'truncate' } };
-        const value = { type: 'value', name: 'USD', axisLabel: { formatter: v => amount.format(v) } };
+        const chartText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
+        const category = { type: 'category', data: labels, axisLabel: { color: chartText, width: compact ? 95 : 150, overflow: 'truncate' } };
+        const value = { type: 'value', name: 'USD', nameTextStyle: { color: chartText }, axisLabel: { color: chartText, formatter: v => amount.format(v) } };
         const zoom = labels.length > 10 ? [{ type: 'slider', orient: horizontal ? 'vertical' : 'horizontal',
             [horizontal ? 'yAxisIndex' : 'xAxisIndex']: 0, start: 0, end: Math.min(100, 1000 / labels.length) }] : [];
         instance.setOption({ color: colors, backgroundColor: 'transparent',
             tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: v => amount.format(v) + ' USD' },
-            legend: { top: 0, type: 'scroll' }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal ? 60 : 25, top: 50, bottom: 60 },
+            legend: { top: 0, type: 'scroll', textStyle: { color: chartText } }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal ? 60 : 25, top: 50, bottom: 60 },
             xAxis: horizontal ? value : category, yAxis: horizontal ? category : value,
             dataZoom: zoom, series: series, aria: { enabled: true } });
         charts.push(instance);
