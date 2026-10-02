@@ -88,6 +88,29 @@
                 <div class="col-12">
                     <div class="card h-100">
                         <div class="card-body">
+                            <h4 class="mt-0">Cantidades por Vendedor</h4>
+                            <p class="text-muted">Proyectos registrados en el mes seleccionado, incluidos los declinados.</p>
+                            <div id="ventas-cantidades-vendedores" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por vendedor; cifras en la tabla siguiente"></div>
+                            <div class="table-responsive">
+                                <table class="table table-striped ventas-tabla">
+                                    <thead><tr><th>Vendedor</th><th class="text-end">Proyectos</th></tr></thead>
+                                    <tbody>
+                                        <?php foreach ($report['proyectos_por_vendedor'] ?? [] as $seller): ?>
+                                            <tr><td><?= $esc($seller['nombre']); ?></td><td class="text-end"><?= $esc($seller['proyectos']); ?></td></tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                    <tfoot><tr><th>Total</th><th class="text-end"><?= $esc($report['cantidades']['total_proyectos']); ?></th></tr></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr class="ventas-separador">
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="card h-100">
+                        <div class="card-body">
                             <h4 class="mt-0">Cotizado vs. colocado</h4>
                             <div id="ventas-comparativo" class="ventas-chart" role="img" aria-label="Comparación de montos cotizados y colocados; cifras en los totales de la tabla de ventas por vendedor"></div>
                         </div>

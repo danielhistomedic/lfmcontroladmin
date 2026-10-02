@@ -186,23 +186,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const charts = [];
     const amount = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });
     const colors = ['#2385bd', '#27a58c', '#e5a543', '#8c6bb1', '#cf6478', '#428582', '#718bbd', '#ad7e56'];
-    function chart(id, labels, series, horizontal) {
+    function chart(id, labels, series, horizontal, unit = 'USD') {
         const el = document.getElementById(id);
         const instance = echarts.init(el, typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? 'dark' : null);
         const compact = el.clientWidth < 500;
         const chartText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
         const category = { type: 'category', data: labels, axisLabel: { color: chartText, width: compact ? 95 : 150, overflow: 'truncate' } };
-        const value = { type: 'value', name: 'USD', nameTextStyle: { color: chartText }, axisLabel: { color: chartText, formatter: v => amount.format(v) } };
+        const value = { type: 'value', name: unit, nameTextStyle: { color: chartText }, axisLabel: { color: chartText, formatter: v => amount.format(v) } };
+        if (unit === 'Proyectos') value.minInterval = 1;
         const zoom = labels.length > 10 ? [{ type: 'slider', orient: horizontal ? 'vertical' : 'horizontal',
             [horizontal ? 'yAxisIndex' : 'xAxisIndex']: 0, start: 0, end: Math.min(100, 1000 / labels.length) }] : [];
         instance.setOption({ color: colors, backgroundColor: 'transparent',
-            tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: v => amount.format(v) + ' USD' },
+            tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: v => amount.format(v) + ' ' + unit },
             legend: { top: 0, type: 'scroll', textStyle: { color: chartText } }, grid: { left: horizontal ? (compact ? 110 : 180) : 70, right: labels.length > 10 && horizontal ? 60 : 25, top: 50, bottom: 60 },
             xAxis: horizontal ? value : category, yAxis: horizontal ? category : value,
             dataZoom: zoom, series: series, aria: { enabled: true } });
         charts.push(instance);
     }
     const bars = rows => ['cotizado', 'colocado'].map((key, i) => ({ name: i === 0 ? 'Cotizado' : 'Colocado', type: 'bar', data: rows.map(r => r[key]) }));
+    const projectCounts = data.proyectos_por_vendedor || [];
+    chart('ventas-cantidades-vendedores', projectCounts.map(r => r.nombre), [{ name: 'Proyectos', type: 'bar',
+        data: projectCounts.map(r => r.proyectos), label: { show: true, position: 'right' } }], true, 'Proyectos');
     chart('ventas-comparativo', ['Mes seleccionado'], bars([data]), false);
     chart('ventas-vendedores', data.vendedores.map(r => r.nombre), bars(data.vendedores), true);
     chart('ventas-productos', data.productos.map(r => r.nombre), bars(data.productos), true);

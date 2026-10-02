@@ -68,10 +68,12 @@ class ModeloSimulado extends ReportesmensualesModel
     public function getConexion() { return $this->fake; }
 }
 $quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3,'interna_sin_cliente'=>4];
-$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$lines[0]],[$lines[2]],[$quantities]]);
+$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$lines[0]],[$lines[2]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']]]);
 $model=new ModeloSimulado($db);
 $actual=$model->dashboard(2024,2,"V'1");
-verificar(count($db->calls)===6,'Consultas por conjunto');
+verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
+verificar($db->calls[6][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[6][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[6][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
+verificar(count($db->calls)===7,'Consultas por conjunto');
 verificar($db->calls[1][1]===['2024-02-01','2024-03-01',"V'1"],'Límites del mes y vendedor parametrizado');
 verificar(str_contains($db->calls[1][0],'cc.enviado = 1') && str_contains($db->calls[3][0],'cc.enviado=1'),'Sólo cotizaciones enviadas en importes y partidas');
 verificar(str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados de importes cotizados conservando activo NULL');

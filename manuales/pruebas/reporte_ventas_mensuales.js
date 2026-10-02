@@ -12,7 +12,7 @@ function ejecutar(empty, width, theme) {
     const vendors = empty ? [] : [{ nombre: 'José', cotizado: 130, colocado: 80 }, { nombre: 'Ana', cotizado: 20, colocado: 40 }];
     const rows = empty ? [] : Array.from({ length: 12 }, (_, i) => ({ nombre: 'Servicio '+i, subclasificacion_id: String(i),
         vendedor_id: i % 2 ? 'V2' : 'V1', vendedor: i % 2 ? 'Ana' : 'José', cotizado: i+10, colocado: i+5 }));
-    const data = { cotizado: empty ? 0 : 150, colocado: empty ? 0 : 120, vendedores: vendors, productos: rows, cruce: rows,
+    const data = { cotizado: empty ? 0 : 150, colocado: empty ? 0 : 120, vendedores: vendors, proyectos_por_vendedor: empty ? [] : [{nombre:'Vendedor 1',proyectos:8},{nombre:'Vendedor 2',proyectos:2}], productos: rows, cruce: rows,
         diario: Array.from({ length: 29 }, (_, i) => ({ dia: i+1, cotizado: i === 0 && !empty ? 150 : 0, colocado: i === 1 && !empty ? 120 : 0 })) };
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -36,14 +36,18 @@ function ejecutar(empty, width, theme) {
     };
     vm.runInNewContext(code, context, { filename: 'reporte_ventas_mensuales.js' });
     events.DOMContentLoaded();
-    assert.equal(charts.length, 4, 'Inicializar las cuatro gráficas restantes');
+    assert.equal(charts.length, 5, 'Inicializar las cinco gráficas restantes');
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
+    const counts=charts[0].getOption();
+    assert.equal(counts.xAxis[0].name,'Proyectos');
+    assert.equal(counts.xAxis[0].minInterval,1);
     if (!empty) {
-        const comparison = charts[3].getOption();
+        assert.deepEqual(counts.series[0].data,[8,2]);
+        const comparison = charts[4].getOption();
         assert.equal(comparison.series.length, 2, 'Cruce con una serie por vendedor');
         assert.equal(comparison.series[0].data[0], 5, 'Asignar ventas a su vendedor y subclasificación');
         assert.equal(comparison.series[1].data[0], 0, 'Mantener cero para combinaciones sin ventas');
@@ -62,7 +66,7 @@ ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');
 ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
-console.log('OK: cuatro gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');
+console.log('OK: cinco gráficas SVG con ECharts '+echarts.version+', cruce por vendedor, categorías numerosas, móvil, oscuro, vacío y filtros globales.');
 
 async function probarModal(critical = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;

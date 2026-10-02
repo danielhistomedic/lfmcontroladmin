@@ -139,8 +139,18 @@ class ReportesmensualesModel extends Mysql
             WHERE v.fecha >= ? AND v.fecha < ? $scope", $params);
         if (!$counts) throw new RuntimeException('No se pudieron obtener las cantidades de proyectos.');
         $quantities = array_map('intval', $counts[0]);
+        $projectsBySeller = $this->consultar("SELECT v.ccveusuario_vendedor AS vendedor_id,
+            COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS nombre,
+            COUNT(*) AS proyectos
+            FROM tb_ventas v LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
+            WHERE v.fecha >= ? AND v.fecha < ? $scope
+            GROUP BY v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido
+            ORDER BY proyectos DESC, nombre ASC, v.ccveusuario_vendedor ASC", $params);
+        foreach ($projectsBySeller as &$sellerRow) $sellerRow['proyectos'] = (int)$sellerRow['proyectos'];
+        unset($sellerRow);
         return self::resumir($headers, $lines, $divisor, (int)(new DateTimeImmutable($start))->format('t'))
-            + ['cantidades' => $quantities, 'tipo_cambio' => $rate, 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null];
+            + ['cantidades' => $quantities, 'proyectos_por_vendedor' => $projectsBySeller,
+                'tipo_cambio' => $rate, 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null];
     }
 
     /** Lista paginada con las mismas condiciones del indicador Declinados. */
