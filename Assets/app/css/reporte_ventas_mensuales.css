@@ -1,4 +1,12 @@
-/* Encabezado del reporte de ventas. Sin estilos para KPIs, graficas o modales. */
+/* Encabezado y acabado de las tarjetas KPI del reporte de ventas. */
+#ventas-mensuales .card.ventas-toolbar,
+#ventas-mensuales .card.ventas-kpi {
+    border: 1px solid #dfe8f2 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(23, 75, 102, .08) !important;
+}
+html.dark #ventas-mensuales .card.ventas-toolbar,
+html.dark #ventas-mensuales .card.ventas-kpi { border-color: #455563 !important; }
 #ventas-mensuales .ventas-toolbar {
     --ventas-titulo: #113461;
     --ventas-texto: #334765;

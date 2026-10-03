@@ -18,7 +18,7 @@
                         <div id="colocados-totales" class="colocados-monedas"></div>
                     </section>
                     <div class="colocados-grupos">
-                        <section class="colocados-resumen-seccion" aria-labelledby="colocados-flowserve-titulo"><h6 id="colocados-flowserve-titulo"><i class="fa-solid fa-industry colocados-icono" aria-hidden="true"></i>Total Flowserve</h6><div id="colocados-flowserve" class="colocados-monedas"></div></section>
+                        <section class="colocados-resumen-seccion colocados-flowserve-destacado" aria-labelledby="colocados-flowserve-titulo"><h6 id="colocados-flowserve-titulo"><i class="fa-solid fa-industry colocados-icono" aria-hidden="true"></i>Total Flowserve</h6><div id="colocados-flowserve" class="colocados-monedas"></div></section>
                         <section class="colocados-resumen-seccion" aria-labelledby="colocados-diversos-titulo"><h6 id="colocados-diversos-titulo"><i class="fa-solid fa-boxes-stacked colocados-icono" aria-hidden="true"></i>Total Diversos</h6><div id="colocados-diversos" class="colocados-monedas"></div></section>
                     </div>
                 </div>
