@@ -419,17 +419,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const statusPeriodCounts = new Map();
     (data.estatus_por_clasificacion || []).forEach(row => {
         const placed = Number(row.estatus_id) >= 6;
-        const key = placed ? 'colocados' : String(row.estatus_id);
-        if (!statusGroups.has(key)) statusGroups.set(key, { id: placed ? 'colocados' : row.estatus_id,
-            nombre: placed ? 'Pedidos Colocados' : (row.estatus || 'Sin estatus') });
+        const quotation = [1,3].includes(Number(row.estatus_id));
+        const key = placed ? 'colocados' : (quotation ? 'proceso_cotizacion' : String(row.estatus_id));
+        if (!statusGroups.has(key)) statusGroups.set(key, { id: placed || quotation ? key : row.estatus_id,
+            orden: placed ? 6 : (quotation ? 1 : Number(row.estatus_id)),
+            nombre: placed ? 'Pedidos Colocados' : (quotation ? 'PROCESO DE COTIZACION' : (row.estatus || 'Sin estatus')) });
         const periodKey = [key,row.anio,row.mes].join(':');
         if (!statusPeriodCounts.has(periodKey)) statusPeriodCounts.set(periodKey,{proyectos:0,declinados:0});
         const total = statusPeriodCounts.get(periodKey);
         total.proyectos += Number(row.proyectos);
         total.declinados += Number(row.declinados);
     });
-    const statuses = [...statusGroups.values()].sort((a,b) =>
-        (a.id === 'colocados' ? 6 : Number(a.id)) - (b.id === 'colocados' ? 6 : Number(b.id)));
+    const statuses = [...statusGroups.values()].sort((a,b) => a.orden - b.orden);
     const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
     const statusOption = { ...principalOption, grid: { ...principalOption.grid },
         legend: {show:false},

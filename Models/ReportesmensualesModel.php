@@ -287,6 +287,7 @@ class ReportesmensualesModel extends Mysql
                 $where .= ' AND v.ccveusuario_vendedor = ?';
                 $params[] = $options['vendedor_id'];
             } elseif ($lista === 'estatus_periodo' && $options['estatus_id'] === 'colocados') $where .= ' AND v.estatus_proyecto_id >= 6';
+            elseif ($lista === 'estatus_periodo' && $options['estatus_id'] === 'proceso_cotizacion') $where .= ' AND v.estatus_proyecto_id IN (1,3)';
             elseif (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true) && $options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
             elseif (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true)) { $where .= ' AND v.estatus_proyecto_id = ?'; $params[] = $options['estatus_id']; }
             $where .= $options['segmento'] === 'declinados'

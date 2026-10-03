@@ -157,6 +157,12 @@ foreach ($placedStatusDb->calls as [$sql,$params]) {
     verificar(str_contains($sql,'v.estatus_proyecto_id >= 6') && !str_contains($sql,'v.estatus_proyecto_id = ?'), 'Modal incluye todos los estatus colocados');
     verificar($params === ['2026-09-01','2026-10-01','V1'], 'Grupo conserva mes y vendedor');
 }
+$quotationDb = new ConexionSimulada([[['total'=>3]],[['total'=>3]],[]]);
+(new ModeloSimulado($quotationDb))->declinadosTabla(2026,9,'V1',array_replace($placedStatusOptions, ['estatus_id'=>'proceso_cotizacion']),'estatus_periodo');
+foreach ($quotationDb->calls as [$sql,$params]) {
+    verificar(str_contains($sql,'v.estatus_proyecto_id IN (1,3)'), 'Proceso de cotizacion incluye ambos estatus');
+    verificar($params === ['2026-09-01','2026-10-01','V1'], 'Grupo conserva periodo y vendedor');
+}
 (new ModeloSimulado($drillDb))->declinadosTabla(2026,9,'V1',$drillOptions,'estatus_clasificacion');
 verificar($drillDb->calls[0][1]===['2026-09-01','2026-10-01','V1',5,3], 'Desglose por clase y estatus parametrizados');
 verificar(str_contains($drillDb->calls[0][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'") && str_contains($drillDb->calls[2][0],'v.cliente_id ASC'), 'Segmento no declinado y agrupacion vendedor cliente');
@@ -226,6 +232,7 @@ $_GET['clasificacion_id']=['5']; verificar(llamarLista($api)[0]===400,'Rechazar 
 $_GET['lista']='estatus_periodo'; unset($_GET['clasificacion_id']);
 verificar(llamarLista($api)[0]===200,'Endpoint de estatus no requiere clasificacion');
 $_GET['estatus_id']=['3']; verificar(llamarLista($api)[0]===400,'Rechazar estatus malformado');
+$_GET['estatus_id']='proceso_cotizacion'; verificar(llamarLista($api)[0]===200,'Aceptar grupo proceso de cotizacion');
 $_GET['estatus_id']='colocados'; verificar(llamarLista($api)[0]===200,'Aceptar grupo de colocados');
 $_GET['lista']='estatus_clasificacion'; $_GET['clasificacion_id']='5'; verificar(llamarLista($api)[0]===400,'Grupo solo en grafica general');
 $_GET['lista']='estatus_periodo';

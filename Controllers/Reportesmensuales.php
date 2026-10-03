@@ -284,8 +284,8 @@ class Reportesmensuales extends Controllers
                     'order_dir'=>$_GET['order_dir'] ?? 'desc', 'search'=>$_GET['search'] ?? '', 'filters'=>[]];
                 if (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true)) {
                     $options['clasificacion_id'] = $lista === 'estatus_periodo' ? null : $integer('clasificacion_id', 0, 1, 2147483647);
-                    $options['estatus_id'] = $lista === 'estatus_periodo' && ($_GET['estatus_id'] ?? '') === 'colocados'
-                        ? 'colocados' : (($_GET['estatus_id'] ?? '') === 'sin_estatus'
+                    $options['estatus_id'] = $lista === 'estatus_periodo' && in_array($_GET['estatus_id'] ?? '', ['colocados','proceso_cotizacion'], true)
+                        ? $_GET['estatus_id'] : (($_GET['estatus_id'] ?? '') === 'sin_estatus'
                         ? null : $integer('estatus_id', 0, 1, 2147483647));
                     $options['segmento'] = $_GET['segmento'] ?? '';
                     if ($options['clasificacion_id'] === false || $options['estatus_id'] === false

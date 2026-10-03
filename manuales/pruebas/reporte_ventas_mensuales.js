@@ -28,7 +28,8 @@ function ejecutar(empty, width, theme, periods = false) {
     data.meses_seleccionados = [2,9];
     if (periods) data.clasificaciones_por_vendedor[0].proyectos = 9;
     if (periods) data.estatus_por_clasificacion = [
-        {clasificacion_id:3,anio:2026,mes:9,estatus_id:3,estatus:'Cotizacion',proyectos:4,declinados:1},
+        {clasificacion_id:3,anio:2026,mes:9,estatus_id:1,estatus:'Oportunidad',proyectos:2,declinados:1},
+        {clasificacion_id:3,anio:2026,mes:9,estatus_id:3,estatus:'Cotizacion',proyectos:2,declinados:0},
         {clasificacion_id:3,anio:2024,mes:2,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:1},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:1,declinados:0},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:11,estatus:'Facturado',proyectos:2,declinados:1}];
@@ -62,8 +63,8 @@ function ejecutar(empty, width, theme, periods = false) {
     if (periods) {
         const statusOption = charts[3].getOption();
         assert.equal(statusOption.legend[0].show,false);
-        assert.equal(statusOption.series[0].label.formatter(),'Cotizacion');
-        assert.equal(statusOption.series[0].name,'Cotizacion');
+        assert.equal(statusOption.series[0].label.formatter(),'PROCESO DE COTIZACION');
+        assert.equal(statusOption.series[0].name,'PROCESO DE COTIZACION');
         assert.equal(statusOption.series[2].name,'Pedidos Colocados');
         assert.equal(statusOption.series.length,4,'Una sola barra apilada para los estatus >= 6');
         assert.deepEqual(statusOption.series[0].data,[0,0,0,3]);
@@ -74,14 +75,14 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(statusOption.series[1].itemStyle.color,'#dc3545');
         assert.equal(statusOption.series[0].stack,statusOption.series[1].stack);
         const tip = statusOption.tooltip[0].formatter({seriesIndex:0,dataIndex:3});
-        assert.ok(tip.includes('Cotizacion') && tip.includes('Septiembre 2026') && tip.includes('Total: 4'));
+        assert.ok(tip.includes('PROCESO DE COTIZACION') && tip.includes('Septiembre 2026') && tip.includes('Total: 4'));
         assert.equal(statusOption.series[0].barWidth,26);
         assert.equal(statusOption.series[0].label.fontSize,9);
         assert.equal(statusOption.xAxis[1].offset,100);
         charts[3].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:1});
         const statusModal = nodes.get('modal-declinados-ventas');
         assert.equal(statusModal.dataset.desgloseLista,'estatus_periodo');
-        assert.equal(statusModal.dataset.estatusId,'3');
+        assert.equal(statusModal.dataset.estatusId,'proceso_cotizacion');
         assert.equal(statusModal.dataset.segmento,'declinados');
         assert.equal(statusModal.dataset.desgloseAnio,'2026');
         assert.equal(statusModal.dataset.desgloseMes,'9');
