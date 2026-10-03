@@ -1,6 +1,7 @@
 <?php require_once('Template/header_01.php'); ?>
 <link rel="stylesheet" href="<?= assets(); ?>/app/css/reporte_ventas_mensuales.css?v=<?= version(); ?>">
 <link rel="stylesheet" href="<?= assets(); ?>/app/css/reporte_ventas_colocados.css?v=<?= version(); ?>">
+<link rel="stylesheet" href="<?= assets(); ?>/app/css/reporte_ventas_eficiencia.css?v=<?= version(); ?>">
 <?php require_once('Template/header_02.php'); ?>
 
 <section role="main" class="content-body fondo-general">
@@ -188,6 +189,7 @@
                 <p class="mb-0">Resumen de pedidos colocados del período seleccionado, sin IVA y por moneda.</p>
             </div>
             <?php require dirname(__DIR__, 2) . '/Views/Reportesmensuales/resumen_colocados_financiero.php'; ?>
+            <?php require dirname(__DIR__, 2) . '/Views/Reportesmensuales/analisis_financiero_eficiencia.php'; ?>
             <div class="modal fade" id="modal-declinados-ventas" tabindex="-1" aria-labelledby="modal-declinados-titulo" aria-hidden="true" data-url="<?= base_url(); ?>/reportesmensuales/declinados" data-anio="<?= $esc(implode(',', $selectedYears)); ?>" data-mes="<?= $esc(implode(',', $selectedMonths)); ?>" data-vendedor="<?= $esc($filters['vendedor']); ?>">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content border-0 shadow">
@@ -786,4 +788,5 @@ require dirname(__DIR__, 2) . '/Template/modal_seguimientos_venta.php'; ?>
 <script src="<?= assets(); ?>/app/js/reporte_ventas_colocados.js?v=<?= version(); ?>"></script>
 <script src="<?= assets(); ?>/vendor/echarts/dist/echarts.js?v=<?= version(); ?>"></script>
 <script src="<?= assets(); ?>/vendor/echarts/i18n/langES.js?v=<?= version(); ?>"></script>
+<script src="<?= assets(); ?>/app/js/reporte_ventas_eficiencia.js?v=<?= version(); ?>"></script>
 <?php require_once('Template/footer_02.php'); ?>

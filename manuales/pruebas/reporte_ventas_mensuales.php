@@ -53,6 +53,11 @@ $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
 verificar(count($db->calls)===13,'Consultas por conjunto');
+foreach ([11,12] as $index) {
+    verificar(str_contains($db->calls[$index][0], 'FROM cat_medico GROUP BY ccvemedico) nombres')
+        && str_contains($db->calls[$index][0], "COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre"),
+        'Desglose financiero reutiliza conteos y nombres sin multiplicar proyectos ni consultas');
+}
 verificar(str_contains($db->calls[12][0],'MIN(pc.fecha_pedido) AS fecha')
     && str_contains($db->calls[12][0],'pc.enviado = 1')
     && str_contains($db->calls[12][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")

@@ -140,3 +140,6 @@ preg_match_all('/\bid="([^"]+)"/', $yearsHtml, $ids);
 verificar(count($ids[1]) === count(array_unique($ids[1])), 'Sin IDs duplicados entre seccion y modal');
 verificar(strpos($yearsHtml, 'id="ventas-financiero-titulo"') < strpos($yearsHtml, 'id="resumen-colocados-financiero"'), 'Resumen dentro de analisis financiero');
 verificar(!str_contains($yearsHtml, 'id="ventas-comparativo"') && !str_contains($yearsHtml, 'Cotizado vs. colocado'), 'Retirar solo la tarjeta comparativa');
+verificar(strpos($yearsHtml, 'id="resumen-colocados-financiero"') < strpos($yearsHtml, 'id="ventas-financiero-eficiencia"')
+    && str_contains($yearsHtml, 'id="ventas-eficiencia-vendedores"')
+    && str_contains($yearsHtml, 'aria-controls="ventas-eficiencia-vendedores"'), 'Segunda seccion con desglose accesible debajo de la financiera actual');

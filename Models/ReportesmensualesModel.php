@@ -258,13 +258,21 @@ class ReportesmensualesModel extends Mysql
         $quantities['declinados_anteriores'] = (int)$previousDeclined[0]['declinados_anteriores'];
         $quantities['declinados'] += $quantities['declinados_anteriores'];
         [$quotedSql,$quotedParams] = self::cotizadosPeriodoSql($year,$month,$seller);
+        // Un nombre por vendedor: conserva la cardinalidad del conjunto de proyectos.
+        $sellerNames = "LEFT JOIN (SELECT ccvemedico,
+            MAX(NULLIF(TRIM(CONCAT_WS(' ', cNombre, cPriApellido, cSegApellido)), '')) AS nombre
+            FROM cat_medico GROUP BY ccvemedico) nombres";
         $quotedPeriods = $this->consultar("SELECT vendedor_id, YEAR(fecha_reporte) AS anio,
-            MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos
-            FROM ($quotedSql) cotizados GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $quotedParams);
+            MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos,
+            COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre
+            FROM ($quotedSql) cotizados $sellerNames ON nombres.ccvemedico = cotizados.vendedor_id
+            GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $quotedParams);
         [$placedSql,$placedParams] = self::documentadosPeriodoSql($year,$month,$seller,'colocados');
         $placedPeriods = $this->consultar("SELECT vendedor_id, YEAR(fecha_reporte) AS anio,
-            MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos
-            FROM ($placedSql) colocados GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $placedParams);
+            MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos,
+            COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre
+            FROM ($placedSql) colocados $sellerNames ON nombres.ccvemedico = colocados.vendedor_id
+            GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $placedParams);
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
