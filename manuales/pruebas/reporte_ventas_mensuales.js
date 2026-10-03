@@ -30,7 +30,8 @@ function ejecutar(empty, width, theme, periods = false) {
     if (periods) data.estatus_por_clasificacion = [
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:3,estatus:'Cotizacion',proyectos:4,declinados:1},
         {clasificacion_id:3,anio:2024,mes:2,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:1},
-        {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:3,declinados:0}];
+        {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:1,declinados:0},
+        {clasificacion_id:3,anio:2026,mes:9,estatus_id:11,estatus:'Facturado',proyectos:2,declinados:1}];
     data.estatus_por_clasificacion = data.estatus_por_clasificacion.map(row => ({anio:2026,mes:9,vendedor_id:'V1',...row}));
     const context = {
         document: {
@@ -63,10 +64,13 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(statusOption.legend[0].show,false);
         assert.equal(statusOption.series[0].label.formatter(),'Cotizacion');
         assert.equal(statusOption.series[0].name,'Cotizacion');
-        assert.equal(statusOption.series[2].name,'Pedido');
+        assert.equal(statusOption.series[2].name,'Pedidos Colocados');
+        assert.equal(statusOption.series.length,4,'Una sola barra apilada para los estatus >= 6');
         assert.deepEqual(statusOption.series[0].data,[0,0,0,3]);
         assert.deepEqual(statusOption.series[1].data,[0,0,0,1]);
-        assert.deepEqual(statusOption.series[2].data,[1,0,0,3]);
+        assert.deepEqual(statusOption.series[2].data,[1,0,0,2]);
+        assert.deepEqual(statusOption.series[3].data,[1,0,0,1],'Declinados de todo el grupo');
+        assert.ok(statusOption.tooltip[0].formatter({seriesIndex:2,dataIndex:3}).includes('Total: 3'));
         assert.equal(statusOption.series[1].itemStyle.color,'#dc3545');
         assert.equal(statusOption.series[0].stack,statusOption.series[1].stack);
         const tip = statusOption.tooltip[0].formatter({seriesIndex:0,dataIndex:3});
@@ -82,15 +86,15 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(statusModal.dataset.desgloseAnio,'2026');
         assert.equal(statusModal.dataset.desgloseMes,'9');
         charts[3].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:2});
-        assert.equal(statusModal.dataset.estatusId,'6');
+        assert.equal(statusModal.dataset.estatusId,'colocados');
         assert.equal(statusModal.dataset.segmento,'no_declinados');
         assert.equal(statusModal.dataset.desgloseAnio,'2024');
         assert.equal(statusModal.dataset.desgloseMes,'2');
 
         assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
         assert.deepEqual(charts[2].getOption().xAxis[1].data,['2024','2024','2026','2026']);
-        assert.deepEqual(charts[2].getOption().series[2].data,[1,0,0,6]);
-        assert.deepEqual(charts[2].getOption().series[3].data,[1,0,0,1]);
+        assert.deepEqual(charts[2].getOption().series[2].data,[1,0,0,5]);
+        assert.deepEqual(charts[2].getOption().series[3].data,[1,0,0,2]);
         charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:3});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'clasificacion_periodo');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'declinados');

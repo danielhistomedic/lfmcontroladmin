@@ -150,6 +150,13 @@ verificar($statusDb->calls[0][1]===['2026-09-01','2026-10-01','V1',3], 'Estatus 
 verificar(str_contains($statusDb->calls[0][0],'v.estatus_proyecto_id = ?') &&
     !str_contains($statusDb->calls[0][0],'v.clasificacion_proyecto_id = ?') &&
     str_contains($statusDb->calls[2][0],'v.ccveusuario_vendedor ASC'), 'Modal de estatus agrupado por vendedor conserva alcance');
+$placedStatusDb = new ConexionSimulada([[['total'=>3]],[['total'=>3]],[]]);
+$placedStatusOptions = array_replace($drillOptions, ['estatus_id'=>'colocados','search'=>'','filters'=>[]]);
+(new ModeloSimulado($placedStatusDb))->declinadosTabla(2026,9,'V1',$placedStatusOptions,'estatus_periodo');
+foreach ($placedStatusDb->calls as [$sql,$params]) {
+    verificar(str_contains($sql,'v.estatus_proyecto_id >= 6') && !str_contains($sql,'v.estatus_proyecto_id = ?'), 'Modal incluye todos los estatus colocados');
+    verificar($params === ['2026-09-01','2026-10-01','V1'], 'Grupo conserva mes y vendedor');
+}
 (new ModeloSimulado($drillDb))->declinadosTabla(2026,9,'V1',$drillOptions,'estatus_clasificacion');
 verificar($drillDb->calls[0][1]===['2026-09-01','2026-10-01','V1',5,3], 'Desglose por clase y estatus parametrizados');
 verificar(str_contains($drillDb->calls[0][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'") && str_contains($drillDb->calls[2][0],'v.cliente_id ASC'), 'Segmento no declinado y agrupacion vendedor cliente');
@@ -219,6 +226,9 @@ $_GET['clasificacion_id']=['5']; verificar(llamarLista($api)[0]===400,'Rechazar 
 $_GET['lista']='estatus_periodo'; unset($_GET['clasificacion_id']);
 verificar(llamarLista($api)[0]===200,'Endpoint de estatus no requiere clasificacion');
 $_GET['estatus_id']=['3']; verificar(llamarLista($api)[0]===400,'Rechazar estatus malformado');
+$_GET['estatus_id']='colocados'; verificar(llamarLista($api)[0]===200,'Aceptar grupo de colocados');
+$_GET['lista']='estatus_clasificacion'; $_GET['clasificacion_id']='5'; verificar(llamarLista($api)[0]===400,'Grupo solo en grafica general');
+$_GET['lista']='estatus_periodo';
 $_GET['estatus_id']='sin_estatus'; verificar(llamarLista($api)[0]===200,'Permitir proyectos sin estatus');
 $_GET['segmento']='invalido'; verificar(llamarLista($api)[0]===400,'Rechazar segmento desconocido');
 $_GET['lista']='invalida'; verificar(llamarLista($api)[0]===400,'Rechazar tipo de lista desconocido');

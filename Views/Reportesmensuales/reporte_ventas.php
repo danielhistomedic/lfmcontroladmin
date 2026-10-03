@@ -123,7 +123,7 @@
                 <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
                     <div class="card-body">
                         <h4 class="mt-0">Proyectos por estatus</h4>
-                        <p class="text-muted">Comparativo por mes y año: una barra por estatus dentro de cada mes, con su nombre debajo y declinados apilados en rojo.</p>
+                        <p class="text-muted">Comparativo por mes y año: una barra por estatus dentro de cada mes; los estatus con ID 6 o mayor se agrupan en Pedidos Colocados, con declinados apilados en rojo.</p>
                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por estatus del proyecto">
                             <div id="ventas-estatus-general" class="ventas-chart" role="img" aria-label="Proyectos por estatus, mes y año con declinados apilados"></div>
                         </div>

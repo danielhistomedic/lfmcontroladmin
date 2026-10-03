@@ -418,16 +418,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const statusGroups = new Map();
     const statusPeriodCounts = new Map();
     (data.estatus_por_clasificacion || []).forEach(row => {
-        const key = String(row.estatus_id);
-        if (!statusGroups.has(key)) statusGroups.set(key, { id: row.estatus_id,
-            nombre: row.estatus || 'Sin estatus' });
+        const placed = Number(row.estatus_id) >= 6;
+        const key = placed ? 'colocados' : String(row.estatus_id);
+        if (!statusGroups.has(key)) statusGroups.set(key, { id: placed ? 'colocados' : row.estatus_id,
+            nombre: placed ? 'Pedidos Colocados' : (row.estatus || 'Sin estatus') });
         const periodKey = [key,row.anio,row.mes].join(':');
         if (!statusPeriodCounts.has(periodKey)) statusPeriodCounts.set(periodKey,{proyectos:0,declinados:0});
         const total = statusPeriodCounts.get(periodKey);
         total.proyectos += Number(row.proyectos);
         total.declinados += Number(row.declinados);
     });
-    const statuses = [...statusGroups.values()].sort((a,b) => Number(a.id)-Number(b.id));
+    const statuses = [...statusGroups.values()].sort((a,b) =>
+        (a.id === 'colocados' ? 6 : Number(a.id)) - (b.id === 'colocados' ? 6 : Number(b.id)));
     const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
     const statusOption = { ...principalOption, grid: { ...principalOption.grid },
         legend: {show:false},
