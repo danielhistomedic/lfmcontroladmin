@@ -99,6 +99,7 @@
                                 <?php elseif ($kpi[0] === 'Pedidos Colocados en el Período'): ?>
                                     <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['orden_compra_cliente_periodo']); ?></small>
                                     <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['orden_compra_cliente_anteriores']); ?></small>
+                                    <small class="text-muted d-block">Total = proyectos del período + anteriores</small>
                                 <?php else: ?>
                                     <small class="text-muted"><?= $esc($kpi[2]); ?></small>
                                 <?php endif; ?>

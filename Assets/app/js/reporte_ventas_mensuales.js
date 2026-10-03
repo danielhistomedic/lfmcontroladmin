@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo'].includes(lista);
+        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo','colocados_periodo'].includes(lista);
         const listTitle = () => isDrill() ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     years.split(',').forEach(year => params.append('anio[]', year));
                     months.split(',').forEach(month => params.append('mes[]', month));
                     if (isDrill()) {
-                        if (lista !== 'estatus_periodo' && lista !== 'cotizados_periodo') params.set('clasificacion_id', modal.dataset.clasificacionId);
-                        if (lista === 'cotizados_periodo') {
+                        if (!['estatus_periodo','cotizados_periodo','colocados_periodo'].includes(lista)) params.set('clasificacion_id', modal.dataset.clasificacionId);
+                        if (['cotizados_periodo','colocados_periodo'].includes(lista)) {
                             modal.dataset.anio.split(',').forEach(year => params.append('periodo_anio[]',year));
                             modal.dataset.mes.split(',').forEach(month => params.append('periodo_mes[]',month));
                         }
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
             periods.some(period => Number(row.anio) === Number(period.anio) && Number(row.mes) === Number(period.mes)));
         const classifications = generalClassifications.filter(group => sellerRows.some(row => String(row.clasificacion_id) === String(group.clasificacion_id)));
         const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)) ||
-            (group.id === 'cotizados_periodo' && (data.cotizados_por_periodo || []).some(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))));
+            (kpiRows(group.id) || []).some(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')));
         document.getElementById('ventas-estatus-resumen').textContent = classifications.length
             ? 'Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. El nombre completo de cada serie se muestra debajo de su barra.'
             : 'Sin clasificaciones registradas para los meses seleccionados.';
@@ -345,17 +345,19 @@ document.addEventListener('DOMContentLoaded', function () {
             total.proyectos += Number(row.proyectos);
             total.declinados += Number(row.declinados);
         });
-        if (allGroups === statuses && Array.isArray(data.cotizados_por_periodo)) {
-            periods.forEach(period => counts.set(['cotizados_periodo',period.anio,period.mes].join(':'),{proyectos:0,declinados:0,periodo:0,anteriores:0}));
+        if (allGroups === statuses) ['cotizados_periodo','colocados'].forEach(groupId => {
+            const documentRows = kpiRows(groupId);
+            if (!documentRows) return;
+            periods.forEach(period => counts.set([groupId,period.anio,period.mes].join(':'),{proyectos:0,declinados:0,periodo:0,anteriores:0}));
             const seller = projectCounts[selectedIndex];
-            data.cotizados_por_periodo.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')).forEach(row => {
-                const key = ['cotizados_periodo',row.anio,row.mes].join(':');
+            documentRows.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')).forEach(row => {
+                const key = [groupId,row.anio,row.mes].join(':');
                 if (counts.has(key)) {
                     counts.get(key).proyectos += Number(row.proyectos);
                     counts.get(key)[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
                 }
             });
-        }
+        });
         const totalsFor = group => periods.map(period => counts.get([groupKey(group),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
         const option = {...base, legend:{...base.legend,data:groups.length ? [...groups.map(groupName),'Declinados'] : []},
             series:groups.flatMap(group => {
@@ -371,8 +373,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const group = groups[Math.floor(params.seriesIndex/2)];
                 const period = periods[params.dataIndex];
                 const total = totalsFor(group)[params.dataIndex];
-                if (group.id === 'cotizados_periodo') return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-                    '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+'\nTotal cotizado: '+total.proyectos;
+                if (kpiRows(group.id)) return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+                    '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+
+                    '\nTotal '+(group.id === 'colocados' ? 'colocado' : 'cotizado')+': '+total.proyectos;
                 return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
                     '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
             }}
@@ -388,6 +391,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (quotedStatusKey !== null && String(row.estatus_id) === quotedStatusKey) return 'cotizados_periodo';
         return Number(row.estatus_id) >= 6 ? 'colocados' :
             ([1,3].includes(Number(row.estatus_id)) ? 'proceso_cotizacion' : String(row.estatus_id));
+    }
+    function kpiRows(groupId) {
+        const rows = groupId === 'cotizados_periodo' ? data.cotizados_por_periodo :
+            (groupId === 'colocados' ? data.colocados_por_periodo : null);
+        return Array.isArray(rows) ? rows : null;
     }
     sellerChart.instance.on('click', event => {
         if (event.componentType === 'series') selectSeller(event.dataIndex);
@@ -503,6 +511,17 @@ document.addEventListener('DOMContentLoaded', function () {
             total[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
         });
     }
+    if (Array.isArray(data.colocados_por_periodo)) {
+        statusGroups.set('colocados',{id:'colocados',orden:6,nombre:'Pedidos Colocados'});
+        periods.forEach(period => statusPeriodCounts.set(['colocados',period.anio,period.mes].join(':'),
+            {proyectos:0,declinados:0,periodo:0,anteriores:0}));
+        data.colocados_por_periodo.forEach(row => {
+            const total = statusPeriodCounts.get(['colocados',row.anio,row.mes].join(':'));
+            if (!total) return;
+            total.proyectos += Number(row.proyectos);
+            total[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
+        });
+    }
     const statuses = [...statusGroups.values()].sort((a,b) => a.orden - b.orden);
     const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
     const statusOption = { ...principalOption, grid: { ...principalOption.grid },
@@ -530,8 +549,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const status = statuses[Math.floor(params.seriesIndex/2)];
             const period = periods[params.dataIndex];
             const total = statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0};
-            if (status.id === 'cotizados_periodo') return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-                '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+'\nTotal cotizado: '+total.proyectos;
+            if (kpiRows(status.id)) return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+                '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+
+                '\nTotal '+(status.id === 'colocados' ? 'colocado' : 'cotizado')+': '+total.proyectos;
             return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
                 '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
         }}
@@ -557,8 +577,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const modal = document.getElementById('modal-declinados-ventas');
         if (!status || !period || !modal) return;
         modal.dataset.desglose = '1';
-        if (status.id === 'cotizados_periodo' && event.seriesIndex % 2 === 1) return;
-        modal.dataset.desgloseLista = status.id === 'cotizados_periodo' ? 'cotizados_periodo' : 'estatus_periodo';
+        if (kpiRows(status.id) && event.seriesIndex % 2 === 1) return;
+        modal.dataset.desgloseLista = status.id === 'cotizados_periodo' ? 'cotizados_periodo' :
+            (status.id === 'colocados' && kpiRows(status.id) ? 'colocados_periodo' : 'estatus_periodo');
         modal.dataset.estatusId = status.id == null ? 'sin_estatus' : String(status.id);
         modal.dataset.desgloseAnio = String(period.anio);
         modal.dataset.desgloseMes = String(period.mes);

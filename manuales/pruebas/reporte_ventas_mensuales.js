@@ -8,7 +8,7 @@ Object.defineProperty(globalThis, 'navigator', { value: undefined });
 const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
-function ejecutar(empty, width, theme, periods = false, quoted = false) {
+function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false) {
     const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -43,6 +43,10 @@ function ejecutar(empty, width, theme, periods = false, quoted = false) {
             {anio:2026,mes:9,vendedor_id:'V2',origen:'periodo',proyectos:4},
             {anio:2026,mes:9,vendedor_id:'V2',origen:'anteriores',proyectos:1}];
     }
+    if (placed) data.colocados_por_periodo = [
+        {anio:2026,mes:9,vendedor_id:'V1',origen:'periodo',proyectos:3},
+        {anio:2026,mes:9,vendedor_id:'V1',origen:'anteriores',proyectos:2},
+        {anio:2026,mes:9,vendedor_id:'V2',origen:'anteriores',proyectos:1}];
     const context = {
         document: {
             createElement: () => ({value:'',textContent:''}),
@@ -75,6 +79,22 @@ function ejecutar(empty, width, theme, periods = false, quoted = false) {
             assert.equal(series.label.formatter(),series.name,'Nombre completo de clasificacion debajo de cada barra');
             assert.equal(series.label.overflow,'break');
         });
+    }
+    if (placed) {
+        const option=charts[3].getOption();
+        const index=option.series.findIndex(series=>series.name==='Pedidos Colocados');
+        assert.deepEqual(option.series[index].data,[0,0,0,6],'Colocados suman ambos grupos del KPI');
+        assert.deepEqual(option.series[index+1].data,[0,0,0,0],'Excluir los cerrados del conjunto colocado');
+        const tip=option.tooltip[0].formatter({seriesIndex:index,dataIndex:3});
+        assert.ok(tip.includes('Proyectos del período: 3') && tip.includes('Proyectos anteriores: 3') && tip.includes('Total colocado: 6'));
+        charts[3].trigger('click',{componentType:'series',seriesIndex:index,dataIndex:3});
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'colocados_periodo');
+        charts[0].trigger('click',{componentType:'series',dataIndex:0});
+        assert.deepEqual(charts[5].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,5]);
+        const dropdown=nodes.get('ventas-vendedor-desglose');dropdown.value='1';dropdown.events.change();
+        assert.deepEqual(charts[5].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,1]);
+        charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
+        return;
     }
     if (quoted) {
         const option = charts[3].getOption();
@@ -220,6 +240,8 @@ function ejecutar(empty, width, theme, periods = false, quoted = false) {
     charts.forEach(chart => chart.dispose());
 }
 ejecutar(false, 900, 'walden', true);
+ejecutar(false, 900, 'walden', false, false, true);
+ejecutar(false, 320, 'dark', false, false, true);
 ejecutar(false, 900, 'walden', false, true);
 ejecutar(false, 320, 'dark', false, true);
 ejecutar(false, 320, 'dark', true);

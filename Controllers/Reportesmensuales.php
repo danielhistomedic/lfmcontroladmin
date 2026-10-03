@@ -63,7 +63,7 @@ class Reportesmensuales extends Controllers
             $restricted = (int)$this->session->get('rol_id') === 4;
             $seller = $restricted ? (string)$this->session->get('ccveusuario') : '';
             $lista = $_POST['lista'] ?? 'declinados';
-            if (!in_array($lista, ['declinados', 'interna_sin_cliente','estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo'], true)) {
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente','estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo','colocados_periodo'], true)) {
                 http_response_code(400);
                 echo json_encode(['respuesta'=>'error', 'data'=>[]]);
                 return;
@@ -280,7 +280,7 @@ class Reportesmensuales extends Controllers
                 $seller = $scope;
             }
             $lista = $_GET['lista'] ?? 'declinados';
-            if (!in_array($lista, ['declinados', 'interna_sin_cliente', 'estatus_clasificacion', 'vendedor_clasificacion', 'clasificacion_periodo', 'estatus_periodo','cotizados_periodo'], true)
+            if (!in_array($lista, ['declinados', 'interna_sin_cliente', 'estatus_clasificacion', 'vendedor_clasificacion', 'clasificacion_periodo', 'estatus_periodo','cotizados_periodo','colocados_periodo'], true)
                 || ($lista !== 'declinados' && ($_GET['datatable'] ?? '') !== '1')) {
                 http_response_code(400);
                 echo json_encode(['status'=>false, 'message'=>'La lista solicitada no es válida.']);
@@ -320,7 +320,7 @@ class Reportesmensuales extends Controllers
                 $valid = !in_array(false, [$options['draw'],$options['start'],$options['length'],$options['order_column']],true)
                     && in_array($options['order_dir'],['asc','desc'],true)
                     && is_string($options['search']) && strlen($options['search'])<=200;
-                if ($lista === 'cotizados_periodo') {
+                if (in_array($lista,['cotizados_periodo','colocados_periodo'],true)) {
                     $quoteYears = self::seleccionNumerica($_GET['periodo_anio'] ?? $year,2000,2100);
                     $quoteMonths = self::seleccionNumerica($_GET['periodo_mes'] ?? $month,1,12);
                     if ($quoteYears === false || $quoteMonths === false || array_diff($year,$quoteYears)

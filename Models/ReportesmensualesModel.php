@@ -261,6 +261,10 @@ class ReportesmensualesModel extends Mysql
         $quotedPeriods = $this->consultar("SELECT vendedor_id, YEAR(fecha_reporte) AS anio,
             MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos
             FROM ($quotedSql) cotizados GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $quotedParams);
+        [$placedSql,$placedParams] = self::documentadosPeriodoSql($year,$month,$seller,'colocados');
+        $placedPeriods = $this->consultar("SELECT vendedor_id, YEAR(fecha_reporte) AS anio,
+            MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos
+            FROM ($placedSql) colocados GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $placedParams);
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -270,6 +274,7 @@ class ReportesmensualesModel extends Mysql
                 'estatus_por_vendedor' => $projectStatuses,
                 'estatus_por_clasificacion' => $annualStatuses,
                 'cotizados_por_periodo' => $quotedPeriods,
+                'colocados_por_periodo' => $placedPeriods,
                 'anios_seleccionados' => is_array($year) ? $year : [$year],
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
@@ -280,10 +285,20 @@ class ReportesmensualesModel extends Mysql
     /** Un registro por proyecto del KPI; anteriores se asignan a su primera cotizacion del filtro. */
     private static function cotizadosPeriodoSql(int|array $years, int|array $months, string $seller): array
     {
+        return self::documentadosPeriodoSql($years,$months,$seller,'cotizados');
+    }
+
+    private static function documentadosPeriodoSql(int|array $years, int|array $months, string $seller, string $type): array
+    {
+        [$table,$alias,$date] = match ($type) {
+            'cotizados' => ['tb_ventas_cotizacion_cliente','cc','cc.fecha'],
+            'colocados' => ['tb_pedidos_cliente','pc','pc.fecha_pedido'],
+            default => throw new InvalidArgumentException('Tipo de documento no valido.')
+        };
         $projectParams = [];
         $quoteParams = [];
         $projectPeriod = self::periodo('v.fecha',$years,$months,$projectParams);
-        $quotePeriod = self::periodo('cc.fecha',$years,$months,$quoteParams);
+        $quotePeriod = self::periodo($date,$years,$months,$quoteParams);
         $params = [...$projectParams,...$projectParams,...$quoteParams,...$projectParams];
         $scope = self::FILTRO_PROYECTOS;
         if ($seller !== '') { $scope .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
@@ -291,12 +306,12 @@ class ReportesmensualesModel extends Mysql
             CASE WHEN ($projectPeriod) THEN v.fecha ELSE q.fecha END AS fecha_reporte,
             CASE WHEN ($projectPeriod) THEN 'periodo' ELSE 'anteriores' END AS origen
             FROM tb_ventas v LEFT JOIN (
-                SELECT cc.venta_id, MIN(cc.fecha) AS fecha FROM tb_ventas_cotizacion_cliente cc
-                WHERE cc.enviado = 1 AND ($quotePeriod) GROUP BY cc.venta_id
+                SELECT $alias.venta_id, MIN($date) AS fecha FROM $table $alias
+                WHERE $alias.enviado = 1 AND ($quotePeriod) GROUP BY $alias.venta_id
             ) q ON q.venta_id = v.id
             WHERE (($projectPeriod) OR q.fecha IS NOT NULL)
                 AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
-                AND EXISTS (SELECT 1 FROM tb_ventas_cotizacion_cliente cc WHERE cc.venta_id = v.id AND cc.enviado = 1)
+                AND EXISTS (SELECT 1 FROM $table $alias WHERE $alias.venta_id = v.id AND $alias.enviado = 1)
                 AND $scope";
         return [$sql,$params];
     }
@@ -362,8 +377,9 @@ class ReportesmensualesModel extends Mysql
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
         }
-        if ($lista === 'cotizados_periodo') {
-            [$quotedSql,$params] = self::cotizadosPeriodoSql($options['periodo_anios'] ?? $year,$options['periodo_meses'] ?? $month,$seller);
+        if (in_array($lista,['cotizados_periodo','colocados_periodo'],true)) {
+            [$quotedSql,$params] = self::documentadosPeriodoSql($options['periodo_anios'] ?? $year,$options['periodo_meses'] ?? $month,$seller,
+                $lista === 'cotizados_periodo' ? 'cotizados' : 'colocados');
             $reportParams = [];
             $reportPeriod = self::periodo('cotizados.fecha_reporte',$year,$month,$reportParams);
             $where = "v.id IN (SELECT cotizados.id FROM ($quotedSql) cotizados WHERE $reportPeriod)";
