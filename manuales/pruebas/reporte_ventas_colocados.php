@@ -89,3 +89,8 @@ $_SERVER['REQUEST_METHOD']='GET'; $api->model->fail=true;
 $error=llamarFinanciero($api); verificar($error[0]===500 && !str_contains(json_encode($error),'sensitive'), 'Error controlado sin detalles SQL');
 verificar(str_contains($yearsHtml,'data-bs-target="#modal-colocados-financiero"') && str_contains($yearsHtml,'colocados-clientes-tabla'), 'Tarjeta verde abre el modal financiero');
 echo "OK: resumen por moneda, grupos Flowserve/Diversos, clientes/vendedores paginados, filtros, permisos, vacio y errores seguros.\n";
+
+verificar(str_contains($yearsHtml, 'id="resumen-colocados-financiero"') && str_contains($yearsHtml, 'id="panel-colocados-clientes-tabla"'), 'Seccion financiera integrada');
+preg_match_all('/\bid="([^"]+)"/', $yearsHtml, $ids);
+verificar(count($ids[1]) === count(array_unique($ids[1])), 'Sin IDs duplicados entre seccion y modal');
+verificar(strpos($yearsHtml, 'id="resumen-colocados-financiero"') < strpos($yearsHtml, 'id="ventas-comparativo"'), 'Resumen dentro de analisis financiero antes del comparativo');

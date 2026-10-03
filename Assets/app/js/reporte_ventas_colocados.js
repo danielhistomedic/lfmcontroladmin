@@ -1,10 +1,13 @@
-/* Resumen financiero de pedidos. Solo carga al abrir la tarjeta Pedidos Colocados. */
+/* Resumen financiero compartido por la seccion del reporte y el modal. */
 document.addEventListener('DOMContentLoaded', function () {
-    const modal = document.getElementById('modal-colocados-financiero');
+    ['resumen-colocados-financiero','modal-colocados-financiero'].forEach(rootId => {
+    const modal = document.getElementById(rootId);
     if (!modal) return;
-    const state = document.getElementById('colocados-financiero-estado');
-    const retry = document.getElementById('colocados-financiero-reintentar');
-    const summary = document.getElementById('colocados-financiero-resumen');
+    const isModal = rootId === 'modal-colocados-financiero';
+    const byId = id => document.getElementById(isModal ? id : 'panel-' + id);
+    const state = byId('colocados-financiero-estado');
+    const retry = byId('colocados-financiero-reintentar');
+    const summary = byId('colocados-financiero-resumen');
     const requests = new Map();
     const tables = new Map();
     const amount = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -33,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } finally { if (requests.get(section) === current) requests.delete(section); }
     }
     function currencyCards(id, rows) {
-        const target = document.getElementById(id);
+        const target = byId(id);
         target.replaceChildren();
         const currencies = new Map([['3',{moneda:'USD',total:0,pedidos:0}],['1',{moneda:'MXN',total:0,pedidos:0}]]);
         rows.forEach(row => currencies.set(String(row.moneda_id), row));
@@ -75,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const detail = {year:0,month:0,start:0,column:2,direction:'asc',timer:null};
-    const detailSearch = document.getElementById('colocados-partidas-buscar');
+    const detailSearch = byId('colocados-partidas-buscar');
     function appendRow(body, values) {
         const tr = document.createElement('tr');
         values.forEach(value => { const td = document.createElement('td'); td.textContent = String(value ?? ''); tr.appendChild(td); });
@@ -83,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return tr;
     }
     function renderMonths(rows) {
-        const body = document.getElementById('colocados-mensual-filas');
+        const body = byId('colocados-mensual-filas');
         body.replaceChildren();
         if (!rows.length) { appendRow(body,['Sin pedidos para los filtros seleccionados.']); return; }
         rows.forEach(row => {
@@ -100,20 +103,20 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadDetails() {
         clearTimeout(detail.timer);
         for (let column = 0; column < 12; column++) {
-            document.getElementById('colocados-partidas-columna-' + column).setAttribute('aria-sort',
+            byId('colocados-partidas-columna-' + column).setAttribute('aria-sort',
                 column === detail.column ? (detail.direction === 'asc' ? 'ascending' : 'descending') : 'none');
         }
-        const section = document.getElementById('colocados-partidas');
-        const body = document.getElementById('colocados-partidas-filas');
-        const state = document.getElementById('colocados-partidas-estado');
-        const previous = document.getElementById('colocados-partidas-anterior');
-        const next = document.getElementById('colocados-partidas-siguiente');
-        const detailRetry = document.getElementById('colocados-partidas-reintentar');
+        const section = byId('colocados-partidas');
+        const body = byId('colocados-partidas-filas');
+        const state = byId('colocados-partidas-estado');
+        const previous = byId('colocados-partidas-anterior');
+        const next = byId('colocados-partidas-siguiente');
+        const detailRetry = byId('colocados-partidas-reintentar');
         section.hidden = false;
         section.open = true;
-        document.getElementById('colocados-partidas-titulo').textContent = 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)';
+        byId('colocados-partidas-titulo').textContent = 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)';
         body.replaceChildren(); state.textContent = 'Cargando partidas...'; previous.disabled = next.disabled = true; detailRetry.hidden = true;
-        document.getElementById('colocados-partidas-pagina').textContent = '';
+        byId('colocados-partidas-pagina').textContent = '';
         const query = params('detalle');
         query.delete('anio[]'); query.delete('mes[]');
         query.append('anio[]', detail.year); query.append('mes[]', detail.month);
@@ -126,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.cantidad_pedido,displayAmount(row.precio_unitario),displayAmount(row.subtotal_partida)]));
             state.textContent = data.data.length ? '' : 'Sin partidas en este mes.';
             previous.disabled = detail.start === 0; next.disabled = detail.start + 5 >= data.recordsFiltered;
-            document.getElementById('colocados-partidas-pagina').textContent = data.recordsFiltered ?
+            byId('colocados-partidas-pagina').textContent = data.recordsFiltered ?
                 (detail.start+1) + '–' + (detail.start+data.data.length) + ' de ' + data.recordsFiltered : '0 partidas';
         } catch (error) {
             if (error.name === 'AbortError') return;
@@ -134,9 +137,9 @@ document.addEventListener('DOMContentLoaded', function () {
             detailRetry.hidden = false;
         }
     }
-    document.getElementById('colocados-partidas-anterior').addEventListener('click', () => { detail.start = Math.max(0,detail.start-5); loadDetails(); });
-    document.getElementById('colocados-partidas-siguiente').addEventListener('click', () => { detail.start += 5; loadDetails(); });
-    document.getElementById('colocados-partidas-reintentar').addEventListener('click', loadDetails);
+    byId('colocados-partidas-anterior').addEventListener('click', () => { detail.start = Math.max(0,detail.start-5); loadDetails(); });
+    byId('colocados-partidas-siguiente').addEventListener('click', () => { detail.start += 5; loadDetails(); });
+    byId('colocados-partidas-reintentar').addEventListener('click', loadDetails);
     detailSearch.addEventListener('input', () => {
         clearTimeout(detail.timer);
         if (requests.has('detalle')) requests.get('detalle').abort();
@@ -144,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
         detail.timer = setTimeout(loadDetails, 350);
     });
     for (let column = 0; column < 12; column++) {
-        document.getElementById('colocados-partidas-orden-' + column).addEventListener('click', () => {
+        byId('colocados-partidas-orden-' + column).addEventListener('click', () => {
             detail.direction = column === detail.column && detail.direction === 'asc' ? 'desc' : 'asc';
             detail.column = column; detail.start = 0; loadDetails();
         });
@@ -191,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     ['clientes','vendedores'].forEach(section => {
-        const control = name => document.getElementById('colocados-' + section + '-' + name);
+        const control = name => byId('colocados-' + section + '-' + name);
         const element = control('tabla');
         const table = {element,body:element.querySelector('tbody'),state:control('estado'),
             page:control('pagina'),previous:control('anterior'),next:control('siguiente'),
@@ -207,18 +210,23 @@ document.addEventListener('DOMContentLoaded', function () {
         table.previous.addEventListener('click', () => { table.start = Math.max(0, table.start - 10); loadTable(section); });
         table.next.addEventListener('click', () => { table.start += 10; loadTable(section); });
     });
-    function load() { clearTimeout(detail.timer); if (requests.has('detalle')) requests.get('detalle').abort(); document.getElementById('colocados-partidas').hidden = true; document.getElementById('colocados-mensual-filas').replaceChildren(); loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
+    function load() { clearTimeout(detail.timer); if (requests.has('detalle')) requests.get('detalle').abort(); byId('colocados-partidas').hidden = true; byId('colocados-mensual-filas').replaceChildren(); loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
+    if (isModal) {
     modal.addEventListener('shown.bs.modal', load);
     modal.addEventListener('hidden.bs.modal', () => {
         requests.forEach(request => request.abort()); requests.clear(); summary.hidden = true;
-        document.getElementById('colocados-partidas').hidden = true;
+        byId('colocados-partidas').hidden = true;
         clearTimeout(detail.timer);
         tables.forEach(table => clearTimeout(table.timer));
     });
+    }
     retry.addEventListener('click', load);
+    if (isModal) {
     document.querySelectorAll('#ventas-mensuales .ventas-abrir-colocados').forEach(card => {
         card.addEventListener('keydown', event => {
             if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
         });
+    });
+    } else { load(); }
     });
 });

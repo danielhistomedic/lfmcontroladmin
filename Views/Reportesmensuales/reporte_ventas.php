@@ -175,6 +175,7 @@
                 <h3 id="ventas-financiero-titulo" class="mt-0 mb-1 fw-bold"><i class="fa-solid fa-dollar-sign me-2" aria-hidden="true"></i>Análisis financiero</h3>
                 <p class="mb-0">Comparativo de importes cotizados y colocados del período seleccionado, sin IVA en USD.</p>
             </div>
+            <?php require dirname(__DIR__, 2) . '/Views/Reportesmensuales/resumen_colocados_financiero.php'; ?>
             <div class="row g-3 mb-4">
                 <div class="col-12">
                     <div class="card h-100">

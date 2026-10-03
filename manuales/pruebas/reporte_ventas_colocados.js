@@ -12,6 +12,7 @@ function node(id) {
 }
 const modal = node('modal-colocados-financiero');
 modal.dataset={url:'/portal/reportesmensuales/colocadosfinanciero',anio:'2024,2026',mes:'2,9',vendedor:'V1'};
+const panel=node('resumen-colocados-financiero'); panel.dataset={...modal.dataset};
 const card=node('card'); let ready, fail=false, defer=false; const pending=[];
 const totals={totales:[{moneda_id:3,moneda:'USD',total:'90.00',pedidos:1},{moneda_id:1,moneda:'MXN',total:'1234.50',pedidos:2}],
     mensual:[{anio:2026,mes:9,moneda:'USD',pedidos:1,total:'90.00',productos:'60.00',servicios:'30.00'}],
@@ -30,11 +31,15 @@ const context={document:{getElementById:node,querySelectorAll:()=>[card],createE
 async function tick(){await new Promise(resolve=>setImmediate(resolve));}
 (async()=>{
     vm.runInNewContext(code,context); ready();
-    assert.equal(queries.length,0,'No cargar datos antes de abrir la tarjeta');
+    assert.equal(queries.length,3,'La seccion carga sin abrir el modal');
+    await tick();
+    assert.equal(node('panel-colocados-financiero-resumen').hidden,false);
+    assert.equal(node('panel-colocados-totales').children[0].children[1].textContent,'$ 90.00');
+    assert.equal(node('colocados-totales').children.length,0,'El modal sigue cargando bajo demanda');
     let prevented=false; card.events.keydown({key:'Enter',preventDefault(){prevented=true;}});
     assert.ok(prevented && card.clicked,'Acceso por teclado');
     modal.events['shown.bs.modal'](); await tick();
-    assert.equal(queries.length,3);
+    assert.equal(queries.length,6);
     queries.forEach(query=>{assert.deepEqual(query.getAll('anio[]'),['2024','2026']);assert.deepEqual(query.getAll('mes[]'),['2','9']);assert.equal(query.get('vendedor'),'V1');});
     assert.equal(node('colocados-financiero-resumen').hidden,false);
     assert.equal(node('colocados-totales').children[0].children[1].textContent,'$ 90.00');
@@ -78,6 +83,11 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     await new Promise(resolve=>setTimeout(resolve,400));
     assert.equal(queries.at(-1).get('search'),'material');
     assert.equal(queries.at(-1).get('start'),'0');
+    const panelRequestsBefore=queries.length;
+    node('panel-colocados-clientes-orden').value='0:asc';
+    node('panel-colocados-clientes-orden').events.change(); await tick();
+    assert.equal(queries.length,panelRequestsBefore+1,'Orden de la seccion genera su propia consulta');
+    assert.equal(node('colocados-clientes-orden').value,'2:desc','Orden del modal no cambia');
     fail=true; node('colocados-financiero-reintentar').events.click(); await tick();
     assert.equal(node('colocados-financiero-reintentar').hidden,false);
     assert.ok(node('colocados-financiero-estado').textContent.includes('Intente nuevamente'));
@@ -86,6 +96,7 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     fail=false; defer=true; node('colocados-financiero-reintentar').events.click();
     modal.events['hidden.bs.modal'](); pending.splice(0).forEach(resolve=>resolve()); await tick();
     assert.equal(node('colocados-financiero-resumen').hidden,true,'Respuesta tardia no repinta el modal cerrado');
+    assert.equal(node('panel-colocados-financiero-resumen').hidden,false,'Cerrar modal mantiene visible la seccion');
     defer=false; totals.totales=[];totals.grupos=[];
     modal.events['shown.bs.modal'](); await tick();
     assert.equal(node('colocados-financiero-resumen').hidden,false);
