@@ -95,3 +95,41 @@ html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .coloc
 html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-diversos-destacado h6,
 html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-diversos-destacado .colocados-total strong { color: #cbf3dc; }
 html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-diversos-destacado .colocados-icono { background: #345443; color: #91dfb5; }
+
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-clientes-destacado {
+    --entidad-acento: #127d93;
+    --entidad-texto: #126477;
+    --entidad-suave: #eaf6f8;
+    --entidad-borde: #cce5eb;
+}
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-vendedores-destacado {
+    --entidad-acento: #7554ad;
+    --entidad-texto: #60438f;
+    --entidad-suave: #f2edf9;
+    --entidad-borde: #e0d6ef;
+}
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-entidad-destacada {
+    border-color: var(--entidad-borde);
+    border-top: 3px solid var(--entidad-acento);
+}
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-entidad-destacada h6 { color: var(--entidad-texto); }
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-entidad-destacada .colocados-icono {
+    background: var(--entidad-suave);
+    color: var(--entidad-acento);
+}
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-entidad-destacada .table th {
+    background: var(--entidad-suave) !important;
+    color: var(--entidad-texto) !important;
+}
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-clientes-destacado {
+    --entidad-acento: #70c6d7;
+    --entidad-texto: #bceaf2;
+    --entidad-suave: #29434e;
+    --entidad-borde: #3b626e;
+}
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-vendedores-destacado {
+    --entidad-acento: #bda2e7;
+    --entidad-texto: #e4d6f7;
+    --entidad-suave: #393149;
+    --entidad-borde: #635277;
+}

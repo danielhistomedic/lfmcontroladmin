@@ -63,7 +63,7 @@
 </details>
 <div class="colocados-grupos colocados-listados">
     <?php foreach (['clientes' => 'Total por cliente', 'vendedores' => 'Total por vendedor'] as $section => $title): ?>
-        <section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo">
+        <section class="colocados-resumen-seccion colocados-entidad-destacada colocados-<?= $section; ?>-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo">
             <h6 id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo"><i class="fa-solid <?= $section === 'clientes' ? 'fa-building' : 'fa-user-tie'; ?> colocados-icono" aria-hidden="true"></i><?= $title; ?></h6>
             <div class="colocados-tabla-controles">
                 <label>Buscar<input id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-buscar" type="search" maxlength="200" placeholder="Nombre o moneda" class="form-control form-control-sm"></label>
