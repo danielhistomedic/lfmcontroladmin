@@ -362,26 +362,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const classificationColors=['#2385bd','#239c83','#d48825','#8064b0'];
     const groupedSeries=generalClassifications.flatMap((classification,index) => {
         const totals=periods.map(period=>periodCounts.get([classification.clasificacion_id,period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
-        const abbreviation=classification.clasificacion.trim().charAt(0);
         return [
-            {name:classification.clasificacion,type:'bar',stack:'clase-'+classification.clasificacion_id,barMaxWidth:38,
+            {name:classification.clasificacion,type:'bar',stack:'clase-'+classification.clasificacion_id,barWidth:26,barGap:'230%',
                 itemStyle:{color:classificationColors[index%classificationColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
-                label:{show:true,position:'bottom',distance:5,color:cascadeText,formatter:()=>abbreviation}},
-            {name:'Declinados',type:'bar',stack:'clase-'+classification.clasificacion_id,barMaxWidth:50,
+                label:{show:true,position:'bottom',distance:5,color:cascadeText,fontSize:9,width:82,overflow:'break',lineHeight:11,formatter:()=>classification.clasificacion}},
+            {name:'Declinados',type:'bar',stack:'clase-'+classification.clasificacion_id,barWidth:26,barGap:'230%',
                 itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
                 label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
         ];
     });
     const classificationChart = cascade('ventas-clasificaciones-general');
     classificationChart.count = periods.length;
-    classificationChart.slotWidth = Math.max(180,generalClassifications.length*65);
+    classificationChart.slotWidth = Math.max(280,generalClassifications.length*88);
     const principalOption = cascadeOption([]);
     principalOption.legend={top:0,type:'scroll',data:generalClassifications.length?[...generalClassifications.map(row=>row.clasificacion),'Declinados']:[],textStyle:{color:cascadeText,fontSize:10}};
-    principalOption.grid.bottom=100;
+    principalOption.grid.bottom=115;
     principalOption.xAxis.data=periods.map(period=>monthNames[Number(period.mes)-1]);
-    principalOption.xAxis.axisLabel.margin=27;
+    principalOption.xAxis.axisLabel.margin=46;
     principalOption.xAxis.splitLine={show:true,lineStyle:{color:"#dce5ed"}};
-    const yearAxis={type:'category',data:periods.map(period=>String(period.anio)),position:'bottom',offset:55,
+    const yearAxis={type:'category',data:periods.map(period=>String(period.anio)),position:'bottom',offset:75,
         axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,color:cascadeText,formatter:(value,index)=>{
             const first=periods.findIndex(period=>String(period.anio)===value);
             const last=periods.length-1-periods.slice().reverse().findIndex(period=>String(period.anio)===value);
@@ -433,7 +432,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const statuses = [...statusGroups.values()].sort((a,b) => a.orden - b.orden);
     const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
     const statusOption = { ...principalOption, grid: { ...principalOption.grid },
-        legend: {show:false},
+        legend: {
+            show:true, type:'scroll', top:0, left:0, right:0, itemWidth:12, itemHeight:8, itemGap:12,
+            textStyle:{color:cascadeText,fontSize:10},
+            formatter:name=>{
+                const characters = Array.from(String(name));
+                return characters.slice(0, Math.max(1, Math.floor(characters.length * .66))).join('') + '...';
+            },
+            tooltip:{show:true,renderMode:'richText',formatter:params=>params.name}
+        },
         series: statuses.flatMap((status,index) => {
             const totals = periods.map(period=>statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
             return [
@@ -458,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
     generalStatusChart.element.style.height = '370px';
     generalStatusChart.count = periods.length;
     generalStatusChart.slotWidth = Math.max(280,statuses.length*88);
-    statusOption.grid.top = 25;
+    statusOption.grid.top = 55;
     statusOption.grid.bottom = 125;
     statusOption.xAxis = principalOption.xAxis.map(axis => ({...axis,axisLabel:{...axis.axisLabel}}));
     statusOption.xAxis[0].axisLabel.margin = 83;

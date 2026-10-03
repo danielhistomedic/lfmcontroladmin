@@ -112,7 +112,7 @@
                 <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
                     <div class="card-body">
                         <h4 class="mt-0">Proyectos por clasificación</h4>
-                        <p class="text-muted">Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. Las letras bajo las barras corresponden a la leyenda.</p>
+                        <p class="text-muted">Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. El nombre completo de cada serie se muestra debajo de su barra.</p>
                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
                             <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
                         </div>

@@ -60,9 +60,22 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
+    if (!empty) {
+        const classificationSeries = charts[2].getOption().series;
+        classificationSeries.filter(series=>series.name !== 'Declinados').forEach(series=>{
+            assert.equal(series.label.formatter(),series.name,'Nombre completo de clasificacion debajo de cada barra');
+            assert.equal(series.label.overflow,'break');
+        });
+    }
     if (periods) {
         const statusOption = charts[3].getOption();
-        assert.equal(statusOption.legend[0].show,false);
+        assert.equal(statusOption.legend[0].show,true);
+        assert.equal(statusOption.legend[0].type,'scroll');
+        const statusName = 'PROCESO DE COTIZACION';
+        assert.equal(statusOption.legend[0].formatter(statusName), statusName.slice(0,Math.floor(statusName.length*.66))+'...');
+        assert.equal(statusOption.legend[0].formatter('Declinados'),'Declin...');
+        assert.equal(statusOption.legend[0].tooltip.formatter({name:statusName}),statusName);
+        assert.equal(statusOption.grid[0].top,55,'Espacio para leyenda y nombre del eje');
         assert.equal(statusOption.series[0].label.formatter(),'PROCESO DE COTIZACION');
         assert.equal(statusOption.series[0].name,'PROCESO DE COTIZACION');
         assert.equal(statusOption.series[2].name,'Pedidos Colocados');
