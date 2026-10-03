@@ -219,6 +219,16 @@ class Reportesmensuales extends Controllers
                     http_response_code(400); echo json_encode(['status'=>false,'message'=>'Los filtros de la tabla no son válidos.']); return;
                 }
             }
+            if ($section === 'detalle' && (isset($_GET['periodo_anio']) || isset($_GET['periodo_mes']))) {
+                $periodYears = self::seleccionNumerica($_GET['periodo_anio'] ?? null,2000,2100);
+                $periodMonths = self::seleccionNumerica($_GET['periodo_mes'] ?? null,1,12);
+                if ($periodYears === false || $periodMonths === false || !in_array($years[0],$periodYears,true)
+                    || !in_array($months[0],$periodMonths,true)) {
+                    http_response_code(400); echo json_encode(['status'=>false,'message'=>'El mes no pertenece al período del reporte.']); return;
+                }
+                $options['periodo_anios'] = $periodYears;
+                $options['periodo_meses'] = $periodMonths;
+            }
             $result = $this->model->colocadosFinanciero($years,$months,$seller,$section,$options);
             echo json_encode(['status'=>true,'data'=>$result],JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
         } catch (\Throwable $ex) {

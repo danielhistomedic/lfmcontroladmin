@@ -14,8 +14,8 @@ const modal = node('modal-colocados-financiero');
 modal.dataset={url:'/portal/reportesmensuales/colocadosfinanciero',anio:'2024,2026',mes:'2,9',vendedor:'V1'};
 const panel=node('resumen-colocados-financiero'); panel.dataset={...modal.dataset};
 const card=node('card'); let ready, fail=false, defer=false; const pending=[];
-const totals={totales:[{moneda_id:3,moneda:'USD',total:'90.00',pedidos:1},{moneda_id:1,moneda:'MXN',total:'1234.50',pedidos:2}],
-    mensual:[{anio:2026,mes:9,moneda:'USD',pedidos:1,total:'90.00',productos:'60.00',servicios:'30.00'}],
+const totals={conteo:{proyectos:3,proyectos_periodo:2,proyectos_anteriores:1,pedidos:4},totales:[{moneda_id:3,moneda:'USD',total:'90.00',proyectos:3,pedidos:4},{moneda_id:1,moneda:'MXN',total:'1234.50',pedidos:2}],
+    mensual:[{anio:2026,mes:9,moneda:'USD',proyectos:3,pedidos:4,total:'90.00',productos:'60.00',servicios:'30.00'}],
     grupos:[{grupo:'Flowserve',moneda_id:1,moneda:'MXN',total:'500.00',pedidos:1},{grupo:'Diversos',moneda_id:3,moneda:'USD',total:'90.00',pedidos:1}]};
 const context={document:{getElementById:node,querySelectorAll:()=>[card],createElement:tag=>({tag,events:{},children:[],setAttribute(name,value){this[name]=value;},addEventListener(name,fn){this.events[name]=fn;},appendChild(child){this.children.push(child);}}),
     addEventListener(name,fn){ready=fn;}},setTimeout,clearTimeout,Map,Intl,Number,URLSearchParams,AbortController,DOMException,SyntaxError,
@@ -43,6 +43,9 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     queries.forEach(query=>{assert.deepEqual(query.getAll('anio[]'),['2024','2026']);assert.deepEqual(query.getAll('mes[]'),['2','9']);assert.equal(query.get('vendedor'),'V1');});
     assert.equal(node('colocados-financiero-resumen').hidden,false);
     assert.equal(node('colocados-totales').children[0].children[1].textContent,'$ 90.00');
+    assert.equal(node('colocados-totales').children[0].children[2].textContent,'3 proyectos · 4 pedidos');
+    assert.equal(node('colocados-proyectos-conteo').textContent,'Proyectos colocados en el período: 3 | Proyectos del período: 2 | Proyectos anteriores: 1');
+    assert.equal(node('panel-colocados-proyectos-conteo').textContent,node('colocados-proyectos-conteo').textContent);
     assert.equal(node('colocados-totales').children[1].children[1].textContent,'$ 1,234.50');
     assert.equal(node('colocados-flowserve').children[0].children[1].textContent,'$ 0.00','No convertir MXN a USD');
     assert.equal(node('colocados-flowserve').children[1].children[1].textContent,'$ 500.00');
@@ -57,11 +60,15 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     assert.equal(queries.at(-1).get('order_column'),'2');
     assert.equal(queries.at(-1).get('order_dir'),'desc');
     const monthly=node('colocados-mensual-filas');
-    assert.equal(monthly.children[0].children[5].textContent,'$ 60.00');
-    assert.equal(monthly.children[0].children[6].textContent,'$ 30.00');
-    monthly.children[0].children[7].children[0].events.click(); await tick();
+    assert.equal(monthly.children[0].children[3].textContent,'3');
+    assert.equal(monthly.children[0].children[4].textContent,'4');
+    assert.equal(monthly.children[0].children[6].textContent,'$ 60.00');
+    assert.equal(monthly.children[0].children[7].textContent,'$ 30.00');
+    monthly.children[0].children[8].children[0].events.click(); await tick();
     assert.deepEqual(queries.at(-1).getAll('anio[]'),['2026']);
     assert.deepEqual(queries.at(-1).getAll('mes[]'),['9']);
+    assert.deepEqual(queries.at(-1).getAll('periodo_anio[]'),['2024','2026']);
+    assert.deepEqual(queries.at(-1).getAll('periodo_mes[]'),['2','9']);
     assert.equal(queries.at(-1).get('seccion'),'detalle');
     assert.equal(node('colocados-partidas').open,true,'Ver partidas abre el desplegable');
     const detailRow=node('colocados-partidas-filas').children[0];

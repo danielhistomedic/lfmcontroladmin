@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function currencyCards(id, rows) {
         const target = byId(id);
         target.replaceChildren();
-        const currencies = new Map([['3',{moneda:'USD',total:0,pedidos:0}],['1',{moneda:'MXN',total:0,pedidos:0}]]);
+        const currencies = new Map([['3',{moneda:'USD',total:0,pedidos:0,proyectos:0}],['1',{moneda:'MXN',total:0,pedidos:0,proyectos:0}]]);
         rows.forEach(row => currencies.set(String(row.moneda_id), row));
         currencies.forEach(row => {
             const card = document.createElement('div');
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const value = document.createElement('strong');
             value.textContent = displayAmount(row.total);
             const count = document.createElement('small');
-            count.textContent = row.pedidos + ' pedidos';
+            count.textContent = (row.proyectos ?? row.pedidos) + ' proyectos · ' + row.pedidos + ' pedidos';
             const breakdown = document.createElement('small');
             breakdown.textContent = 'Productos: ' + displayAmount(row.productos ?? 0) + ' | Servicios: ' + displayAmount(row.servicios ?? 0);
 
@@ -63,6 +63,10 @@ document.addEventListener('DOMContentLoaded', function () {
         retry.hidden = true;
         try {
             const data = await get('resumen', params('resumen'));
+            const counts = data.conteo || {};
+            byId('colocados-proyectos-conteo').textContent = 'Proyectos colocados en el período: ' + (counts.proyectos ?? 0) +
+                ' | Proyectos del período: ' + (counts.proyectos_periodo ?? 0) +
+                ' | Proyectos anteriores: ' + (counts.proyectos_anteriores ?? 0);
             currencyCards('colocados-totales', data.totales);
             currencyCards('colocados-flowserve', data.grupos.filter(row => row.grupo === 'Flowserve'));
             currencyCards('colocados-diversos', data.grupos.filter(row => row.grupo === 'Diversos'));
@@ -90,8 +94,9 @@ document.addEventListener('DOMContentLoaded', function () {
         body.replaceChildren();
         if (!rows.length) { appendRow(body,['Sin pedidos para los filtros seleccionados.']); return; }
         rows.forEach(row => {
-            const tr = appendRow(body,[row.anio,monthNames[Number(row.mes)-1],row.moneda,row.pedidos,
+            const tr = appendRow(body,[row.anio,monthNames[Number(row.mes)-1],row.moneda,row.proyectos ?? row.pedidos,row.pedidos,
                 displayAmount(row.total),displayAmount(row.productos),displayAmount(row.servicios)]);
+            for (let column = 3; column <= 7; column++) tr.children[column].className = 'text-end';
             const td = document.createElement('td');
             const button = document.createElement('button');
             button.type = 'button'; button.className = 'btn btn-outline-primary btn-sm'; button.textContent = 'Ver partidas';
@@ -118,6 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
         body.replaceChildren(); state.textContent = 'Cargando partidas...'; previous.disabled = next.disabled = true; detailRetry.hidden = true;
         byId('colocados-partidas-pagina').textContent = '';
         const query = params('detalle');
+        modal.dataset.anio.split(',').forEach(year => query.append('periodo_anio[]',year));
+        modal.dataset.mes.split(',').forEach(month => query.append('periodo_mes[]',month));
         query.delete('anio[]'); query.delete('mes[]');
         query.append('anio[]', detail.year); query.append('mes[]', detail.month);
         query.set('start', detail.start); query.set('length', 5);

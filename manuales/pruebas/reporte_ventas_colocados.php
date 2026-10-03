@@ -6,18 +6,20 @@ ob_start(); require __DIR__ . '/reporte_ventas_mensuales.php'; ob_end_clean();
 $financialDb = new ConexionSimulada([
     [['moneda_id'=>1,'moneda'=>'MXN','total'=>'1200.00','pedidos'=>2],['moneda_id'=>3,'moneda'=>'USD','total'=>'150.00','pedidos'=>1]],
     [['grupo'=>'Flowserve','moneda_id'=>1,'moneda'=>'MXN','total'=>'1200.00','pedidos'=>2],['grupo'=>'Diversos','moneda_id'=>3,'moneda'=>'USD','total'=>'150.00','pedidos'=>1]],
-    [['anio'=>2026,'mes'=>9,'moneda_id'=>3,'moneda'=>'USD','pedidos'=>1,'total'=>'150.00','productos'=>'100.00','servicios'=>'50.00']]
+    [['anio'=>2026,'mes'=>9,'moneda_id'=>3,'moneda'=>'USD','proyectos'=>3,'pedidos'=>4,'total'=>'150.00','productos'=>'100.00','servicios'=>'50.00']],
+    [['proyectos'=>3,'proyectos_periodo'=>2,'proyectos_anteriores'=>1,'pedidos'=>4]]
 ]);
 $financial = (new ModeloSimulado($financialDb))->colocadosFinanciero([2026,2024],[2,9],'V1');
 verificar(count($financial['totales'])===2 && $financial['totales'][0]['total']==='1200.00', 'Conservar importes originales sin conversion');
-foreach ($financialDb->calls as [$sql,$params]) {
+foreach (array_slice($financialDb->calls,0,3) as [$sql,$params]) {
     verificar(substr_count($sql,'?')===count($params), 'Parametros coinciden con rangos y vendedor');
-    verificar(str_contains($sql,'pc.fecha_pedido >= ?') && !str_contains($sql,'v.fecha >= ?'), 'Usar fecha del pedido');
+    verificar(str_contains($sql,'pc.fecha_pedido >= ?') && str_contains($sql,'v.fecha >= ?')
+        && str_contains($sql,'v.fecha_proyecto_periodo IS NOT NULL OR ('), 'Mismo conjunto del KPI: fecha del proyecto o fecha del pedido anterior');
     verificar(str_contains($sql,'pd.cantidad_pedido * pd.precio_unitario') && str_contains($sql,'pc.moneda_id'), 'Subtotal sin IVA y moneda provienen del pedido');
     verificar(str_contains($sql,'pc.enviado = 1') && str_contains($sql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
         && str_contains($sql,'v.ccveusuario_vendedor = ?') && str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Conservar alcance comercial y vendedor');
     verificar(!str_contains($sql,'pc.total'), 'No sumar importes con IVA');
-    verificar(str_contains($sql,'INNER JOIN tb_pedidos_cliente_detalle pd ON pd.pedido_id = pc.id') && str_contains($sql,'INNER JOIN tb_ventas_detalle vd ON vd.id = pd.venta_detalle_id'), 'Relaciones directas de partidas');
+    verificar(str_contains($sql,'LEFT JOIN tb_pedidos_cliente_detalle pd ON pd.pedido_id = pc.id') && str_contains($sql,'LEFT JOIN tb_ventas_detalle vd ON vd.id = pd.venta_detalle_id'), 'Relaciones directas conservan proyectos con pedidos sin partidas validas');
     verificar(str_contains($sql,'COUNT(DISTINCT pc.id) AS pedidos') && !str_contains($sql,'pc.subtotal') && !str_contains($sql,'pd.importe'), 'Pedidos distintos, sin encabezados ni importe almacenado');
     verificar(str_contains($sql, "vd.tipo_partida = 'PRODUCTO'") && str_contains($sql, "vd.tipo_partida = 'SERVICIO'"), 'Separar productos y servicios');
 }
@@ -35,17 +37,35 @@ $sellerDb = new ConexionSimulada([[['total'=>1]],[]]);
 (new ModeloSimulado($sellerDb))->colocadosFinanciero(2026,9,'V1','vendedores',['search'=>'']);
 verificar(str_contains($sellerDb->calls[1][0],'pd.cantidad_pedido * pd.precio_unitario') && !str_contains($sellerDb->calls[1][0],'pc.total'), 'Vendedores muestran subtotales sin IVA');
 verificar(count($sellerDb->calls)===2 && str_contains($sellerDb->calls[1][0],'GROUP BY v.ccveusuario_vendedor, pc.moneda_id'), 'Vendedor del proyecto y moneda del pedido');
-$emptyDb = new ConexionSimulada([[],[],[]]);
+$emptyDb = new ConexionSimulada([[],[],[],[['proyectos'=>0,'proyectos_periodo'=>0,'proyectos_anteriores'=>0,'pedidos'=>0]]]);
 verificar((new ModeloSimulado($emptyDb))->colocadosFinanciero(2026,9,'')['totales']===[], 'Resumen vacio valido');
 
 verificar($financial['mensual'][0]['productos'] === '100.00' && $financial['mensual'][0]['servicios'] === '50.00', 'Desglose mensual conserva decimales');
-verificar(str_contains($financialDb->calls[2][0], 'GROUP BY YEAR(pc.fecha_pedido), MONTH(pc.fecha_pedido), pc.moneda_id'), 'Meses separados por moneda');
+verificar(str_contains($financialDb->calls[2][0], 'YEAR(COALESCE(v.fecha_proyecto_periodo, pc.fecha_pedido))')
+    && str_contains($financialDb->calls[2][0], 'GROUP BY anio, mes, pc.moneda_id'), 'Meses por fecha del proyecto del periodo o pedido anterior, separados por moneda');
+verificar($financial['conteo']===['proyectos'=>3,'proyectos_periodo'=>2,'proyectos_anteriores'=>1,'pedidos'=>4], 'Conteo global distingue proyectos unicos y pedidos');
+verificar(str_contains($financialDb->calls[3][0],'COUNT(DISTINCT v.id) AS proyectos')
+    && str_contains($financialDb->calls[3][0],'COUNT(DISTINCT CASE WHEN v.fecha_proyecto_periodo IS NULL THEN v.id END)')
+    && $financialDb->calls[3][1]===$financialDb->calls[0][1], 'Conciliar los mismos dos grupos sin sumar conteos por moneda');
+foreach ($financialDb->calls as [$sql,$params]) verificar($params === [
+    '2024-02-01','2024-03-01','2024-09-01','2024-10-01','2026-02-01','2026-03-01','2026-09-01','2026-10-01',
+    '2024-02-01','2024-03-01','2024-09-01','2024-10-01','2026-02-01','2026-03-01','2026-09-01','2026-10-01','V1'],
+    'Parametros por proyecto y pedido conservan todos los anios/meses y vendedor');
 $detailDb = new ConexionSimulada([[['total'=>1]],[['pedido_id'=>4,'venta_id'=>3,'subtotal_partida'=>'150.00']]]);
 $details = (new ModeloSimulado($detailDb))->colocadosFinanciero(2026,9,'V1','detalle',['start'=>10,'length'=>10]);
 verificar($details['recordsFiltered'] === 1 && str_contains($detailDb->calls[1][0], 'pd.cantidad_pedido * pd.precio_unitario AS subtotal_partida') && str_contains($detailDb->calls[1][0], 'LIMIT 10 OFFSET 10'), 'Detalle paginado con subtotal exclusivo por partida');
 foreach (['pc.num_orden_compra','pc.venta_id','v.proyecto_id','mat.ccvematerial AS clave','mat.ccn','pd.ccvematerial AS codigo_cliente','pd.descripcion','pd.precio_unitario'] as $field) verificar(str_contains($detailDb->calls[1][0], $field), 'Campos reales de detalle');
 
 verificar(str_contains($detailDb->calls[1][0], 'MAX(ccveMaterialAlmacen) AS ccn FROM tb_materiales GROUP BY ccvematerial') && str_contains($detailDb->calls[1][0], 'mat ON mat.ccvematerial = pd.ccvematerial'), 'Materiales opcionales sin multiplicar partidas');
+$scopeDetailDb = new ConexionSimulada([[['total'=>1]],[]]);
+(new ModeloSimulado($scopeDetailDb))->colocadosFinanciero(2026,9,'V1','detalle',
+    ['periodo_anios'=>[2026],'periodo_meses'=>[9,10]]);
+foreach ($scopeDetailDb->calls as [$sql,$params]) {
+    verificar($params===['2026-09-01','2026-10-01','2026-10-01','2026-11-01',
+        '2026-09-01','2026-10-01','2026-10-01','2026-11-01','V1','2026-09-01','2026-10-01'],
+        'Detalle filtra el mes elegido sobre el conjunto global, sin reasignar proyectos entre meses');
+    verificar(str_contains($sql,'COALESCE(v.fecha_proyecto_periodo, pc.fecha_pedido) >= ?'), 'Fecha mensual del detalle coincide con la tabla mensual');
+}
 $searchDetailDb = new ConexionSimulada([[['total'=>7]],[]]);
 (new ModeloSimulado($searchDetailDb))->colocadosFinanciero(2026,9,'V1','detalle',
     ['search'=>'a%_','order_column'=>11,'order_dir'=>'desc','start'=>5]);
@@ -82,6 +102,12 @@ $_GET['anio']=['2026']; $_GET['mes']=['9']; $_GET['order_column']='11';
 verificar(llamarFinanciero($api)[0]===200 && $api->model->calls[count($api->model->calls)-1][3] === 'detalle', 'Detalle mensual mantiene autorizacion y alcance');
 $_GET['order_column']='12'; verificar(llamarFinanciero($api)[0]===400, 'Rechazar columna fuera del detalle');
 $_GET['order_column']='11';
+$_GET['periodo_anio']=['2024','2026']; $_GET['periodo_mes']=['2','9'];
+verificar(llamarFinanciero($api)[0]===200
+    && end($api->model->calls)[4]['periodo_anios']===[2024,2026]
+    && end($api->model->calls)[4]['periodo_meses']===[2,9], 'Detalle conserva la seleccion global para asignar cada proyecto al mes correcto');
+$_GET['periodo_mes']=['2']; verificar(llamarFinanciero($api)[0]===400, 'Detalle no acepta un mes externo al reporte');
+unset($_GET['periodo_anio'],$_GET['periodo_mes']);
 Session::$active=false; verificar(llamarFinanciero($api)[0]===401, 'Rechazar sesion vencida');
 Session::$active=true; $testPermissions=[]; verificar(llamarFinanciero($api)[0]===403, 'Comprobar permiso del modulo');
 $testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='POST'; verificar(llamarFinanciero($api)[0]===405, 'Solo lectura GET');

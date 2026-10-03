@@ -1,10 +1,11 @@
 <p class="mb-1"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Período: <strong><?= $esc($monthNames); ?> <?= $esc($yearNames); ?></strong></p>
-<p class="colocados-nota">Pedidos colocados por fecha del pedido, con el filtro de vendedor aplicado. Subtotales de partidas: cantidad pedida × precio unitario, sin IVA ni conversión de moneda. Se excluyen proyectos declinados.</p>
+<p class="colocados-nota">Mismo conjunto de proyectos que el KPI: proyectos registrados en el período con pedido enviado y proyectos anteriores con pedido enviado dentro del período. Subtotales de partidas: cantidad pedida × precio unitario, sin IVA ni conversión de moneda. Se excluyen proyectos cerrados y de estatus 2. Un proyecto puede tener varios pedidos o monedas.</p>
 <div id="<?= $colocadosPrefix; ?>colocados-financiero-estado" role="status" aria-live="polite"></div>
 <button id="<?= $colocadosPrefix; ?>colocados-financiero-reintentar" type="button" class="btn btn-outline-primary btn-sm mb-3" hidden>Reintentar</button>
 <div id="<?= $colocadosPrefix; ?>colocados-financiero-resumen" hidden>
     <section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-totales-titulo">
         <h6 id="<?= $colocadosPrefix; ?>colocados-totales-titulo"><i class="fa-solid fa-coins colocados-icono" aria-hidden="true"></i>Total colocado por moneda</h6>
+        <p id="<?= $colocadosPrefix; ?>colocados-proyectos-conteo" class="colocados-nota" aria-live="polite"></p>
         <div id="<?= $colocadosPrefix; ?>colocados-totales" class="colocados-monedas"></div>
     </section>
     <div class="colocados-grupos">
@@ -20,6 +21,7 @@
 </div>
 <section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-mensual-titulo">
     <h6 id="<?= $colocadosPrefix; ?>colocados-mensual-titulo"><i class="fa-solid fa-calendar colocados-icono" aria-hidden="true"></i>Pedidos por mes · Productos y servicios</h6>
+    <p class="colocados-nota">Los proyectos del período se muestran en su mes de registro; los anteriores, en el mes del pedido. Los conteos por moneda pueden compartir proyectos.</p>
     <div class="table-responsive">
         <table class="table colocados-tabla">
             <thead>
@@ -27,7 +29,8 @@
                     <th>Año</th>
                     <th>Mes</th>
                     <th>Moneda</th>
-                    <th class="text-end">Pedidos colocados</th>
+                    <th class="text-end">Proyectos colocados</th>
+                    <th class="text-end">Pedidos enviados</th>
                     <th class="text-end">Subtotal general</th>
                     <th class="text-end">Productos</th>
                     <th class="text-end">Servicios</th>
