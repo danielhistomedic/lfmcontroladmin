@@ -134,7 +134,10 @@ class ReportesmensualesModel extends Mysql
         // Pedidos enviados: sumar cada partida una vez y convertir con el tipo de cambio existente.
         $placed = $this->consultar("SELECT v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id,
             3 AS moneda_id, COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor,
-            'colocado' AS tipo, SUM(CASE WHEN pc.moneda_id = 1
+            'colocado' AS tipo,
+            SUM(CASE WHEN pc.moneda_id = 3 THEN pd.cantidad_pedido * pd.precio_unitario ELSE 0 END) AS monto_usd_original,
+            SUM(CASE WHEN pc.moneda_id = 1 THEN pd.cantidad_pedido * pd.precio_unitario ELSE 0 END) AS monto_mxn_original,
+            SUM(CASE WHEN pc.moneda_id = 1
                 THEN (pd.cantidad_pedido * pd.precio_unitario) / $divisor
                 ELSE pd.cantidad_pedido * pd.precio_unitario END) AS monto, MIN(pc.fecha_pedido) AS fecha
             FROM tb_pedidos_cliente pc
@@ -286,6 +289,11 @@ class ReportesmensualesModel extends Mysql
                 'anios_seleccionados' => is_array($year) ? $year : [$year],
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
+                'tipo_cambio_aplicado' => $divisor,
+                'colocado_moneda_original' => [
+                    'USD' => array_sum(array_column($placed, 'monto_usd_original')),
+                    'MXN' => array_sum(array_column($placed, 'monto_mxn_original'))
+                ],
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
     }

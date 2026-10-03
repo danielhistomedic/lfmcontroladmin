@@ -55,7 +55,24 @@ class ModeloSimulado extends ReportesmensualesModel
 $quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3,'interna_sin_cliente'=>4];
 $db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['clasificacion_id'=>3,'estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['cotizacion_cliente_anteriores'=>'8']],[['orden_compra_cliente_anteriores'=>2]],[['declinados_anteriores'=>3]],[],[]]);
 $model=new ModeloSimulado($db);
+$currencyResponses = $db->responses;
 $actual=$model->dashboard(2024,2,"V'1");
+verificar($actual['tipo_cambio_aplicado'] === 1.0 && $actual['tipo_cambio'] === 0.0,
+    'Informar el divisor realmente utilizado cuando el tipo de cambio registrado es cero');
+$currencyResponses[0] = [['valor'=>'18.00','fecha'=>'2026-09-30']];
+$currencyResponses[2] = [array_replace($headers[1], ['moneda_id'=>3,'monto'=>250,
+    'monto_usd_original'=>'150.00','monto_mxn_original'=>'1800.00'])];
+$currencyDb = new ConexionSimulada($currencyResponses);
+$currencyReport = (new ModeloSimulado($currencyDb))->dashboard(2024,2,"V'1");
+cerca($currencyReport['colocado'],250.0,'Mantener importe convertido por la consulta existente');
+cerca($currencyReport['colocado_moneda_original']['USD'],150.0,'Conservar importe originalmente USD');
+cerca($currencyReport['colocado_moneda_original']['MXN'],1800.0,'Conservar importe originalmente MXN');
+verificar($currencyReport['tipo_cambio_aplicado'] === 18.0 && $currencyReport['fecha_tipo_cambio'] === '2026-09-30'
+    && count($currencyDb->calls) === 13, 'Misma fuente del tipo de cambio y fecha sin consultas adicionales');
+foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
+    verificar(str_contains($currencyDb->calls[2][0], "SUM(CASE WHEN pc.moneda_id = $currencyId THEN pd.cantidad_pedido * pd.precio_unitario ELSE 0 END) AS monto_{$key}_original"),
+        'Sumar monedas originales en la misma consulta y con las mismas partidas del importe convertido');
+}
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
 verificar(count($db->calls)===13,'Consultas por conjunto');

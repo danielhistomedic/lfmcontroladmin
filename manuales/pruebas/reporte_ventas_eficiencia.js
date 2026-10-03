@@ -27,6 +27,7 @@ function run(data,width=1200,dark=false) {
 }
 const fixture={
     cotizado:600,colocado:250,
+    colocado_moneda_original:{USD:150,MXN:1800},tipo_cambio_aplicado:18,fecha_tipo_cambio:'2026-09-30 12:00:00',
     cantidades:{total_proyectos:10,cotizacion_cliente:9,orden_compra_cliente:9},
     proyectos_por_vendedor:[{vendedor_id:'V1',nombre:'Ana',proyectos:6},{vendedor_id:'V2',nombre:'Beto',proyectos:4}],
     cotizados_por_periodo:[{vendedor_id:'V1',nombre:'Ana',origen:'periodo',proyectos:3},
@@ -50,6 +51,8 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     assert.ok(!node('ventas-eficiencia-eficiencia').textContent,'Eficiencia retirada');
     assert.equal(node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00');
     assert.equal(node('ventas-eficiencia-importe-colocado').textContent,'$ 250.00');
+    assert.equal(node('ventas-eficiencia-moneda-original').textContent,'USD: $ 150.00 | MXN: $ 1,800.00');
+    assert.equal(node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');
     assert.equal(node('ventas-eficiencia-colocacion-monetaria').textContent,'41.67 %');
     assert.deepEqual(charts[0].getOption().series[0].data.map(row=>row.value),[9,9]);
     assert.deepEqual(charts[1].getOption().series[0].data.map(row=>row.value),[600,250]);
@@ -76,6 +79,7 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
 const empty=run({cantidades:{total_proyectos:0,cotizacion_cliente:0,orden_compra_cliente:0}});
 assert.equal(empty.node('ventas-eficiencia-colocacion').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-colocacion-monetaria').textContent,'—');
+assert.equal(empty.node('ventas-eficiencia-tipo-cambio').textContent,'TC: — | Fecha TC: —','Datos ausentes sin tipo de cambio inventado');
 assert.equal(empty.node('ventas-eficiencia-vendedores-filas').children[0].children[0].colSpan,7);
 empty.charts.forEach(chart=>chart.dispose());
 const scoped=run({cantidades:{total_proyectos:6,cotizacion_cliente:4,orden_compra_cliente:2},
@@ -96,4 +100,7 @@ moneyOnly.charts.forEach(chart=>chart.dispose());
 const negative=run({cantidades:{},cotizado:-100,colocado:20});
 assert.equal(negative.node('ventas-eficiencia-colocacion-monetaria').textContent,'-20.00 %','Conservar importes con signo; solo cero invalida el denominador');
 negative.charts.forEach(chart=>chart.dispose());
+const fallback=run({cantidades:{},tipo_cambio:0,tipo_cambio_aplicado:1,fecha_tipo_cambio:null});
+assert.equal(fallback.node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 1.00 | Fecha TC: —','Mostrar divisor efectivo del backend sin reconvertir importes');
+fallback.charts.forEach(chart=>chart.dispose());
 console.log('OK: cantidades e importes en escalas independientes, porcentajes, anteriores, vendedor, orden, teclado, XSS, cero, movil y oscuro.');

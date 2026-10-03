@@ -15,7 +15,13 @@
             </div>
             <div class="ventas-eficiencia-indicadores mt-3">
                 <?php foreach (['importe-cotizado'=>'Importe Cotizado (USD)','importe-colocado'=>'Importe Colocado (USD)','colocacion-monetaria'=>'% Colocación Monetaria'] as $key=>$label): ?>
-                    <div class="ventas-eficiencia-metrica ventas-eficiencia-<?= $key; ?>"><span><?= $esc($label); ?></span><strong id="ventas-eficiencia-<?= $key; ?>">—</strong></div>
+                    <div class="ventas-eficiencia-metrica ventas-eficiencia-<?= $key; ?>">
+                        <span><?= $esc($label); ?></span><strong id="ventas-eficiencia-<?= $key; ?>">—</strong>
+                        <?php if ($key === 'importe-colocado'): ?>
+                            <small id="ventas-eficiencia-moneda-original" class="ventas-eficiencia-desglose">USD: — | MXN: —</small>
+                            <small id="ventas-eficiencia-tipo-cambio" class="ventas-eficiencia-desglose">TC: — | Fecha TC: —</small>
+                        <?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
             </div>
             <div class="ventas-eficiencia-graficas mt-3">
