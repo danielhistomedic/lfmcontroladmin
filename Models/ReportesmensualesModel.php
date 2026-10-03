@@ -488,8 +488,20 @@ class ReportesmensualesModel extends Mysql
             $totals = $this->consultar("SELECT pc.moneda_id, $currency AS moneda, $total AS total, $product AS productos, $service AS servicios,
                 COUNT(DISTINCT v.id) AS proyectos, COUNT(DISTINCT pc.id) AS pedidos $base WHERE $where GROUP BY pc.moneda_id ORDER BY pc.moneda_id", $params);
             $group = "CASE WHEN v.clasificacion_proyecto_id IN (2,3,4) THEN 'Flowserve' ELSE 'Diversos' END";
+            $subtotals = [];
+            foreach ([1,2,3] as $subclassification) {
+                $subtotals[] = "COALESCE(SUM(CASE WHEN vd.subclasificacion_id = $subclassification
+                    AND vd.tipo_partida IN ('PRODUCTO','SERVICIO') THEN $line ELSE 0 END),0)
+                    AS subclasificacion_$subclassification,
+                    MAX(CASE WHEN sc.id = $subclassification THEN sc.subclasificacion ELSE NULL END)
+                    AS subclasificacion_{$subclassification}_nombre";
+            }
+            $subtotalsSql = implode(', ', $subtotals);
             $groups = $this->consultar("SELECT $group AS grupo, pc.moneda_id, $currency AS moneda,
-                $total AS total, $product AS productos, $service AS servicios, COUNT(DISTINCT v.id) AS proyectos, COUNT(DISTINCT pc.id) AS pedidos $base WHERE $where
+                $total AS total, $product AS productos, $service AS servicios, $subtotalsSql,
+                COUNT(DISTINCT v.id) AS proyectos, COUNT(DISTINCT pc.id) AS pedidos $base
+                LEFT JOIN cat_subclasificacion_proyectos sc ON sc.id = vd.subclasificacion_id AND sc.id IN (1,2,3)
+                WHERE $where
                 GROUP BY $group, pc.moneda_id ORDER BY grupo, pc.moneda_id", $params);
             $monthly = $this->consultar("SELECT YEAR($reportDate) AS anio, MONTH($reportDate) AS mes,
                 pc.moneda_id, $currency AS moneda, COUNT(DISTINCT v.id) AS proyectos, COUNT(DISTINCT pc.id) AS pedidos,

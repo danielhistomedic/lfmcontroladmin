@@ -24,6 +24,20 @@ foreach (array_slice($financialDb->calls,0,3) as [$sql,$params]) {
     verificar(str_contains($sql, "vd.tipo_partida = 'PRODUCTO'") && str_contains($sql, "vd.tipo_partida = 'SERVICIO'"), 'Separar productos y servicios');
 }
 verificar(str_contains($financialDb->calls[1][0],"IN (2,3,4) THEN 'Flowserve' ELSE 'Diversos'"), 'Clasificaciones Flowserve y Diversos');
+foreach ([1,2,3] as $subcategory) {
+    verificar(str_contains($financialDb->calls[1][0], "vd.subclasificacion_id = $subcategory")
+        && str_contains($financialDb->calls[1][0], "AS subclasificacion_$subcategory"),
+        'Desglose por subclasificacion de las partidas, dentro de cada grupo y moneda');
+}
+verificar(substr_count($financialDb->calls[1][0], "AND vd.tipo_partida IN ('PRODUCTO','SERVICIO') THEN pd.cantidad_pedido * pd.precio_unitario") === 3,
+    'Los tres subtotales usan las partidas validas y la misma formula sin IVA del total');
+verificar(count($financialDb->calls) === 4, 'Desglose sin consultas adicionales ni multiplicacion de partidas');
+verificar(str_contains($financialDb->calls[1][0], 'LEFT JOIN cat_subclasificacion_proyectos sc ON sc.id = vd.subclasificacion_id AND sc.id IN (1,2,3)'),
+    'Nombres del catalogo por clave primaria sin excluir otras partidas del total');
+foreach ([1,2,3] as $subcategory) {
+    verificar(str_contains($financialDb->calls[1][0], "MAX(CASE WHEN sc.id = $subcategory THEN sc.subclasificacion ELSE NULL END)")
+        && str_contains($financialDb->calls[1][0], "AS subclasificacion_{$subcategory}_nombre"), 'Nombre real del catalogo para cada subtotal');
+}
 $clientDb = new ConexionSimulada([[['total'=>4]],[['total'=>1]],[['entidad_id'=>12,'nombre'=>'Cliente','moneda'=>'USD','total'=>'150.00']]]);
 $options = ['draw'=>4,'start'=>10,'length'=>10,'search'=>'a%_','order_column'=>2,'order_dir'=>'desc'];
 $clientRows = (new ModeloSimulado($clientDb))->colocadosFinanciero(2026,9,'V1','clientes',$options);

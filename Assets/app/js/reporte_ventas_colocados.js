@@ -53,6 +53,22 @@ document.addEventListener('DOMContentLoaded', function () {
             breakdown.textContent = 'Productos: ' + displayAmount(row.productos ?? 0) + ' | Servicios: ' + displayAmount(row.servicios ?? 0);
 
             card.appendChild(currency); card.appendChild(value); card.appendChild(count); card.appendChild(breakdown);
+            if (id === 'colocados-flowserve') {
+                const subcategories = document.createElement('dl');
+                subcategories.className = 'colocados-flowserve-subclasificaciones';
+                [1,2,3].forEach(subcategory => {
+                    const label = row['subclasificacion_' + subcategory + '_nombre'];
+                    const subtotal = Number(row['subclasificacion_' + subcategory] ?? 0);
+                    if (typeof label !== 'string' || !label.trim() || !Number.isFinite(subtotal) || subtotal === 0) return;
+                    const name = document.createElement('dt');
+                    const shortNames = {'BOMBAS FLOWSERVE':'Bombas','SELLOS FLOWSERVE':'Sellos','VALVULAS FLOWSERVE':'Válvulas'};
+                    name.textContent = shortNames[label.trim().toUpperCase()] || label;
+                    const amount = document.createElement('dd');
+                    amount.textContent = displayAmount(subtotal);
+                    subcategories.appendChild(name); subcategories.appendChild(amount);
+                });
+                if (subcategories.children.length) card.appendChild(subcategories);
+            }
             target.appendChild(card);
         });
     }
