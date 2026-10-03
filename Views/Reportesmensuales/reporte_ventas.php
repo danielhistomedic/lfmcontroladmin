@@ -82,7 +82,7 @@
             </div>
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
-                <?php foreach ([['Total de Proyectos del Mes', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados del Mes', $report['cantidades']['declinados'], 'Proyectos de los meses seleccionados declinados'], ['Pedidos Cotizados en el Período', $report['cantidades']['cotizacion_cliente'], ''], ['Pedidos Colocados en el Período', $report['cantidades']['orden_compra_cliente'], '']] as $kpi): ?>
+                <?php foreach ([['Total de Proyectos del Mes', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados en el Período', $report['cantidades']['declinados'], ''], ['Pedidos Cotizados en el Período', $report['cantidades']['cotizacion_cliente'], ''], ['Pedidos Colocados en el Período', $report['cantidades']['orden_compra_cliente'], '']] as $kpi): ?>
                     <?php $colorClass = str_starts_with($kpi[0], 'Declinados') ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados en el Período' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
                         <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= str_starts_with($kpi[0], 'Declinados') ? ' ventas-abrir-declinados' : ($kpi[0] === 'Pedidos Colocados en el Período' ? ' ventas-abrir-colocados' : ''); ?>" <?php if (str_starts_with($kpi[0], 'Declinados')): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php elseif ($kpi[0] === 'Pedidos Colocados en el Período'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-colocados-financiero" aria-haspopup="dialog" aria-controls="modal-colocados-financiero" aria-label="Ver resumen financiero de pedidos colocados" <?php endif; ?>>
@@ -92,6 +92,9 @@
                                 <?php if ($kpi[0] === 'Pedidos Cotizados en el Período'): ?>
                                     <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['cotizacion_cliente_periodo']); ?></small>
                                     <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['cotizacion_cliente_anteriores']); ?></small>
+                                <?php elseif (str_starts_with($kpi[0], 'Declinados')): ?>
+                                    <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['declinados_periodo']); ?></small>
+                                    <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['declinados_anteriores']); ?></small>
                                 <?php elseif ($kpi[0] === 'Pedidos Colocados en el Período'): ?>
                                     <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['orden_compra_cliente_periodo']); ?></small>
                                     <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['orden_compra_cliente_anteriores']); ?></small>

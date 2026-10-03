@@ -12,7 +12,7 @@
             <h6 id="<?= $colocadosPrefix; ?>colocados-flowserve-titulo"><i class="fa-solid fa-industry colocados-icono" aria-hidden="true"></i>Total Flowserve</h6>
             <div id="<?= $colocadosPrefix; ?>colocados-flowserve" class="colocados-monedas"></div>
         </section>
-        <section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-diversos-titulo">
+        <section class="colocados-resumen-seccion colocados-diversos-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-diversos-titulo">
             <h6 id="<?= $colocadosPrefix; ?>colocados-diversos-titulo"><i class="fa-solid fa-boxes-stacked colocados-icono" aria-hidden="true"></i>Total Diversos</h6>
             <div id="<?= $colocadosPrefix; ?>colocados-diversos" class="colocados-monedas"></div>
         </section>

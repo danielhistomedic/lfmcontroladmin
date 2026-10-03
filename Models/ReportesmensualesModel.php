@@ -29,6 +29,18 @@ class ReportesmensualesModel extends Mysql
         }
         return count($ranges) === 1 ? $ranges[0] : '(' . implode(' OR ', array_map(static fn($range) => "($range)", $ranges)) . ')';
     }
+    private static function periodoDeclinados(int|array $years, int|array $months, array &$params): string
+    {
+        $projectParams = [];
+        $declineParams = [];
+        $projectPeriod = self::periodo('v.fecha', $years, $months, $projectParams);
+        $declinePeriod = self::periodo('v.fecha_declina', $years, $months, $declineParams);
+        $params = [...$projectParams, ...$declineParams];
+        // La unión equivale a proyectos del período + anteriores declinados en él,
+        // sin multiplicar los proyectos que cumplen ambas fechas.
+        return "(($projectPeriod) OR ($declinePeriod))";
+    }
+
     // Usa la conexión central; propaga errores para distinguir error de un mes vacío.
     private function consultar(string $sql, array $params = []): array
     {
@@ -233,6 +245,18 @@ class ReportesmensualesModel extends Mysql
         $quantities['orden_compra_cliente_periodo'] = $quantities['orden_compra_cliente'];
         $quantities['orden_compra_cliente_anteriores'] = (int)$previousPlaced[0]['orden_compra_cliente_anteriores'];
         $quantities['orden_compra_cliente'] += $quantities['orden_compra_cliente_anteriores'];
+        $declineParams = [];
+        $declinePeriod = self::periodo('v.fecha_declina', $year, $month, $declineParams);
+        $previousDeclineParams = [...$dateParams, ...$declineParams];
+        if ($seller !== '') $previousDeclineParams[] = $seller;
+        $previousDeclined = $this->consultar("SELECT COUNT(DISTINCT v.id) AS declinados_anteriores
+            FROM tb_ventas v
+            WHERE NOT COALESCE(($projectPeriod), 0) AND ($declinePeriod)
+                AND v.activo = 'CERRADO' $scope", $previousDeclineParams);
+        if (!$previousDeclined) throw new RuntimeException('No se pudieron obtener los proyectos anteriores declinados.');
+        $quantities['declinados_periodo'] = $quantities['declinados'];
+        $quantities['declinados_anteriores'] = (int)$previousDeclined[0]['declinados_anteriores'];
+        $quantities['declinados'] += $quantities['declinados_anteriores'];
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -273,7 +297,7 @@ class ReportesmensualesModel extends Mysql
     public function declinados(int|array $year, int|array $month, string $seller, int $page): array
     {
         $dateParams = [];
-        $projectPeriod = self::periodo('v.fecha', $year, $month, $dateParams);
+        $projectPeriod = self::periodoDeclinados($year, $month, $dateParams);
         $where = "$projectPeriod AND v.activo = 'CERRADO' AND " . self::FILTRO_PROYECTOS;
         $params = $dateParams;
         if ($seller !== '') {
@@ -302,6 +326,7 @@ class ReportesmensualesModel extends Mysql
         $dateParams = [];
         $projectPeriod = self::periodo('v.fecha', $year, $month, $dateParams);
         $condition = $lista === 'interna_sin_cliente' ? self::condicionInternaSinCliente() : "v.activo = 'CERRADO'";
+        if ($lista === 'declinados') $projectPeriod = self::periodoDeclinados($year, $month, $dateParams);
         $where = "$projectPeriod AND $condition AND " . self::FILTRO_PROYECTOS;
         $params = $dateParams;
         if ($seller !== '') {
