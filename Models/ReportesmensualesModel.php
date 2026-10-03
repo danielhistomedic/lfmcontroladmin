@@ -98,7 +98,7 @@ class ReportesmensualesModel extends Mysql
         $params = $seller === '' ? $dateParams : [...$dateParams, $seller];
         $periodParams = [];
         $sentPeriod = self::periodo('COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha)', $year, $month, $periodParams);
-        $placedPeriod = self::periodo('fecha_pedido', $year, $month, $periodParams);
+        $placedPeriod = self::periodo('pc.fecha_pedido', $year, $month, $periodParams);
         $rateRows = $this->consultar('SELECT valor, fecha FROM tb_historial_tipos_cambio WHERE idMoneda = 3 ORDER BY fecha DESC, id DESC LIMIT 1');
         $rate = (float)($rateRows[0]['valor'] ?? 0);
         $divisor = $rate == 0 ? 1.0 : $rate;
@@ -106,24 +106,34 @@ class ReportesmensualesModel extends Mysql
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
         // Cotizaciones enviadas: se excluye CERRADO por indicación del usuario para este dashboard.
         $sent = $this->consultar("SELECT $columns, 'cotizado' AS tipo,
-            SUM(COALESCE(cc.subtotal, 0)) AS monto, COUNT(*) AS cotizaciones,
+            SUM(COALESCE(cp.subtotal_partidas, 0)) AS monto, COUNT(DISTINCT cc.id) AS cotizaciones,
             COALESCE(MAX(cc.fecha), v.fecha_cotizacion, v.fecha) AS fecha
             FROM tb_ventas_cotizacion_cliente cc INNER JOIN tb_ventas v ON v.id = cc.venta_id
+            INNER JOIN (SELECT cd.cotizacion_cliente_id, SUM(cd.cantidad * cd.precio_unitario) AS subtotal_partidas
+                FROM tb_ventas_cotizacion_cliente_detalle cd
+                INNER JOIN tb_ventas_detalle vd ON vd.id = cd.venta_detalle_id_partida
+                WHERE vd.tipo_partida IN ('PRODUCTO','SERVICIO') GROUP BY cd.cotizacion_cliente_id) cp
+                ON cp.cotizacion_cliente_id = cc.id
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE cc.enviado = 1 AND v.estatus_pedido_reporte IN (1,2)
             AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
             AND $sentPeriod $scope
             GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido", $params);
-        // Una fila por proyecto como en el listado de escritorio; los pedidos sólo determinan pertenencia al período.
-        $placed = $this->consultar("SELECT $columns, 'colocado' AS tipo, COALESCE(v.subtotal,0) AS monto,
-            p.fecha AS fecha FROM tb_ventas v
-            INNER JOIN (SELECT venta_id, MIN(fecha_pedido) AS fecha FROM tb_pedidos_cliente
-                WHERE $placedPeriod GROUP BY venta_id) p ON p.venta_id=v.id
-            INNER JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id
-            INNER JOIN cat_estatus_proyecto e ON e.Id=v.estatus_proyecto_id
-            INNER JOIN cat_clientes c ON c.id=v.cliente_id
-            INNER JOIN cat_medico m ON m.ccvemedico=v.ccveusuario_vendedor
-            WHERE v.estatus_pedido_reporte=2 $scope ORDER BY v.id", $params);
+        // Pedidos enviados: sumar cada partida una vez y convertir con el tipo de cambio existente.
+        $placed = $this->consultar("SELECT v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id,
+            3 AS moneda_id, COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor,
+            'colocado' AS tipo, SUM(CASE WHEN pc.moneda_id = 1
+                THEN (pd.cantidad_pedido * pd.precio_unitario) / $divisor
+                ELSE pd.cantidad_pedido * pd.precio_unitario END) AS monto, MIN(pc.fecha_pedido) AS fecha
+            FROM tb_pedidos_cliente pc
+            INNER JOIN tb_pedidos_cliente_detalle pd ON pd.pedido_id = pc.id
+            INNER JOIN tb_ventas_detalle vd ON vd.id = pd.venta_detalle_id
+            INNER JOIN tb_ventas v ON v.id = pc.venta_id
+            LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
+            WHERE pc.enviado = 1 AND vd.tipo_partida IN ('PRODUCTO','SERVICIO')
+                AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND v.estatus_pedido_reporte = 2
+                AND $placedPeriod $scope
+            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido ORDER BY v.id", $params);
         $projects = [];
         foreach ($placed as $row) {
             $folio = (string)$row['proyecto_id'];
@@ -342,16 +352,41 @@ class ReportesmensualesModel extends Mysql
         $period = self::periodo('pc.fecha_pedido', $year, $month, $params);
         $where = "$period AND pc.enviado = 1 AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND " . self::FILTRO_PROYECTOS;
         if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
-        $base = 'FROM tb_pedidos_cliente pc INNER JOIN tb_ventas v ON v.id = pc.venta_id';
+        $base = "FROM tb_pedidos_cliente pc INNER JOIN tb_ventas v ON v.id = pc.venta_id
+            INNER JOIN tb_pedidos_cliente_detalle pd ON pd.pedido_id = pc.id
+            INNER JOIN tb_ventas_detalle vd ON vd.id = pd.venta_detalle_id";
+        $where .= " AND vd.tipo_partida IN ('PRODUCTO','SERVICIO')";
+        $line = 'pd.cantidad_pedido * pd.precio_unitario';
+        $product = "COALESCE(SUM(CASE WHEN vd.tipo_partida = 'PRODUCTO' THEN $line ELSE 0 END),0)";
+        $service = "COALESCE(SUM(CASE WHEN vd.tipo_partida = 'SERVICIO' THEN $line ELSE 0 END),0)";
+        $total = "($product + $service)";
         $currency = "CASE WHEN pc.moneda_id = 1 THEN 'MXN' WHEN pc.moneda_id = 3 THEN 'USD' ELSE CONCAT('Moneda ', COALESCE(pc.moneda_id, 'sin identificar')) END";
         if ($section === 'resumen') {
-            $totals = $this->consultar("SELECT pc.moneda_id, $currency AS moneda, SUM(COALESCE(pc.subtotal,0)) AS total,
-                COUNT(*) AS pedidos $base WHERE $where GROUP BY pc.moneda_id ORDER BY pc.moneda_id", $params);
+            $totals = $this->consultar("SELECT pc.moneda_id, $currency AS moneda, $total AS total, $product AS productos, $service AS servicios,
+                COUNT(DISTINCT pc.id) AS pedidos $base WHERE $where GROUP BY pc.moneda_id ORDER BY pc.moneda_id", $params);
             $group = "CASE WHEN v.clasificacion_proyecto_id IN (2,3,4) THEN 'Flowserve' ELSE 'Diversos' END";
             $groups = $this->consultar("SELECT $group AS grupo, pc.moneda_id, $currency AS moneda,
-                SUM(COALESCE(pc.subtotal,0)) AS total, COUNT(*) AS pedidos $base WHERE $where
+                $total AS total, $product AS productos, $service AS servicios, COUNT(DISTINCT pc.id) AS pedidos $base WHERE $where
                 GROUP BY $group, pc.moneda_id ORDER BY grupo, pc.moneda_id", $params);
-            return ['totales'=>$totals, 'grupos'=>$groups];
+            $monthly = $this->consultar("SELECT YEAR(pc.fecha_pedido) AS anio, MONTH(pc.fecha_pedido) AS mes,
+                pc.moneda_id, $currency AS moneda, COUNT(DISTINCT pc.id) AS pedidos,
+                $total AS total, $product AS productos, $service AS servicios
+                $base WHERE $where GROUP BY YEAR(pc.fecha_pedido), MONTH(pc.fecha_pedido), pc.moneda_id
+                ORDER BY anio, mes, CASE pc.moneda_id WHEN 3 THEN 0 WHEN 1 THEN 1 ELSE 2 END", $params);
+            return ['totales'=>$totals, 'grupos'=>$groups, 'mensual'=>$monthly];
+        }
+        if ($section === 'detalle') {
+            if (count(is_array($year) ? $year : [$year]) !== 1 || count(is_array($month) ? $month : [$month]) !== 1)
+                throw new InvalidArgumentException('Seleccione un mes y un anio para el detalle.');
+            $length = max(5,min(100,(int)($options['length'] ?? 10)));
+            $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
+            $count = $this->consultar("SELECT COUNT(*) AS total $base WHERE $where", $params);
+            $rows = $this->consultar("SELECT pc.id AS pedido_id, pc.venta_id, pc.num_orden_compra,
+                pc.fecha_pedido, $currency AS moneda, vd.tipo_partida, vd.codigo_partida,
+                pd.ccvematerial AS clave_material, COALESCE(pd.descripcion, vd.descripcion) AS descripcion,
+                pd.cantidad_pedido, pd.precio_unitario, $line AS subtotal_partida
+                $base WHERE $where ORDER BY pc.fecha_pedido, pc.id, pd.id LIMIT $length OFFSET $offset", $params);
+            return ['data'=>$rows,'recordsFiltered'=>(int)($count[0]['total'] ?? 0)];
         }
         if (!in_array($section, ['clientes','vendedores'], true)) throw new InvalidArgumentException('Seccion no valida.');
         $entity = $section === 'clientes' ? 'pc.cliente_id' : 'v.ccveusuario_vendedor';
@@ -377,7 +412,7 @@ class ReportesmensualesModel extends Mysql
         $length = max(5,min(100,(int)($options['length'] ?? 10)));
         $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
         $rows = $this->consultar("SELECT $entity AS entidad_id, MAX($name) AS nombre, pc.moneda_id,
-            $currency AS moneda, SUM(COALESCE(pc.subtotal,0)) AS total, COUNT(*) AS pedidos
+            $currency AS moneda, $total AS total, $product AS productos, $service AS servicios, COUNT(DISTINCT pc.id) AS pedidos
             $joins WHERE $filteredWhere GROUP BY $group
             ORDER BY CASE pc.moneda_id WHEN 3 THEN 0 WHEN 1 THEN 1 ELSE 2 END ASC,
                 $order $direction, entidad_id ASC, pc.moneda_id ASC

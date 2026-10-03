@@ -14,8 +14,9 @@ const modal = node('modal-colocados-financiero');
 modal.dataset={url:'/portal/reportesmensuales/colocadosfinanciero',anio:'2024,2026',mes:'2,9',vendedor:'V1'};
 const card=node('card'); let ready, fail=false, defer=false; const pending=[];
 const totals={totales:[{moneda_id:3,moneda:'USD',total:'90.00',pedidos:1},{moneda_id:1,moneda:'MXN',total:'1234.50',pedidos:2}],
+    mensual:[{anio:2026,mes:9,moneda:'USD',pedidos:1,total:'90.00',productos:'60.00',servicios:'30.00'}],
     grupos:[{grupo:'Flowserve',moneda_id:1,moneda:'MXN',total:'500.00',pedidos:1},{grupo:'Diversos',moneda_id:3,moneda:'USD',total:'90.00',pedidos:1}]};
-const context={document:{getElementById:node,querySelectorAll:()=>[card],createElement:tag=>({tag,children:[],appendChild(child){this.children.push(child);}}),
+const context={document:{getElementById:node,querySelectorAll:()=>[card],createElement:tag=>({tag,events:{},children:[],setAttribute(name,value){this[name]=value;},addEventListener(name,fn){this.events[name]=fn;},appendChild(child){this.children.push(child);}}),
     addEventListener(name,fn){ready=fn;}},setTimeout,clearTimeout,Map,Intl,Number,URLSearchParams,AbortController,DOMException,SyntaxError,
     fetch:async (url,options)=>{
         const query=new URL(url,'http://test').searchParams;
@@ -23,7 +24,7 @@ const context={document:{getElementById:node,querySelectorAll:()=>[card],createE
         if(defer) await new Promise(resolve=>pending.push(resolve));
         if(fail) throw new SyntaxError('invalid JSON');
         const section=query.get('seccion');
-        return {ok:true,json:async()=>({status:true,data:section==='resumen'?totals:{draw:1,recordsTotal:1,recordsFiltered:1,
+        return {ok:true,json:async()=>({status:true,data:section==='resumen'?totals:section==='detalle'?{recordsFiltered:1,data:[{pedido_id:4,venta_id:3,num_orden_compra:'OC1',fecha_pedido:'2026-09-01',moneda:'USD',tipo_partida:'SERVICIO',codigo_partida:'P1',clave_material:'MAT',descripcion:'<script>',cantidad_pedido:2,precio_unitario:15,subtotal_partida:30}]}:{draw:1,recordsTotal:1,recordsFiltered:1,
             data:[{nombre:'<script>alert(1)</script>',moneda:'USD',total:'90.00'}]}})};
     }};
 async function tick(){await new Promise(resolve=>setImmediate(resolve));}
@@ -50,6 +51,15 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     node('colocados-clientes-orden').events.change(); await tick();
     assert.equal(queries.at(-1).get('order_column'),'2');
     assert.equal(queries.at(-1).get('order_dir'),'desc');
+    const monthly=node('colocados-mensual-filas');
+    assert.equal(monthly.children[0].children[5].textContent,'$ 60.00');
+    assert.equal(monthly.children[0].children[6].textContent,'$ 30.00');
+    monthly.children[0].children[7].children[0].events.click(); await tick();
+    assert.deepEqual(queries.at(-1).getAll('anio[]'),['2026']);
+    assert.deepEqual(queries.at(-1).getAll('mes[]'),['9']);
+    assert.equal(queries.at(-1).get('seccion'),'detalle');
+    assert.equal(node('colocados-partidas-filas').children[0].children[8].textContent,'<script>');
+    assert.equal(node('colocados-partidas-filas').children[0].children[11].textContent,'$ 30.00');
     fail=true; node('colocados-financiero-reintentar').events.click(); await tick();
     assert.equal(node('colocados-financiero-reintentar').hidden,false);
     assert.ok(node('colocados-financiero-estado').textContent.includes('Intente nuevamente'));

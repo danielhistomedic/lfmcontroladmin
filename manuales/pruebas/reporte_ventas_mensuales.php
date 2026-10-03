@@ -53,9 +53,9 @@ $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
 verificar(count($db->calls)===8,'Consultas por conjunto');
-verificar(str_contains($db->calls[1][0], 'SUM(COALESCE(cc.subtotal, 0)) AS monto')
+verificar(str_contains($db->calls[1][0], 'SUM(cd.cantidad * cd.precio_unitario) AS subtotal_partidas')
     && !str_contains($db->calls[1][0], 'cc.total'), 'Cotizado usa subtotal sin IVA');
-verificar(str_contains($db->calls[2][0], 'COALESCE(v.subtotal,0) AS monto')
+verificar(str_contains($db->calls[2][0], 'pd.cantidad_pedido * pd.precio_unitario')
     && !str_contains($db->calls[2][0], 'v.total'), 'Colocado usa subtotal del proyecto sin IVA');
 verificar(str_contains($db->calls[7][0], 'YEAR(v.fecha) AS anio')
     && str_contains($db->calls[7][0], 'MONTH(v.fecha) AS mes')
@@ -100,7 +100,7 @@ $sellerModel->proyectoDeclinadoAutorizado(633,'V1');
 foreach ($sellerDb->calls as [$sql]) verificar(str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)'), 'Clasificaciones en vendedores e historial declinado');
 verificar($db->calls[1][1]===['2024-02-01','2024-03-01',"V'1"],'Límites del mes y vendedor parametrizado');
 verificar(str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados de importes cotizados conservando activo NULL');
-verificar(!str_contains($db->calls[2][0],'v.activo'),'Conservar las condiciones de colocados');
+verificar(str_contains($db->calls[2][0], 'pc.enviado = 1') && str_contains($db->calls[2][0], "vd.tipo_partida IN ('PRODUCTO','SERVICIO')"), 'Colocados solo pedidos enviados y tipos validos');
 cerca($actual['cotizado'],2000,'Tipo de cambio cero usa divisor 1');
 verificar($actual['cantidades']===$quantities,'Cantidades independientes de los conjuntos cotizado y colocado');
 verificar($db->calls[3][1]===['2024-02-01','2024-03-01',"V'1"],'Cantidades con mes de proyecto y alcance autorizado');
@@ -330,7 +330,7 @@ verificar(substr_count($html,'data-bs-target="#modal-declinados-ventas"')===2, '
 verificar(str_contains($html, 'Importes sin IVA en USD') && !str_contains($html, 'con IVA'), 'Pantalla informa subtotales sin IVA');
 verificar(!str_contains($html,'Colocado / cotizado'),'Retirar el indicador de relación anterior');
 verificar(!str_contains($html,'Ventas por vendedor') && !str_contains($html,'ventas-productos') && !str_contains($html,'ventas-cruce') && !str_contains($html,'Criterios del reporte'), 'Secciones inferiores retiradas');
-foreach ($db->calls as [$sql]) verificar(!str_contains($sql,'tb_ventas_detalle') && !str_contains($sql,'tb_ventas_cotizacion_cliente_detalle'), 'Sin consultas de partidas para secciones retiradas');
+foreach ($db->calls as $index => [$sql]) if (!in_array($index, [1,2], true)) verificar(!str_contains($sql,'tb_ventas_detalle'), 'Partidas solo en los importes de pedidos');
 
 $data['filtros']['mes'] = [2,9,12];
 ob_start(); eval('?>'.$view); $multiHtml=ob_get_clean();

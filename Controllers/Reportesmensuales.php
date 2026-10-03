@@ -193,7 +193,7 @@ class Reportesmensuales extends Controllers
             $seller = $_GET['vendedor'] ?? '';
             $section = $_GET['seccion'] ?? 'resumen';
             if ($years === false || $months === false || !is_string($seller) || strlen($seller)>100
-                || !in_array($section,['resumen','clientes','vendedores'],true)) {
+                || !in_array($section,['resumen','clientes','vendedores','detalle'],true)) {
                 http_response_code(400); echo json_encode(['status'=>false,'message'=>'Los filtros del resumen no son válidos.']); return;
             }
             if ((int)$this->session->get('rol_id') === 4) {
@@ -202,6 +202,9 @@ class Reportesmensuales extends Controllers
                     http_response_code(403); echo json_encode(['status'=>false,'message'=>'Vendedor no autorizado.']); return;
                 }
                 $seller = $scope;
+            }
+            if ($section === 'detalle' && (count($years) !== 1 || count($months) !== 1)) {
+                http_response_code(400); echo json_encode(['status'=>false,'message'=>'Seleccione un mes y un anio.']); return;
             }
             $options = [];
             if ($section !== 'resumen') {

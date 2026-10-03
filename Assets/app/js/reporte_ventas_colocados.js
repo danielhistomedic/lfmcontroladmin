@@ -46,7 +46,10 @@ document.addEventListener('DOMContentLoaded', function () {
             value.textContent = displayAmount(row.total);
             const count = document.createElement('small');
             count.textContent = row.pedidos + ' pedidos';
-            card.appendChild(currency); card.appendChild(value); card.appendChild(count);
+            const breakdown = document.createElement('small');
+            breakdown.textContent = 'Productos: ' + displayAmount(row.productos ?? 0) + ' | Servicios: ' + displayAmount(row.servicios ?? 0);
+
+            card.appendChild(currency); card.appendChild(value); card.appendChild(count); card.appendChild(breakdown);
             target.appendChild(card);
         });
     }
@@ -60,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
             currencyCards('colocados-totales', data.totales);
             currencyCards('colocados-flowserve', data.grupos.filter(row => row.grupo === 'Flowserve'));
             currencyCards('colocados-diversos', data.grupos.filter(row => row.grupo === 'Diversos'));
+            renderMonths(data.mensual || []);
             summary.hidden = false;
             state.textContent = data.totales.length ? '' : 'No hay pedidos enviados para el período y vendedor seleccionados.';
         } catch (error) {
@@ -69,6 +73,62 @@ document.addEventListener('DOMContentLoaded', function () {
             retry.hidden = false;
         }
     }
+    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const detail = {year:0,month:0,start:0};
+    function appendRow(body, values) {
+        const tr = document.createElement('tr');
+        values.forEach(value => { const td = document.createElement('td'); td.textContent = String(value ?? ''); tr.appendChild(td); });
+        body.appendChild(tr);
+        return tr;
+    }
+    function renderMonths(rows) {
+        const body = document.getElementById('colocados-mensual-filas');
+        body.replaceChildren();
+        if (!rows.length) { appendRow(body,['Sin pedidos para los filtros seleccionados.']); return; }
+        rows.forEach(row => {
+            const tr = appendRow(body,[row.anio,monthNames[Number(row.mes)-1],row.moneda,row.pedidos,
+                displayAmount(row.total),displayAmount(row.productos),displayAmount(row.servicios)]);
+            const td = document.createElement('td');
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'btn btn-outline-primary btn-sm'; button.textContent = 'Ver partidas';
+            button.setAttribute('aria-label', 'Ver partidas de ' + monthNames[Number(row.mes)-1] + ' ' + row.anio);
+            button.addEventListener('click', () => { detail.year = row.anio; detail.month = row.mes; detail.start = 0; loadDetails(); });
+            td.appendChild(button); tr.appendChild(td);
+        });
+    }
+    async function loadDetails() {
+        const section = document.getElementById('colocados-partidas');
+        const body = document.getElementById('colocados-partidas-filas');
+        const state = document.getElementById('colocados-partidas-estado');
+        const previous = document.getElementById('colocados-partidas-anterior');
+        const next = document.getElementById('colocados-partidas-siguiente');
+        const detailRetry = document.getElementById('colocados-partidas-reintentar');
+        section.hidden = false;
+        document.getElementById('colocados-partidas-titulo').textContent = 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)';
+        body.replaceChildren(); state.textContent = 'Cargando partidas...'; previous.disabled = next.disabled = true; detailRetry.hidden = true;
+        document.getElementById('colocados-partidas-pagina').textContent = '';
+        const query = params('detalle');
+        query.delete('anio[]'); query.delete('mes[]');
+        query.append('anio[]', detail.year); query.append('mes[]', detail.month);
+        query.set('start', detail.start); query.set('length', 10);
+        try {
+            const data = await get('detalle',query);
+            data.data.forEach(row => appendRow(body,[row.pedido_id,row.venta_id,row.num_orden_compra,row.fecha_pedido,
+                row.moneda,row.tipo_partida,row.codigo_partida,row.clave_material,row.descripcion,
+                row.cantidad_pedido,displayAmount(row.precio_unitario),displayAmount(row.subtotal_partida)]));
+            state.textContent = data.data.length ? '' : 'Sin partidas en este mes.';
+            previous.disabled = detail.start === 0; next.disabled = detail.start + 10 >= data.recordsFiltered;
+            document.getElementById('colocados-partidas-pagina').textContent = data.recordsFiltered ?
+                (detail.start+1) + '–' + (detail.start+data.data.length) + ' de ' + data.recordsFiltered : '0 partidas';
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            state.textContent = error instanceof SyntaxError ? 'No se pudo cargar el detalle.' : error.message;
+            detailRetry.hidden = false;
+        }
+    }
+    document.getElementById('colocados-partidas-anterior').addEventListener('click', () => { detail.start = Math.max(0,detail.start-10); loadDetails(); });
+    document.getElementById('colocados-partidas-siguiente').addEventListener('click', () => { detail.start += 10; loadDetails(); });
+    document.getElementById('colocados-partidas-reintentar').addEventListener('click', loadDetails);
     async function loadTable(section, reset = false) {
         const table = tables.get(section);
         if (reset) table.start = 0;
@@ -127,10 +187,11 @@ document.addEventListener('DOMContentLoaded', function () {
         table.previous.addEventListener('click', () => { table.start = Math.max(0, table.start - 10); loadTable(section); });
         table.next.addEventListener('click', () => { table.start += 10; loadTable(section); });
     });
-    function load() { loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
+    function load() { document.getElementById('colocados-partidas').hidden = true; document.getElementById('colocados-mensual-filas').replaceChildren(); loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
     modal.addEventListener('shown.bs.modal', load);
     modal.addEventListener('hidden.bs.modal', () => {
         requests.forEach(request => request.abort()); requests.clear(); summary.hidden = true;
+        document.getElementById('colocados-partidas').hidden = true;
         tables.forEach(table => clearTimeout(table.timer));
     });
     retry.addEventListener('click', load);
