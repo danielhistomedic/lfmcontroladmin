@@ -124,7 +124,6 @@
                 <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
                     <div class="card-body">
                         <h4 class="mt-0">Proyectos por clasificación</h4>
-                        <p class="text-muted">Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. El nombre completo de cada serie se muestra debajo de su barra.</p>
                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por clasificación">
                             <div id="ventas-clasificaciones-general" class="ventas-chart" role="img" aria-label="Proyectos por clasificación con declinados apilados"></div>
                         </div>
@@ -135,7 +134,6 @@
                 <div class="card mb-4 ventas-grafico-clasificaciones shadow rounded-3">
                     <div class="card-body">
                         <h4 class="mt-0">Proyectos por estatus</h4>
-                        <p class="text-muted">Comparativo por mes y año: una barra por estatus dentro de cada mes; los estatus 1 y 3 se agrupan en PROCESO DE COTIZACION y los estatus con ID 6 o mayor en Pedidos Colocados, con declinados apilados en rojo.</p>
                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica general por estatus del proyecto">
                             <div id="ventas-estatus-general" class="ventas-chart" role="img" aria-label="Proyectos por estatus, mes y año con declinados apilados"></div>
                         </div>
