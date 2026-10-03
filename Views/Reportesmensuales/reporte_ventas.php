@@ -135,7 +135,7 @@
                 <div class="col-12">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h4 class="mt-0">Cantidades por Vendedor</h4>
+                            <h4 class="mt-0 ventas-vendedores-titulo">Cantidades por Vendedor</h4>
                             <p class="text-muted">Proyectos registrados en los meses seleccionados, incluidos los declinados.</p>
                             <label for="ventas-vendedor-desglose" class="form-label">Selecciona una barra o un vendedor para ver sus desgloses</label>
                             <select id="ventas-vendedor-desglose" class="form-select mb-3" aria-controls="ventas-estatus-panel">

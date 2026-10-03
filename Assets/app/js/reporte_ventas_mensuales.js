@@ -285,13 +285,28 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const sellerChart = cascade('ventas-cantidades-vendedores');
     sellerChart.count = projectCounts.length;
-    sellerChart.instance.setOption(cascadeOption(projectCounts));
+    sellerChart.height = 260;
+    sellerChart.slotWidth = 100;
+    sellerChart.element.style.height = '260px';
+    function sellerOption(selected = -1) {
+        const option = cascadeOption(projectCounts, selected);
+        option.grid = {left:38,right:12,top:24,bottom:76};
+        option.xAxis.axisLabel = {...option.xAxis.axisLabel,fontSize:9,width:92,lineHeight:12,margin:8};
+        option.yAxis.axisLabel.fontSize = 10;
+        option.yAxis.nameTextStyle.fontSize = 10;
+        option.yAxis.splitLine = {lineStyle:{color: typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#354a64' : '#e7edf4'}};
+        option.series[0].barMaxWidth = 42;
+        option.series[0].label.fontSize = 10;
+        option.series[0].itemStyle = {borderRadius:[2,2,0,0]};
+        return option;
+    }
+    sellerChart.instance.setOption(sellerOption());
     fitCascade(sellerChart);
     document.getElementById('ventas-cascada-vacio').hidden = projectCounts.length > 0;
     function selectSeller(index) {
         selectedIndex = Number.isInteger(index) && index >= 0 && index < projectCounts.length ? index : -1;
         selector.value = selectedIndex < 0 ? '' : String(selectedIndex);
-        sellerChart.instance.setOption({ series: cascadeOption(projectCounts, selectedIndex).series });
+        sellerChart.instance.setOption({ series: sellerOption(selectedIndex).series });
         statusPanel.hidden = selectedIndex < 0;
         if (selectedIndex < 0) return;
         const seller = projectCounts[selectedIndex];

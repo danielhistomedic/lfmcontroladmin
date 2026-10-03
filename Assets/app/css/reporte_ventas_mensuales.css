@@ -150,3 +150,26 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
     #ventas-mensuales #filtros-ventas-mensuales button[type='submit'] { margin-top: 0; }
     #ventas-mensuales .ventas-toolbar .ventas-actualizacion { margin-left: 0; }
 }
+#ventas-mensuales .card-body:has(> .ventas-vendedores-titulo) {
+    padding: 14px;
+}
+#ventas-mensuales .ventas-vendedores-titulo {
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+#ventas-mensuales .ventas-vendedores-titulo + p {
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+#ventas-mensuales label[for='ventas-vendedor-desglose'] {
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+#ventas-mensuales #ventas-vendedor-desglose {
+    max-width: 520px;
+    margin-bottom: 8px !important;
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-size: 12px;
+}
