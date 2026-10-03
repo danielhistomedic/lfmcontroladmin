@@ -322,16 +322,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const classifications = generalClassifications.filter(group => sellerRows.some(row => String(row.clasificacion_id) === String(group.clasificacion_id)));
         const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)) ||
             (kpiRows(group.id) || []).some(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')));
-        document.getElementById('ventas-estatus-resumen').textContent = classifications.length
-            ? 'Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. El nombre completo de cada serie se muestra debajo de su barra.'
-            : 'Sin clasificaciones registradas para los meses seleccionados.';
+        const classificationSummary = document.getElementById('ventas-estatus-resumen');
+        classificationSummary.hidden = classifications.length > 0;
+        classificationSummary.textContent = classifications.length ? '' : 'Sin clasificaciones registradas para los meses seleccionados.';
         if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
         renderSellerMonthly(statusChart, principalOption, classifications, generalClassifications, sellerRows,
             row => String(row.clasificacion_id), group => String(group.clasificacion_id), group => group.clasificacion, classificationChart);
         document.getElementById('ventas-desglose-estatus-titulo').textContent = seller.nombre + ' — Estatus de proyectos';
-        document.getElementById('ventas-desglose-estatus-resumen').textContent = sellerStatuses.length
-            ? 'Comparativo por mes y año: una barra por estatus dentro de cada mes; los estatus 1 y 3 se agrupan en PROCESO DE COTIZACION y los estatus con ID 6 o mayor en Pedidos Colocados, con declinados apilados en rojo.'
-            : 'Sin estatus registrados para los meses seleccionados.';
+        const statusSummary = document.getElementById('ventas-desglose-estatus-resumen');
+        statusSummary.hidden = sellerStatuses.length > 0;
+        statusSummary.textContent = sellerStatuses.length ? '' : 'Sin estatus registrados para los meses seleccionados.';
         if (!projectStatusChart) projectStatusChart = cascade('ventas-desglose-estatus');
         renderSellerMonthly(projectStatusChart, statusOption, sellerStatuses, statuses, sellerRows,
             statusGroupKey, group => String(group.id), group => group.nombre, generalStatusChart);
