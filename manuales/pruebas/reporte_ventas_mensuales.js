@@ -67,54 +67,55 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
     };
     vm.runInNewContext(code, context, { filename: 'reporte_ventas_mensuales.js' });
     events.DOMContentLoaded();
-    assert.equal(charts.length, 4, 'Inicializar las cinco gráficas restantes');
+    assert.equal(charts.length, 3, 'Inicializar las tres gráficas generales restantes');
+    assert.ok(!nodes.has('ventas-comparativo'), 'No inicializar el comparativo retirado');
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
     if (!empty) {
-        const classificationSeries = charts[2].getOption().series;
+        const classificationSeries = charts[1].getOption().series;
         classificationSeries.filter(series=>series.name !== 'Declinados').forEach(series=>{
             assert.equal(series.label.formatter(),series.name,'Nombre completo de clasificacion debajo de cada barra');
             assert.equal(series.label.overflow,'break');
         });
     }
     if (placed) {
-        const option=charts[3].getOption();
+        const option=charts[2].getOption();
         const index=option.series.findIndex(series=>series.name==='Pedidos Colocados');
         assert.deepEqual(option.series[index].data,[0,0,0,6],'Colocados suman ambos grupos del KPI');
         assert.deepEqual(option.series[index+1].data,[0,0,0,0],'Excluir los cerrados del conjunto colocado');
         const tip=option.tooltip[0].formatter({seriesIndex:index,dataIndex:3});
         assert.ok(tip.includes('Proyectos del período: 3') && tip.includes('Proyectos anteriores: 3') && tip.includes('Total colocado: 6'));
-        charts[3].trigger('click',{componentType:'series',seriesIndex:index,dataIndex:3});
+        charts[2].trigger('click',{componentType:'series',seriesIndex:index,dataIndex:3});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'colocados_periodo');
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        assert.deepEqual(charts[5].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,5]);
+        assert.deepEqual(charts[4].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,5]);
         const dropdown=nodes.get('ventas-vendedor-desglose');dropdown.value='1';dropdown.events.change();
-        assert.deepEqual(charts[5].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,1]);
+        assert.deepEqual(charts[4].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,1]);
         charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
         return;
     }
     if (quoted) {
-        const option = charts[3].getOption();
+        const option = charts[2].getOption();
         const quotedIndex = option.series.findIndex(series => series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)');
         assert.equal(quotedIndex,2);
         assert.deepEqual(option.series[quotedIndex].data,[0,0,0,10],'La barra usa el KPI, no el conteo crudo de estatus');
         assert.deepEqual(option.series[quotedIndex+1].data,[0,0,0,0],'El conjunto cotizado excluye cerrados');
         const tip=option.tooltip[0].formatter({seriesIndex:quotedIndex,dataIndex:3});
         assert.ok(tip.includes('Proyectos del período: 7') && tip.includes('Proyectos anteriores: 3') && tip.includes('Total cotizado: 10'));
-        charts[3].trigger('click',{componentType:'series',seriesIndex:quotedIndex,dataIndex:3});
+        charts[2].trigger('click',{componentType:'series',seriesIndex:quotedIndex,dataIndex:3});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'cotizados_periodo');
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        assert.deepEqual(charts[5].getOption().series[quotedIndex].data,[0,0,0,5],'Desglose por vendedor conserva solo sus cotizados');
+        assert.deepEqual(charts[4].getOption().series[quotedIndex].data,[0,0,0,5],'Desglose por vendedor conserva solo sus cotizados');
         const dropdown=nodes.get('ventas-vendedor-desglose'); dropdown.value='1';dropdown.events.change();
-        assert.deepEqual(charts[5].getOption().series.find(series=>series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').data,[0,0,0,5]);
+        assert.deepEqual(charts[4].getOption().series.find(series=>series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').data,[0,0,0,5]);
         charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
         return;
     }
     if (periods) {
-        const statusOption = charts[3].getOption();
+        const statusOption = charts[2].getOption();
         assert.equal(statusOption.legend[0].show,true);
         assert.equal(statusOption.legend[0].type,'scroll');
         const statusName = 'PROCESO DE COTIZACION';
@@ -138,37 +139,37 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         assert.equal(statusOption.series[0].barWidth,26);
         assert.equal(statusOption.series[0].label.fontSize,9);
         assert.equal(statusOption.xAxis[1].offset,100);
-        charts[3].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:1});
+        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:1});
         const statusModal = nodes.get('modal-declinados-ventas');
         assert.equal(statusModal.dataset.desgloseLista,'estatus_periodo');
         assert.equal(statusModal.dataset.estatusId,'proceso_cotizacion');
         assert.equal(statusModal.dataset.segmento,'declinados');
         assert.equal(statusModal.dataset.desgloseAnio,'2026');
         assert.equal(statusModal.dataset.desgloseMes,'9');
-        charts[3].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:2});
+        charts[2].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:2});
         assert.equal(statusModal.dataset.estatusId,'colocados');
         assert.equal(statusModal.dataset.segmento,'no_declinados');
         assert.equal(statusModal.dataset.desgloseAnio,'2024');
         assert.equal(statusModal.dataset.desgloseMes,'2');
 
-        assert.deepEqual(charts[2].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.deepEqual(charts[2].getOption().xAxis[1].data,['2024','2024','2026','2026']);
-        assert.deepEqual(charts[2].getOption().series[2].data,[1,0,0,5]);
-        assert.deepEqual(charts[2].getOption().series[3].data,[1,0,0,2]);
-        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:3});
+        assert.deepEqual(charts[1].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
+        assert.deepEqual(charts[1].getOption().xAxis[1].data,['2024','2024','2026','2026']);
+        assert.deepEqual(charts[1].getOption().series[2].data,[1,0,0,5]);
+        assert.deepEqual(charts[1].getOption().series[3].data,[1,0,0,2]);
+        charts[1].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:3});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'clasificacion_periodo');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'declinados');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseAnio,'2026');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseMes,'9');
-        assert.equal(charts.length,4,'Abrir modal sin crear los graficos retirados');
+        assert.equal(charts.length,3,'Abrir modal sin crear los graficos retirados');
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        const sellerClassification = charts[4].getOption();
-        const sellerStatus = charts[5].getOption();
-        assert.deepEqual(sellerClassification.xAxis[0].data,charts[2].getOption().xAxis[0].data);
+        const sellerClassification = charts[3].getOption();
+        const sellerStatus = charts[4].getOption();
+        assert.deepEqual(sellerClassification.xAxis[0].data,charts[1].getOption().xAxis[0].data);
         assert.deepEqual(sellerClassification.xAxis[1].data,['2024','2024','2026','2026']);
         assert.deepEqual(sellerClassification.series[0].data,[1,0,0,4],'Solo las partidas del vendedor seleccionado');
         assert.deepEqual(sellerClassification.series[1].data,[1,0,0,1]);
-        assert.equal(sellerClassification.series[0].itemStyle.color,charts[2].getOption().series[2].itemStyle.color);
+        assert.equal(sellerClassification.series[0].itemStyle.color,charts[1].getOption().series[2].itemStyle.color);
         assert.equal(sellerClassification.series[0].label.formatter(),'Bombas');
         assert.deepEqual(sellerStatus.series[0].data,[0,0,0,2],'Agrupar cotizacion sin incluir otro vendedor');
         assert.deepEqual(sellerStatus.series[2].data,[1,0,0,2]);
@@ -177,15 +178,15 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         assert.equal(sellerStatus.legend[0].formatter(statusName),statusOption.legend[0].formatter(statusName));
         assert.equal(sellerStatus.grid[0].bottom,statusOption.grid[0].bottom);
         assert.ok(sellerStatus.tooltip[0].formatter({seriesIndex:0,dataIndex:3}).includes('Total: 2'));
-        charts[4].renderToSVGString(); charts[5].renderToSVGString();
+        charts[3].renderToSVGString(); charts[4].renderToSVGString();
         charts.forEach(chart=>chart.dispose());
         return;
     }
     if (!empty) {
-        assert.deepEqual(charts[2].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.deepEqual(charts[2].getOption().series[0].data,[0,0,0,3]);
-        assert.deepEqual(charts[2].getOption().series[1].data,[0,0,0,2]);
-        assert.equal(charts[2].getOption().series[1].itemStyle.color,'#dc3545');
+        assert.deepEqual(charts[1].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
+        assert.deepEqual(charts[1].getOption().series[0].data,[0,0,0,3]);
+        assert.deepEqual(charts[1].getOption().series[1].data,[0,0,0,2]);
+        assert.equal(charts[1].getOption().series[1].itemStyle.color,'#dc3545');
     }
     const counts=charts[0].getOption();
     assert.equal(counts.yAxis[0].name,'Proyectos');
@@ -200,32 +201,32 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
-        assert.equal(charts.length,6,'Segunda grafica debajo sin reemplazar la primera');
+        assert.equal(charts.length,5,'Segunda grafica debajo sin reemplazar la primera');
+        assert.deepEqual(charts[3].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
         assert.deepEqual(charts[4].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.equal(charts[5].getOption().series[0].name,'PROCESO DE COTIZACION');
-        assert.equal(charts[5].getOption().series[2].name,'Pedidos Colocados');
-        assert.deepEqual(charts[5].getOption().series[3].data,[0,0,0,2]);
-        assert.deepEqual(charts[4].getOption().series[0].data,[0,0,0,3]);
-        assert.deepEqual(charts[4].getOption().series[2].data,[0,0,0,3]);
+        assert.equal(charts[4].getOption().series[0].name,'PROCESO DE COTIZACION');
+        assert.equal(charts[4].getOption().series[2].name,'Pedidos Colocados');
+        assert.deepEqual(charts[4].getOption().series[3].data,[0,0,0,2]);
+        assert.deepEqual(charts[3].getOption().series[0].data,[0,0,0,3]);
+        assert.deepEqual(charts[3].getOption().series[2].data,[0,0,0,3]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
-        assert.equal(charts.length,6,'Reutilizar grafica secundaria');
+        assert.equal(charts.length,5,'Reutilizar grafica secundaria');
         assert.equal(nodes.has('ventas-vendedor-mensual'),false);
         dropdown.value='1'; dropdown.events.change();
-        assert.deepEqual(charts[4].getOption().series[0].data,[0,0,0,0]);
+        assert.deepEqual(charts[3].getOption().series[0].data,[0,0,0,0]);
+        assert.deepEqual(charts[3].getOption().series[1].data,[0,0,0,2]);
+        assert.equal(charts[3].getOption().series[1].itemStyle.color,'#dc3545');
+        assert.equal(charts[3].getOption().series[1].stack,'clase-3');
         assert.deepEqual(charts[4].getOption().series[1].data,[0,0,0,2]);
         assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
-        assert.equal(charts[4].getOption().series[1].stack,'clase-3');
-        assert.deepEqual(charts[5].getOption().series[1].data,[0,0,0,2]);
-        assert.equal(charts[5].getOption().series[1].itemStyle.color,'#dc3545');
     }
     if (!empty) {
-        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
+        charts[1].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'no_declinados');
         assert.equal(nodes.get('modal-declinados-ventas').shown,true);
-        assert.equal(charts.length,6,'Modal conserva las graficas existentes sin agregar A ni B');
+        assert.equal(charts.length,5,'Modal conserva las graficas existentes sin agregar A ni B');
     }
     change.call({id:'ventas-mes'}); change.call({id:'ventas-mes'});
     change.call({id:'ventas-anio'}); change.call({id:'ventas-anio'});
@@ -249,7 +250,7 @@ ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');
 ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
-console.log('OK: comparativo y cascada, clasificaciones, estatus, declinados apilados, movil, oscuro y filtros globales.');
+console.log('OK: cascada, clasificaciones, estatus, declinados apilados, movil, oscuro y filtros globales.');
 
 async function probarModal(critical = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;

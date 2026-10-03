@@ -138,4 +138,5 @@ echo "OK: resumen por moneda, grupos Flowserve/Diversos, clientes/vendedores pag
 verificar(str_contains($yearsHtml, 'id="resumen-colocados-financiero"') && str_contains($yearsHtml, 'id="panel-colocados-clientes-tabla"'), 'Seccion financiera integrada');
 preg_match_all('/\bid="([^"]+)"/', $yearsHtml, $ids);
 verificar(count($ids[1]) === count(array_unique($ids[1])), 'Sin IDs duplicados entre seccion y modal');
-verificar(strpos($yearsHtml, 'id="resumen-colocados-financiero"') < strpos($yearsHtml, 'id="ventas-comparativo"'), 'Resumen dentro de analisis financiero antes del comparativo');
+verificar(strpos($yearsHtml, 'id="ventas-financiero-titulo"') < strpos($yearsHtml, 'id="resumen-colocados-financiero"'), 'Resumen dentro de analisis financiero');
+verificar(!str_contains($yearsHtml, 'id="ventas-comparativo"') && !str_contains($yearsHtml, 'Cotizado vs. colocado'), 'Retirar solo la tarjeta comparativa');

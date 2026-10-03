@@ -185,19 +185,9 @@
             <hr class="ventas-separador">
             <div class="ventas-encabezado-cuantitativo mb-4" aria-labelledby="ventas-financiero-titulo">
                 <h3 id="ventas-financiero-titulo" class="mt-0 mb-1 fw-bold"><i class="fa-solid fa-dollar-sign me-2" aria-hidden="true"></i>Análisis financiero</h3>
-                <p class="mb-0">Comparativo de importes cotizados y colocados del período seleccionado, sin IVA en USD.</p>
+                <p class="mb-0">Resumen de pedidos colocados del período seleccionado, sin IVA y por moneda.</p>
             </div>
             <?php require dirname(__DIR__, 2) . '/Views/Reportesmensuales/resumen_colocados_financiero.php'; ?>
-            <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h4 class="mt-0">Cotizado vs. colocado</h4>
-                            <div id="ventas-comparativo" class="ventas-chart" role="img" aria-label="Comparación de montos cotizados y colocados en USD"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <div class="modal fade" id="modal-declinados-ventas" tabindex="-1" aria-labelledby="modal-declinados-titulo" aria-hidden="true" data-url="<?= base_url(); ?>/reportesmensuales/declinados" data-anio="<?= $esc(implode(',', $selectedYears)); ?>" data-mes="<?= $esc(implode(',', $selectedMonths)); ?>" data-vendedor="<?= $esc($filters['vendedor']); ?>">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content border-0 shadow">
