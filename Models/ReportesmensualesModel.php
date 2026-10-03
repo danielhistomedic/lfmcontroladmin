@@ -218,6 +218,21 @@ class ReportesmensualesModel extends Mysql
         $quantities['cotizacion_cliente_periodo'] = $quantities['cotizacion_cliente'];
         $quantities['cotizacion_cliente_anteriores'] = (int)$previousQuoted[0]['cotizacion_cliente_anteriores'];
         $quantities['cotizacion_cliente'] += $quantities['cotizacion_cliente_anteriores'];
+        $orderParams = [];
+        $orderPeriod = self::periodo('pc.fecha_pedido', $year, $month, $orderParams);
+        $previousOrderParams = [...$dateParams, ...$orderParams];
+        if ($seller !== '') $previousOrderParams[] = $seller;
+        $previousPlaced = $this->consultar("SELECT COUNT(DISTINCT v.id) AS orden_compra_cliente_anteriores
+            FROM tb_ventas v
+            WHERE NOT COALESCE(($projectPeriod), 0)
+                AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+                AND EXISTS (SELECT 1 FROM tb_pedidos_cliente pc
+                    WHERE pc.venta_id = v.id AND pc.enviado = 1 AND ($orderPeriod))
+                $scope", $previousOrderParams);
+        if (!$previousPlaced) throw new RuntimeException('No se pudieron obtener los proyectos anteriores colocados.');
+        $quantities['orden_compra_cliente_periodo'] = $quantities['orden_compra_cliente'];
+        $quantities['orden_compra_cliente_anteriores'] = (int)$previousPlaced[0]['orden_compra_cliente_anteriores'];
+        $quantities['orden_compra_cliente'] += $quantities['orden_compra_cliente_anteriores'];
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
