@@ -3,7 +3,7 @@
 <div id="<?= $colocadosPrefix; ?>colocados-financiero-estado" role="status" aria-live="polite"></div>
 <button id="<?= $colocadosPrefix; ?>colocados-financiero-reintentar" type="button" class="btn btn-outline-primary btn-sm mb-3" hidden>Reintentar</button>
 <div id="<?= $colocadosPrefix; ?>colocados-financiero-resumen" hidden>
-    <section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-totales-titulo">
+    <section class="colocados-resumen-seccion colocados-moneda-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-totales-titulo">
         <h6 id="<?= $colocadosPrefix; ?>colocados-totales-titulo"><i class="fa-solid fa-coins colocados-icono" aria-hidden="true"></i>Total colocado por moneda</h6>
         <p id="<?= $colocadosPrefix; ?>colocados-proyectos-conteo" class="colocados-nota" aria-live="polite"></p>
         <div id="<?= $colocadosPrefix; ?>colocados-totales" class="colocados-monedas"></div>

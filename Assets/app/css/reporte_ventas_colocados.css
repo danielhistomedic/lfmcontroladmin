@@ -133,3 +133,18 @@ html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .coloc
     --entidad-suave: #393149;
     --entidad-borde: #635277;
 }
+
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado {
+    background: #fbfdff;
+    border-color: #ccdef5;
+    border-top: 3px solid #2878c8;
+}
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado h6,
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado .colocados-total strong { color: #1d5f9e; }
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado .colocados-icono { background: #e6f0fc; color: #2878c8; }
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado .colocados-total { background: #eef5fd; border-left-color: #2878c8; }
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado { background: #253447; border-color: #45658a; border-top-color: #81b6ed; }
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado h6,
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado .colocados-total strong { color: #cee5ff; }
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado .colocados-icono { background: #304b6c; color: #97c6f5; }
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-moneda-destacado .colocados-total { background: #2c405b; border-left-color: #81b6ed; }
