@@ -295,39 +295,64 @@ document.addEventListener('DOMContentLoaded', function () {
         statusPanel.hidden = selectedIndex < 0;
         if (selectedIndex < 0) return;
         const seller = projectCounts[selectedIndex];
-        const statuses = statusCounts.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))
-            .sort((a, b) => Number(a.clasificacion_id) - Number(b.clasificacion_id));
         document.getElementById('ventas-estatus-titulo').textContent = seller.nombre + ' — ' + seller.proyectos + ' proyectos';
-        document.getElementById('ventas-estatus-resumen').textContent = statuses.length
-            ? statuses.map(row => row.clasificacion + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ') : 'Sin clasificaciones registradas.';
+        const sellerRows = (data.estatus_por_clasificacion || []).filter(row =>
+            String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '') &&
+            periods.some(period => Number(row.anio) === Number(period.anio) && Number(row.mes) === Number(period.mes)));
+        const classifications = generalClassifications.filter(group => sellerRows.some(row => String(row.clasificacion_id) === String(group.clasificacion_id)));
+        const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)));
+        document.getElementById('ventas-estatus-resumen').textContent = classifications.length
+            ? 'Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. El nombre completo de cada serie se muestra debajo de su barra.'
+            : 'Sin clasificaciones registradas para los meses seleccionados.';
         if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
-        statusChart.count = statuses.length;
-        statusChart.instance.setOption(stackedOption(statuses, 'clasificacion'), true);
-        fitCascade(statusChart);
-        const projectStatuses = (data.estatus_por_vendedor || [])
-            .filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))
-            .sort((a, b) => Number(a.estatus_id) - Number(b.estatus_id));
+        renderSellerMonthly(statusChart, principalOption, classifications, generalClassifications, sellerRows,
+            row => String(row.clasificacion_id), group => String(group.clasificacion_id), group => group.clasificacion, classificationChart);
         document.getElementById('ventas-desglose-estatus-titulo').textContent = seller.nombre + ' — Estatus de proyectos';
-        document.getElementById('ventas-desglose-estatus-resumen').textContent = projectStatuses.length
-            ? projectStatuses.map(row => row.estatus + ': ' + row.proyectos + ' (' + row.declinados + ' declinados)').join(' | ')
-            : 'Sin estatus registrados.';
+        document.getElementById('ventas-desglose-estatus-resumen').textContent = sellerStatuses.length
+            ? 'Comparativo por mes y año: una barra por estatus dentro de cada mes; los estatus 1 y 3 se agrupan en PROCESO DE COTIZACION y los estatus con ID 6 o mayor en Pedidos Colocados, con declinados apilados en rojo.'
+            : 'Sin estatus registrados para los meses seleccionados.';
         if (!projectStatusChart) projectStatusChart = cascade('ventas-desglose-estatus');
-        projectStatusChart.count = projectStatuses.length;
-        projectStatusChart.instance.setOption(stackedOption(projectStatuses, 'estatus'), true);
-        fitCascade(projectStatusChart);
+        renderSellerMonthly(projectStatusChart, statusOption, sellerStatuses, statuses, sellerRows,
+            statusGroupKey, group => String(group.id), group => group.nombre, generalStatusChart);
     }
-    function stackedOption(statuses, nameField) {
-        const option = cascadeOption(statuses.map(row => ({ nombre: row[nameField], proyectos: row.proyectos })));
-        option.legend = { top: 0, textStyle: { color: cascadeText } };
-        option.series = [
-            { name: 'No declinados', type: 'bar', stack: 'proyectos', barMaxWidth: 65,
-                itemStyle: { color: '#2385bd' }, data: statuses.map(row => row.proyectos - row.declinados) },
-            { name: 'Declinados', type: 'bar', stack: 'proyectos', barMaxWidth: 65,
-                itemStyle: { color: '#dc3545' }, data: statuses.map(row => row.declinados),
-                label: { show: true, position: 'top', color: cascadeText,
-                    formatter: params => String(statuses[params.dataIndex].proyectos) } }
-        ];
-        return option;
+    function renderSellerMonthly(entry, base, groups, allGroups, rows, rowKey, groupKey, groupName, reference) {
+        const counts = new Map();
+        rows.forEach(row => {
+            const key = [rowKey(row),row.anio,row.mes].join(':');
+            if (!counts.has(key)) counts.set(key, {proyectos:0,declinados:0});
+            const total = counts.get(key);
+            total.proyectos += Number(row.proyectos);
+            total.declinados += Number(row.declinados);
+        });
+        const totalsFor = group => periods.map(period => counts.get([groupKey(group),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
+        const option = {...base, legend:{...base.legend,data:groups.length ? [...groups.map(groupName),'Declinados'] : []},
+            series:groups.flatMap(group => {
+                const index = allGroups.indexOf(group) * 2;
+                const totals = totalsFor(group);
+                return [
+                    {...base.series[index],data:totals.map(row => row.proyectos-row.declinados)},
+                    {...base.series[index+1],data:totals.map(row => row.declinados),
+                        label:{...base.series[index+1].label,formatter:params => String(totals[params.dataIndex].proyectos)}}
+                ];
+            }),
+            tooltip:{trigger:'item',renderMode:'richText',formatter:params => {
+                const group = groups[Math.floor(params.seriesIndex/2)];
+                const period = periods[params.dataIndex];
+                const total = totalsFor(group)[params.dataIndex];
+                return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+                    '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
+            }}
+        };
+        entry.count = periods.length;
+        entry.slotWidth = Math.max(280,groups.length*88);
+        entry.height = reference.height || 330;
+        entry.element.style.height = entry.height + 'px';
+        entry.instance.setOption(option, true);
+        fitCascade(entry);
+    }
+    function statusGroupKey(row) {
+        return Number(row.estatus_id) >= 6 ? 'colocados' :
+            ([1,3].includes(Number(row.estatus_id)) ? 'proceso_cotizacion' : String(row.estatus_id));
     }
     sellerChart.instance.on('click', event => {
         if (event.componentType === 'series') selectSeller(event.dataIndex);
@@ -419,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function () {
     (data.estatus_por_clasificacion || []).forEach(row => {
         const placed = Number(row.estatus_id) >= 6;
         const quotation = [1,3].includes(Number(row.estatus_id));
-        const key = placed ? 'colocados' : (quotation ? 'proceso_cotizacion' : String(row.estatus_id));
+        const key = statusGroupKey(row);
         if (!statusGroups.has(key)) statusGroups.set(key, { id: placed || quotation ? key : row.estatus_id,
             orden: placed ? 6 : (quotation ? 1 : Number(row.estatus_id)),
             nombre: placed ? 'Pedidos Colocados' : (quotation ? 'PROCESO DE COTIZACION' : (row.estatus || 'Sin estatus')) });

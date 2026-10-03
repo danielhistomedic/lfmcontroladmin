@@ -150,18 +150,18 @@
                             <p id="ventas-cascada-vacio" class="text-muted" hidden>Sin proyectos para los filtros seleccionados.</p>
                             <div id="ventas-estatus-panel" class="mt-4 pt-3 border-top" hidden>
                                 <div class="ventas-desgloses-vendedor">
-                                    <section class="ventas-desglose-vendedor" aria-labelledby="ventas-estatus-titulo">
+                                    <section class="card card-body h-100 ventas-desglose-vendedor" aria-labelledby="ventas-estatus-titulo">
                                         <h4 id="ventas-estatus-titulo" class="mt-0" aria-live="polite"></h4>
                                         <p id="ventas-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica de clasificaciones del vendedor; desplazamiento horizontal">
-                                            <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Cantidad de proyectos por clasificación, con declinados apilados en rojo"></div>
+                                            <div id="ventas-estatus-vendedor" class="ventas-chart" role="img" aria-label="Proyectos del vendedor por clasificación, mes y año, con declinados apilados en rojo"></div>
                                         </div>
                                     </section>
-                                    <section class="ventas-desglose-vendedor" aria-labelledby="ventas-desglose-estatus-titulo">
+                                    <section class="card card-body h-100 ventas-desglose-vendedor" aria-labelledby="ventas-desglose-estatus-titulo">
                                         <h4 id="ventas-desglose-estatus-titulo" aria-live="polite"></h4>
                                         <p id="ventas-desglose-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica por estatus del proyecto; desplazamiento horizontal">
-                                            <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos por estatus, con declinados apilados en rojo"></div>
+                                            <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos del vendedor por estatus agrupado, mes y año, con declinados apilados en rojo"></div>
                                         </div>
                                     </section>
                                 </div>
@@ -515,23 +515,15 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
-            margin-left: 20px;
-            padding-left: 12px;
-            border-left: 2px solid #b9d9e6;
         }
 
         #ventas-mensuales .ventas-desglose-vendedor {
             min-width: 0;
-            padding: 10px;
-            border: 1px solid #dbe3e8;
-            border-radius: 5px;
         }
 
         @media (max-width: 767px) {
             #ventas-mensuales .ventas-desgloses-vendedor {
                 grid-template-columns: minmax(0, 1fr);
-                margin-left: 8px;
-                padding-left: 8px;
             }
         }
 

@@ -23,12 +23,12 @@ function ejecutar(empty, width, theme, periods = false) {
         {vendedor_id:'V1',estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2},
         {vendedor_id:'V1',estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},
         {vendedor_id:'V2',estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2}];
-    data.estatus_por_clasificacion = empty ? [] : [{clasificacion_id:3,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2},{clasificacion_id:3,estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},{clasificacion_id:5,estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2}];
+    data.estatus_por_clasificacion = empty ? [] : [{vendedor_id:'V2',clasificacion_id:3,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:2},{clasificacion_id:3,estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0},{clasificacion_id:5,estatus_id:6,estatus:'Pedido',proyectos:5,declinados:2}];
     data.anios_seleccionados = [2024,2026];
     data.meses_seleccionados = [2,9];
     if (periods) data.clasificaciones_por_vendedor[0].proyectos = 9;
     if (periods) data.estatus_por_clasificacion = [
-        {clasificacion_id:3,anio:2026,mes:9,estatus_id:1,estatus:'Oportunidad',proyectos:2,declinados:1},
+        {vendedor_id:'V2',clasificacion_id:3,anio:2026,mes:9,estatus_id:1,estatus:'Oportunidad',proyectos:2,declinados:1},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:3,estatus:'Cotizacion',proyectos:2,declinados:0},
         {clasificacion_id:3,anio:2024,mes:2,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:1},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:1,declinados:0},
@@ -115,6 +115,23 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseAnio,'2026');
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseMes,'9');
         assert.equal(charts.length,4,'Abrir modal sin crear los graficos retirados');
+        charts[0].trigger('click',{componentType:'series',dataIndex:0});
+        const sellerClassification = charts[4].getOption();
+        const sellerStatus = charts[5].getOption();
+        assert.deepEqual(sellerClassification.xAxis[0].data,charts[2].getOption().xAxis[0].data);
+        assert.deepEqual(sellerClassification.xAxis[1].data,['2024','2024','2026','2026']);
+        assert.deepEqual(sellerClassification.series[0].data,[1,0,0,4],'Solo las partidas del vendedor seleccionado');
+        assert.deepEqual(sellerClassification.series[1].data,[1,0,0,1]);
+        assert.equal(sellerClassification.series[0].itemStyle.color,charts[2].getOption().series[2].itemStyle.color);
+        assert.equal(sellerClassification.series[0].label.formatter(),'Bombas');
+        assert.deepEqual(sellerStatus.series[0].data,[0,0,0,2],'Agrupar cotizacion sin incluir otro vendedor');
+        assert.deepEqual(sellerStatus.series[2].data,[1,0,0,2]);
+        assert.deepEqual(sellerStatus.series[3].data,[1,0,0,1]);
+        assert.equal(sellerStatus.series[2].name,'Pedidos Colocados');
+        assert.equal(sellerStatus.legend[0].formatter(statusName),statusOption.legend[0].formatter(statusName));
+        assert.equal(sellerStatus.grid[0].bottom,statusOption.grid[0].bottom);
+        assert.ok(sellerStatus.tooltip[0].formatter({seriesIndex:0,dataIndex:3}).includes('Total: 2'));
+        charts[4].renderToSVGString(); charts[5].renderToSVGString();
         charts.forEach(chart=>chart.dispose());
         return;
     }
@@ -138,20 +155,24 @@ function ejecutar(empty, width, theme, periods = false) {
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
         assert.equal(charts.length,6,'Segunda grafica debajo sin reemplazar la primera');
-        assert.deepEqual(charts[4].getOption().xAxis[0].data,['Bombas','Sellos']);
-        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Cotizacion','Pedido']);
-        assert.deepEqual(charts[5].getOption().series[1].data,[0,2]);
+        assert.deepEqual(charts[4].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
+        assert.deepEqual(charts[5].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
+        assert.equal(charts[5].getOption().series[0].name,'PROCESO DE COTIZACION');
+        assert.equal(charts[5].getOption().series[2].name,'Pedidos Colocados');
+        assert.deepEqual(charts[5].getOption().series[3].data,[0,0,0,2]);
+        assert.deepEqual(charts[4].getOption().series[0].data,[0,0,0,3]);
+        assert.deepEqual(charts[4].getOption().series[2].data,[0,0,0,3]);
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
         assert.equal(charts.length,6,'Reutilizar grafica secundaria');
         assert.equal(nodes.has('ventas-vendedor-mensual'),false);
         dropdown.value='1'; dropdown.events.change();
-        assert.deepEqual(charts[4].getOption().series[0].data,[0]);
-        assert.deepEqual(charts[4].getOption().series[1].data,[2]);
+        assert.deepEqual(charts[4].getOption().series[0].data,[0,0,0,0]);
+        assert.deepEqual(charts[4].getOption().series[1].data,[0,0,0,2]);
         assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
-        assert.equal(charts[4].getOption().series[1].stack,'proyectos');
-        assert.deepEqual(charts[5].getOption().series[1].data,[2]);
+        assert.equal(charts[4].getOption().series[1].stack,'clase-3');
+        assert.deepEqual(charts[5].getOption().series[1].data,[0,0,0,2]);
         assert.equal(charts[5].getOption().series[1].itemStyle.color,'#dc3545');
     }
     if (!empty) {
