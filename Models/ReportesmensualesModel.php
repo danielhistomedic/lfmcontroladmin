@@ -200,6 +200,24 @@ class ReportesmensualesModel extends Mysql
         $annualParams = [];
         $annualPeriod = self::periodo('v.fecha', $year, range(1,12), $annualParams);
         if ($seller !== '') $annualParams[] = $seller;
+        $annualStatuses = $this->estatusPorClasificacion($scope, $annualParams, $annualPeriod);
+        // Complemento del KPI: cada proyecto externo al período cuenta una sola vez,
+        // aunque tenga varias cotizaciones enviadas durante los meses seleccionados.
+        $quotationParams = [];
+        $quotationPeriod = self::periodo('cc.fecha', $year, $month, $quotationParams);
+        $previousParams = [...$dateParams, ...$quotationParams];
+        if ($seller !== '') $previousParams[] = $seller;
+        $previousQuoted = $this->consultar("SELECT COUNT(DISTINCT v.id) AS cotizacion_cliente_anteriores
+            FROM tb_ventas v
+            WHERE NOT COALESCE(($projectPeriod), 0)
+                AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+                AND EXISTS (SELECT 1 FROM tb_ventas_cotizacion_cliente cc
+                    WHERE cc.venta_id = v.id AND cc.enviado = 1 AND ($quotationPeriod))
+                $scope", $previousParams);
+        if (!$previousQuoted) throw new RuntimeException('No se pudieron obtener los proyectos anteriores cotizados.');
+        $quantities['cotizacion_cliente_periodo'] = $quantities['cotizacion_cliente'];
+        $quantities['cotizacion_cliente_anteriores'] = (int)$previousQuoted[0]['cotizacion_cliente_anteriores'];
+        $quantities['cotizacion_cliente'] += $quantities['cotizacion_cliente_anteriores'];
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -207,7 +225,7 @@ class ReportesmensualesModel extends Mysql
                 'proyectos_por_vendedor' => $projectsBySeller,
                 'clasificaciones_por_vendedor' => $statusesBySeller,
                 'estatus_por_vendedor' => $projectStatuses,
-                'estatus_por_clasificacion' => $this->estatusPorClasificacion($scope, $annualParams, $annualPeriod),
+                'estatus_por_clasificacion' => $annualStatuses,
                 'anios_seleccionados' => is_array($year) ? $year : [$year],
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,

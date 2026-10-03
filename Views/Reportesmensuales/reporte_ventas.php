@@ -82,13 +82,19 @@
             </div>
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
-                <?php foreach ([['Total de Proyectos del Mes', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados del Mes', $report['cantidades']['declinados'], 'Proyectos de los meses seleccionados declinados'], ['Pedidos Cotizados', $report['cantidades']['cotizacion_cliente'], 'Proyectos de los meses seleccionados con cotización enviada'], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos de los meses seleccionados con orden de compra de cliente']] as $kpi): ?>
+                <?php foreach ([['Total de Proyectos del Mes', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados del Mes', $report['cantidades']['declinados'], 'Proyectos de los meses seleccionados declinados'], ['Pedidos Cotizados en el Período', $report['cantidades']['cotizacion_cliente'], ''], ['Pedidos Colocados', $report['cantidades']['orden_compra_cliente'], 'Proyectos de los meses seleccionados con orden de compra de cliente']] as $kpi): ?>
                     <?php $colorClass = str_starts_with($kpi[0], 'Declinados') ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
                     <div class="col-sm-6 col-xl-3">
                         <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= str_starts_with($kpi[0], 'Declinados') ? ' ventas-abrir-declinados' : ($kpi[0] === 'Pedidos Colocados' ? ' ventas-abrir-colocados' : ''); ?>" <?php if (str_starts_with($kpi[0], 'Declinados')): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php elseif ($kpi[0] === 'Pedidos Colocados'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-colocados-financiero" aria-haspopup="dialog" aria-controls="modal-colocados-financiero" aria-label="Ver resumen financiero de pedidos colocados" <?php endif; ?>>
                             <div class="card-body">
                                 <div class="text-muted mb-2"><?= $esc($kpi[0]); ?></div>
-                                <div class="ventas-valor"><?= $esc($kpi[1]); ?></div><small class="text-muted"><?= $esc($kpi[2]); ?></small>
+                                <div class="ventas-valor"><?= $esc($kpi[1]); ?></div>
+                                <?php if ($kpi[0] === 'Pedidos Cotizados en el Período'): ?>
+                                    <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['cotizacion_cliente_periodo']); ?></small>
+                                    <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['cotizacion_cliente_anteriores']); ?></small>
+                                <?php else: ?>
+                                    <small class="text-muted"><?= $esc($kpi[2]); ?></small>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

@@ -47,12 +47,25 @@ class ModeloSimulado extends ReportesmensualesModel
     public function getConexion() { return $this->fake; }
 }
 $quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3,'interna_sin_cliente'=>4];
-$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['clasificacion_id'=>3,'estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']]]);
+$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['clasificacion_id'=>3,'estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['cotizacion_cliente_anteriores'=>'8']]]);
 $model=new ModeloSimulado($db);
 $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
-verificar(count($db->calls)===8,'Consultas por conjunto');
+verificar(count($db->calls)===9,'Consultas por conjunto');
+[$previousSql,$previousParams] = $db->calls[8];
+verificar($previousParams===['2024-02-01','2024-03-01','2024-02-01','2024-03-01',"V'1"],
+    'Aplicar periodo de proyecto, fecha de cotizacion y vendedor con parametros propios');
+verificar(str_contains($previousSql,'COUNT(DISTINCT v.id)') && str_contains($previousSql,'AND EXISTS (SELECT 1 FROM tb_ventas_cotizacion_cliente cc')
+    && !str_contains($previousSql,'JOIN'), 'Multiples cotizaciones no multiplican los proyectos anteriores');
+verificar(str_contains($previousSql,'NOT COALESCE((v.fecha >= ? AND v.fecha < ?), 0)')
+    && str_contains($previousSql,'cc.enviado = 1 AND (cc.fecha >= ? AND cc.fecha < ?)'),
+    'Excluir todos los proyectos del periodo y usar exclusivamente la fecha de cotizacion enviada');
+verificar(str_contains($previousSql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
+    && str_contains($previousSql,'v.ccveusuario_vendedor = ?')
+    && str_contains($previousSql,'v.clasificacion_proyecto_id IN (2,3,4,5)')
+    && !str_contains($previousSql,'fecha_cotizacion') && !str_contains($previousSql,'estatus_pedido_reporte'),
+    'Reutilizar las reglas del KPI, sin imponer las reglas distintas del calculo de importes');
 verificar(str_contains($db->calls[1][0], 'SUM(cd.cantidad * cd.precio_unitario) AS subtotal_partidas')
     && !str_contains($db->calls[1][0], 'cc.total'), 'Cotizado usa subtotal sin IVA');
 verificar(str_contains($db->calls[2][0], 'pd.cantidad_pedido * pd.precio_unitario')
@@ -63,7 +76,7 @@ verificar(str_contains($db->calls[7][0], 'YEAR(v.fecha) AS anio')
     'Separar cantidades por clasificacion, anio, mes y estatus sin nuevas consultas');
 
 // Meses no consecutivos, sin duplicar meses ni proyectos al agregar el periodo.
-$multiDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], []]);
+$multiDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], [], [['cotizacion_cliente_anteriores'=>0]]]);
 (new ModeloSimulado($multiDb))->dashboard(2024, [12,2,9,2], 'V1');
 $multiParams = ['2024-02-01','2024-03-01','2024-09-01','2024-10-01','2024-12-01','2025-01-01','V1'];
 foreach (array_slice($multiDb->calls, 1, 6) as [$sql,$params]) {
@@ -72,12 +85,14 @@ foreach (array_slice($multiDb->calls, 1, 6) as [$sql,$params]) {
     verificar(str_contains($sql, 'v.clasificacion_proyecto_id IN (2,3,4,5)'), 'Conservar clasificaciones globales');
     verificar(str_contains($sql, 'v.estatus_proyecto_id <> 2'), 'Conservar exclusion de estatus');
 }
+verificar($multiDb->calls[8][1] === [...array_slice($multiParams,0,-1),...array_slice($multiParams,0,-1),'V1'],
+    'Proyectos anteriores excluyen la union de todos los meses seleccionados');
 $multiListDb = new ConexionSimulada([[['total'=>0]], [['total'=>0]], []]);
 (new ModeloSimulado($multiListDb))->declinadosTabla(2024, [2,9,12], 'V1',
     ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[]]);
 foreach ($multiListDb->calls as [$sql,$params]) verificar($params === $multiParams, 'Modal y total mantienen la seleccion multiple');
 
-$yearsDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], []]);
+$yearsDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], [], [['cotizacion_cliente_anteriores'=>0]]]);
 (new ModeloSimulado($yearsDb))->dashboard([2026,2024,2026], [2,12], 'V1');
 $yearsParams = ['2024-02-01','2024-03-01','2024-12-01','2025-01-01',
     '2026-02-01','2026-03-01','2026-12-01','2027-01-01','V1'];
@@ -85,6 +100,21 @@ foreach (array_slice($yearsDb->calls,1,6) as [$sql,$params]) {
     verificar($params === $yearsParams, 'Combinar solo los anios y meses seleccionados sin duplicados');
     verificar(str_contains($sql, ' OR ') && str_contains($sql,'v.estatus_proyecto_id <> 2'), 'Conservar filtros sobre todos los rangos');
 }
+verificar($yearsDb->calls[8][1] === [...array_slice($yearsParams,0,-1),...array_slice($yearsParams,0,-1),'V1'],
+    'Aplicar todos los anios seleccionados al complemento de cotizaciones');
+$compositionDb = new ConexionSimulada([[],[],[],[array_replace($quantities,['cotizacion_cliente'=>46])],[],[],[],[],[['cotizacion_cliente_anteriores'=>8]]]);
+$composition = (new ModeloSimulado($compositionDb))->dashboard(2024,2,'');
+verificar($composition['cantidades']['cotizacion_cliente']===54
+    && $composition['cantidades']['cotizacion_cliente_periodo']===46
+    && $composition['cantidades']['cotizacion_cliente_anteriores']===8, 'Total principal es la suma exacta de ambos grupos');
+verificar(!str_contains($compositionDb->calls[8][0],'v.ccveusuario_vendedor = ?')
+    && count($compositionDb->calls[8][1])===4,'TODOS conserva el alcance global sin vendedor ficticio');
+$emptyQuantities = array_fill_keys(array_keys($quantities),0);
+$emptyDb = new ConexionSimulada([[],[],[],[$emptyQuantities],[],[],[],[],[['cotizacion_cliente_anteriores'=>0]]]);
+$emptyDashboard = (new ModeloSimulado($emptyDb))->dashboard(2024,2,'');
+verificar($emptyDashboard['cantidades']['cotizacion_cliente']===0
+    && $emptyDashboard['cantidades']['cotizacion_cliente_periodo']===0
+    && $emptyDashboard['cantidades']['cotizacion_cliente_anteriores']===0,'Ambos componentes se muestran como cero en un periodo vacio');
 $yearsListDb = new ConexionSimulada([[['total'=>0]], [['total'=>0]], []]);
 (new ModeloSimulado($yearsListDb))->declinadosTabla([2024,2026], [2,12], 'V1',
     ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[]]);
@@ -102,7 +132,7 @@ verificar($db->calls[1][1]===['2024-02-01','2024-03-01',"V'1"],'Límites del mes
 verificar(str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados de importes cotizados conservando activo NULL');
 verificar(str_contains($db->calls[2][0], 'pc.enviado = 1') && str_contains($db->calls[2][0], "vd.tipo_partida IN ('PRODUCTO','SERVICIO')"), 'Colocados solo pedidos enviados y tipos validos');
 cerca($actual['cotizado'],2000,'Tipo de cambio cero usa divisor 1');
-verificar($actual['cantidades']===$quantities,'Cantidades independientes de los conjuntos cotizado y colocado');
+verificar($actual['cantidades']===array_replace($quantities,['cotizacion_cliente'=>14,'cotizacion_cliente_periodo'=>6,'cotizacion_cliente_anteriores'=>8]),'Cantidades independientes de los conjuntos cotizado y colocado');
 verificar($db->calls[3][1]===['2024-02-01','2024-03-01',"V'1"],'Cantidades con mes de proyecto y alcance autorizado');
 verificar(str_contains($db->calls[3][0], 'WHERE enviado = 1 GROUP BY venta_id'), 'Contar proyectos con cotización enviada en cualquier fecha según la consulta solicitada');
 verificar(substr_count($db->calls[3][0],'GROUP BY venta_id')===2,'Agrupar documentos por proyecto antes del JOIN');
@@ -329,7 +359,7 @@ function base_url() { return '/portal'; }
 function assets() { return '/portal/Assets'; }
 function version() { return 'test'; }
 $report['tipo_cambio']=20; $report['fecha_tipo_cambio']='2024-02-01';
-$report['cantidades']=$quantities;
+$report['cantidades']=array_replace($quantities,['cotizacion_cliente'=>54,'cotizacion_cliente_periodo'=>46,'cotizacion_cliente_anteriores'=>8]);
 $report['proyectos_por_vendedor'][0]['nombre']='<script>alert("XSS")</script>';
 $report['proyectos_por_vendedor'][0]['proyectos']=10;
 $data=['page_form_title'=>'Reporte ventas','page_breadcrumb'=>'Ventas','filtros'=>['anio'=>2024,'mes'=>2,'vendedor'=>''],
@@ -342,6 +372,9 @@ verificar(!str_contains($html,'<script>alert'),'Sin inyección HTML');
 verificar(str_contains($html,'\\u003Cscript\\u003E'),'Escape de JSON incrustado');
 verificar(str_contains($html,'TODOS') && str_contains($html,'José'),'UTF-8 y filtros');
 verificar(str_contains($html,'Cantidades') && !str_contains($html,'>Importes</h4>') && str_contains($html,'Pedidos Colocados'),'Conservar Cantidades y retirar el bloque Importes');
+verificar(str_contains($html,'Pedidos Cotizados en el Período')
+    && str_contains($html,'Proyectos del período: 46') && str_contains($html,'Proyectos anteriores: 8')
+    && str_contains($html,'class="ventas-valor">54</div>'), 'Mostrar el total principal y sus componentes con menor jerarquia');
 verificar(str_contains($html,'Cantidades (crítico)') && str_contains($html,'col-12 col-md-3') && str_contains($html,'sin cotización a cliente enviada vinculada'), 'Tarjeta crítica en el primer cuarto de la fila');
 verificar(substr_count($html,'data-bs-target="#modal-declinados-ventas"')===2, 'Ambas tarjetas abren el modal de declinados solicitado');
 verificar(str_contains($html, 'Importes sin IVA en USD') && !str_contains($html, 'con IVA'), 'Pantalla informa subtotales sin IVA');
