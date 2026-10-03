@@ -104,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const next = document.getElementById('colocados-partidas-siguiente');
         const detailRetry = document.getElementById('colocados-partidas-reintentar');
         section.hidden = false;
+        section.open = true;
         document.getElementById('colocados-partidas-titulo').textContent = 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)';
         body.replaceChildren(); state.textContent = 'Cargando partidas...'; previous.disabled = next.disabled = true; detailRetry.hidden = true;
         document.getElementById('colocados-partidas-pagina').textContent = '';
@@ -113,8 +114,8 @@ document.addEventListener('DOMContentLoaded', function () {
         query.set('start', detail.start); query.set('length', 10);
         try {
             const data = await get('detalle',query);
-            data.data.forEach(row => appendRow(body,[row.pedido_id,row.venta_id,row.num_orden_compra,row.fecha_pedido,
-                row.moneda,row.tipo_partida,row.codigo_partida,row.clave_material,row.descripcion,
+            data.data.forEach(row => appendRow(body,[row.proyecto_id,row.num_orden_compra,row.fecha_pedido,
+                row.moneda,row.tipo_partida,row.clave,row.ccn,row.codigo_cliente,row.descripcion,
                 row.cantidad_pedido,displayAmount(row.precio_unitario),displayAmount(row.subtotal_partida)]));
             state.textContent = data.data.length ? '' : 'Sin partidas en este mes.';
             previous.disabled = detail.start === 0; next.disabled = detail.start + 10 >= data.recordsFiltered;

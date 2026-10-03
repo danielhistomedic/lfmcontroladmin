@@ -24,7 +24,7 @@ const context={document:{getElementById:node,querySelectorAll:()=>[card],createE
         if(defer) await new Promise(resolve=>pending.push(resolve));
         if(fail) throw new SyntaxError('invalid JSON');
         const section=query.get('seccion');
-        return {ok:true,json:async()=>({status:true,data:section==='resumen'?totals:section==='detalle'?{recordsFiltered:1,data:[{pedido_id:4,venta_id:3,num_orden_compra:'OC1',fecha_pedido:'2026-09-01',moneda:'USD',tipo_partida:'SERVICIO',codigo_partida:'P1',clave_material:'MAT',descripcion:'<script>',cantidad_pedido:2,precio_unitario:15,subtotal_partida:30}]}:{draw:1,recordsTotal:1,recordsFiltered:1,
+        return {ok:true,json:async()=>({status:true,data:section==='resumen'?totals:section==='detalle'?{recordsFiltered:1,data:[{pedido_id:4,venta_id:3,proyecto_id:'PV-2026-4',clave:'CLAVE1',ccn:'CCN1',codigo_cliente:'CLIENTE1',num_orden_compra:'OC1',fecha_pedido:'2026-09-01',moneda:'USD',tipo_partida:'SERVICIO',codigo_partida:'P1',clave_material:'MAT',descripcion:'<script>',cantidad_pedido:2,precio_unitario:15,subtotal_partida:30}]}:{draw:1,recordsTotal:1,recordsFiltered:1,
             data:[{nombre:'<script>alert(1)</script>',moneda:'USD',total:'90.00'}]}})};
     }};
 async function tick(){await new Promise(resolve=>setImmediate(resolve));}
@@ -58,7 +58,13 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     assert.deepEqual(queries.at(-1).getAll('anio[]'),['2026']);
     assert.deepEqual(queries.at(-1).getAll('mes[]'),['9']);
     assert.equal(queries.at(-1).get('seccion'),'detalle');
-    assert.equal(node('colocados-partidas-filas').children[0].children[8].textContent,'<script>');
+    assert.equal(node('colocados-partidas').open,true,'Ver partidas abre el desplegable');
+    const detailRow=node('colocados-partidas-filas').children[0];
+    assert.equal(detailRow.children[0].textContent,'PV-2026-4');
+    assert.equal(detailRow.children[5].textContent,'CLAVE1');
+    assert.equal(detailRow.children[6].textContent,'CCN1');
+    assert.equal(detailRow.children[7].textContent,'CLIENTE1');
+    assert.equal(detailRow.children[8].textContent,'<script>');
     assert.equal(node('colocados-partidas-filas').children[0].children[11].textContent,'$ 30.00');
     fail=true; node('colocados-financiero-reintentar').events.click(); await tick();
     assert.equal(node('colocados-financiero-reintentar').hidden,false);

@@ -48,21 +48,21 @@
                         </table>
                     </div>
                 </section>
-                <section id="colocados-partidas" class="colocados-resumen-seccion" hidden aria-labelledby="colocados-partidas-titulo">
-                    <h6 id="colocados-partidas-titulo">Detalle de partidas del mes</h6>
+                <details id="colocados-partidas" class="colocados-resumen-seccion" hidden open aria-labelledby="colocados-partidas-titulo">
+                    <summary><h6 id="colocados-partidas-titulo">Detalle de partidas del mes</h6></summary>
                     <div id="colocados-partidas-estado" role="status" aria-live="polite"></div>
                     <div class="table-responsive">
                         <table class="table colocados-tabla colocados-partidas-tabla">
                             <thead>
                                 <tr>
-                                    <th>Pedido</th>
-                                    <th>Venta</th>
+                                    <th>Proyecto</th>
                                     <th>Orden de compra</th>
                                     <th>Fecha</th>
                                     <th>Moneda</th>
                                     <th>Tipo</th>
-                                    <th>Código</th>
-                                    <th>Material</th>
+                                    <th>Clave</th>
+                                    <th>CCN</th>
+                                    <th>Código Cliente</th>
                                     <th>Descripción</th>
                                     <th class="text-end">Cantidad</th>
                                     <th class="text-end">Precio unitario</th>
@@ -75,7 +75,7 @@
                     <div class="colocados-tabla-pie"><span id="colocados-partidas-pagina" aria-live="polite"></span>
                         <nav aria-label="Paginación de partidas"><button id="colocados-partidas-anterior" class="btn btn-light btn-sm" type="button" disabled>Anterior</button><button id="colocados-partidas-siguiente" class="btn btn-light btn-sm" type="button" disabled>Siguiente</button><button id="colocados-partidas-reintentar" class="btn btn-light btn-sm" type="button" hidden>Reintentar</button></nav>
                     </div>
-                </section>
+                </details>
                 <div class="colocados-grupos colocados-listados">
                     <?php foreach (['clientes' => 'Total por cliente', 'vendedores' => 'Total por vendedor'] as $section => $title): ?>
                         <section class="colocados-resumen-seccion" aria-labelledby="colocados-<?= $section; ?>-titulo">

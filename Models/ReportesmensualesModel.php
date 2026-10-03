@@ -381,11 +381,15 @@ class ReportesmensualesModel extends Mysql
             $length = max(5,min(100,(int)($options['length'] ?? 10)));
             $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
             $count = $this->consultar("SELECT COUNT(*) AS total $base WHERE $where", $params);
-            $rows = $this->consultar("SELECT pc.id AS pedido_id, pc.venta_id, pc.num_orden_compra,
-                pc.fecha_pedido, $currency AS moneda, vd.tipo_partida, vd.codigo_partida,
-                pd.ccvematerial AS clave_material, COALESCE(pd.descripcion, vd.descripcion) AS descripcion,
+            $rows = $this->consultar("SELECT pc.id AS pedido_id, pc.venta_id, v.proyecto_id, pc.num_orden_compra,
+                pc.fecha_pedido, $currency AS moneda, vd.tipo_partida,
+                mat.ccvematerial AS clave, mat.ccn, pd.ccvematerial AS codigo_cliente,
+                COALESCE(pd.descripcion, vd.descripcion) AS descripcion,
                 pd.cantidad_pedido, pd.precio_unitario, $line AS subtotal_partida
-                $base WHERE $where ORDER BY pc.fecha_pedido, pc.id, pd.id LIMIT $length OFFSET $offset", $params);
+                $base LEFT JOIN (
+                    SELECT ccvematerial, MAX(ccveMaterialAlmacen) AS ccn FROM tb_materiales GROUP BY ccvematerial
+                ) mat ON mat.ccvematerial = pd.ccvematerial
+                WHERE $where ORDER BY pc.fecha_pedido, pc.id, pd.id LIMIT $length OFFSET $offset", $params);
             return ['data'=>$rows,'recordsFiltered'=>(int)($count[0]['total'] ?? 0)];
         }
         if (!in_array($section, ['clientes','vendedores'], true)) throw new InvalidArgumentException('Seccion no valida.');

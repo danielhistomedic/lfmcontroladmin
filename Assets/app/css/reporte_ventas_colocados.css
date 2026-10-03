@@ -29,6 +29,10 @@
 #modal-colocados-financiero .colocados-tabla tbody tr:hover { background: #f5f9fc; }
 #modal-colocados-financiero .colocados-moneda { color: #62758e; font-weight: 600; }
 #modal-colocados-financiero .colocados-partidas-tabla { min-width: 1100px; }
+#modal-colocados-financiero #colocados-partidas > summary { cursor: pointer; color: #174b66; margin-bottom: 10px; }
+#modal-colocados-financiero #colocados-partidas > summary h6 { display: inline; margin: 0; }
+#modal-colocados-financiero #colocados-partidas > summary:focus-visible { outline: 2px solid #2385bd; outline-offset: 4px; border-radius: 4px; }
+html.dark #modal-colocados-financiero #colocados-partidas > summary { color: #9ddaf0; }
 #modal-colocados-financiero #colocados-mensual-filas td:nth-child(n+4):nth-child(-n+7),
 #modal-colocados-financiero #colocados-partidas-filas td:nth-child(n+10) { text-align: right; font-variant-numeric: tabular-nums; }
 #modal-colocados-financiero .colocados-tabla-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; color: #62758e; font-size: 10px; }

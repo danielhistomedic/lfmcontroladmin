@@ -43,8 +43,9 @@ verificar(str_contains($financialDb->calls[2][0], 'GROUP BY YEAR(pc.fecha_pedido
 $detailDb = new ConexionSimulada([[['total'=>1]],[['pedido_id'=>4,'venta_id'=>3,'subtotal_partida'=>'150.00']]]);
 $details = (new ModeloSimulado($detailDb))->colocadosFinanciero(2026,9,'V1','detalle',['start'=>10,'length'=>10]);
 verificar($details['recordsFiltered'] === 1 && str_contains($detailDb->calls[1][0], 'pd.cantidad_pedido * pd.precio_unitario AS subtotal_partida') && str_contains($detailDb->calls[1][0], 'LIMIT 10 OFFSET 10'), 'Detalle paginado con subtotal exclusivo por partida');
-foreach (['pc.num_orden_compra','pc.venta_id','vd.codigo_partida','pd.ccvematerial','pd.descripcion','pd.precio_unitario'] as $field) verificar(str_contains($detailDb->calls[1][0], $field), 'Campos reales de detalle');
+foreach (['pc.num_orden_compra','pc.venta_id','v.proyecto_id','mat.ccvematerial AS clave','mat.ccn','pd.ccvematerial AS codigo_cliente','pd.descripcion','pd.precio_unitario'] as $field) verificar(str_contains($detailDb->calls[1][0], $field), 'Campos reales de detalle');
 
+verificar(str_contains($detailDb->calls[1][0], 'MAX(ccveMaterialAlmacen) AS ccn FROM tb_materiales GROUP BY ccvematerial') && str_contains($detailDb->calls[1][0], 'mat ON mat.ccvematerial = pd.ccvematerial'), 'Materiales opcionales sin multiplicar partidas');
 $api->model = new class {
     public array $calls = [];
     public bool $fail = false;
