@@ -211,8 +211,9 @@ class Reportesmensuales extends Controllers
                 $integer = static fn($key,$default,$min,$max) => filter_var($_GET[$key] ?? $default,
                     FILTER_VALIDATE_INT,['options'=>['min_range'=>$min,'max_range'=>$max]]);
                 $options = ['draw'=>$integer('draw',1,0,1000000000),'start'=>$integer('start',0,0,1000000),
-                    'length'=>$integer('length',10,5,100),'order_column'=>$integer('order_column',2,0,2),
-                    'order_dir'=>$_GET['order_dir'] ?? 'desc','search'=>$_GET['search'] ?? ''];
+                    'length'=>$integer('length',$section === 'detalle' ? 5 : 10,5,100),
+                    'order_column'=>$integer('order_column',2,0,$section === 'detalle' ? 11 : 2),
+                    'order_dir'=>$_GET['order_dir'] ?? ($section === 'detalle' ? 'asc' : 'desc'),'search'=>$_GET['search'] ?? ''];
                 if (in_array(false,[$options['draw'],$options['start'],$options['length'],$options['order_column']],true)
                     || !in_array($options['order_dir'],['asc','desc'],true) || !is_string($options['search']) || strlen($options['search'])>200) {
                     http_response_code(400); echo json_encode(['status'=>false,'message'=>'Los filtros de la tabla no son válidos.']); return;

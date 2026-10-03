@@ -74,7 +74,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const detail = {year:0,month:0,start:0};
+    const detail = {year:0,month:0,start:0,column:2,direction:'asc',timer:null};
+    const detailSearch = document.getElementById('colocados-partidas-buscar');
     function appendRow(body, values) {
         const tr = document.createElement('tr');
         values.forEach(value => { const td = document.createElement('td'); td.textContent = String(value ?? ''); tr.appendChild(td); });
@@ -92,11 +93,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const button = document.createElement('button');
             button.type = 'button'; button.className = 'btn btn-outline-primary btn-sm'; button.textContent = 'Ver partidas';
             button.setAttribute('aria-label', 'Ver partidas de ' + monthNames[Number(row.mes)-1] + ' ' + row.anio);
-            button.addEventListener('click', () => { detail.year = row.anio; detail.month = row.mes; detail.start = 0; loadDetails(); });
+            button.addEventListener('click', () => { detail.year = row.anio; detail.month = row.mes; detail.start = 0; detailSearch.value = ''; loadDetails(); });
             td.appendChild(button); tr.appendChild(td);
         });
     }
     async function loadDetails() {
+        clearTimeout(detail.timer);
+        for (let column = 0; column < 12; column++) {
+            document.getElementById('colocados-partidas-columna-' + column).setAttribute('aria-sort',
+                column === detail.column ? (detail.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+        }
         const section = document.getElementById('colocados-partidas');
         const body = document.getElementById('colocados-partidas-filas');
         const state = document.getElementById('colocados-partidas-estado');
@@ -111,14 +117,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const query = params('detalle');
         query.delete('anio[]'); query.delete('mes[]');
         query.append('anio[]', detail.year); query.append('mes[]', detail.month);
-        query.set('start', detail.start); query.set('length', 10);
+        query.set('start', detail.start); query.set('length', 5);
+        query.set('search', detailSearch.value); query.set('order_column', detail.column); query.set('order_dir', detail.direction);
         try {
             const data = await get('detalle',query);
             data.data.forEach(row => appendRow(body,[row.proyecto_id,row.num_orden_compra,row.fecha_pedido,
                 row.moneda,row.tipo_partida,row.clave,row.ccn,row.codigo_cliente,row.descripcion,
                 row.cantidad_pedido,displayAmount(row.precio_unitario),displayAmount(row.subtotal_partida)]));
             state.textContent = data.data.length ? '' : 'Sin partidas en este mes.';
-            previous.disabled = detail.start === 0; next.disabled = detail.start + 10 >= data.recordsFiltered;
+            previous.disabled = detail.start === 0; next.disabled = detail.start + 5 >= data.recordsFiltered;
             document.getElementById('colocados-partidas-pagina').textContent = data.recordsFiltered ?
                 (detail.start+1) + '–' + (detail.start+data.data.length) + ' de ' + data.recordsFiltered : '0 partidas';
         } catch (error) {
@@ -127,9 +134,21 @@ document.addEventListener('DOMContentLoaded', function () {
             detailRetry.hidden = false;
         }
     }
-    document.getElementById('colocados-partidas-anterior').addEventListener('click', () => { detail.start = Math.max(0,detail.start-10); loadDetails(); });
-    document.getElementById('colocados-partidas-siguiente').addEventListener('click', () => { detail.start += 10; loadDetails(); });
+    document.getElementById('colocados-partidas-anterior').addEventListener('click', () => { detail.start = Math.max(0,detail.start-5); loadDetails(); });
+    document.getElementById('colocados-partidas-siguiente').addEventListener('click', () => { detail.start += 5; loadDetails(); });
     document.getElementById('colocados-partidas-reintentar').addEventListener('click', loadDetails);
+    detailSearch.addEventListener('input', () => {
+        clearTimeout(detail.timer);
+        if (requests.has('detalle')) requests.get('detalle').abort();
+        detail.start = 0;
+        detail.timer = setTimeout(loadDetails, 350);
+    });
+    for (let column = 0; column < 12; column++) {
+        document.getElementById('colocados-partidas-orden-' + column).addEventListener('click', () => {
+            detail.direction = column === detail.column && detail.direction === 'asc' ? 'desc' : 'asc';
+            detail.column = column; detail.start = 0; loadDetails();
+        });
+    }
     async function loadTable(section, reset = false) {
         const table = tables.get(section);
         if (reset) table.start = 0;
@@ -188,11 +207,12 @@ document.addEventListener('DOMContentLoaded', function () {
         table.previous.addEventListener('click', () => { table.start = Math.max(0, table.start - 10); loadTable(section); });
         table.next.addEventListener('click', () => { table.start += 10; loadTable(section); });
     });
-    function load() { document.getElementById('colocados-partidas').hidden = true; document.getElementById('colocados-mensual-filas').replaceChildren(); loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
+    function load() { clearTimeout(detail.timer); if (requests.has('detalle')) requests.get('detalle').abort(); document.getElementById('colocados-partidas').hidden = true; document.getElementById('colocados-mensual-filas').replaceChildren(); loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
     modal.addEventListener('shown.bs.modal', load);
     modal.addEventListener('hidden.bs.modal', () => {
         requests.forEach(request => request.abort()); requests.clear(); summary.hidden = true;
         document.getElementById('colocados-partidas').hidden = true;
+        clearTimeout(detail.timer);
         tables.forEach(table => clearTimeout(table.timer));
     });
     retry.addEventListener('click', load);

@@ -50,23 +50,15 @@
                 </section>
                 <details id="colocados-partidas" class="colocados-resumen-seccion" hidden open aria-labelledby="colocados-partidas-titulo">
                     <summary><h6 id="colocados-partidas-titulo">Detalle de partidas del mes</h6></summary>
+                    <div class="colocados-tabla-controles"><label for="colocados-partidas-buscar">Buscar<input id="colocados-partidas-buscar" type="search" maxlength="200" placeholder="Buscar en las partidas" class="form-control form-control-sm"></label></div>
                     <div id="colocados-partidas-estado" role="status" aria-live="polite"></div>
                     <div class="table-responsive">
                         <table class="table colocados-tabla colocados-partidas-tabla">
                             <thead>
                                 <tr>
-                                    <th>Proyecto</th>
-                                    <th>Orden de compra</th>
-                                    <th>Fecha</th>
-                                    <th>Moneda</th>
-                                    <th>Tipo</th>
-                                    <th>Clave</th>
-                                    <th>CCN</th>
-                                    <th>Código Cliente</th>
-                                    <th>Descripción</th>
-                                    <th class="text-end">Cantidad</th>
-                                    <th class="text-end">Precio unitario</th>
-                                    <th class="text-end">Subtotal sin IVA</th>
+                                    <?php foreach (['Proyecto','Orden de compra','Fecha','Moneda','Tipo','Clave','CCN','Código Cliente','Descripción','Cantidad','Precio unitario','Subtotal sin IVA'] as $index => $label): ?>
+                                        <th id="colocados-partidas-columna-<?= $index; ?>" scope="col" aria-sort="none" class="<?= $index >= 9 ? 'text-end' : ''; ?>"><button id="colocados-partidas-orden-<?= $index; ?>" type="button" class="colocados-orden-encabezado" aria-label="Ordenar por <?= $esc($label); ?>"><?= $esc($label); ?></button></th>
+                                    <?php endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody id="colocados-partidas-filas"></tbody>

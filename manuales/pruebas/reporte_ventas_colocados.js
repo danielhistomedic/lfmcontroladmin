@@ -66,6 +66,18 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     assert.equal(detailRow.children[7].textContent,'CLIENTE1');
     assert.equal(detailRow.children[8].textContent,'<script>');
     assert.equal(node('colocados-partidas-filas').children[0].children[11].textContent,'$ 30.00');
+    assert.equal(queries.at(-1).get('length'),'5','Detalle muestra cinco filas');
+    node('colocados-partidas-orden-11').events.click(); await tick();
+    assert.equal(queries.at(-1).get('order_column'),'11');
+    assert.equal(queries.at(-1).get('order_dir'),'asc');
+    node('colocados-partidas-orden-11').events.click(); await tick();
+    assert.equal(queries.at(-1).get('order_dir'),'desc');
+    assert.equal(node('colocados-partidas-columna-11')['aria-sort'],'descending');
+    node('colocados-partidas-buscar').value='material';
+    node('colocados-partidas-buscar').events.input();
+    await new Promise(resolve=>setTimeout(resolve,400));
+    assert.equal(queries.at(-1).get('search'),'material');
+    assert.equal(queries.at(-1).get('start'),'0');
     fail=true; node('colocados-financiero-reintentar').events.click(); await tick();
     assert.equal(node('colocados-financiero-reintentar').hidden,false);
     assert.ok(node('colocados-financiero-estado').textContent.includes('Intente nuevamente'));

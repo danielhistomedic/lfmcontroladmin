@@ -46,6 +46,14 @@ verificar($details['recordsFiltered'] === 1 && str_contains($detailDb->calls[1][
 foreach (['pc.num_orden_compra','pc.venta_id','v.proyecto_id','mat.ccvematerial AS clave','mat.ccn','pd.ccvematerial AS codigo_cliente','pd.descripcion','pd.precio_unitario'] as $field) verificar(str_contains($detailDb->calls[1][0], $field), 'Campos reales de detalle');
 
 verificar(str_contains($detailDb->calls[1][0], 'MAX(ccveMaterialAlmacen) AS ccn FROM tb_materiales GROUP BY ccvematerial') && str_contains($detailDb->calls[1][0], 'mat ON mat.ccvematerial = pd.ccvematerial'), 'Materiales opcionales sin multiplicar partidas');
+$searchDetailDb = new ConexionSimulada([[['total'=>7]],[]]);
+(new ModeloSimulado($searchDetailDb))->colocadosFinanciero(2026,9,'V1','detalle',
+    ['search'=>'a%_','order_column'=>11,'order_dir'=>'desc','start'=>5]);
+foreach ($searchDetailDb->calls as [$sql,$params]) {
+    verificar(str_contains($sql, "CONCAT_WS(' ',") && in_array('%a!%!_%',$params,true), 'Busqueda literal sobre todas las partidas y conteo filtrado');
+}
+verificar(str_contains($searchDetailDb->calls[1][0], 'ORDER BY pd.cantidad_pedido * pd.precio_unitario DESC, pc.id ASC, pd.id ASC LIMIT 5 OFFSET 5'), 'Orden numerico de subtotal y pagina de cinco');
+
 $api->model = new class {
     public array $calls = [];
     public bool $fail = false;
@@ -70,8 +78,10 @@ $_GET['order_column']='2'; $_GET['search']=['malformado']; verificar(llamarFinan
 $_GET['search']=''; verificar(llamarFinanciero($api)[0]===200, 'Tabla autorizada');
 $_GET['seccion']='detalle'; $_GET['anio']=['2024','2026'];
 verificar(llamarFinanciero($api)[0]===400, 'Detalle exige un solo mes y anio');
-$_GET['anio']=['2026']; $_GET['mes']=['9'];
+$_GET['anio']=['2026']; $_GET['mes']=['9']; $_GET['order_column']='11';
 verificar(llamarFinanciero($api)[0]===200 && $api->model->calls[count($api->model->calls)-1][3] === 'detalle', 'Detalle mensual mantiene autorizacion y alcance');
+$_GET['order_column']='12'; verificar(llamarFinanciero($api)[0]===400, 'Rechazar columna fuera del detalle');
+$_GET['order_column']='11';
 Session::$active=false; verificar(llamarFinanciero($api)[0]===401, 'Rechazar sesion vencida');
 Session::$active=true; $testPermissions=[]; verificar(llamarFinanciero($api)[0]===403, 'Comprobar permiso del modulo');
 $testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='POST'; verificar(llamarFinanciero($api)[0]===405, 'Solo lectura GET');

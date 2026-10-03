@@ -378,18 +378,28 @@ class ReportesmensualesModel extends Mysql
         if ($section === 'detalle') {
             if (count(is_array($year) ? $year : [$year]) !== 1 || count(is_array($month) ? $month : [$month]) !== 1)
                 throw new InvalidArgumentException('Seleccione un mes y un anio para el detalle.');
-            $length = max(5,min(100,(int)($options['length'] ?? 10)));
+            $length = max(5,min(100,(int)($options['length'] ?? 5)));
             $offset = max(0,min(1000000,(int)($options['start'] ?? 0)));
-            $count = $this->consultar("SELECT COUNT(*) AS total $base WHERE $where", $params);
+            $detailBase = $base . ' LEFT JOIN (
+                SELECT ccvematerial, MAX(ccveMaterialAlmacen) AS ccn FROM tb_materiales GROUP BY ccvematerial
+            ) mat ON mat.ccvematerial = pd.ccvematerial';
+            $columns = ['v.proyecto_id','pc.num_orden_compra','pc.fecha_pedido',$currency,'vd.tipo_partida',
+                'mat.ccvematerial','mat.ccn','pd.ccvematerial','COALESCE(pd.descripcion, vd.descripcion)',
+                'pd.cantidad_pedido','pd.precio_unitario',$line];
+            $search = $options['search'] ?? '';
+            if ($search !== '') {
+                $where .= " AND CONCAT_WS(' ', " . implode(', ', $columns) . ") LIKE ? ESCAPE '!'";
+                $params[] = '%' . str_replace(['!','%','_'], ['!!','!%','!_'], $search) . '%';
+            }
+            $order = $columns[(int)($options['order_column'] ?? 2)] ?? $columns[2];
+            $direction = ($options['order_dir'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+            $count = $this->consultar("SELECT COUNT(*) AS total $detailBase WHERE $where", $params);
             $rows = $this->consultar("SELECT pc.id AS pedido_id, pc.venta_id, v.proyecto_id, pc.num_orden_compra,
                 pc.fecha_pedido, $currency AS moneda, vd.tipo_partida,
                 mat.ccvematerial AS clave, mat.ccn, pd.ccvematerial AS codigo_cliente,
                 COALESCE(pd.descripcion, vd.descripcion) AS descripcion,
                 pd.cantidad_pedido, pd.precio_unitario, $line AS subtotal_partida
-                $base LEFT JOIN (
-                    SELECT ccvematerial, MAX(ccveMaterialAlmacen) AS ccn FROM tb_materiales GROUP BY ccvematerial
-                ) mat ON mat.ccvematerial = pd.ccvematerial
-                WHERE $where ORDER BY pc.fecha_pedido, pc.id, pd.id LIMIT $length OFFSET $offset", $params);
+                $detailBase WHERE $where ORDER BY $order $direction, pc.id ASC, pd.id ASC LIMIT $length OFFSET $offset", $params);
             return ['data'=>$rows,'recordsFiltered'=>(int)($count[0]['total'] ?? 0)];
         }
         if (!in_array($section, ['clientes','vendedores'], true)) throw new InvalidArgumentException('Seccion no valida.');
