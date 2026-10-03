@@ -47,12 +47,27 @@ class ModeloSimulado extends ReportesmensualesModel
     public function getConexion() { return $this->fake; }
 }
 $quantities=['total_proyectos'=>10,'declinados'=>2,'cotizacion_cliente'=>6,'orden_compra_cliente'=>3,'interna_sin_cliente'=>4];
-$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['clasificacion_id'=>3,'estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['cotizacion_cliente_anteriores'=>'8']],[['orden_compra_cliente_anteriores'=>2]],[['declinados_anteriores'=>3]]]);
+$db=new ConexionSimulada([[['valor'=>0,'fecha'=>'2024-02-01']],[$headers[0]],[$headers[1]],[$quantities],[['vendedor_id'=>'V1','nombre'=>'Vendedor','proyectos'=>'10']],[['vendedor_id'=>'V1','clasificacion_id'=>3,'clasificacion'=>'Bombas','proyectos'=>'10','declinados'=>'2']],[['vendedor_id'=>'V1','estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['clasificacion_id'=>3,'estatus_id'=>6,'estatus'=>'Pedido','proyectos'=>'10','declinados'=>'2']],[['cotizacion_cliente_anteriores'=>'8']],[['orden_compra_cliente_anteriores'=>2]],[['declinados_anteriores'=>3]],[]]);
 $model=new ModeloSimulado($db);
 $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
-verificar(count($db->calls)===11,'Consultas por conjunto');
+verificar(count($db->calls)===12,'Consultas por conjunto');
+verificar(str_contains($db->calls[11][0],'MIN(cc.fecha) AS fecha')
+    && str_contains($db->calls[11][0],'cc.enviado = 1')
+    && str_contains($db->calls[11][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
+    && str_contains($db->calls[11][0],'v.estatus_proyecto_id <> 2')
+    && str_contains($db->calls[11][0],"THEN 'periodo' ELSE 'anteriores' END AS origen"),
+    'Grafica cotizada reutiliza ambos grupos del KPI y asigna anteriores una sola vez');
+verificar($db->calls[11][1]===['2024-02-01','2024-03-01','2024-02-01','2024-03-01',
+    '2024-02-01','2024-03-01','2024-02-01','2024-03-01',"V'1"], 'Fechas y vendedor parametrizados para el conjunto cotizado');
+$quotedListDb = new ConexionSimulada([[['total'=>5]],[['total'=>5]],[]]);
+(new ModeloSimulado($quotedListDb))->declinadosTabla(2026,9,'V1',
+    ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[],
+        'periodo_anios'=>[2026],'periodo_meses'=>[9,10]], 'cotizados_periodo');
+foreach ($quotedListDb->calls as [$sql,$params]) verificar(str_contains($sql,'cotizados.fecha_reporte >= ?')
+    && str_contains($sql,'MIN(cc.fecha) AS fecha') && str_contains($sql,'v.ccveusuario_vendedor = ?')
+    && array_slice($params,-2)===['2026-09-01','2026-10-01'], 'Listado de la barra usa su mes dentro del conjunto global autorizado');
 [$previousDeclineSql,$previousDeclineParams] = $db->calls[10];
 verificar($previousDeclineParams===['2024-02-01','2024-03-01','2024-02-01','2024-03-01',"V'1"],
     'Declinados anteriores conservan el periodo y vendedor autorizado');
@@ -100,7 +115,7 @@ verificar(str_contains($db->calls[7][0], 'YEAR(v.fecha) AS anio')
     'Separar cantidades por clasificacion, anio, mes y estatus sin nuevas consultas');
 
 // Meses no consecutivos, sin duplicar meses ni proyectos al agregar el periodo.
-$multiDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], [], [['cotizacion_cliente_anteriores'=>0]],[['orden_compra_cliente_anteriores'=>0]],[['declinados_anteriores'=>0]]]);
+$multiDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], [], [['cotizacion_cliente_anteriores'=>0]],[['orden_compra_cliente_anteriores'=>0]],[['declinados_anteriores'=>0]],[]]);
 (new ModeloSimulado($multiDb))->dashboard(2024, [12,2,9,2], 'V1');
 $multiParams = ['2024-02-01','2024-03-01','2024-09-01','2024-10-01','2024-12-01','2025-01-01','V1'];
 foreach (array_slice($multiDb->calls, 1, 6) as [$sql,$params]) {
@@ -118,7 +133,7 @@ $multiListDb = new ConexionSimulada([[['total'=>0]], [['total'=>0]], []]);
     ['draw'=>1,'start'=>0,'length'=>10,'order_column'=>2,'order_dir'=>'desc','search'=>'','filters'=>[]]);
 foreach ($multiListDb->calls as [$sql,$params]) verificar($params === [...array_slice($multiParams,0,-1),...array_slice($multiParams,0,-1),'V1'], 'Modal y total mantienen la seleccion multiple');
 
-$yearsDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], [], [['cotizacion_cliente_anteriores'=>0]],[['orden_compra_cliente_anteriores'=>0]],[['declinados_anteriores'=>0]]]);
+$yearsDb = new ConexionSimulada([[['valor'=>20]], [], [], [$quantities], [], [], [], [], [['cotizacion_cliente_anteriores'=>0]],[['orden_compra_cliente_anteriores'=>0]],[['declinados_anteriores'=>0]],[]]);
 (new ModeloSimulado($yearsDb))->dashboard([2026,2024,2026], [2,12], 'V1');
 $yearsParams = ['2024-02-01','2024-03-01','2024-12-01','2025-01-01',
     '2026-02-01','2026-03-01','2026-12-01','2027-01-01','V1'];
@@ -130,7 +145,7 @@ verificar($yearsDb->calls[8][1] === [...array_slice($yearsParams,0,-1),...array_
     'Aplicar todos los anios seleccionados al complemento de cotizaciones');
 verificar($yearsDb->calls[9][1] === $yearsDb->calls[8][1], 'Colocados conservan todos los anios seleccionados');
 verificar($yearsDb->calls[10][1] === $yearsDb->calls[8][1], 'Declinados conservan todos los anios seleccionados');
-$compositionDb = new ConexionSimulada([[],[],[],[array_replace($quantities,['cotizacion_cliente'=>46])],[],[],[],[],[['cotizacion_cliente_anteriores'=>8]],[['orden_compra_cliente_anteriores'=>2]],[['declinados_anteriores'=>3]]]);
+$compositionDb = new ConexionSimulada([[],[],[],[array_replace($quantities,['cotizacion_cliente'=>46])],[],[],[],[],[['cotizacion_cliente_anteriores'=>8]],[['orden_compra_cliente_anteriores'=>2]],[['declinados_anteriores'=>3]],[]]);
 $composition = (new ModeloSimulado($compositionDb))->dashboard(2024,2,'');
 verificar($composition['cantidades']['cotizacion_cliente']===54
     && $composition['cantidades']['cotizacion_cliente_periodo']===46
@@ -148,7 +163,7 @@ verificar($composition['cantidades']['declinados']===5
 verificar(!str_contains($compositionDb->calls[10][0],'v.ccveusuario_vendedor = ?')
     && count($compositionDb->calls[10][1])===4, 'Declinados anteriores permiten el filtro TODOS');
 $emptyQuantities = array_fill_keys(array_keys($quantities),0);
-$emptyDb = new ConexionSimulada([[],[],[],[$emptyQuantities],[],[],[],[],[['cotizacion_cliente_anteriores'=>0]],[['orden_compra_cliente_anteriores'=>0]],[['declinados_anteriores'=>0]]]);
+$emptyDb = new ConexionSimulada([[],[],[],[$emptyQuantities],[],[],[],[],[['cotizacion_cliente_anteriores'=>0]],[['orden_compra_cliente_anteriores'=>0]],[['declinados_anteriores'=>0]],[]]);
 $emptyDashboard = (new ModeloSimulado($emptyDb))->dashboard(2024,2,'');
 verificar($emptyDashboard['cantidades']['cotizacion_cliente']===0
     && $emptyDashboard['cantidades']['cotizacion_cliente_periodo']===0
@@ -279,7 +294,7 @@ $api->model = new class {
         return ['proyectos'=>[],'total'=>0,'pagina'=>1,'paginas'=>1,'por_pagina'=>20];
     }
     public function declinadosTabla($year,$month,$seller,$options,$lista='declinados') {
-        $this->calls[]=[$year,$month,$seller,$options];
+        $this->calls[]=[$year,$month,$seller,$options,$lista];
         return ['draw'=>$options['draw'],'recordsTotal'=>0,'recordsFiltered'=>0,'data'=>[], 'lista'=>$lista];
     }
 };
@@ -333,6 +348,13 @@ foreach ([[], ['2024','2101'], [['2024']], ['2024 OR 1=1']] as $invalidYears) {
     $_GET['anio'] = $invalidYears;
     verificar(llamarLista($api)[0]===400, 'Rechazar seleccion de anios malformada');
 }
+$_GET = ['anio'=>'2024','mes'=>'2','vendedor'=>'','pagina'=>'1'];
+$_GET = ['anio'=>'2026','mes'=>'9','vendedor'=>'','datatable'=>'1','lista'=>'cotizados_periodo',
+    'periodo_anio'=>['2024','2026'],'periodo_mes'=>['9','10']];
+verificar(llamarLista($api)[0]===200 && end($api->model->calls)[4]==='cotizados_periodo'
+    && end($api->model->calls)[3]['periodo_anios']===[2024,2026]
+    && end($api->model->calls)[3]['periodo_meses']===[9,10], 'Desglose de cotizados acepta y conserva el filtro global');
+$_GET['periodo_mes']=['10']; verificar(llamarLista($api)[0]===400, 'Rechazar mes de desglose externo al filtro global');
 $_GET = ['anio'=>'2024','mes'=>'2','vendedor'=>'','pagina'=>'1'];
 
 $_SERVER['REQUEST_METHOD']='GET';

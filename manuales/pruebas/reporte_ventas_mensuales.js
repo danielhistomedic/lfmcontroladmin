@@ -8,7 +8,7 @@ Object.defineProperty(globalThis, 'navigator', { value: undefined });
 const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
-function ejecutar(empty, width, theme, periods = false) {
+function ejecutar(empty, width, theme, periods = false, quoted = false) {
     const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -34,6 +34,15 @@ function ejecutar(empty, width, theme, periods = false) {
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:1,declinados:0},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:11,estatus:'Facturado',proyectos:2,declinados:1}];
     data.estatus_por_clasificacion = data.estatus_por_clasificacion.map(row => ({anio:2026,mes:9,vendedor_id:'V1',...row}));
+    if (quoted) {
+        data.estatus_por_clasificacion.push({anio:2026,mes:9,vendedor_id:'V1',clasificacion_id:3,estatus_id:5,
+            estatus:'PEDIDO COTIZADO (SIN OC CLIENTE)',proyectos:99,declinados:1});
+        data.cotizados_por_periodo = [
+            {anio:2026,mes:9,vendedor_id:'V1',origen:'periodo',proyectos:3},
+            {anio:2026,mes:9,vendedor_id:'V1',origen:'anteriores',proyectos:2},
+            {anio:2026,mes:9,vendedor_id:'V2',origen:'periodo',proyectos:4},
+            {anio:2026,mes:9,vendedor_id:'V2',origen:'anteriores',proyectos:1}];
+    }
     const context = {
         document: {
             createElement: () => ({value:'',textContent:''}),
@@ -66,6 +75,23 @@ function ejecutar(empty, width, theme, periods = false) {
             assert.equal(series.label.formatter(),series.name,'Nombre completo de clasificacion debajo de cada barra');
             assert.equal(series.label.overflow,'break');
         });
+    }
+    if (quoted) {
+        const option = charts[3].getOption();
+        const quotedIndex = option.series.findIndex(series => series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)');
+        assert.equal(quotedIndex,2);
+        assert.deepEqual(option.series[quotedIndex].data,[0,0,0,10],'La barra usa el KPI, no el conteo crudo de estatus');
+        assert.deepEqual(option.series[quotedIndex+1].data,[0,0,0,0],'El conjunto cotizado excluye cerrados');
+        const tip=option.tooltip[0].formatter({seriesIndex:quotedIndex,dataIndex:3});
+        assert.ok(tip.includes('Proyectos del período: 7') && tip.includes('Proyectos anteriores: 3') && tip.includes('Total cotizado: 10'));
+        charts[3].trigger('click',{componentType:'series',seriesIndex:quotedIndex,dataIndex:3});
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'cotizados_periodo');
+        charts[0].trigger('click',{componentType:'series',dataIndex:0});
+        assert.deepEqual(charts[5].getOption().series[quotedIndex].data,[0,0,0,5],'Desglose por vendedor conserva solo sus cotizados');
+        const dropdown=nodes.get('ventas-vendedor-desglose'); dropdown.value='1';dropdown.events.change();
+        assert.deepEqual(charts[5].getOption().series.find(series=>series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').data,[0,0,0,5]);
+        charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
+        return;
     }
     if (periods) {
         const statusOption = charts[3].getOption();
@@ -194,6 +220,8 @@ function ejecutar(empty, width, theme, periods = false) {
     charts.forEach(chart => chart.dispose());
 }
 ejecutar(false, 900, 'walden', true);
+ejecutar(false, 900, 'walden', false, true);
+ejecutar(false, 320, 'dark', false, true);
 ejecutar(false, 320, 'dark', true);
 ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');

@@ -92,6 +92,7 @@
                                 <?php if ($kpi[0] === 'Pedidos Cotizados en el Período'): ?>
                                     <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['cotizacion_cliente_periodo']); ?></small>
                                     <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['cotizacion_cliente_anteriores']); ?></small>
+                                    <small class="text-muted d-block">Total = proyectos del período + anteriores</small>
                                 <?php elseif (str_starts_with($kpi[0], 'Declinados')): ?>
                                     <small class="text-muted d-block">Proyectos del período: <?= $esc($report['cantidades']['declinados_periodo']); ?></small>
                                     <small class="text-muted d-block">Proyectos anteriores: <?= $esc($report['cantidades']['declinados_anteriores']); ?></small>

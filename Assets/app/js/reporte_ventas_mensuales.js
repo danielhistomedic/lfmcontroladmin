@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo'].includes(lista);
+        const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo'].includes(lista);
         const listTitle = () => isDrill() ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
@@ -132,7 +132,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     years.split(',').forEach(year => params.append('anio[]', year));
                     months.split(',').forEach(month => params.append('mes[]', month));
                     if (isDrill()) {
-                        if (lista !== 'estatus_periodo') params.set('clasificacion_id', modal.dataset.clasificacionId);
+                        if (lista !== 'estatus_periodo' && lista !== 'cotizados_periodo') params.set('clasificacion_id', modal.dataset.clasificacionId);
+                        if (lista === 'cotizados_periodo') {
+                            modal.dataset.anio.split(',').forEach(year => params.append('periodo_anio[]',year));
+                            modal.dataset.mes.split(',').forEach(month => params.append('periodo_mes[]',month));
+                        }
                         if (lista === 'vendedor_clasificacion') params.set('vendedor_id', modal.dataset.desgloseVendedor);
                         else if (lista === 'estatus_clasificacion' || lista === 'estatus_periodo') params.set('estatus_id', modal.dataset.estatusId);
                         params.set('segmento', modal.dataset.segmento);
@@ -247,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedIndex = -1;
     let statusChart = null;
     let projectStatusChart = null;
+    let quotedStatusKey = null;
     const cascadeText = typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#edf2f7' : '#243447';
     function cascade(id) {
         const element = document.getElementById(id);
@@ -315,7 +320,8 @@ document.addEventListener('DOMContentLoaded', function () {
             String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '') &&
             periods.some(period => Number(row.anio) === Number(period.anio) && Number(row.mes) === Number(period.mes)));
         const classifications = generalClassifications.filter(group => sellerRows.some(row => String(row.clasificacion_id) === String(group.clasificacion_id)));
-        const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)));
+        const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)) ||
+            (group.id === 'cotizados_periodo' && (data.cotizados_por_periodo || []).some(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? ''))));
         document.getElementById('ventas-estatus-resumen').textContent = classifications.length
             ? 'Comparativo por mes y año: una barra por clasificación dentro de cada mes, con declinados apilados en rojo. El nombre completo de cada serie se muestra debajo de su barra.'
             : 'Sin clasificaciones registradas para los meses seleccionados.';
@@ -339,6 +345,17 @@ document.addEventListener('DOMContentLoaded', function () {
             total.proyectos += Number(row.proyectos);
             total.declinados += Number(row.declinados);
         });
+        if (allGroups === statuses && Array.isArray(data.cotizados_por_periodo)) {
+            periods.forEach(period => counts.set(['cotizados_periodo',period.anio,period.mes].join(':'),{proyectos:0,declinados:0,periodo:0,anteriores:0}));
+            const seller = projectCounts[selectedIndex];
+            data.cotizados_por_periodo.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')).forEach(row => {
+                const key = ['cotizados_periodo',row.anio,row.mes].join(':');
+                if (counts.has(key)) {
+                    counts.get(key).proyectos += Number(row.proyectos);
+                    counts.get(key)[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
+                }
+            });
+        }
         const totalsFor = group => periods.map(period => counts.get([groupKey(group),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
         const option = {...base, legend:{...base.legend,data:groups.length ? [...groups.map(groupName),'Declinados'] : []},
             series:groups.flatMap(group => {
@@ -354,6 +371,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const group = groups[Math.floor(params.seriesIndex/2)];
                 const period = periods[params.dataIndex];
                 const total = totalsFor(group)[params.dataIndex];
+                if (group.id === 'cotizados_periodo') return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+                    '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+'\nTotal cotizado: '+total.proyectos;
                 return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
                     '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
             }}
@@ -366,6 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fitCascade(entry);
     }
     function statusGroupKey(row) {
+        if (quotedStatusKey !== null && String(row.estatus_id) === quotedStatusKey) return 'cotizados_periodo';
         return Number(row.estatus_id) >= 6 ? 'colocados' :
             ([1,3].includes(Number(row.estatus_id)) ? 'proceso_cotizacion' : String(row.estatus_id));
     }
@@ -469,6 +489,20 @@ document.addEventListener('DOMContentLoaded', function () {
         total.proyectos += Number(row.proyectos);
         total.declinados += Number(row.declinados);
     });
+    if (Array.isArray(data.cotizados_por_periodo)) {
+        const quoted = [...statusGroups.entries()].find(([,group]) => group.nombre.toUpperCase().startsWith('PEDIDO COTIZADO'));
+        if (quoted) { quotedStatusKey = String(quoted[1].id); statusGroups.delete(quoted[0]); }
+        statusGroups.set('cotizados_periodo',{id:'cotizados_periodo',orden:quoted ? quoted[1].orden : 5,
+            nombre:quoted ? quoted[1].nombre : 'PEDIDO COTIZADO (SIN OC CLIENTE)'});
+        periods.forEach(period => statusPeriodCounts.set(['cotizados_periodo',period.anio,period.mes].join(':'),
+            {proyectos:0,declinados:0,periodo:0,anteriores:0}));
+        data.cotizados_por_periodo.forEach(row => {
+            const total = statusPeriodCounts.get(['cotizados_periodo',row.anio,row.mes].join(':'));
+            if (!total) return;
+            total.proyectos += Number(row.proyectos);
+            total[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
+        });
+    }
     const statuses = [...statusGroups.values()].sort((a,b) => a.orden - b.orden);
     const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
     const statusOption = { ...principalOption, grid: { ...principalOption.grid },
@@ -496,6 +530,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const status = statuses[Math.floor(params.seriesIndex/2)];
             const period = periods[params.dataIndex];
             const total = statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0};
+            if (status.id === 'cotizados_periodo') return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
+                '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+'\nTotal cotizado: '+total.proyectos;
             return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
                 '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
         }}
@@ -521,7 +557,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const modal = document.getElementById('modal-declinados-ventas');
         if (!status || !period || !modal) return;
         modal.dataset.desglose = '1';
-        modal.dataset.desgloseLista = 'estatus_periodo';
+        if (status.id === 'cotizados_periodo' && event.seriesIndex % 2 === 1) return;
+        modal.dataset.desgloseLista = status.id === 'cotizados_periodo' ? 'cotizados_periodo' : 'estatus_periodo';
         modal.dataset.estatusId = status.id == null ? 'sin_estatus' : String(status.id);
         modal.dataset.desgloseAnio = String(period.anio);
         modal.dataset.desgloseMes = String(period.mes);

@@ -257,6 +257,10 @@ class ReportesmensualesModel extends Mysql
         $quantities['declinados_periodo'] = $quantities['declinados'];
         $quantities['declinados_anteriores'] = (int)$previousDeclined[0]['declinados_anteriores'];
         $quantities['declinados'] += $quantities['declinados_anteriores'];
+        [$quotedSql,$quotedParams] = self::cotizadosPeriodoSql($year,$month,$seller);
+        $quotedPeriods = $this->consultar("SELECT vendedor_id, YEAR(fecha_reporte) AS anio,
+            MONTH(fecha_reporte) AS mes, origen, COUNT(*) AS proyectos
+            FROM ($quotedSql) cotizados GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $quotedParams);
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -265,11 +269,36 @@ class ReportesmensualesModel extends Mysql
                 'clasificaciones_por_vendedor' => $statusesBySeller,
                 'estatus_por_vendedor' => $projectStatuses,
                 'estatus_por_clasificacion' => $annualStatuses,
+                'cotizados_por_periodo' => $quotedPeriods,
                 'anios_seleccionados' => is_array($year) ? $year : [$year],
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
+    }
+
+    /** Un registro por proyecto del KPI; anteriores se asignan a su primera cotizacion del filtro. */
+    private static function cotizadosPeriodoSql(int|array $years, int|array $months, string $seller): array
+    {
+        $projectParams = [];
+        $quoteParams = [];
+        $projectPeriod = self::periodo('v.fecha',$years,$months,$projectParams);
+        $quotePeriod = self::periodo('cc.fecha',$years,$months,$quoteParams);
+        $params = [...$projectParams,...$projectParams,...$quoteParams,...$projectParams];
+        $scope = self::FILTRO_PROYECTOS;
+        if ($seller !== '') { $scope .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        $sql = "SELECT v.id, v.ccveusuario_vendedor AS vendedor_id,
+            CASE WHEN ($projectPeriod) THEN v.fecha ELSE q.fecha END AS fecha_reporte,
+            CASE WHEN ($projectPeriod) THEN 'periodo' ELSE 'anteriores' END AS origen
+            FROM tb_ventas v LEFT JOIN (
+                SELECT cc.venta_id, MIN(cc.fecha) AS fecha FROM tb_ventas_cotizacion_cliente cc
+                WHERE cc.enviado = 1 AND ($quotePeriod) GROUP BY cc.venta_id
+            ) q ON q.venta_id = v.id
+            WHERE (($projectPeriod) OR q.fecha IS NOT NULL)
+                AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+                AND EXISTS (SELECT 1 FROM tb_ventas_cotizacion_cliente cc WHERE cc.venta_id = v.id AND cc.enviado = 1)
+                AND $scope";
+        return [$sql,$params];
     }
 
     private function estatusPorClasificacion(string $scope, array $params, string $projectPeriod): array
@@ -332,6 +361,13 @@ class ReportesmensualesModel extends Mysql
         if ($seller !== '') {
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
+        }
+        if ($lista === 'cotizados_periodo') {
+            [$quotedSql,$params] = self::cotizadosPeriodoSql($options['periodo_anios'] ?? $year,$options['periodo_meses'] ?? $month,$seller);
+            $reportParams = [];
+            $reportPeriod = self::periodo('cotizados.fecha_reporte',$year,$month,$reportParams);
+            $where = "v.id IN (SELECT cotizados.id FROM ($quotedSql) cotizados WHERE $reportPeriod)";
+            array_push($params,...$reportParams);
         }
         if (in_array($lista, ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo'], true)) {
             $where = "$projectPeriod AND " . self::FILTRO_PROYECTOS;
