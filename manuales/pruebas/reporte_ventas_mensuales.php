@@ -20,6 +20,12 @@ $headers = [
 $report=ReportesmensualesModel::resumir($headers,20);
 cerca($report['cotizado'],130,'Total cotizado convertido');
 cerca($report['colocado'],80,'Total colocado sin duplicar pedidos');
+verificar($report['importes_por_vendedor'] === [
+    ['vendedor_id'=>'V1','nombre'=>'José','importe_cotizado'=>100.0,'importe_colocado'=>80.0],
+    ['vendedor_id'=>'V2','nombre'=>'Ana','importe_cotizado'=>30.0,'importe_colocado'=>0.0]
+], 'Importes por vendedor con la misma conversion y redondeo del total');
+cerca(array_sum(array_column($report['importes_por_vendedor'],'importe_cotizado')),$report['cotizado'],'Conciliar importe cotizado por vendedor');
+cerca(array_sum(array_column($report['importes_por_vendedor'],'importe_colocado')),$report['colocado'],'Conciliar importe colocado por vendedor');
 verificar($report['proyectos']===2 && $report['proyectos_cotizados']===2 && $report['proyectos_colocados']===1,'Conteos por proyecto');
 verificar($report['cotizaciones_enviadas']===2,'Documentos enviados');
 verificar(ReportesmensualesModel::resumir([],1)['proyectos']===0,'Mes vacio');

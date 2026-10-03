@@ -9,13 +9,14 @@
 #ventas-financiero-eficiencia h6 { font-size:13px; font-weight:600; color:#174b66; margin:0 0 10px; }
 #ventas-financiero-eficiencia .ventas-eficiencia-icono { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; margin-right:8px; border-radius:6px; background:#eaf3fb; color:#2385bd; font-size:13px; vertical-align:middle; }
 #ventas-financiero-eficiencia .ventas-eficiencia-nota { color:#62758e; font-size:11px; margin-bottom:14px; }
-#ventas-financiero-eficiencia .ventas-eficiencia-indicadores { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-indicadores { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
 #ventas-financiero-eficiencia .ventas-eficiencia-metrica { min-width:0; padding:10px; border-left:3px solid #2878c8; border-radius:4px; background:#eef5fd; }
 #ventas-financiero-eficiencia .ventas-eficiencia-metrica strong { display:block; font-size:20px; color:#1d5f9e; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-#ventas-financiero-eficiencia .ventas-eficiencia-proyectado { border-left-color:#78909c; background:#f3f7fa; }
-#ventas-financiero-eficiencia .ventas-eficiencia-colocado { border-left-color:#198754; background:#edf8f2; }
-#ventas-financiero-eficiencia .ventas-eficiencia-colocado strong { color:#146c43; }
-#ventas-eficiencia-grafica { width:100%; height:240px; }
+#ventas-financiero-eficiencia :is(.ventas-eficiencia-colocado,.ventas-eficiencia-importe-colocado) { border-left-color:#198754; background:#edf8f2; }
+#ventas-financiero-eficiencia :is(.ventas-eficiencia-colocado,.ventas-eficiencia-importe-colocado) strong { color:#146c43; }
+#ventas-financiero-eficiencia .ventas-eficiencia-graficas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-graficas > section { min-width:0; }
+#ventas-financiero-eficiencia .ventas-eficiencia-chart { width:100%; height:240px; }
 #ventas-financiero-eficiencia .table { font-size:11px; }
 #ventas-financiero-eficiencia .table th { background:#eaf1fa !important; color:#174b66 !important; font-weight:600; }
 #ventas-financiero-eficiencia .table td { padding:6px 8px; font-size:11px; white-space:normal; overflow-wrap:anywhere; }
@@ -28,8 +29,8 @@ html.dark #ventas-financiero-eficiencia h6 { color:#9ddaf0; }
 html.dark #ventas-financiero-eficiencia .ventas-eficiencia-nota { color:#cbd5e1; }
 html.dark #ventas-financiero-eficiencia .ventas-eficiencia-metrica { background:#2c405b; }
 html.dark #ventas-financiero-eficiencia .ventas-eficiencia-metrica strong { color:#cee5ff; }
-html.dark #ventas-financiero-eficiencia .ventas-eficiencia-proyectado { background:#2a4050; }
-html.dark #ventas-financiero-eficiencia .ventas-eficiencia-colocado { background:#2b4437; }
-html.dark #ventas-financiero-eficiencia .ventas-eficiencia-colocado strong { color:#b8efd2; }
+html.dark #ventas-financiero-eficiencia :is(.ventas-eficiencia-colocado,.ventas-eficiencia-importe-colocado) { background:#2b4437; }
+html.dark #ventas-financiero-eficiencia :is(.ventas-eficiencia-colocado,.ventas-eficiencia-importe-colocado) strong { color:#b8efd2; }
 @media (max-width:991px) { #ventas-financiero-eficiencia .ventas-eficiencia-indicadores { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:767px) { #ventas-financiero-eficiencia .ventas-eficiencia-graficas { grid-template-columns:minmax(0,1fr); } }
 @media (max-width:479px) { #ventas-financiero-eficiencia .ventas-eficiencia-indicadores { grid-template-columns:minmax(0,1fr); } }

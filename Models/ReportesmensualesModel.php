@@ -597,15 +597,24 @@ class ReportesmensualesModel extends Mysql
         $result = ['cotizado'=>0.0, 'colocado'=>0.0, 'proyectos'=>0,
             'cotizaciones_enviadas'=>0, 'proyectos_cotizados'=>0, 'proyectos_colocados'=>0];
         $unique = [];
+        $sellerAmounts = [];
         foreach ($headers as $row) {
             $type = $row['tipo'];
             $factor = (int)$row['moneda_id'] === 1 ? 1 / $divisor : 1;
-            $result[$type] += round((float)$row['monto'] * $factor, 2);
+            $amount = round((float)$row['monto'] * $factor, 2);
+            $result[$type] += $amount;
+            $sellerId = (string)($row['vendedor_id'] ?? '');
+            if (!isset($sellerAmounts[$sellerId])) {
+                $sellerAmounts[$sellerId] = ['vendedor_id'=>$sellerId,'nombre'=>$row['vendedor'] ?? 'Sin vendedor',
+                    'importe_cotizado'=>0.0,'importe_colocado'=>0.0];
+            }
+            $sellerAmounts[$sellerId]['importe_'.$type] += $amount;
             $result['proyectos_'.$type.'s']++;
             if ($type === 'cotizado') $result['cotizaciones_enviadas'] += (int)($row['cotizaciones'] ?? 0);
             $unique[(string)$row['id']] = true;
         }
         $result['proyectos'] = count($unique);
+        $result['importes_por_vendedor'] = array_values($sellerAmounts);
         return $result;
     }
 }
