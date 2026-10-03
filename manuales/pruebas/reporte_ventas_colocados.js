@@ -17,7 +17,10 @@ const card=node('card'); let ready, fail=false, defer=false; const pending=[];
 const totals={conteo:{proyectos:3,proyectos_periodo:2,proyectos_anteriores:1,pedidos:4},totales:[{moneda_id:3,moneda:'USD',total:'90.00',proyectos:3,pedidos:4},{moneda_id:1,moneda:'MXN',total:'1234.50',pedidos:2}],
     mensual:[{anio:2026,mes:9,moneda:'USD',proyectos:3,pedidos:4,total:'90.00',productos:'60.00',servicios:'30.00'}],
     grupos:[{grupo:'Flowserve',moneda_id:1,moneda:'MXN',total:'500.00',pedidos:1,subclasificacion_1:'200.00',subclasificacion_2:'125.00',subclasificacion_3:'175.00',subclasificacion_4:'900.00',
-        subclasificacion_1_nombre:'BOMBAS FLOWSERVE',subclasificacion_2_nombre:'SELLOS FLOWSERVE',subclasificacion_3_nombre:'VALVULAS FLOWSERVE'},
+        subclasificacion_1_nombre:'BOMBAS FLOWSERVE',subclasificacion_2_nombre:'SELLOS FLOWSERVE',subclasificacion_3_nombre:'VALVULAS FLOWSERVE',
+        subclasificacion_1_productos:'100.00',subclasificacion_1_servicios:'100.00',
+        subclasificacion_2_productos:'125.00',subclasificacion_2_servicios:'0.00',
+        subclasificacion_3_productos:'150.00',subclasificacion_3_servicios:'25.00'},
         {grupo:'Diversos',moneda_id:3,moneda:'USD',total:'90.00',pedidos:1,subclasificacion_1:'90.00'}]};
 const context={document:{getElementById:node,querySelectorAll:()=>[card],createElement:tag=>({tag,events:{},children:[],setAttribute(name,value){this[name]=value;},addEventListener(name,fn){this.events[name]=fn;},appendChild(child){this.children.push(child);}}),
     addEventListener(name,fn){ready=fn;}},setTimeout,clearTimeout,Map,Intl,Number,URLSearchParams,AbortController,DOMException,SyntaxError,
@@ -53,15 +56,22 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     assert.equal(node('colocados-flowserve').children[1].children[1].textContent,'$ 500.00');
     const subcategories = node('colocados-flowserve').children[1].children[4];
     assert.equal(subcategories.className,'colocados-flowserve-subclasificaciones');
-    assert.deepEqual(subcategories.children.map(child=>child.textContent),['Bombas','$ 200.00','Sellos','$ 125.00','Válvulas','$ 175.00']);
+    assert.deepEqual(subcategories.children.map(child=>child.textContent),[
+        'Bombas','$ 200.00','Productos: $ 100.00 | Servicios: $ 100.00',
+        'Sellos','$ 125.00','Productos: $ 125.00 | Servicios: $ 0.00',
+        'Válvulas','$ 175.00','Productos: $ 150.00 | Servicios: $ 25.00']);
+    [2,5,8].forEach(index=>assert.equal(subcategories.children[index].className,'colocados-subclasificacion-tipos'));
     assert.equal(node('colocados-flowserve').children[0].children.length,4,'Moneda sin valor no muestra categorias vacias');
     assert.equal(node('colocados-diversos').children[0].children.length,4,'El desglose es exclusivo de Flowserve');
     assert.deepEqual(node('panel-colocados-flowserve').children[1].children[4].children.map(child=>child.textContent),
         subcategories.children.map(child=>child.textContent),'Desglose identico en panel y modal');
     totals.grupos[0].subclasificacion_1 = '325.00'; totals.grupos[0].subclasificacion_2 = '0.00';
+    totals.grupos[0].subclasificacion_1_productos = '225.00'; totals.grupos[0].subclasificacion_2_productos = '0.00';
     modal.events['shown.bs.modal'](); await tick();
     assert.deepEqual(node('colocados-flowserve').children[1].children[4].children.map(child=>child.textContent),
-        ['Bombas','$ 325.00','Válvulas','$ 175.00'],'Ocultar categorias en cero y conservar subtotales por moneda');
+        ['Bombas','$ 325.00','Productos: $ 225.00 | Servicios: $ 100.00',
+            'Válvulas','$ 175.00','Productos: $ 150.00 | Servicios: $ 25.00'],
+        'Ocultar categorias en cero con su desglose y conservar subtotales por moneda');
     const body=node('colocados-clientes-tabla-body');
     assert.equal(body.children[0].children[0].textContent,'<script>alert(1)</script>','Nombres como texto, sin HTML');
     assert.equal(body.children[0].children[2].textContent,'$ 90.00');

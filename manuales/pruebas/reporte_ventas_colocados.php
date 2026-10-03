@@ -37,6 +37,11 @@ verificar(str_contains($financialDb->calls[1][0], 'LEFT JOIN cat_subclasificacio
 foreach ([1,2,3] as $subcategory) {
     verificar(str_contains($financialDb->calls[1][0], "MAX(CASE WHEN sc.id = $subcategory THEN sc.subclasificacion ELSE NULL END)")
         && str_contains($financialDb->calls[1][0], "AS subclasificacion_{$subcategory}_nombre"), 'Nombre real del catalogo para cada subtotal');
+    foreach (['PRODUCTO'=>'productos','SERVICIO'=>'servicios'] as $type=>$key) {
+        verificar(str_contains($financialDb->calls[1][0], "vd.subclasificacion_id = $subcategory\n                        AND vd.tipo_partida = '$type' THEN pd.cantidad_pedido * pd.precio_unitario")
+            && str_contains($financialDb->calls[1][0], "AS subclasificacion_{$subcategory}_$key"),
+            'Productos y servicios de cada subclasificacion usan las mismas partidas y formula');
+    }
 }
 $clientDb = new ConexionSimulada([[['total'=>4]],[['total'=>1]],[['entidad_id'=>12,'nombre'=>'Cliente','moneda'=>'USD','total'=>'150.00']]]);
 $options = ['draw'=>4,'start'=>10,'length'=>10,'search'=>'a%_','order_column'=>2,'order_dir'=>'desc'];

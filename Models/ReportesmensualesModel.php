@@ -495,6 +495,11 @@ class ReportesmensualesModel extends Mysql
                     AS subclasificacion_$subclassification,
                     MAX(CASE WHEN sc.id = $subclassification THEN sc.subclasificacion ELSE NULL END)
                     AS subclasificacion_{$subclassification}_nombre";
+                foreach (['PRODUCTO'=>'productos','SERVICIO'=>'servicios'] as $type=>$key) {
+                    $subtotals[] = "COALESCE(SUM(CASE WHEN vd.subclasificacion_id = $subclassification
+                        AND vd.tipo_partida = '$type' THEN $line ELSE 0 END),0)
+                        AS subclasificacion_{$subclassification}_$key";
+                }
             }
             $subtotalsSql = implode(', ', $subtotals);
             $groups = $this->consultar("SELECT $group AS grupo, pc.moneda_id, $currency AS moneda,

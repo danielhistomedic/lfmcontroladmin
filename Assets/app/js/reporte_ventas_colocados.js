@@ -66,6 +66,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     const amount = document.createElement('dd');
                     amount.textContent = displayAmount(subtotal);
                     subcategories.appendChild(name); subcategories.appendChild(amount);
+                    const types = document.createElement('dd');
+                    types.className = 'colocados-subclasificacion-tipos';
+                    types.textContent = 'Productos: ' + displayAmount(row['subclasificacion_' + subcategory + '_productos'] ?? 0) +
+                        ' | Servicios: ' + displayAmount(row['subclasificacion_' + subcategory + '_servicios'] ?? 0);
+                    subcategories.appendChild(types);
                 });
                 if (subcategories.children.length) card.appendChild(subcategories);
             }

@@ -111,6 +111,15 @@ html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .coloc
     border-top-color: #80505c;
     color: #efafbd;
 }
+:is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-flowserve-subclasificaciones .colocados-subclasificacion-tipos {
+    grid-column: 1 / -1;
+    margin: -2px 0 6px;
+    text-align: left;
+    color: #62676f;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-flowserve-subclasificaciones .colocados-subclasificacion-tipos { color: #c5c8cd; }
 html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-flowserve-destacado { background: #332730; border-color: #80505c; border-top-color: #eb637b; }
 html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-flowserve-destacado .colocados-total { background: #432c37; border-left-color: #eb637b; }
 html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-flowserve-destacado h6,
