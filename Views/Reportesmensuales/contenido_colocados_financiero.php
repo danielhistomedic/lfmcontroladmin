@@ -19,6 +19,39 @@
         </section>
     </div>
 </div>
+<div class="colocados-grupos colocados-listados">
+    <?php foreach (['clientes' => 'Total por cliente', 'vendedores' => 'Total por vendedor'] as $section => $title): ?>
+        <section class="colocados-resumen-seccion colocados-entidad-destacada colocados-<?= $section; ?>-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo">
+            <h6 id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo"><i class="fa-solid <?= $section === 'clientes' ? 'fa-building' : 'fa-user-tie'; ?> colocados-icono" aria-hidden="true"></i><?= $title; ?></h6>
+            <div class="colocados-tabla-controles">
+                <label>Buscar<input id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-buscar" type="search" maxlength="200" placeholder="Nombre o moneda" class="form-control form-control-sm"></label>
+                <label>Ordenar<select id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-orden" class="form-select form-select-sm">
+                        <option value="2:desc">Mayor importe</option>
+                        <option value="1:asc">Moneda</option>
+                        <option value="2:asc">Menor importe</option>
+                        <option value="0:asc">Nombre A–Z</option>
+                    </select></label>
+            </div>
+            <div id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-estado" class="text-danger" role="status" aria-live="polite"></div>
+            <div class="table-responsive">
+                <table id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-tabla" class="table colocados-tabla w-100">
+                    <thead>
+                        <tr>
+                            <th><?= $section === 'clientes' ? 'Cliente' : 'Vendedor'; ?></th>
+                            <th>Moneda</th>
+                            <th class="text-end">Total colocado</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="colocados-tabla-pie">
+                <span id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-pagina" aria-live="polite"></span>
+                <nav aria-label="Paginación de <?= $section; ?>"><button id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-anterior" type="button" class="btn btn-light btn-sm" disabled>Anterior</button><button id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-siguiente" type="button" class="btn btn-light btn-sm" disabled>Siguiente</button></nav>
+            </div>
+        </section>
+    <?php endforeach; ?>
+</div>
 <section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-mensual-titulo">
     <h6 id="<?= $colocadosPrefix; ?>colocados-mensual-titulo"><i class="fa-solid fa-calendar colocados-icono" aria-hidden="true"></i>Pedidos por mes · Productos y servicios</h6>
     <p class="colocados-nota">Los proyectos del período se muestran en su mes de registro; los anteriores, en el mes del pedido. Los conteos por moneda pueden compartir proyectos.</p>
@@ -61,36 +94,3 @@
         <nav aria-label="Paginación de partidas"><button id="<?= $colocadosPrefix; ?>colocados-partidas-anterior" class="btn btn-light btn-sm" type="button" disabled>Anterior</button><button id="<?= $colocadosPrefix; ?>colocados-partidas-siguiente" class="btn btn-light btn-sm" type="button" disabled>Siguiente</button><button id="<?= $colocadosPrefix; ?>colocados-partidas-reintentar" class="btn btn-light btn-sm" type="button" hidden>Reintentar</button></nav>
     </div>
 </details>
-<div class="colocados-grupos colocados-listados">
-    <?php foreach (['clientes' => 'Total por cliente', 'vendedores' => 'Total por vendedor'] as $section => $title): ?>
-        <section class="colocados-resumen-seccion colocados-entidad-destacada colocados-<?= $section; ?>-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo">
-            <h6 id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-titulo"><i class="fa-solid <?= $section === 'clientes' ? 'fa-building' : 'fa-user-tie'; ?> colocados-icono" aria-hidden="true"></i><?= $title; ?></h6>
-            <div class="colocados-tabla-controles">
-                <label>Buscar<input id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-buscar" type="search" maxlength="200" placeholder="Nombre o moneda" class="form-control form-control-sm"></label>
-                <label>Ordenar<select id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-orden" class="form-select form-select-sm">
-                        <option value="2:desc">Mayor importe</option>
-                        <option value="1:asc">Moneda</option>
-                        <option value="2:asc">Menor importe</option>
-                        <option value="0:asc">Nombre A–Z</option>
-                    </select></label>
-            </div>
-            <div id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-estado" class="text-danger" role="status" aria-live="polite"></div>
-            <div class="table-responsive">
-                <table id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-tabla" class="table colocados-tabla w-100">
-                    <thead>
-                        <tr>
-                            <th><?= $section === 'clientes' ? 'Cliente' : 'Vendedor'; ?></th>
-                            <th>Moneda</th>
-                            <th class="text-end">Total colocado</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div class="colocados-tabla-pie">
-                <span id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-pagina" aria-live="polite"></span>
-                <nav aria-label="Paginación de <?= $section; ?>"><button id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-anterior" type="button" class="btn btn-light btn-sm" disabled>Anterior</button><button id="<?= $colocadosPrefix; ?>colocados-<?= $section; ?>-siguiente" type="button" class="btn btn-light btn-sm" disabled>Siguiente</button></nav>
-            </div>
-        </section>
-    <?php endforeach; ?>
-</div>
