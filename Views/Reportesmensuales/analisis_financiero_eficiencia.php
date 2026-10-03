@@ -25,10 +25,10 @@
                 <?php endforeach; ?>
             </div>
             <div class="ventas-eficiencia-graficas mt-3">
-                <section aria-labelledby="ventas-eficiencia-cantidad-titulo"><h6 id="ventas-eficiencia-cantidad-titulo">Cantidad · Proyectos</h6><div id="ventas-eficiencia-grafica" class="ventas-eficiencia-chart" role="img" aria-label="Cantidad de proyectos cotizados y colocados"></div></section>
-                <section aria-labelledby="ventas-eficiencia-importe-titulo"><h6 id="ventas-eficiencia-importe-titulo">Importe · USD</h6><div id="ventas-eficiencia-grafica-importes" class="ventas-eficiencia-chart" role="img" aria-label="Importes cotizados y colocados en USD, escala independiente"></div></section>
+                <section aria-labelledby="ventas-eficiencia-cantidad-titulo"><h6 id="ventas-eficiencia-cantidad-titulo">Colocación por cantidad</h6><div id="ventas-eficiencia-grafica" class="ventas-eficiencia-chart" role="img" aria-label="Anillo de conversión por cantidad de proyectos"></div></section>
+                <section aria-labelledby="ventas-eficiencia-importe-titulo"><h6 id="ventas-eficiencia-importe-titulo">Colocación monetaria · USD</h6><div id="ventas-eficiencia-grafica-importes" class="ventas-eficiencia-chart" role="img" aria-label="Anillo de conversión monetaria en USD"></div></section>
             </div>
-            <p class="ventas-eficiencia-nota mb-0">Selecciona el resumen o una barra para ver el desglose por vendedor.</p>
+            <p class="ventas-eficiencia-nota mb-0">Selecciona el resumen o un anillo para ver el desglose por vendedor.</p>
         </div>
         <section id="ventas-eficiencia-vendedores" class="ventas-eficiencia-seccion" hidden aria-labelledby="ventas-eficiencia-vendedores-titulo">
             <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i>Desglose por vendedor</h6>

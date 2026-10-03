@@ -17,7 +17,7 @@ function run(data,width=1200,dark=false) {
         document:{getElementById:node,createElement:make,addEventListener(key,fn){ready=fn;}},
         window:{addEventListener(key,fn){resize=fn;}},Intl,Map,JSON,Number,theme_chart:dark?'dark':null,
         echarts:{init(){const chart=echarts.init({setAttribute(){},getAttribute(){return null;}},dark?'dark':null,
-            {renderer:'svg',ssr:true,width,height:240});charts.push(chart);return chart;}}
+            {renderer:'svg',ssr:true,width,height:220});charts.push(chart);return chart;}}
     });
     ready();
     assert.equal(charts.length,2,'Graficas independientes para cantidad e importe');
@@ -54,10 +54,14 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     assert.equal(node('ventas-eficiencia-moneda-original').textContent,'USD: $ 150.00 | MXN: $ 1,800.00');
     assert.equal(node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');
     assert.equal(node('ventas-eficiencia-colocacion-monetaria').textContent,'41.67 %');
-    assert.deepEqual(charts[0].getOption().series[0].data.map(row=>row.value),[9,9]);
-    assert.deepEqual(charts[1].getOption().series[0].data.map(row=>row.value),[600,250]);
-    assert.equal(charts[0].getOption().yAxis[0].name,'Proyectos');
-    assert.equal(charts[1].getOption().yAxis[0].name,'USD');
+    assert.deepEqual(charts[0].getOption().series[0].data.map(row=>row.value),[9,0]);
+    assert.deepEqual(charts[1].getOption().series[0].data.map(row=>row.value),[250,350]);
+    charts.forEach(chart=>assert.equal(chart.getOption().series[0].type,'pie','Sustituir barras por donas'));
+    assert.equal(charts[0].getOption().title[0].text,'100.00 %');
+    assert.equal(charts[1].getOption().title[0].text,'41.67 %');
+    assert.equal(charts[0].getOption().tooltip[0].formatter(),'Cotizados: 9\nColocados: 9\nPendientes: 0');
+    assert.equal(charts[1].getOption().tooltip[0].formatter(),
+        'Importe cotizado: $ 600.00 USD\nImporte colocado: $ 250.00 USD\nImporte pendiente de colocar: $ 350.00 USD');
     const rows=node('ventas-eficiencia-vendedores-filas').children.map(row=>row.children.map(cell=>cell.textContent));
     assert.deepEqual(rows,[['<script>','2','4','200.00 %','$ 100.00','$ 0.00','0.00 %'],
         ['Beto','3','3','100.00 %','$ 200.00','$ 150.00','75.00 %'],
@@ -81,6 +85,8 @@ assert.equal(empty.node('ventas-eficiencia-colocacion').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-colocacion-monetaria').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-tipo-cambio').textContent,'TC: — | Fecha TC: —','Datos ausentes sin tipo de cambio inventado');
 assert.equal(empty.node('ventas-eficiencia-vendedores-filas').children[0].children[0].colSpan,7);
+assert.equal(empty.charts[0].getOption().title[0].text,'—','Sin porcentaje falso cuando no hay cotizados');
+assert.equal(empty.charts[0].getOption().tooltip[0].formatter(),'Cotizados: 0\nColocados: 0\nPendientes: 0');
 empty.charts.forEach(chart=>chart.dispose());
 const scoped=run({cantidades:{total_proyectos:6,cotizacion_cliente:4,orden_compra_cliente:2},
     proyectos_por_vendedor:[fixture.proyectos_por_vendedor[0]],
@@ -103,4 +109,10 @@ negative.charts.forEach(chart=>chart.dispose());
 const fallback=run({cantidades:{},tipo_cambio:0,tipo_cambio_aplicado:1,fecha_tipo_cambio:null});
 assert.equal(fallback.node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 1.00 | Fecha TC: —','Mostrar divisor efectivo del backend sin reconvertir importes');
 fallback.charts.forEach(chart=>chart.dispose());
-console.log('OK: cantidades e importes en escalas independientes, porcentajes, anteriores, vendedor, orden, teclado, XSS, cero, movil y oscuro.');
+const excess=run({cantidades:{cotizacion_cliente:5,orden_compra_cliente:8},cotizado:100,colocado:150});
+assert.equal(excess.charts[0].getOption().title[0].text,'160.00 %','Mostrar conversion real aunque supere el anillo completo');
+assert.equal(excess.charts[1].getOption().title[0].text,'150.00 %');
+assert.deepEqual(excess.charts[0].getOption().series[0].data.map(row=>row.value),[5,0],'Pendientes no negativos');
+assert.equal(excess.charts[0].getOption().tooltip[0].formatter(),'Cotizados: 5\nColocados: 8\nPendientes: 0');
+excess.charts.forEach(chart=>chart.dispose());
+console.log('OK: donas de conversion, porcentajes y pendientes, importes USD, anteriores, vendedor, teclado, XSS, cero, movil y oscuro.');
