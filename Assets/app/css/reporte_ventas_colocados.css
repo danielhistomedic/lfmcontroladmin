@@ -76,8 +76,7 @@ html.dark :is(#modal-colocados-financiero, #resumen-colocados-financiero) .coloc
     :is(#modal-colocados-financiero, #resumen-colocados-financiero) .colocados-monedas { grid-template-columns: minmax(0,1fr); }
 }
 
-#resumen-colocados-financiero { background: #fff; border: 1px solid #dfe8f2; border-radius: 8px; box-shadow: 0 2px 8px rgba(23,75,102,.08); min-width: 0; }
-#resumen-colocados-financiero .colocados-panel-encabezado { background: #198754; color: #fff; border-radius: 8px 8px 0 0; padding: 12px 16px; }
-#resumen-colocados-financiero .colocados-panel-encabezado h4 { margin: 0; color: #fff; font-size: 15px; font-weight: 600; }
-#resumen-colocados-financiero .colocados-panel-contenido { padding: 16px; }
-html.dark #resumen-colocados-financiero { background: #21313e; color: #edf2f7; border-color: #455563; }
+#resumen-colocados-financiero { min-width: 0; }
+#resumen-colocados-financiero .colocados-panel-contenido { padding: 16px; background: #fff; }
+html.dark #resumen-colocados-financiero { color: #edf2f7; }
+html.dark #resumen-colocados-financiero .colocados-panel-contenido { background: #21313e; }
