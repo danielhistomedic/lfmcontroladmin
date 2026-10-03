@@ -1,5 +1,5 @@
 <p class="mb-1"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Período: <strong><?= $esc($monthNames); ?> <?= $esc($yearNames); ?></strong></p>
-<p class="colocados-nota">Mismo conjunto de proyectos que el KPI: proyectos registrados en el período con pedido enviado y proyectos anteriores con pedido enviado dentro del período. Subtotales de partidas: cantidad pedida × precio unitario, sin IVA ni conversión de moneda. Se excluyen proyectos cerrados y de estatus 2. Un proyecto puede tener varios pedidos o monedas.</p>
+<p class="colocados-nota">Mismo conjunto de proyectos que el KPI: proyectos registrados en el período con pedido enviado y proyectos anteriores con pedido enviado dentro del período. Subtotales de partidas: cantidad pedida × precio unitario, sin IVA ni conversión de moneda. Se excluyen proyectos cerrados y de estatus cancelado. Un proyecto puede tener varios pedidos o monedas.</p>
 <div id="<?= $colocadosPrefix; ?>colocados-financiero-estado" role="status" aria-live="polite"></div>
 <button id="<?= $colocadosPrefix; ?>colocados-financiero-reintentar" type="button" class="btn btn-outline-primary btn-sm mb-3" hidden>Reintentar</button>
 <div id="<?= $colocadosPrefix; ?>colocados-financiero-resumen" hidden>
@@ -52,7 +52,7 @@
         </section>
     <?php endforeach; ?>
 </div>
-<section class="colocados-resumen-seccion" aria-labelledby="<?= $colocadosPrefix; ?>colocados-mensual-titulo">
+<section class="colocados-resumen-seccion colocados-mensual-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-mensual-titulo">
     <h6 id="<?= $colocadosPrefix; ?>colocados-mensual-titulo"><i class="fa-solid fa-calendar colocados-icono" aria-hidden="true"></i>Pedidos por mes · Productos y servicios</h6>
     <p class="colocados-nota">Los proyectos del período se muestran en su mes de registro; los anteriores, en el mes del pedido. Los conteos por moneda pueden compartir proyectos.</p>
     <div class="table-responsive">
@@ -74,15 +74,17 @@
         </table>
     </div>
 </section>
-<details id="<?= $colocadosPrefix; ?>colocados-partidas" class="colocados-resumen-seccion" hidden open aria-labelledby="<?= $colocadosPrefix; ?>colocados-partidas-titulo">
-    <summary><h6 id="<?= $colocadosPrefix; ?>colocados-partidas-titulo">Detalle de partidas del mes</h6></summary>
+<details id="<?= $colocadosPrefix; ?>colocados-partidas" class="colocados-resumen-seccion colocados-partidas-destacado" hidden open aria-labelledby="<?= $colocadosPrefix; ?>colocados-partidas-titulo">
+    <summary>
+        <h6 id="<?= $colocadosPrefix; ?>colocados-partidas-titulo">Detalle de partidas del mes</h6>
+    </summary>
     <div class="colocados-tabla-controles"><label for="<?= $colocadosPrefix; ?>colocados-partidas-buscar">Buscar<input id="<?= $colocadosPrefix; ?>colocados-partidas-buscar" type="search" maxlength="200" placeholder="Buscar en las partidas" class="form-control form-control-sm"></label></div>
     <div id="<?= $colocadosPrefix; ?>colocados-partidas-estado" role="status" aria-live="polite"></div>
     <div class="table-responsive">
         <table class="table colocados-tabla colocados-partidas-tabla">
             <thead>
                 <tr>
-                    <?php foreach (['Proyecto','Orden de compra','Fecha','Moneda','Tipo','Clave','CCN','Código Cliente','Descripción','Cantidad','Precio unitario','Subtotal sin IVA'] as $index => $label): ?>
+                    <?php foreach (['Proyecto', 'Orden de compra', 'Fecha', 'Moneda', 'Tipo', 'Clave', 'CCN', 'Código Cliente', 'Descripción', 'Cantidad', 'Precio unitario', 'Subtotal sin IVA'] as $index => $label): ?>
                         <th id="<?= $colocadosPrefix; ?>colocados-partidas-columna-<?= $index; ?>" scope="col" aria-sort="none" class="<?= $index >= 9 ? 'text-end' : ''; ?>"><button id="<?= $colocadosPrefix; ?>colocados-partidas-orden-<?= $index; ?>" type="button" class="colocados-orden-encabezado" aria-label="Ordenar por <?= $esc($label); ?>"><?= $esc($label); ?></button></th>
                     <?php endforeach; ?>
                 </tr>

@@ -83,7 +83,7 @@
             <h4 class="mt-0 mb-3">Cantidades</h4>
             <div class="row g-3 mb-4">
                 <?php foreach ([['Total de Proyectos del Mes', $report['cantidades']['total_proyectos'], 'Proyectos registrados en los meses seleccionados'], ['Declinados en el Período', $report['cantidades']['declinados'], ''], ['Pedidos Cotizados en el Período', $report['cantidades']['cotizacion_cliente'], ''], ['Pedidos Colocados en el Período', $report['cantidades']['orden_compra_cliente'], '']] as $kpi): ?>
-                    <?php $colorClass = str_starts_with($kpi[0], 'Declinados') ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados en el Período' ? 'ventas-kpi-pedidos bg-success text-white' : ''); ?>
+                    <?php $colorClass = str_starts_with($kpi[0], 'Declinados') ? 'ventas-kpi-declinados bg-danger text-white' : ($kpi[0] === 'Pedidos Colocados en el Período' ? 'ventas-kpi-pedidos bg-success text-white' : 'ventas-kpi-azul-gris'); ?>
                     <div class="col-sm-6 col-xl-3">
                         <div class="card h-100 ventas-kpi shadow rounded-3 <?= $colorClass; ?><?= str_starts_with($kpi[0], 'Declinados') ? ' ventas-abrir-declinados' : ($kpi[0] === 'Pedidos Colocados en el Período' ? ' ventas-abrir-colocados' : ''); ?>" <?php if (str_starts_with($kpi[0], 'Declinados')): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-declinados-ventas" aria-haspopup="dialog" aria-controls="modal-declinados-ventas" aria-label="Ver lista de proyectos declinados" <?php elseif ($kpi[0] === 'Pedidos Colocados en el Período'): ?>role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#modal-colocados-financiero" aria-haspopup="dialog" aria-controls="modal-colocados-financiero" aria-label="Ver resumen financiero de pedidos colocados" <?php endif; ?>>
                             <div class="card-body">
@@ -170,7 +170,7 @@
                                         </div>
                                     </section>
                                     <section class="card card-body h-100 ventas-desglose-vendedor" aria-labelledby="ventas-desglose-estatus-titulo">
-                                        <h4 id="ventas-desglose-estatus-titulo" aria-live="polite"></h4>
+                                        <h4 id="ventas-desglose-estatus-titulo" class="mt-0" aria-live="polite"></h4>
                                         <p id="ventas-desglose-estatus-resumen" class="text-muted" aria-live="polite"></p>
                                         <div class="ventas-cascada-scroll" tabindex="0" role="region" aria-label="Gráfica por estatus del proyecto; desplazamiento horizontal">
                                             <div id="ventas-desglose-estatus" class="ventas-chart" role="img" aria-label="Proyectos del vendedor por estatus agrupado, mes y año, con declinados apilados en rojo"></div>
@@ -531,6 +531,7 @@
 
         #ventas-mensuales .ventas-desglose-vendedor {
             min-width: 0;
+            margin-top: 0;
         }
 
         @media (max-width: 767px) {

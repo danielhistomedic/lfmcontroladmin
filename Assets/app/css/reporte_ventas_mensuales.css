@@ -7,6 +7,24 @@
 }
 html.dark #ventas-mensuales .card.ventas-toolbar,
 html.dark #ventas-mensuales .card.ventas-kpi { border-color: #455563 !important; }
+#ventas-mensuales .card.ventas-kpi.ventas-kpi-azul-gris,
+html.dark #ventas-mensuales .card.ventas-kpi.ventas-kpi-azul-gris {
+    border-top: 3px solid #78909c !important;
+}
+#ventas-mensuales .card.ventas-kpi.ventas-kpi-critico {
+    border-color: #f1c7d0 !important;
+    border-top: 3px solid #dc143c !important;
+}
+#ventas-mensuales .ventas-kpi-critico .card-body { background-color: #fff7f9; }
+#ventas-mensuales .ventas-kpi-critico .text-muted.mb-2,
+#ventas-mensuales .ventas-kpi-critico .ventas-valor { color: #b01030 !important; }
+html.dark #ventas-mensuales .card.ventas-kpi.ventas-kpi-critico {
+    border-color: #70404c !important;
+    border-top-color: #dc143c !important;
+}
+html.dark #ventas-mensuales .ventas-kpi-critico .card-body { background-color: #30232a; }
+html.dark #ventas-mensuales .ventas-kpi-critico .text-muted.mb-2,
+html.dark #ventas-mensuales .ventas-kpi-critico .ventas-valor { color: #ff8ca4 !important; }
 #ventas-mensuales .ventas-toolbar {
     --ventas-titulo: #113461;
     --ventas-texto: #334765;
