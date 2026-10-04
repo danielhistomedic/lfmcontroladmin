@@ -91,9 +91,10 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         charts[2].trigger('click',{componentType:'series',seriesIndex:index,dataIndex:3});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'colocados_periodo');
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        assert.deepEqual(charts[4].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,5]);
+        assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='Pedidos Colocados').total,5);
         const dropdown=nodes.get('ventas-vendedor-desglose');dropdown.value='1';dropdown.events.change();
-        assert.deepEqual(charts[4].getOption().series.find(series=>series.name==='Pedidos Colocados').data,[0,0,0,1]);
+        assert.equal(charts[4].getOption().title[0].text,'2');
+        assert.deepEqual(charts[4].getOption().series[0].data.map(row=>row.value),[2]);
         charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
         return;
     }
@@ -108,9 +109,9 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         charts[2].trigger('click',{componentType:'series',seriesIndex:quotedIndex,dataIndex:3});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'cotizados_periodo');
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        assert.deepEqual(charts[4].getOption().series[quotedIndex].data,[0,0,0,5],'Desglose por vendedor conserva solo sus cotizados');
+        assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').total,99,'Dona usa la distribucion de estatus registrada del vendedor');
         const dropdown=nodes.get('ventas-vendedor-desglose'); dropdown.value='1';dropdown.events.change();
-        assert.deepEqual(charts[4].getOption().series.find(series=>series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').data,[0,0,0,5]);
+        assert.ok(!charts[4].getOption().series[0].data.some(row=>row.name==='PEDIDO COTIZADO (SIN OC CLIENTE)'),'No incorporar cotizados anteriores ajenos al conjunto de proyectos del vendedor');
         charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
         return;
     }
@@ -165,19 +166,13 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         const sellerClassification = charts[3].getOption();
         const sellerStatus = charts[4].getOption();
-        assert.deepEqual(sellerClassification.xAxis[0].data,charts[1].getOption().xAxis[0].data);
-        assert.deepEqual(sellerClassification.xAxis[1].data,['2024','2024','2026','2026']);
-        assert.deepEqual(sellerClassification.series[0].data,[1,0,0,4],'Solo las partidas del vendedor seleccionado');
-        assert.deepEqual(sellerClassification.series[1].data,[1,0,0,1]);
-        assert.equal(sellerClassification.series[0].itemStyle.color,charts[1].getOption().series[2].itemStyle.color);
-        assert.equal(sellerClassification.series[0].label.formatter(),'Bombas');
-        assert.deepEqual(sellerStatus.series[0].data,[0,0,0,2],'Agrupar cotizacion sin incluir otro vendedor');
-        assert.deepEqual(sellerStatus.series[2].data,[1,0,0,2]);
-        assert.deepEqual(sellerStatus.series[3].data,[1,0,0,1]);
-        assert.equal(sellerStatus.series[2].name,'Pedidos Colocados');
-        assert.equal(sellerStatus.legend[0].formatter(statusName),statusOption.legend[0].formatter(statusName));
-        assert.equal(sellerStatus.grid[0].bottom,statusOption.grid[0].bottom);
-        assert.ok(sellerStatus.tooltip[0].formatter({seriesIndex:0,dataIndex:3}).includes('Total: 2'));
+        assert.equal(sellerClassification.xAxis,undefined);
+        assert.deepEqual(sellerClassification.series[0].data.map(row=>row.value),[5,2],'Acumular meses y anios del vendedor');
+        assert.equal(sellerClassification.series[0].data[0].itemStyle.color,charts[1].getOption().series[2].itemStyle.color);
+        assert.equal(sellerClassification.series[0].data[0].name,'Bombas');
+        assert.deepEqual(sellerStatus.series[0].data.map(row=>row.value),[2,3,2],'Distribucion registrada, sin repetir proyectos anteriores de los KPI');
+        assert.equal(sellerStatus.series[0].data[1].name,'Pedidos Colocados');
+        assert.ok(sellerStatus.tooltip[0].formatter({data:sellerStatus.series[0].data[0]}).includes('Total de la categoría: 2'));
         charts[3].renderToSVGString(); charts[4].renderToSVGString();
         charts.forEach(chart=>chart.dispose());
         return;
@@ -202,25 +197,30 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         assert.equal(nodes.get('ventas-estatus-panel').hidden,false,'Click en barra abre el desglose');
         dropdown.value='0'; dropdown.events.change();
         assert.equal(charts.length,5,'Segunda grafica debajo sin reemplazar la primera');
-        assert.deepEqual(charts[3].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.deepEqual(charts[4].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.equal(charts[4].getOption().series[0].name,'PROCESO DE COTIZACION');
-        assert.equal(charts[4].getOption().series[2].name,'Pedidos Colocados');
-        assert.deepEqual(charts[4].getOption().series[3].data,[0,0,0,2]);
-        assert.deepEqual(charts[3].getOption().series[0].data,[0,0,0,3]);
-        assert.deepEqual(charts[3].getOption().series[2].data,[0,0,0,3]);
+        [3,4].forEach(index=>{
+            const option=charts[index].getOption();
+            assert.equal(option.series[0].type,'pie');
+            assert.equal(option.xAxis,undefined,'Sin desglose visual por mes');
+            assert.equal(option.title[0].text,'8','Total de todo el periodo en el centro');
+            assert.equal(option.series[0].data.reduce((sum,row)=>sum+row.value,0),8,'Distribucion concilia con total');
+            assert.ok(option.tooltip[0].formatter({data:option.series[0].data[0]}).includes('%'));
+            assert.ok(!charts[index].renderToSVGString().includes('NaN'));
+        });
+        assert.deepEqual(charts[3].getOption().series[0].data.map(row=>row.value),[3,3,2]);
+        assert.equal(charts[3].getOption().series[0].data[2].itemStyle.color,'#dc3545');
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
         dropdown.value='1'; dropdown.events.change();
         assert.equal(charts.length,5,'Reutilizar grafica secundaria');
         assert.equal(nodes.has('ventas-vendedor-mensual'),false);
         dropdown.value='1'; dropdown.events.change();
-        assert.deepEqual(charts[3].getOption().series[0].data,[0,0,0,0]);
-        assert.deepEqual(charts[3].getOption().series[1].data,[0,0,0,2]);
-        assert.equal(charts[3].getOption().series[1].itemStyle.color,'#dc3545');
-        assert.equal(charts[3].getOption().series[1].stack,'clase-3');
-        assert.deepEqual(charts[4].getOption().series[1].data,[0,0,0,2]);
-        assert.equal(charts[4].getOption().series[1].itemStyle.color,'#dc3545');
+        [3,4].forEach(index=>{
+            const option=charts[index].getOption();
+            assert.equal(option.title[0].text,'2');
+            assert.equal(option.series[0].data.length,1);
+            assert.equal(option.series[0].data[0].value,2);
+            assert.equal(option.series[0].data[0].itemStyle.color,'#dc3545');
+        });
     }
     if (!empty) {
         charts[1].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});

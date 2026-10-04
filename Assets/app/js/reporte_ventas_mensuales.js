@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function fitCascade(entry) {
         const available = entry.element.parentElement ? entry.element.parentElement.clientWidth : entry.element.clientWidth;
-        const width = Math.max(available || 320, entry.count * (entry.slotWidth || 125) + 90);
+        const width = entry.donut ? (available || 320) : Math.max(available || 320, entry.count * (entry.slotWidth || 125) + 90);
         entry.element.style.width = width + 'px';
         entry.instance.resize({ width, height: entry.height || 330 });
     }
@@ -302,71 +302,50 @@ document.addEventListener('DOMContentLoaded', function () {
             String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '') &&
             periods.some(period => Number(row.anio) === Number(period.anio) && Number(row.mes) === Number(period.mes)));
         const classifications = generalClassifications.filter(group => sellerRows.some(row => String(row.clasificacion_id) === String(group.clasificacion_id)));
-        const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)) ||
-            (kpiRows(group.id) || []).some(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')));
+        const sellerStatuses = statuses.filter(group => sellerRows.some(row => statusGroupKey(row) === String(group.id)));
         const classificationSummary = document.getElementById('ventas-estatus-resumen');
         classificationSummary.hidden = classifications.length > 0;
         classificationSummary.textContent = classifications.length ? '' : 'Sin clasificaciones registradas para los meses seleccionados.';
         if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
-        renderSellerMonthly(statusChart, principalOption, classifications, generalClassifications, sellerRows,
+        renderSellerDonut(statusChart, principalOption, classifications, generalClassifications, sellerRows,
             row => String(row.clasificacion_id), group => String(group.clasificacion_id), group => group.clasificacion, classificationChart);
         document.getElementById('ventas-desglose-estatus-titulo').textContent = seller.nombre + ' — Estatus de proyectos';
         const statusSummary = document.getElementById('ventas-desglose-estatus-resumen');
         statusSummary.hidden = sellerStatuses.length > 0;
         statusSummary.textContent = sellerStatuses.length ? '' : 'Sin estatus registrados para los meses seleccionados.';
         if (!projectStatusChart) projectStatusChart = cascade('ventas-desglose-estatus');
-        renderSellerMonthly(projectStatusChart, statusOption, sellerStatuses, statuses, sellerRows,
+        renderSellerDonut(projectStatusChart, statusOption, sellerStatuses, statuses, sellerRows,
             statusGroupKey, group => String(group.id), group => group.nombre, generalStatusChart);
     }
-    function renderSellerMonthly(entry, base, groups, allGroups, rows, rowKey, groupKey, groupName, reference) {
-        const counts = new Map();
-        rows.forEach(row => {
-            const key = [rowKey(row),row.anio,row.mes].join(':');
-            if (!counts.has(key)) counts.set(key, {proyectos:0,declinados:0});
-            const total = counts.get(key);
-            total.proyectos += Number(row.proyectos);
-            total.declinados += Number(row.declinados);
+    function renderSellerDonut(entry, base, groups, allGroups, rows, rowKey, groupKey, groupName) {
+        const totalProjects = Number(projectCounts[selectedIndex].proyectos);
+        const distribution = groups.flatMap(group => {
+            const selected = rows.filter(row => rowKey(row) === groupKey(group));
+            const total = selected.reduce((sum,row)=>sum+Number(row.proyectos),0);
+            const declined = selected.reduce((sum,row)=>sum+Number(row.declinados),0);
+            const index = allGroups.indexOf(group)*2;
+            const common = {group:groupName(group),total,declined};
+            const slices = [];
+            if (total > declined) slices.push({...common,name:groupName(group),value:total-declined,itemStyle:base.series[index].itemStyle});
+            if (declined > 0) slices.push({...common,name:'Declinados',value:declined,itemStyle:{color:'#dc3545'}});
+            return slices;
         });
-        if (allGroups === statuses) ['cotizados_periodo','colocados'].forEach(groupId => {
-            const documentRows = kpiRows(groupId);
-            if (!documentRows) return;
-            periods.forEach(period => counts.set([groupId,period.anio,period.mes].join(':'),{proyectos:0,declinados:0,periodo:0,anteriores:0}));
-            const seller = projectCounts[selectedIndex];
-            documentRows.filter(row => String(row.vendedor_id ?? '') === String(seller.vendedor_id ?? '')).forEach(row => {
-                const key = [groupId,row.anio,row.mes].join(':');
-                if (counts.has(key)) {
-                    counts.get(key).proyectos += Number(row.proyectos);
-                    counts.get(key)[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
-                }
-            });
-        });
-        const totalsFor = group => periods.map(period => counts.get([groupKey(group),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
-        const option = {...base, legend:{...base.legend,data:groups.length ? [...groups.map(groupName),'Declinados'] : []},
-            series:groups.flatMap(group => {
-                const index = allGroups.indexOf(group) * 2;
-                const totals = totalsFor(group);
-                return [
-                    {...base.series[index],data:totals.map(row => row.proyectos-row.declinados)},
-                    {...base.series[index+1],data:totals.map(row => row.declinados),
-                        label:{...base.series[index+1].label,formatter:params => String(totals[params.dataIndex].proyectos)}}
-                ];
-            }),
-            tooltip:{trigger:'item',renderMode:'richText',formatter:params => {
-                const group = groups[Math.floor(params.seriesIndex/2)];
-                const period = periods[params.dataIndex];
-                const total = totalsFor(group)[params.dataIndex];
-                if (kpiRows(group.id)) return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-                    '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+
-                    '\nTotal '+(group.id === 'colocados' ? 'colocado' : 'cotizado')+': '+total.proyectos;
-                return groupName(group)+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-                    '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
-            }}
-        };
-        entry.count = periods.length;
-        entry.slotWidth = Math.max(280,groups.length*88);
-        entry.height = reference.height || 330;
-        entry.element.style.height = entry.height + 'px';
-        entry.instance.setOption(option, true);
+        entry.donut = true; entry.height = 360; entry.element.style.height = '360px';
+        entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
+            title:[{text:String(totalProjects),left:'center',top:'37%',textStyle:{color:cascadeText,fontSize:25,fontWeight:600}},
+                {text:'Proyectos del vendedor',left:'center',top:'48%',textStyle:{color:cascadeText,fontSize:10,fontWeight:400}}],
+            legend:{bottom:0,type:'scroll',textStyle:{color:cascadeText,fontSize:10},data:[...new Set(distribution.map(row=>row.name))]},
+            tooltip:{trigger:'item',renderMode:'richText',formatter:params=>{
+                const row=params.data; const percentage=totalProjects ? row.value/totalProjects*100 : 0;
+                return row.group+'\n'+row.name+': '+row.value+' ('+amount.format(percentage)+' %)'+
+                    '\nTotal de la categoría: '+row.total+' ('+amount.format(totalProjects ? row.total/totalProjects*100 : 0)+' %)'+
+                    '\nDeclinados: '+row.declined+'\nTotal del vendedor: '+totalProjects;
+            }},
+            series:[{type:'pie',radius:['47%','68%'],center:['50%','44%'],
+                label:{show:true,formatter:'{b}\n{c} ({d} %)',color:cascadeText,fontSize:10,overflow:'break',width:110},
+                labelLine:{length:8,length2:6},avoidLabelOverlap:true,
+                data:distribution.length ? distribution : [{name:'Sin proyectos',value:1,itemStyle:{color:'#dce7f0'},label:{show:false},tooltip:{show:false}}]}]
+        },true);
         fitCascade(entry);
     }
     function statusGroupKey(row) {
