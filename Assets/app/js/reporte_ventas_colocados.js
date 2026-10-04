@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
             currencyCards('colocados-totales', data.totales);
             currencyCards('colocados-flowserve', data.grupos.filter(row => row.grupo === 'Flowserve'));
             currencyCards('colocados-diversos', data.grupos.filter(row => row.grupo === 'Diversos'));
-            renderMonths(data.mensual || []);
+            if (isModal) renderMonths(data.mensual || []);
             summary.hidden = false;
             state.textContent = data.totales.length ? '' : 'No hay pedidos enviados para el período y vendedor seleccionados.';
         } catch (error) {
@@ -140,14 +140,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const detailRetry = byId('colocados-partidas-reintentar');
         section.hidden = false;
         section.open = true;
-        byId('colocados-partidas-titulo').textContent = 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)';
+        byId('colocados-partidas-titulo').textContent = isModal ? 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)' : 'Total por Productos';
         body.replaceChildren(); state.textContent = 'Cargando partidas...'; previous.disabled = next.disabled = true; detailRetry.hidden = true;
         byId('colocados-partidas-pagina').textContent = '';
         const query = params('detalle');
         modal.dataset.anio.split(',').forEach(year => query.append('periodo_anio[]',year));
         modal.dataset.mes.split(',').forEach(month => query.append('periodo_mes[]',month));
-        query.delete('anio[]'); query.delete('mes[]');
-        query.append('anio[]', detail.year); query.append('mes[]', detail.month);
+        if (isModal) {
+            query.delete('anio[]'); query.delete('mes[]');
+            query.append('anio[]', detail.year); query.append('mes[]', detail.month);
+        }
         query.set('start', detail.start); query.set('length', 5);
         query.set('search', detailSearch.value); query.set('order_column', detail.column); query.set('order_dir', detail.direction);
         try {
@@ -155,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
             data.data.forEach(row => appendRow(body,[row.proyecto_id,row.num_orden_compra,row.fecha_pedido,
                 row.moneda,row.tipo_partida,row.clave,row.ccn,row.codigo_cliente,row.descripcion,
                 row.cantidad_pedido,displayAmount(row.precio_unitario),displayAmount(row.subtotal_partida)]));
-            state.textContent = data.data.length ? '' : 'Sin partidas en este mes.';
+            state.textContent = data.data.length ? '' : (isModal ? 'Sin partidas en este mes.' : 'Sin partidas para los filtros seleccionados.');
             previous.disabled = detail.start === 0; next.disabled = detail.start + 5 >= data.recordsFiltered;
             byId('colocados-partidas-pagina').textContent = data.recordsFiltered ?
                 (detail.start+1) + '–' + (detail.start+data.data.length) + ' de ' + data.recordsFiltered : '0 partidas';
@@ -238,7 +240,18 @@ document.addEventListener('DOMContentLoaded', function () {
         table.previous.addEventListener('click', () => { table.start = Math.max(0, table.start - 10); loadTable(section); });
         table.next.addEventListener('click', () => { table.start += 10; loadTable(section); });
     });
-    function load() { clearTimeout(detail.timer); if (requests.has('detalle')) requests.get('detalle').abort(); byId('colocados-partidas').hidden = true; byId('colocados-mensual-filas').replaceChildren(); loadSummary(); loadTable('clientes', true); loadTable('vendedores', true); }
+    function load() {
+        clearTimeout(detail.timer);
+        if (requests.has('detalle')) requests.get('detalle').abort();
+        if (isModal) {
+            byId('colocados-partidas').hidden = true;
+            byId('colocados-mensual-filas').replaceChildren();
+        } else {
+            detail.start = 0;
+            loadDetails();
+        }
+        loadSummary(); loadTable('clientes', true); loadTable('vendedores', true);
+    }
     if (isModal) {
     modal.addEventListener('shown.bs.modal', load);
     modal.addEventListener('hidden.bs.modal', () => {

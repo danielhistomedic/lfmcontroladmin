@@ -38,7 +38,7 @@ foreach ([1,2,3] as $subcategory) {
     verificar(str_contains($financialDb->calls[1][0], "MAX(CASE WHEN sc.id = $subcategory THEN sc.subclasificacion ELSE NULL END)")
         && str_contains($financialDb->calls[1][0], "AS subclasificacion_{$subcategory}_nombre"), 'Nombre real del catalogo para cada subtotal');
     foreach (['PRODUCTO'=>'productos','SERVICIO'=>'servicios'] as $type=>$key) {
-        verificar(str_contains($financialDb->calls[1][0], "vd.subclasificacion_id = $subcategory\n                        AND vd.tipo_partida = '$type' THEN pd.cantidad_pedido * pd.precio_unitario")
+        verificar(str_contains(str_replace("\r\n", "\n", $financialDb->calls[1][0]), "vd.subclasificacion_id = $subcategory\n                        AND vd.tipo_partida = '$type' THEN pd.cantidad_pedido * pd.precio_unitario")
             && str_contains($financialDb->calls[1][0], "AS subclasificacion_{$subcategory}_$key"),
             'Productos y servicios de cada subclasificacion usan las mismas partidas y formula');
     }
@@ -116,7 +116,7 @@ $_GET['length']='10'; $_GET['order_column']='2; DROP'; verificar(llamarFinancier
 $_GET['order_column']='2'; $_GET['search']=['malformado']; verificar(llamarFinanciero($api)[0]===400, 'Rechazar busqueda malformada');
 $_GET['search']=''; verificar(llamarFinanciero($api)[0]===200, 'Tabla autorizada');
 $_GET['seccion']='detalle'; $_GET['anio']=['2024','2026'];
-verificar(llamarFinanciero($api)[0]===400, 'Detalle exige un solo mes y anio');
+verificar(llamarFinanciero($api)[0]===200, 'Detalle permite los filtros globales de varios meses y anios');
 $_GET['anio']=['2026']; $_GET['mes']=['9']; $_GET['order_column']='11';
 verificar(llamarFinanciero($api)[0]===200 && $api->model->calls[count($api->model->calls)-1][3] === 'detalle', 'Detalle mensual mantiene autorizacion y alcance');
 $_GET['order_column']='12'; verificar(llamarFinanciero($api)[0]===400, 'Rechazar columna fuera del detalle');
@@ -127,6 +127,21 @@ verificar(llamarFinanciero($api)[0]===200
     && end($api->model->calls)[4]['periodo_meses']===[2,9], 'Detalle conserva la seleccion global para asignar cada proyecto al mes correcto');
 $_GET['periodo_mes']=['2']; verificar(llamarFinanciero($api)[0]===400, 'Detalle no acepta un mes externo al reporte');
 unset($_GET['periodo_anio'],$_GET['periodo_mes']);
+$multiDetailsDb = new ConexionSimulada([[['total'=>0]],[]]);
+(new ModeloSimulado($multiDetailsDb))->colocadosFinanciero([2026],[9,10],'V1','detalle');
+verificar(count($multiDetailsDb->calls)===2
+    && array_slice($multiDetailsDb->calls[0][1],-4)===['2026-09-01','2026-10-01','2026-10-01','2026-11-01'],
+    'Detalle inicial consulta todos los meses seleccionados con rangos parametrizados');
+$_GET['anio']=['2026','2027']; $_GET['mes']=['9'];
+$_GET['periodo_anio']=['2026']; $_GET['periodo_mes']=['9'];
+verificar(llamarFinanciero($api)[0]===400, 'Validar todos los anios del detalle contra el periodo global');
+unset($_GET['periodo_anio'],$_GET['periodo_mes']); $_GET['anio']=['2026'];
+$colocadosPrefix = 'panel-';
+ob_start(); require __DIR__.'/../../Views/Reportesmensuales/contenido_colocados_financiero.php'; $panelHtml=ob_get_clean();
+verificar(!str_contains($panelHtml,'Pedidos por mes') && str_contains($panelHtml,'Total por Productos')
+    && preg_match('/<details[^>]+id="panel-colocados-partidas"[^>]* open /',$panelHtml)
+    && !preg_match('/<details[^>]+id="panel-colocados-partidas"[^>]* hidden/',$panelHtml),
+    'Panel elimina tarjeta mensual y deja Total por Productos abierto y visible');
 Session::$active=false; verificar(llamarFinanciero($api)[0]===401, 'Rechazar sesion vencida');
 Session::$active=true; $testPermissions=[]; verificar(llamarFinanciero($api)[0]===403, 'Comprobar permiso del modulo');
 $testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='POST'; verificar(llamarFinanciero($api)[0]===405, 'Solo lectura GET');

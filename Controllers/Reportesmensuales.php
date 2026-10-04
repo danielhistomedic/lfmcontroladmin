@@ -203,9 +203,6 @@ class Reportesmensuales extends Controllers
                 }
                 $seller = $scope;
             }
-            if ($section === 'detalle' && (count($years) !== 1 || count($months) !== 1)) {
-                http_response_code(400); echo json_encode(['status'=>false,'message'=>'Seleccione un mes y un anio.']); return;
-            }
             $options = [];
             if ($section !== 'resumen') {
                 $integer = static fn($key,$default,$min,$max) => filter_var($_GET[$key] ?? $default,
@@ -222,8 +219,8 @@ class Reportesmensuales extends Controllers
             if ($section === 'detalle' && (isset($_GET['periodo_anio']) || isset($_GET['periodo_mes']))) {
                 $periodYears = self::seleccionNumerica($_GET['periodo_anio'] ?? null,2000,2100);
                 $periodMonths = self::seleccionNumerica($_GET['periodo_mes'] ?? null,1,12);
-                if ($periodYears === false || $periodMonths === false || !in_array($years[0],$periodYears,true)
-                    || !in_array($months[0],$periodMonths,true)) {
+                if ($periodYears === false || $periodMonths === false || array_diff($years,$periodYears)
+                    || array_diff($months,$periodMonths)) {
                     http_response_code(400); echo json_encode(['status'=>false,'message'=>'El mes no pertenece al período del reporte.']); return;
                 }
                 $options['periodo_anios'] = $periodYears;

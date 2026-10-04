@@ -541,8 +541,6 @@ class ReportesmensualesModel extends Mysql
             return ['totales'=>$totals, 'grupos'=>$groups, 'mensual'=>$monthly, 'conteo'=>$counts[0] ?? []];
         }
         if ($section === 'detalle') {
-            if (count(is_array($year) ? $year : [$year]) !== 1 || count(is_array($month) ? $month : [$month]) !== 1)
-                throw new InvalidArgumentException('Seleccione un mes y un anio para el detalle.');
             $detailParams = [];
             $detailPeriod = self::periodo($reportDate, $year, $month, $detailParams);
             $where .= " AND ($detailPeriod) AND vd.tipo_partida IN ('PRODUCTO','SERVICIO')";

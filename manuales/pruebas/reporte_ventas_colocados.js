@@ -36,15 +36,23 @@ const context={document:{getElementById:node,querySelectorAll:()=>[card],createE
 async function tick(){await new Promise(resolve=>setImmediate(resolve));}
 (async()=>{
     vm.runInNewContext(code,context); ready();
-    assert.equal(queries.length,3,'La seccion carga sin abrir el modal');
+    assert.equal(queries.length,4,'La seccion carga resumen, clientes, vendedores y partidas sin abrir el modal');
     await tick();
     assert.equal(node('panel-colocados-financiero-resumen').hidden,false);
+    assert.equal(node('panel-colocados-partidas').hidden,false,'Partidas visibles al cargar');
+    assert.equal(node('panel-colocados-partidas').open,true,'Partidas abiertas al cargar');
+    assert.equal(node('panel-colocados-partidas-titulo').textContent,'Total por Productos');
+    const initialDetails=queries.find(query=>query.get('seccion')==='detalle');
+    assert.deepEqual(initialDetails.getAll('anio[]'),['2024','2026']);
+    assert.deepEqual(initialDetails.getAll('mes[]'),['2','9'],'Detalle inicial incluye todos los filtros globales');
+    assert.equal(node('panel-colocados-partidas-filas').children.length,1);
+    assert.equal(node('panel-colocados-mensual-filas').children.length,0,'El panel no renderiza la tarjeta mensual');
     assert.equal(node('panel-colocados-totales').children[0].children[1].textContent,'$ 90.00');
     assert.equal(node('colocados-totales').children.length,0,'El modal sigue cargando bajo demanda');
     let prevented=false; card.events.keydown({key:'Enter',preventDefault(){prevented=true;}});
     assert.ok(prevented && card.clicked,'Acceso por teclado');
     modal.events['shown.bs.modal'](); await tick();
-    assert.equal(queries.length,6);
+    assert.equal(queries.length,7);
     queries.forEach(query=>{assert.deepEqual(query.getAll('anio[]'),['2024','2026']);assert.deepEqual(query.getAll('mes[]'),['2','9']);assert.equal(query.get('vendedor'),'V1');});
     assert.equal(node('colocados-financiero-resumen').hidden,false);
     assert.equal(node('colocados-totales').children[0].children[1].textContent,'$ 90.00');

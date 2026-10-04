@@ -52,6 +52,7 @@
         </section>
     <?php endforeach; ?>
 </div>
+<?php if ($colocadosPrefix === ''): ?>
 <section class="colocados-resumen-seccion colocados-mensual-destacado" aria-labelledby="<?= $colocadosPrefix; ?>colocados-mensual-titulo">
     <h6 id="<?= $colocadosPrefix; ?>colocados-mensual-titulo"><i class="fa-solid fa-calendar colocados-icono" aria-hidden="true"></i>Pedidos por mes · Productos y servicios</h6>
     <p class="colocados-nota">Los proyectos del período se muestran en su mes de registro; los anteriores, en el mes del pedido. Los conteos por moneda pueden compartir proyectos.</p>
@@ -74,9 +75,10 @@
         </table>
     </div>
 </section>
-<details id="<?= $colocadosPrefix; ?>colocados-partidas" class="colocados-resumen-seccion colocados-partidas-destacado" hidden open aria-labelledby="<?= $colocadosPrefix; ?>colocados-partidas-titulo">
+<?php endif; ?>
+<details id="<?= $colocadosPrefix; ?>colocados-partidas" class="colocados-resumen-seccion colocados-partidas-destacado" <?= $colocadosPrefix === '' ? 'hidden' : ''; ?> open aria-labelledby="<?= $colocadosPrefix; ?>colocados-partidas-titulo">
     <summary>
-        <h6 id="<?= $colocadosPrefix; ?>colocados-partidas-titulo">Detalle de partidas del mes</h6>
+        <h6 id="<?= $colocadosPrefix; ?>colocados-partidas-titulo"><?= $colocadosPrefix === '' ? 'Detalle de partidas del mes' : 'Total por Productos'; ?></h6>
     </summary>
     <div class="colocados-tabla-controles"><label for="<?= $colocadosPrefix; ?>colocados-partidas-buscar">Buscar<input id="<?= $colocadosPrefix; ?>colocados-partidas-buscar" type="search" maxlength="200" placeholder="Buscar en las partidas" class="form-control form-control-sm"></label></div>
     <div id="<?= $colocadosPrefix; ?>colocados-partidas-estado" role="status" aria-live="polite"></div>
