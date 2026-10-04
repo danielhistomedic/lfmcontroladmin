@@ -191,29 +191,87 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
     padding-bottom: 5px;
     font-size: 12px;
 }
-/* Resumen de declinados: botones accesibles y detalle sin recargar el modal. */
-#modal-declinados-ventas .declinados-indicadores { display:grid; grid-template-columns:1fr 1fr 2fr; gap:12px; }
-#modal-declinados-ventas .declinados-indicadores > div { background:#eef5fd; border-left:3px solid #2385bd; border-radius:4px; padding:10px 12px; }
-#modal-declinados-ventas .declinados-indicadores span { display:block; color:#62758e; font-size:11px; }
-#modal-declinados-ventas .declinados-indicadores strong { display:block; margin-top:4px; color:#174b66; font-size:15px; overflow-wrap:anywhere; }
-#modal-declinados-ventas .declinados-vendedores { display:grid; gap:8px; }
-#modal-declinados-ventas .declinados-vendedor { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; padding:9px 12px; background:transparent; border:1px solid #dfe8f2; border-radius:5px; color:#174b66; text-align:left; font-size:12px; }
-#modal-declinados-ventas .declinados-vendedor > span:first-child { overflow-wrap:anywhere; }
-#modal-declinados-ventas .declinados-vendedor > span:nth-child(2) { font-variant-numeric:tabular-nums; }
-#modal-declinados-ventas .declinados-vendedor:hover { background:#f5f9fc; }
-#modal-declinados-ventas .declinados-vendedor[aria-pressed="true"] { background:#eef5fd; border-color:#2385bd; }
+/* Modal de declinados: resumen superior y distribucion 30/70. */
+#modal-declinados-ventas [hidden] { display:none !important; }
+#modal-declinados-ventas[data-lista="declinados"] { --declinados-borde:#dfe8f2; --declinados-fondo:#fff; --declinados-suave:#f4f8fc; --declinados-texto:#243b53; --declinados-secundario:#62758e; }
+#modal-declinados-ventas[data-lista="declinados"] .modal-dialog { width:calc(100% - 48px); max-width:1440px; }
+#modal-declinados-ventas[data-lista="declinados"] .modal-content { border-radius:8px; }
+#modal-declinados-ventas[data-lista="declinados"] .modal-body { padding:20px !important; font-family:Inter,'Segoe UI',sans-serif; color:var(--declinados-texto); }
+#modal-declinados-ventas .declinados-indicadores { display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:12px; }
+#modal-declinados-ventas .declinados-indicadores > div { display:flex; gap:12px; align-items:flex-start; padding:16px; border:1px solid var(--declinados-borde); border-radius:6px; background:var(--declinados-suave); box-shadow:0 2px 6px rgba(23,75,102,.03); min-width:0; }
+#modal-declinados-ventas .declinados-indicadores > div > div { min-width:0; }
+#modal-declinados-ventas .declinados-indicadores span { display:block; color:var(--declinados-texto); font-size:11px; font-weight:600; }
+#modal-declinados-ventas .declinados-indicadores strong { display:block; margin-top:4px; font-size:24px; line-height:1.25; }
+#modal-declinados-ventas .declinados-kpi-icono { display:flex; flex-shrink:0; align-items:center; justify-content:center; width:34px; height:34px; border-radius:6px; font-size:19px; }
+#modal-declinados-ventas .declinados-kpi-total { color:#c93a49; }
+#modal-declinados-ventas .declinados-kpi-total .declinados-kpi-icono { background:#fff0f2; }
+#modal-declinados-ventas .declinados-kpi-vendedores { color:#7554ad; }
+#modal-declinados-ventas .declinados-kpi-vendedores .declinados-kpi-icono { background:#f2edf9; }
+#modal-declinados-ventas .declinados-kpi-lider { color:#a66a05; }
+#modal-declinados-ventas .declinados-kpi-lider strong { font-size:13px; overflow-wrap:anywhere; }
+#modal-declinados-ventas .declinados-kpi-lider small { display:block; margin-top:5px; color:var(--declinados-secundario); font-size:11px; }
+#modal-declinados-ventas .declinados-kpi-lider .declinados-kpi-icono { background:#fff4df; }
+#modal-declinados-ventas[data-lista="declinados"] .declinados-distribucion { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,7fr); gap:14px; align-items:start; }
+#modal-declinados-ventas[data-lista="declinados"] :is(#declinados-resumen,#declinados-detalle) { min-width:0; border:1px solid var(--declinados-borde); border-radius:5px; background:var(--declinados-fondo); overflow:hidden; }
+#modal-declinados-ventas .declinados-panel-cabecera { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-bottom:1px solid var(--declinados-borde); background:var(--declinados-suave); font-size:11px; }
+#modal-declinados-ventas .declinados-panel-cabecera h6 { margin:0; min-width:0; font-size:13px; font-weight:600; color:var(--declinados-texto); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#modal-declinados-ventas .declinados-detalle-cantidad { color:#c93a49; white-space:nowrap; font-weight:600; }
+#modal-declinados-ventas .declinados-todos-fila { padding:8px 12px; border-bottom:1px solid var(--declinados-borde); }
+#modal-declinados-ventas .declinados-vendedores { display:grid; max-height:520px; overflow-y:auto; }
+#modal-declinados-ventas .declinados-vendedor { display:grid; grid-template-columns:minmax(0,1fr) 55px; gap:6px 12px; padding:12px; background:transparent; border:0; border-bottom:1px solid var(--declinados-borde); border-left:3px solid transparent; color:var(--declinados-texto); text-align:left; font-size:11px; }
+#modal-declinados-ventas .declinados-vendedor > span:first-child { grid-column:1; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#modal-declinados-ventas .declinados-vendedor-cantidad { grid-column:2; text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+#modal-declinados-ventas .declinados-vendedor-porcentaje { grid-column:2; text-align:right; color:var(--declinados-secundario); font-variant-numeric:tabular-nums; font-size:10px; }
+#modal-declinados-ventas .declinados-vendedor:hover { background:var(--declinados-suave); }
+#modal-declinados-ventas .declinados-vendedor[aria-pressed="true"] { background:#e5f3fc; border-left-color:#008caf; color:#075879; }
 #modal-declinados-ventas #declinados-todos[aria-pressed="true"] { background:#008caf; color:#fff; }
-#modal-declinados-ventas .declinados-vendedor:focus-visible { outline:3px solid #2385bd; outline-offset:2px; }
-#modal-declinados-ventas .declinados-vendedor-barra { grid-column:1/-1; display:block; height:5px; background:#f5e9ec; border-radius:3px; overflow:hidden; }
-#modal-declinados-ventas .declinados-vendedor-barra > span { display:block; height:100%; background:#b76c79; border-radius:3px; }
-html.dark #modal-declinados-ventas .declinados-indicadores > div { background:#2c405b; }
-html.dark #modal-declinados-ventas .declinados-indicadores span { color:#cbd5e1; }
-html.dark #modal-declinados-ventas .declinados-indicadores strong { color:#cee5ff; }
-html.dark #modal-declinados-ventas .declinados-vendedor { border-color:#455563; color:#edf2f7; }
-html.dark #modal-declinados-ventas .declinados-vendedor:hover { background:#2a4050; }
-html.dark #modal-declinados-ventas .declinados-vendedor[aria-pressed="true"] { background:#2c405b; border-color:#81b6ed; }
-html.dark #modal-declinados-ventas .declinados-vendedor-barra { background:#49323a; }
+#modal-declinados-ventas .declinados-vendedor:focus-visible { outline:2px solid #2385bd; outline-offset:-2px; }
+#modal-declinados-ventas .declinados-vendedor-barra { grid-column:1; display:block; align-self:center; height:7px; background:#e8edf3; border-radius:4px; overflow:hidden; }
+#modal-declinados-ventas .declinados-vendedor-barra > span { display:block; height:100%; background:#df8186; border-radius:4px; }
+#modal-declinados-ventas .declinados-detalle-vacio { padding:64px 24px; text-align:center; color:var(--declinados-secundario); font-size:12px; margin:0; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle-tabla { padding:12px; }
+#modal-declinados-ventas[data-lista="declinados"] .dataTables_scrollHeadInner,
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle table { width:100% !important; table-layout:fixed; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle :is(th,td) { padding:8px 7px; font-size:11px; overflow:hidden; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th { background:#edf5fc; color:#334765; border-color:#dfe8f2; white-space:normal; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(1) { width:5% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(2) { width:15% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(3) { width:12% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(4) { width:23% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(5) { width:20% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(6) { width:25% !important; }
+#modal-declinados-ventas .declinados-celda { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#modal-declinados-ventas .declinados-clasificacion { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; padding:3px 6px; border-radius:3px; font-size:9px; font-weight:500; }
+#modal-declinados-ventas .declinados-clasificacion-diversos { background:#dceefd; color:#075a94; }
+#modal-declinados-ventas .declinados-clasificacion-valvulas { background:#def4ed; color:#087766; }
+#modal-declinados-ventas .declinados-clasificacion-bombas { background:#fff0ce; color:#926309; }
+#modal-declinados-ventas .declinados-clasificacion-sellos { background:#eee4fb; color:#6335a0; }
+#modal-declinados-ventas .declinados-clasificacion-neutral { background:#edf1f5; color:#465467; }
+#modal-declinados-ventas[data-lista="declinados"] .declinados-buttons .buttons-excel { display:none; }
+#modal-declinados-ventas[data-lista="declinados"] .declinados-toolbar { gap:8px !important; }
+#modal-declinados-ventas[data-lista="declinados"] .declinados-toolbar :is(label,input,select,.btn) { font-size:11px; }
+#modal-declinados-ventas[data-lista="declinados"] .dataTables_filter { flex:1; min-width:140px; }
+#modal-declinados-ventas[data-lista="declinados"] .declinados-search { flex:1 1 220px; min-width:0; }
+#modal-declinados-ventas[data-lista="declinados"] .dataTables_filter input { flex:1; width:100%; min-width:0; margin-left:0; }
+#modal-declinados-ventas[data-lista="declinados"] .dataTables_filter label { display:flex; }
+#modal-declinados-ventas[data-lista="declinados"] .dataTables_info,
+#modal-declinados-ventas[data-lista="declinados"] .dataTables_paginate { font-size:11px; }
+html.dark #modal-declinados-ventas[data-lista="declinados"] { --declinados-borde:#455563; --declinados-fondo:#21313e; --declinados-suave:#2a3b4e; --declinados-texto:#edf2f7; --declinados-secundario:#cbd5e1; }
+html.dark #modal-declinados-ventas .declinados-kpi-total { color:#ffadb5; }
+html.dark #modal-declinados-ventas .declinados-kpi-vendedores { color:#d1b6fa; }
+html.dark #modal-declinados-ventas .declinados-kpi-lider { color:#f8d181; }
+html.dark #modal-declinados-ventas .declinados-vendedor[aria-pressed="true"] { background:#2c405b; color:#cee5ff; }
+html.dark #modal-declinados-ventas .declinados-vendedor-barra { background:#455563; }
+html.dark #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th { background:#2a3b4e; color:#edf2f7; border-color:#455563; }
+@media(max-width:991px) {
+    #modal-declinados-ventas[data-lista="declinados"] .declinados-distribucion { grid-template-columns:1fr; }
+    #modal-declinados-ventas .declinados-vendedores { max-height:280px; }
+}
 @media(max-width:575px) {
+    #modal-declinados-ventas[data-lista="declinados"] .modal-dialog { width:calc(100% - 16px); margin:8px; }
+    #modal-declinados-ventas[data-lista="declinados"] .modal-body { padding:12px !important; }
     #modal-declinados-ventas .declinados-indicadores { grid-template-columns:1fr; }
-    #modal-declinados-ventas .declinados-vendedor { grid-template-columns:1fr; }
+    #modal-declinados-ventas .declinados-panel-cabecera { flex-wrap:wrap; }
+    #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle table,
+    #modal-declinados-ventas[data-lista="declinados"] .dataTables_scrollHeadInner { min-width:580px; }
 }

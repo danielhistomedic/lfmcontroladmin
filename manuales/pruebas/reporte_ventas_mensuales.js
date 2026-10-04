@@ -273,9 +273,11 @@ async function probarModal(critical = false, unscoped = false) {
     await modal.events['shown.bs.modal']();
     if(!critical){
         assert.equal(summaryCalls.length,1);assert.equal(options,undefined,'Resumen antes de cargar tabla plana');
-        assert.equal(node('declinados-detalle').hidden,true);
-        assert.equal(node('declinados-resumen-total').textContent,'8 proyectos');
-        assert.equal(node('declinados-resumen-lider').textContent,unscoped ? 'José · 5 proyectos' : 'José · 8 proyectos');
+        assert.equal(node('declinados-detalle').hidden,false);
+        assert.equal(node('declinados-detalle-tabla').hidden,true,'Detalle derecho con mensaje inicial');
+        assert.equal(node('declinados-resumen-total').textContent,'8');
+        assert.equal(node('declinados-resumen-lider').textContent,'José');
+        assert.equal(node('declinados-resumen-lider-detalle').textContent,unscoped ? '5 proyectos (62.5 %)' : '8 proyectos (100 %)');
         node('declinados-vendedores').children[0].events.click();
         assert.equal(node('declinados-vendedores').children[0]['aria-pressed'],'true');
         assert.equal(node('declinados-detalle').hidden,false);
@@ -295,7 +297,8 @@ async function probarModal(critical = false, unscoped = false) {
         assert.equal(new URL(calls.pop()[0],'http://localhost').searchParams.get('declinado_vendedor'),'V2');
         assert.equal(node('declinados-vendedores').children[0]['aria-pressed'],'false');
         assert.equal(node('declinados-vendedores').children[1]['aria-pressed'],'true');
-        assert.equal(node('declinados-detalle-titulo').textContent,'Ana · 8 proyectos declinados');
+        assert.equal(node('declinados-detalle-titulo').textContent,'Proyectos de: Ana');
+        assert.equal(node('declinados-detalle-cantidad').textContent,'8 proyectos declinados');
         node('declinados-vendedores').children[0].events.click();await pending;calls.pop();
         assert.equal(summaryCalls.length,1,'Cambiar vendedor actualiza solo detalle');
     }
@@ -306,7 +309,16 @@ async function probarModal(critical = false, unscoped = false) {
     assert.deepEqual(multiQuery.getAll('mes[]'), ['2','9','12'], 'Enviar todos los meses a los modales');
     assert.deepEqual(multiQuery.getAll('anio[]'), ['2024','2026'], 'Enviar todos los anios a los modales');
     assert.equal(node('declinados-total').textContent, '8 Proyectos');
-    assert.equal(options.columns[6].render(response.data.data[0].titulo,'display'), '&lt;img src=x onerror=alert(1)&gt;', 'Salida escapada');
+    const titleHtml=options.columns[6].render(response.data.data[0].titulo,'display');
+    assert.ok(titleHtml.includes('&lt;img src=x onerror=alert(1)&gt;') && !titleHtml.includes('<img'),'Salida escapada');
+    if(!critical){
+        assert.ok(titleHtml.includes('title="'),'Texto completo disponible en tooltip');
+        assert.ok(options.columns[6].render('" onmouseover="alert(1)','display').includes('&quot;'),'Escapar comillas en tooltip');
+        assert.ok(options.columns[5].render('VÁLVULAS FLOWSERVE','display').includes('declinados-clasificacion-valvulas'));
+        assert.ok(options.columns[5].render('BOMBAS FLOWSERVE','display').includes('declinados-clasificacion-bombas'));
+        assert.ok(options.columns[5].render('SELLOS FLOWSERVE','display').includes('declinados-clasificacion-sellos'));
+        assert.equal(node('declinados-vendedores').children[0].children[2].children[0].style.width,unscoped?'62.5%':'100%');
+    }
     assert.equal(options.columns[2].render('2026-09-30','display'), '30/09/2026');
     assert.ok(options.columns[critical ? 8 : 7].render('CERRADO','display').includes('ventas-ver-seguimientos'), 'Activo como boton de seguimiento');
     assert.ok(options.columns[7].render('CERRADO','display').includes('btn-danger'),'Declinados con boton rojo');

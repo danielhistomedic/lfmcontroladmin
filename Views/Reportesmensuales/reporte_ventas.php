@@ -200,26 +200,36 @@
                         <div class="modal-body p-3">
                             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
                                 <span class="text-muted text-3"><i class="fa-regular fa-calendar-range me-1" aria-hidden="true"></i> Periodo: <strong id="declinados-periodo" class="text-dark"><?= $esc($periodLabel); ?></strong></span>
-                                <span class="badge bg-primary text-white text-3 px-3 py-2" id="declinados-total">0 Proyectos</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" id="declinados-exportar" class="btn btn-outline-primary btn-sm" hidden disabled><i class="fa-solid fa-file-excel me-1" aria-hidden="true"></i> Exportar a Excel</button>
+                                    <span class="badge bg-primary text-white text-3 px-3 py-2" id="declinados-total">0 Proyectos</span>
+                                </div>
                             </div>
                             <div id="declinados-estado" class="mb-2" role="status" aria-live="polite"></div>
                             <button type="button" id="declinados-reintentar" class="btn btn-outline-primary mb-3" hidden>Reintentar</button>
+                            <div id="declinados-kpis" class="declinados-indicadores mb-3" hidden>
+                                    <div class="declinados-kpi-total"><i class="fa-solid fa-file-lines declinados-kpi-icono" aria-hidden="true"></i><div><span>Total proyectos declinados</span><strong id="declinados-resumen-total">—</strong></div></div>
+                                    <div class="declinados-kpi-vendedores"><i class="fa-solid fa-users declinados-kpi-icono" aria-hidden="true"></i><div><span>Vendedores con declinados</span><strong id="declinados-resumen-vendedores">—</strong></div></div>
+                                    <div class="declinados-kpi-lider"><i class="fa-solid fa-trophy declinados-kpi-icono" aria-hidden="true"></i><div><span>Vendedor con más declinados</span><strong id="declinados-resumen-lider">—</strong><small id="declinados-resumen-lider-detalle"></small></div></div>
+                            </div>
+                            <div class="declinados-distribucion">
                             <section id="declinados-resumen" hidden aria-labelledby="declinados-resumen-titulo">
-                                <h6 id="declinados-resumen-titulo">Resumen por vendedor</h6>
-                                <div class="declinados-indicadores mb-3">
-                                    <div><span>Total proyectos declinados</span><strong id="declinados-resumen-total">—</strong></div>
-                                    <div><span>Vendedores con declinados</span><strong id="declinados-resumen-vendedores">—</strong></div>
-                                    <div><span>Vendedor con más declinados</span><strong id="declinados-resumen-lider">—</strong></div>
+                                <div class="declinados-panel-cabecera">
+                                    <h6 id="declinados-resumen-titulo">Vendedores</h6>
+                                    <span>Proyectos</span>
                                 </div>
-                                <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="declinados-todos-fila">
                                     <button type="button" id="declinados-todos" class="btn btn-outline-primary btn-sm" aria-pressed="false" disabled>TODOS</button>
-                                    <span class="text-muted">Selecciona un vendedor para ver sus proyectos.</span>
                                 </div>
-                                <div id="declinados-vendedores" class="declinados-vendedores mb-3" role="group" aria-label="Vendedores con proyectos declinados"></div>
+                                <div id="declinados-vendedores" class="declinados-vendedores" role="group" aria-label="Vendedores con proyectos declinados"></div>
                             </section>
                             <section id="declinados-detalle" hidden aria-labelledby="declinados-detalle-titulo">
-                            <h6 id="declinados-detalle-titulo" aria-live="polite"></h6>
-                            <div class="table-responsive export-table">
+                            <div id="declinados-detalle-cabecera" class="declinados-panel-cabecera">
+                                <h6 id="declinados-detalle-titulo" aria-live="polite"></h6>
+                                <span id="declinados-detalle-cantidad" class="declinados-detalle-cantidad"></span>
+                            </div>
+                            <p id="declinados-detalle-vacio" class="declinados-detalle-vacio" hidden>Selecciona un vendedor o TODOS para consultar los proyectos declinados del período.</p>
+                            <div id="declinados-detalle-tabla" class="table-responsive export-table">
                                 <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
                                     <caption class="visually-hidden">Lista de proyectos del período y vendedor seleccionados</caption>
                                     <thead>
@@ -233,6 +243,7 @@
                                 </table>
                             </div>
                             </section>
+                            </div>
                         </div>
                         <div class="modal-footer bg-light p-2">
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>

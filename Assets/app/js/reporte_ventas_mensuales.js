@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const detailTitle = document.getElementById('declinados-detalle-titulo');
         const sellerButtons = document.getElementById('declinados-vendedores');
         const allSellers = document.getElementById('declinados-todos');
+        const kpiPanel = document.getElementById('declinados-kpis');
+        const detailCount = document.getElementById('declinados-detalle-cantidad');
+        const detailEmpty = document.getElementById('declinados-detalle-vacio');
+        const detailTable = document.getElementById('declinados-detalle-tabla');
+        const exportButton = document.getElementById('declinados-exportar');
         let selectedDeclinedSeller = null;
         let declinedSummary = null;
         let summaryRequest = null;
@@ -47,6 +52,13 @@ document.addEventListener('DOMContentLoaded', function () {
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
         const text = value => escape(String(value == null ? '' : value));
+        const attribute = value => text(value).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        const cell = (value,className='') => '<span class="declinados-celda '+className+'" title="'+attribute(value)+'">'+text(value)+'</span>';
+        function detailHeading(name,total) {
+            detailTitle.textContent = 'Proyectos de: '+name;
+            detailTitle.title = name;
+            detailCount.textContent = total+' proyectos declinados';
+        }
         function declinedParams() {
             const params = new URLSearchParams({lista:'declinados',vendedor:modal.dataset.vendedor});
             modal.dataset.anio.split(',').forEach(value=>params.append('anio[]',value));
@@ -59,9 +71,9 @@ document.addEventListener('DOMContentLoaded', function () {
             selectedDeclinedSeller = seller;
             allSellers.setAttribute('aria-pressed',String(seller === null));
             [...sellerButtons.children].forEach(button=>button.setAttribute('aria-pressed',String(seller !== null && button.dataset.vendedor === String(seller.vendedor_id))));
-            detailTitle.textContent = (seller ? seller.nombre : 'TODOS') + ' · ' +
-                (seller ? seller.proyectos : declinedSummary.total) + ' proyectos declinados';
+            detailHeading(seller ? seller.nombre : 'TODOS',seller ? seller.proyectos : declinedSummary.total);
             detailPanel.hidden = false;
+            detailEmpty.hidden = true; detailTable.hidden = false;
             if (table) {
                 table.search(''); table.columns().search(''); table.order([]);
                 jQuery(table.table().container()).find('thead input').val('');
@@ -69,14 +81,24 @@ document.addEventListener('DOMContentLoaded', function () {
             initializeTable();
         }
         allSellers.addEventListener('click',()=>selectDeclinedSeller(null));
+        exportButton.addEventListener('click',()=>{
+            if (lista !== 'declinados' || !declinedSummary || exportRequest) return;
+            if (!table || detailTable.hidden) selectDeclinedSeller(null);
+            table.button(0).trigger();
+        });
         async function loadDeclinedSummary() {
             if (summaryRequest) summaryRequest.abort();
             const current = new AbortController(); summaryRequest = current;
             declinedSummary = null; selectedDeclinedSeller = null;
-            summaryPanel.hidden = false; detailPanel.hidden = true;
+            summaryPanel.hidden = false; kpiPanel.hidden = false; detailPanel.hidden = false;
+            document.getElementById('declinados-detalle-cabecera').hidden = false;
+            detailEmpty.hidden = false; detailTable.hidden = true;
+            detailTitle.textContent = 'Proyectos del vendedor'; detailCount.textContent = '';
+            exportButton.hidden = false; exportButton.disabled = true;
             sellerButtons.replaceChildren(); allSellers.disabled = true;
             allSellers.setAttribute('aria-pressed','false');
             ['total','vendedores','lider'].forEach(key=>document.getElementById('declinados-resumen-'+key).textContent='—');
+            document.getElementById('declinados-resumen-lider-detalle').textContent='';
             status.textContent = 'Cargando resumen por vendedor…'; status.className = 'mb-2 text-muted'; retry.hidden = true;
             const params = declinedParams(); params.set('resumen','1');
             try {
@@ -87,22 +109,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 declinedSummary = payload.data;
                 const sellers = declinedSummary.vendedores;
                 badge.textContent = declinedSummary.total+' Proyectos';
-                document.getElementById('declinados-resumen-total').textContent = declinedSummary.total+' proyectos';
+                document.getElementById('declinados-resumen-total').textContent = String(declinedSummary.total);
                 document.getElementById('declinados-resumen-vendedores').textContent = String(sellers.length);
-                document.getElementById('declinados-resumen-lider').textContent = sellers.length ? sellers[0].nombre+' · '+sellers[0].proyectos+' proyectos' : 'Sin proyectos';
                 const percent = new Intl.NumberFormat('es-MX',{maximumFractionDigits:2});
+                document.getElementById('declinados-resumen-lider').textContent = sellers.length ? sellers[0].nombre : 'Sin proyectos';
+                document.getElementById('declinados-resumen-lider-detalle').textContent = sellers.length ? sellers[0].proyectos+' proyectos ('+percent.format(sellers[0].porcentaje)+' %)' : '';
                 sellers.forEach(seller=>{
                     const button = document.createElement('button'); button.type = 'button';
                     button.className = 'declinados-vendedor'; button.dataset.vendedor = seller.vendedor_id;
                     button.setAttribute('aria-pressed','false');
-                    const name = document.createElement('span'); name.textContent = seller.nombre;
-                    const quantity = document.createElement('span'); quantity.textContent = seller.proyectos+' proyectos · '+percent.format(seller.porcentaje)+' %';
+                    const name = document.createElement('span'); name.textContent = seller.nombre; name.title = seller.nombre;
+                    const quantity = document.createElement('span'); quantity.textContent = String(seller.proyectos); quantity.className = 'declinados-vendedor-cantidad';
+                    const percentage = document.createElement('span'); percentage.textContent = percent.format(seller.porcentaje)+' %'; percentage.className = 'declinados-vendedor-porcentaje';
                     const track = document.createElement('span'); track.className = 'declinados-vendedor-barra'; track.setAttribute('aria-hidden','true');
-                    const fill = document.createElement('span'); fill.style.width = (sellers[0].proyectos ? seller.proyectos/sellers[0].proyectos*100 : 0)+'%';
-                    track.appendChild(fill); button.appendChild(name); button.appendChild(quantity); button.appendChild(track);
+                    const fill = document.createElement('span'); fill.style.width = seller.porcentaje+'%';
+                    track.appendChild(fill); button.appendChild(name); button.appendChild(quantity); button.appendChild(track); button.appendChild(percentage);
                     button.addEventListener('click',()=>selectDeclinedSeller(seller)); sellerButtons.appendChild(button);
                 });
                 allSellers.disabled = false;
+                exportButton.disabled = false;
                 status.textContent = sellers.length ? '' : 'No hay proyectos declinados para el período seleccionado.';
             } catch(error) {
                 if (error.name === 'AbortError' || summaryRequest !== current) return;
@@ -115,7 +140,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (restoreList) { restoreList = false; if (table) table.columns.adjust(); return; }
                 return loadDeclinedSummary();
             }
-            summaryPanel.hidden = true; detailPanel.hidden = false; detailTitle.textContent = '';
+            summaryPanel.hidden = true; kpiPanel.hidden = true; exportButton.hidden = true;
+            document.getElementById('declinados-detalle-cabecera').hidden = true;
+            detailPanel.hidden = false; detailTable.hidden = false; detailEmpty.hidden = true;
+            detailTitle.textContent = ''; detailCount.textContent = '';
             initializeTable();
         }
         async function exportDeclined(event,dt,node,config) {
@@ -123,6 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (lista !== 'declinados') return excel.call(this,event,dt,node,config);
             if (exportRequest) return;
             const current = new AbortController(); exportRequest = current;
+            exportButton.disabled = true;
             this.processing(true);
             const params = declinedParams(); params.set('datatable','1'); params.set('length','100'); params.set('order_column','2'); params.set('order_dir','desc');
             if (selectedDeclinedSeller) params.set('declinado_vendedor',selectedDeclinedSeller.vendedor_id);
@@ -149,10 +178,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (error.name === 'AbortError') return;
                 status.textContent = 'No se pudo exportar: '+(error instanceof SyntaxError ? 'respuesta inválida.' : error.message);
                 status.className = 'mb-2 text-danger';
-            } finally { if (exportRequest === current) exportRequest = null; this.processing(false); }
+            } finally { if (exportRequest === current) exportRequest = null; exportButton.disabled = false; this.processing(false); }
         }
         function detailColumns() {
-            [0,4,7].forEach(index=>table.column(index).visible(lista !== 'declinados'));
+            [4,7].forEach(index=>table.column(index).visible(lista !== 'declinados'));
             table.column(8).visible(lista === 'interna_sin_cliente');
         }
         function initializeTable() {
@@ -193,16 +222,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 columns: [
                     { data: null, orderable: false, searchable: false, render: (value, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1 },
-                    { data: 'proyecto_id', render: (v, type) => type === 'display' ? '<span class="text-danger">' + text(v) + '</span>' : v },
+                    { data: 'proyecto_id', render: (v, type) => type === 'display' ? (lista === 'declinados' ? cell(v,'text-danger') : '<span class="text-danger">' + text(v) + '</span>') : v },
                     { data: 'fecha', render: (v, type) => {
                         if (type !== 'display') return v;
                         const date = String(v || '').slice(0, 10);
                         return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.split('-').reverse().join('/') : '—';
                     } },
-                    { data: 'cliente', render: (v, type) => type === 'display' ? '<span class="text-primary">' + text(v) + '</span>' : v },
+                    { data: 'cliente', render: (v, type) => type === 'display' ? (lista === 'declinados' ? cell(v) : '<span class="text-primary">' + text(v) + '</span>') : v },
                     { data: 'vendedor', render: (v, type) => type === 'display' ? text(v) : v },
-                    { data: 'clasificacion', render: (v, type) => type === 'display' ? '<span class="badge border text-dark bg-light">' + text(v) + '</span>' : v },
-                    { data: 'titulo', render: (v, type) => type === 'display' ? text(v) : v },
+                    { data: 'clasificacion', render: (v, type) => {
+                        if (type !== 'display') return v;
+                        if (lista !== 'declinados') return '<span class="badge border text-dark bg-light">'+text(v)+'</span>';
+                        const name=String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                        const color=name.includes('VALVULAS')?'valvulas':name.includes('BOMBAS')?'bombas':name.includes('SELLOS')?'sellos':name.includes('DIVERSOS')?'diversos':'neutral';
+                        return '<span class="declinados-clasificacion declinados-clasificacion-'+color+'" title="'+attribute(v)+'">'+text(v)+'</span>';
+                    } },
+                    { data: 'titulo', render: (v, type) => type === 'display' ? (lista === 'declinados' ? cell(v) : text(v)) : v },
                     { data: 'activo', render: (v, type) => {
                         if (type !== 'display') return v;
                         const color = v === 'CERRADO' ? 'danger' : 'primary';
@@ -268,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo cargar la lista.');
                         if (request !== current) return;
                         badge.textContent = (lista === 'declinados' && declinedSummary ? declinedSummary.total : payload.data.recordsTotal) + ' Proyectos';
-                        if (lista === 'declinados') detailTitle.textContent = (selectedDeclinedSeller ? selectedDeclinedSeller.nombre : 'TODOS')+' · '+payload.data.recordsTotal+' proyectos declinados';
+                        if (lista === 'declinados') detailHeading(selectedDeclinedSeller ? selectedDeclinedSeller.nombre : 'TODOS',payload.data.recordsTotal);
                         status.textContent = '';
                         callback(payload.data);
                     } catch (error) {
@@ -319,6 +354,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 table.order([]);
             }
             lista = next;
+            modal.dataset.lista = lista;
             if (summaryRequest) summaryRequest.abort(); summaryRequest = null;
             if (exportRequest) exportRequest.abort();
             if (periodLabel) {
