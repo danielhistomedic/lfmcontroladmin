@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let openingFollowup = false;
         let lista = 'declinados';
         const isLightTable = () => ['declinados','interna_sin_cliente'].includes(lista);
+        const projectPageSize = () => lista==='interna_sin_cliente'?5:10;
         let currentPageRows = [];
         const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo','colocados_periodo'].includes(lista);
         const listTitle = () => isDrill() ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
@@ -88,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if(lista!=='interna_sin_cliente'||exportRequest||request)return;
             const current=new AbortController();exportRequest=current;
             const button=document.getElementById('declinados-exportar-pagina');button.disabled=true;
-            try{await downloadDeclinedExcel(currentPageRows,current.signal,declinedPage*10);}
+            try{await downloadDeclinedExcel(currentPageRows,current.signal,declinedPage*projectPageSize());}
             catch(error){status.textContent='No se pudo exportar: '+error.message;status.className='mb-2 text-danger';}
             finally{if(exportRequest===current)exportRequest=null;button.disabled=false;}
         });
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             filterTimer=setTimeout(loadDeclinedTable,300);
         });
         document.getElementById('declinados-anterior').addEventListener('click',()=>{if(declinedPage>0){declinedPage--;loadDeclinedTable();}});
-        document.getElementById('declinados-siguiente').addEventListener('click',()=>{if((declinedPage+1)*10<declinedTotal){declinedPage++;loadDeclinedTable();}});
+        document.getElementById('declinados-siguiente').addEventListener('click',()=>{if((declinedPage+1)*projectPageSize()<declinedTotal){declinedPage++;loadDeclinedTable();}});
         sortButtons.forEach(button=>button.addEventListener('click',()=>{
             const order=Number(button.dataset.order);
             declinedDirection=declinedOrder===order&&declinedDirection==='asc'?'desc':'asc';
@@ -117,13 +118,14 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('declinados-anterior').disabled=true;document.getElementById('declinados-siguiente').disabled=true;
             customPanel.setAttribute('aria-busy','true');status.textContent='Cargando proyectos…';status.className='mb-2 text-muted';retry.hidden=true;
             sortButtons.forEach(button=>{
-                button.parentElement.hidden=[4,7].includes(Number(button.dataset.order))&&lista!=='interna_sin_cliente';
+                button.parentElement.hidden=Number(button.dataset.order)===4&&lista!=='interna_sin_cliente';
                 const active=Number(button.dataset.order)===declinedOrder;
                 button.textContent=button.dataset.label+(active?(declinedDirection==='asc'?' ↑':' ↓'):'');
                 button.parentElement.setAttribute('aria-sort',active?(declinedDirection==='asc'?'ascending':'descending'):'none');
             });
             document.getElementById('declinados-seguimiento-cabecera').textContent=lista==='interna_sin_cliente'?'Seguimientos':'Seguimiento';
-            const params=declinedParams();params.set('lista',lista);params.set('datatable','1');params.set('start',String(declinedPage*10));params.set('length','10');
+            const size=projectPageSize();
+            const params=declinedParams();params.set('lista',lista);params.set('datatable','1');params.set('start',String(declinedPage*size));params.set('length',String(size));
             params.set('search',declinedSearch.value || '');params.set('order_column',String(declinedOrder));params.set('order_dir',declinedDirection);
             if(lista==='declinados'&&selectedDeclinedSeller)params.set('declinado_vendedor',selectedDeclinedSeller.vendedor_id);
             try{
@@ -131,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const payload=await response.json();if(!response.ok||!payload.status)throw new Error(payload.message || 'No se pudo cargar el detalle.');
                 if(request!==current)return;
                 declinedTotal=payload.data.recordsFiltered;
-                const last=Math.max(0,Math.ceil(declinedTotal/10)-1);
+                const last=Math.max(0,Math.ceil(declinedTotal/size)-1);
                 if(declinedPage>last){declinedPage=last;return loadDeclinedTable();}
                 if(lista==='declinados')detailHeading(selectedDeclinedSeller?selectedDeclinedSeller.nombre:'TODOS',payload.data.recordsTotal);
                 else badge.textContent=payload.data.recordsTotal+' Proyectos';
@@ -139,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 payload.data.data.forEach((row,index)=>{
                     const tr=document.createElement('tr');const date=String(row.fecha || '').slice(0,10);
                     const internal=lista==='interna_sin_cliente';
-                    const values=[declinedPage*10+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'—',row.cliente,...(internal?[row.vendedor]:[]),row.clasificacion,row.titulo];
+                    const values=[declinedPage*size+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'—',row.cliente,...(internal?[row.vendedor]:[]),row.clasificacion,row.titulo];
                     values.forEach((value,column)=>{
                         const td=document.createElement('td'),span=document.createElement('span');span.textContent=String(value ?? '');span.title=String(value ?? '');
                         span.className='declinados-celda'+(column===1?' text-danger':'');
@@ -147,17 +149,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             span.className='declinados-clasificacion declinados-clasificacion-'+(name.includes('VALVULAS')?'valvulas':name.includes('BOMBAS')?'bombas':name.includes('SELLOS')?'sellos':name.includes('DIVERSOS')?'diversos':'neutral');}
                         td.appendChild(span);tr.appendChild(td);
                     });
-                    if(internal){const td=document.createElement('td'),active=followupButton(row);
-                        active.prepend(document.createTextNode((row.activo||'ACTIVO')+' '));td.appendChild(active);tr.appendChild(td);}
                     const actionCell=document.createElement('td'),button=followupButton(row);
                     actionCell.className='declinados-col-seguimiento';
-                    if(internal)button.appendChild(document.createTextNode(' Ver seguimientos'));
                     actionCell.appendChild(button);tr.appendChild(actionCell);body.appendChild(tr);
                 });
-                if(!payload.data.data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=lista==='interna_sin_cliente'?9:7;td.textContent='No hay proyectos para la búsqueda seleccionada.';tr.appendChild(td);body.appendChild(tr);}
-                const start=declinedPage*10;
+                if(!payload.data.data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=lista==='interna_sin_cliente'?8:7;td.textContent='No hay proyectos para la búsqueda seleccionada.';tr.appendChild(td);body.appendChild(tr);}
+                const start=declinedPage*size;
                 document.getElementById('declinados-tabla-pagina').textContent=declinedTotal?(start+1)+'–'+(start+payload.data.data.length)+' de '+declinedTotal:'0 resultados';
-                document.getElementById('declinados-anterior').disabled=declinedPage===0;document.getElementById('declinados-siguiente').disabled=start+10>=declinedTotal;
+                document.getElementById('declinados-anterior').disabled=declinedPage===0;document.getElementById('declinados-siguiente').disabled=start+size>=declinedTotal;
                 status.textContent='';
                 document.getElementById('declinados-exportar-pagina').disabled=!currentPageRows.length;
             }catch(error){if(error.name==='AbortError'||request!==current)return;
@@ -263,9 +262,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const sourceList=lista,internal=sourceList==='interna_sin_cliente';
             if(typeof JSZip==='undefined')throw new Error('La biblioteca de Excel no está disponible.');
             const xml=value=>String(value ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
-            const values=[['No.','ID Proyecto','Fecha','Cliente',...(internal?['Vendedor']:[]),'Clasificación','Título',...(internal?['Activo']:[])],...rows.map((row,index)=>{
+            const values=[['No.','ID Proyecto','Fecha','Cliente',...(internal?['Vendedor']:[]),'Clasificación','Título'],...rows.map((row,index)=>{
                 const date=String(row.fecha || '').slice(0,10);
-                return [offset+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'',row.cliente,...(internal?[row.vendedor]:[]),row.clasificacion,row.titulo,...(internal?[row.activo||'ACTIVO']:[])];
+                return [offset+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'',row.cliente,...(internal?[row.vendedor]:[]),row.clasificacion,row.titulo];
             })];
             const sheet=values.map((row,index)=>'<row r="'+(index+1)+'">'+row.map((value,column)=>'<c r="'+String.fromCharCode(65+column)+(index+1)+'" t="inlineStr"><is><t xml:space="preserve">'+xml(value)+'</t></is></c>').join('')+'</row>').join('');
             const zip=new JSZip();const declaration='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';

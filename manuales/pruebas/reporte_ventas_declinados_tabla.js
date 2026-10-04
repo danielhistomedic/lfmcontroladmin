@@ -21,7 +21,7 @@ async function run(internal=false) {
         });
         return nodes.get(id);
     }
-    const headers=[1,2,3,4,5,6,7].map((order,i)=>{const button=node('sort-'+order);button.dataset={order:String(order),label:['ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título','Activo'][i]};return button;});
+    const headers=[1,2,3,4,5,6].map((order,i)=>{const button=node('sort-'+order);button.dataset={order:String(order),label:['ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título'][i]};return button;});
     const modal=node('modal-declinados-ventas');modal.dataset={url:'/declinados',anio:'2024,2026',mes:'9,10',vendedor:''};
     node('filtros-ventas-mensuales').querySelector=()=>node('submit');
     node('ventas-mensuales-datos').textContent=JSON.stringify({vendedores:[],productos:[],cruce:[]});
@@ -53,26 +53,30 @@ async function run(internal=false) {
         assert.equal(calls.length,1);assert.equal(calls[0].get('lista'),'interna_sin_cliente');assert.ok(!calls[0].has('resumen'));assert.ok(!calls[0].has('declinado_vendedor'));
         assert.equal(node('declinados-tabla-propia').hidden,false);assert.equal(node('declinados-tabla-legado').hidden,true);
         assert.equal(node('declinados-resumen').hidden,true);assert.equal(node('declinados-kpis').hidden,true);
-        assert.equal(node('declinados-total').textContent,'27 Proyectos');assert.equal(node('declinados-tabla-pagina').textContent,'1–10 de 27');
-        const body=node('declinados-tabla-filas');assert.equal(body.children[0].children.length,9,'Conservar nueve columnas');
+        assert.equal(node('declinados-total').textContent,'27 Proyectos');assert.equal(node('declinados-tabla-pagina').textContent,'1–5 de 27');
+        assert.equal(calls[0].get('length'),'5');assert.equal(node('declinados-tabla-filas').children.length,5);
+        const body=node('declinados-tabla-filas');assert.equal(body.children[0].children.length,8,'Ocho columnas, sin Activo');
         assert.equal(body.children[0].children[4].children[0].textContent,'Vendedor V2');
         assert.ok(body.children[0].children[5].children[0].className.includes('clasificacion-valvulas'));
         assert.equal(body.children[0].children[6].children[0].textContent,'<img src=x> & =SUM(1)');
-        assert.equal(body.children[0].children[7].children[0].children[0].textContent,'CERRADO ');
-        const button=body.children[0].children[8].children[0];button.events.click({stopPropagation(){}});modal.events['hidden.bs.modal']();
+        const button=body.children[0].children[7].children[0];
+        assert.equal(button.children.length,1,'Solo icono');assert.equal(button.children[0].className,'fa-solid fa-list-check');
+        assert.equal(button.title,'Ver seguimiento del proyecto');assert.ok(button.className.includes('btn-danger'));
+        button.events.click({stopPropagation(){}});modal.events['hidden.bs.modal']();
         assert.deepEqual(context.followup,[27,'P27']);assert.equal(node('modalSeguimientosVenta').dataset.lista,'interna_sin_cliente');
         node('modalSeguimientosVenta').events['hidden.bs.modal']();await modal.events['shown.bs.modal']();assert.equal(calls.length,1);
-        node('declinados-siguiente').events.click();await settle();assert.equal(node('declinados-tabla-pagina').textContent,'11–20 de 27');
+        node('declinados-siguiente').events.click();await settle();assert.equal(node('declinados-tabla-pagina').textContent,'6–10 de 27');
+        assert.equal(calls.at(-1).get('start'),'5');
         node('declinados-exportar-pagina').events.click();for(let i=0;i<100&&!exported;i++)await settle();
         const zip=await JSZip.loadAsync(exported),sheet=await zip.file('xl/worksheets/sheet1.xml').async('string');
-        assert.equal((sheet.match(/<row /g)||[]).length,11);assert.ok(sheet.includes('Vendedor'));assert.ok(sheet.includes('Activo'));assert.ok(sheet.includes('A1:H11'));
+        assert.equal((sheet.match(/<row /g)||[]).length,6);assert.ok(sheet.includes('Vendedor'));assert.ok(!sheet.includes('Activo'));assert.ok(sheet.includes('A1:G6'));
         for(const header of headers){header.events.click();await settle();assert.equal(calls.at(-1).get('order_column'),header.dataset.order);}
         node('declinados-buscar').value='Cliente 2';node('declinados-buscar').events.input();await new Promise(resolve=>setTimeout(resolve,330));assert.equal(calls.at(-1).get('search'),'Cliente 2');
         failure=true;node('declinados-reintentar').events.click();await settle();assert.equal(node('declinados-reintentar').hidden,false);
-        failure=false;node('declinados-buscar').value='sin-coincidencias';node('declinados-reintentar').events.click();await settle();assert.equal(body.children[0].children[0].colSpan,9);
+        failure=false;node('declinados-buscar').value='sin-coincidencias';node('declinados-reintentar').events.click();await settle();assert.equal(body.children[0].children[0].colSpan,8);
         modal.events['show.bs.modal']({relatedTarget:{dataset:{}}});await modal.events['shown.bs.modal']();assert.equal(calls.at(-1).get('resumen'),'1');
         node('declinados-vendedores').children[0].events.click();await settle();assert.equal(body.children[0].children.length,7,'Regresar a columnas de Declinados');
-        console.log('OK: Cotización Interna sin DataTables, nueve columnas, filtros, orden, páginas, historial, Excel y transición a Declinados.');return;
+        console.log('OK: Cotización Interna, ocho columnas sin Activo, icono, filtros, orden, páginas, historial, Excel y transición a Declinados.');return;
     }
     assert.equal(node('declinados-detalle-tabla').hidden,true);
     node('declinados-vendedores').children[0].events.click();await settle();
