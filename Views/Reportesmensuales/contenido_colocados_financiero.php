@@ -76,7 +76,7 @@
     </div>
 </section>
 <?php endif; ?>
-<details id="<?= $colocadosPrefix; ?>colocados-partidas" class="colocados-resumen-seccion colocados-partidas-destacado" <?= $colocadosPrefix === '' ? 'hidden' : ''; ?> open aria-labelledby="<?= $colocadosPrefix; ?>colocados-partidas-titulo">
+<details id="<?= $colocadosPrefix; ?>colocados-partidas" class="colocados-resumen-seccion colocados-partidas-destacado" <?= $colocadosPrefix === '' ? 'hidden open' : ''; ?> aria-labelledby="<?= $colocadosPrefix; ?>colocados-partidas-titulo">
     <summary>
         <h6 id="<?= $colocadosPrefix; ?>colocados-partidas-titulo"><?= $colocadosPrefix === '' ? 'Detalle de partidas del mes' : 'Total por Productos'; ?></h6>
     </summary>

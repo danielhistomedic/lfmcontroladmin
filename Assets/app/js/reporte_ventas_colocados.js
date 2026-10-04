@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const next = byId('colocados-partidas-siguiente');
         const detailRetry = byId('colocados-partidas-reintentar');
         section.hidden = false;
-        section.open = true;
+        if (isModal) section.open = true;
         byId('colocados-partidas-titulo').textContent = isModal ? 'Partidas de ' + monthNames[Number(detail.month)-1] + ' ' + detail.year + ' (todas las monedas)' : 'Total por Productos';
         body.replaceChildren(); state.textContent = 'Cargando partidas...'; previous.disabled = next.disabled = true; detailRetry.hidden = true;
         byId('colocados-partidas-pagina').textContent = '';
@@ -248,6 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
             byId('colocados-mensual-filas').replaceChildren();
         } else {
             detail.start = 0;
+            byId('colocados-partidas').open = false;
             loadDetails();
         }
         loadSummary(); loadTable('clientes', true); loadTable('vendedores', true);

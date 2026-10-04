@@ -139,9 +139,9 @@ unset($_GET['periodo_anio'],$_GET['periodo_mes']); $_GET['anio']=['2026'];
 $colocadosPrefix = 'panel-';
 ob_start(); require __DIR__.'/../../Views/Reportesmensuales/contenido_colocados_financiero.php'; $panelHtml=ob_get_clean();
 verificar(!str_contains($panelHtml,'Pedidos por mes') && str_contains($panelHtml,'Total por Productos')
-    && preg_match('/<details[^>]+id="panel-colocados-partidas"[^>]* open /',$panelHtml)
+    && !preg_match('/<details[^>]+id="panel-colocados-partidas"[^>]* open /',$panelHtml)
     && !preg_match('/<details[^>]+id="panel-colocados-partidas"[^>]* hidden/',$panelHtml),
-    'Panel elimina tarjeta mensual y deja Total por Productos abierto y visible');
+    'Panel elimina tarjeta mensual y deja Total por Productos contraido y visible');
 Session::$active=false; verificar(llamarFinanciero($api)[0]===401, 'Rechazar sesion vencida');
 Session::$active=true; $testPermissions=[]; verificar(llamarFinanciero($api)[0]===403, 'Comprobar permiso del modulo');
 $testPermissions=[139=>['r'=>1]]; $_SERVER['REQUEST_METHOD']='POST'; verificar(llamarFinanciero($api)[0]===405, 'Solo lectura GET');

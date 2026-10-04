@@ -40,7 +40,7 @@ async function tick(){await new Promise(resolve=>setImmediate(resolve));}
     await tick();
     assert.equal(node('panel-colocados-financiero-resumen').hidden,false);
     assert.equal(node('panel-colocados-partidas').hidden,false,'Partidas visibles al cargar');
-    assert.equal(node('panel-colocados-partidas').open,true,'Partidas abiertas al cargar');
+    assert.equal(node('panel-colocados-partidas').open,false,'Total por Productos contraido al cargar');
     assert.equal(node('panel-colocados-partidas-titulo').textContent,'Total por Productos');
     const initialDetails=queries.find(query=>query.get('seccion')==='detalle');
     assert.deepEqual(initialDetails.getAll('anio[]'),['2024','2026']);
