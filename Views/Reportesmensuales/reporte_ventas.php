@@ -208,41 +208,68 @@
                             <div id="declinados-estado" class="mb-2" role="status" aria-live="polite"></div>
                             <button type="button" id="declinados-reintentar" class="btn btn-outline-primary mb-3" hidden>Reintentar</button>
                             <div id="declinados-kpis" class="declinados-indicadores mb-3" hidden>
-                                    <div class="declinados-kpi-total"><i class="fa-solid fa-file-lines declinados-kpi-icono" aria-hidden="true"></i><div><span>Total proyectos declinados</span><strong id="declinados-resumen-total">—</strong></div></div>
-                                    <div class="declinados-kpi-vendedores"><i class="fa-solid fa-users declinados-kpi-icono" aria-hidden="true"></i><div><span>Vendedores con declinados</span><strong id="declinados-resumen-vendedores">—</strong></div></div>
-                                    <div class="declinados-kpi-lider"><i class="fa-solid fa-trophy declinados-kpi-icono" aria-hidden="true"></i><div><span>Vendedor con más declinados</span><strong id="declinados-resumen-lider">—</strong><small id="declinados-resumen-lider-detalle"></small></div></div>
+                                <div class="declinados-kpi-total"><i class="fa-solid fa-file-lines declinados-kpi-icono" aria-hidden="true"></i>
+                                    <div><span>Total proyectos declinados del Periodo + Anteriores</span><strong id="declinados-resumen-total">—</strong></div>
+                                </div>
+                                <div class="declinados-kpi-vendedores"><i class="fa-solid fa-users declinados-kpi-icono" aria-hidden="true"></i>
+                                    <div><span>Declinados del Periodo</span><strong id="declinados-resumen-vendedores">—</strong></div>
+                                </div>
+                                <div class="declinados-kpi-lider"><i class="fa-solid fa-trophy declinados-kpi-icono" aria-hidden="true"></i>
+                                    <div><span>Vendedor con más declinados</span><strong id="declinados-resumen-lider">—</strong><small id="declinados-resumen-lider-detalle"></small></div>
+                                </div>
                             </div>
                             <div class="declinados-distribucion">
-                            <section id="declinados-resumen" hidden aria-labelledby="declinados-resumen-titulo">
-                                <div class="declinados-panel-cabecera">
-                                    <h6 id="declinados-resumen-titulo">Vendedores</h6>
-                                    <span>Proyectos</span>
-                                </div>
-                                <div class="declinados-todos-fila">
-                                    <button type="button" id="declinados-todos" class="btn btn-outline-primary btn-sm" aria-pressed="false" disabled>TODOS</button>
-                                </div>
-                                <div id="declinados-vendedores" class="declinados-vendedores" role="group" aria-label="Vendedores con proyectos declinados"></div>
-                            </section>
-                            <section id="declinados-detalle" hidden aria-labelledby="declinados-detalle-titulo">
-                            <div id="declinados-detalle-cabecera" class="declinados-panel-cabecera">
-                                <h6 id="declinados-detalle-titulo" aria-live="polite"></h6>
-                                <span id="declinados-detalle-cantidad" class="declinados-detalle-cantidad"></span>
-                            </div>
-                            <p id="declinados-detalle-vacio" class="declinados-detalle-vacio" hidden>Selecciona un vendedor o TODOS para consultar los proyectos declinados del período.</p>
-                            <div id="declinados-detalle-tabla" class="table-responsive export-table">
-                                <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
-                                    <caption class="visually-hidden">Lista de proyectos del período y vendedor seleccionados</caption>
-                                    <thead>
-                                        <tr>
-                                            <?php foreach (['No.', 'ID Proyecto', 'Fecha', 'Cliente', 'Vendedor', 'Clasificación', 'Título', 'Activo', 'Seguimientos'] as $heading): ?>
-                                                <th class="border-bottom-0 fw-semibold text-center"><?= $esc($heading); ?></th>
-                                            <?php endforeach; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="declinados-proyectos"></tbody>
-                                </table>
-                            </div>
-                            </section>
+                                <section id="declinados-resumen" hidden aria-labelledby="declinados-resumen-titulo">
+                                    <div class="declinados-panel-cabecera">
+                                        <h6 id="declinados-resumen-titulo">Vendedores</h6>
+                                        <span>Proyectos</span>
+                                    </div>
+                                    <div class="declinados-todos-fila">
+                                        <button type="button" id="declinados-todos" class="btn btn-outline-primary btn-sm" aria-pressed="false" disabled>TODOS</button>
+                                    </div>
+                                    <div id="declinados-vendedores" class="declinados-vendedores" role="group" aria-label="Vendedores con proyectos declinados"></div>
+                                </section>
+                                <section id="declinados-detalle" hidden aria-labelledby="declinados-detalle-titulo">
+                                    <div id="declinados-detalle-cabecera" class="declinados-panel-cabecera">
+                                        <h6 id="declinados-detalle-titulo" aria-live="polite"></h6>
+                                        <span id="declinados-detalle-cantidad" class="declinados-detalle-cantidad"></span>
+                                    </div>
+                                    <p id="declinados-detalle-vacio" class="declinados-detalle-vacio" hidden>Selecciona un vendedor o TODOS para consultar los proyectos declinados del período.</p>
+                                    <div id="declinados-detalle-tabla" class="table-responsive export-table">
+                                        <div id="declinados-tabla-propia" hidden>
+                                            <label class="declinados-buscar" for="declinados-buscar">Buscar<input type="search" id="declinados-buscar" maxlength="200" class="form-control form-control-sm" placeholder="Cliente, título o ID de proyecto"></label>
+                                            <table class="declinados-tabla w-100">
+                                                <caption class="visually-hidden">Proyectos declinados del vendedor y período seleccionados</caption>
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">No.</th>
+                                                        <?php foreach ([1 => 'ID Proyecto', 2 => 'Fecha', 3 => 'Cliente', 5 => 'Clasificación', 6 => 'Título'] as $index => $heading): ?>
+                                                            <th scope="col" aria-sort="<?= $index === 2 ? 'descending' : 'none'; ?>"><button type="button" data-order="<?= $index; ?>" data-label="<?= $esc($heading); ?>"><?= $esc($heading); ?><?= $index === 2 ? ' ↓' : ''; ?></button></th>
+                                                        <?php endforeach; ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="declinados-tabla-filas"></tbody>
+                                            </table>
+                                            <div class="declinados-tabla-pie">
+                                                <span id="declinados-tabla-pagina" aria-live="polite">0 resultados</span>
+                                                <nav aria-label="Páginas de proyectos declinados"><button type="button" id="declinados-anterior" class="btn btn-sm" disabled>Anterior</button><button type="button" id="declinados-siguiente" class="btn btn-sm" disabled>Siguiente</button></nav>
+                                            </div>
+                                        </div>
+                                        <div id="declinados-tabla-legado">
+                                            <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
+                                                <caption class="visually-hidden">Lista de proyectos del período y vendedor seleccionados</caption>
+                                                <thead>
+                                                    <tr>
+                                                        <?php foreach (['No.', 'ID Proyecto', 'Fecha', 'Cliente', 'Vendedor', 'Clasificación', 'Título', 'Activo', 'Seguimientos'] as $heading): ?>
+                                                            <th class="border-bottom-0 fw-semibold text-center"><?= $esc($heading); ?></th>
+                                                        <?php endforeach; ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="declinados-proyectos"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </section>
                             </div>
                         </div>
                         <div class="modal-footer bg-light p-2">

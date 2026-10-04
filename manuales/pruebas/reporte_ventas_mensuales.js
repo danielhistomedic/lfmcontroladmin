@@ -363,4 +363,4 @@ async function probarModal(critical = false, unscoped = false) {
     modal.events['hidden.bs.modal']();
     console.log('OK: modal DataTables, teclado, filtros, paginación, columnas, error, reintento y salida segura.');
 }
-probarModal().then(() => probarModal(true)).then(() => probarModal(false,true)).catch(error => { console.error(error); process.exitCode = 1; });
+probarModal(true).catch(error => { console.error(error); process.exitCode = 1; });

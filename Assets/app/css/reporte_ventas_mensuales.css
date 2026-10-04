@@ -241,6 +241,20 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
 #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(5) { width:20% !important; }
 #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(6) { width:25% !important; }
 #modal-declinados-ventas .declinados-celda { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#modal-declinados-ventas .declinados-buscar { display:block; margin-bottom:12px; font-size:10px; color:var(--declinados-secundario); }
+#modal-declinados-ventas .declinados-buscar input { margin-top:4px; border-color:var(--declinados-borde); font-size:11px; }
+#modal-declinados-ventas #declinados-tabla-propia table { border-collapse:collapse; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-tabla-propia th { background:#e8f4f7; color:#087e98; border:0; text-align:left; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-tabla-propia :is(th,td) { padding:10px 8px; }
+#modal-declinados-ventas #declinados-tabla-propia td { border:0; border-bottom:1px solid var(--declinados-borde); }
+#modal-declinados-ventas #declinados-tabla-propia tbody tr:hover { background:var(--declinados-suave); }
+#modal-declinados-ventas #declinados-tabla-propia th button { padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:inherit; cursor:pointer; }
+#modal-declinados-ventas #declinados-tabla-propia th button:focus-visible { outline:2px solid #2385bd; outline-offset:3px; }
+#modal-declinados-ventas .declinados-tabla-pie { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; color:var(--declinados-secundario); font-size:10px; }
+#modal-declinados-ventas .declinados-tabla-pie nav { display:flex; gap:6px; }
+#modal-declinados-ventas .declinados-tabla-pie .btn { border:1px solid var(--declinados-borde); border-radius:5px; padding:6px 10px; font-size:11px; color:var(--declinados-texto); }
+#modal-declinados-ventas .declinados-tabla-pie .btn:hover { background:var(--declinados-suave); }
+html.dark #modal-declinados-ventas[data-lista="declinados"] #declinados-tabla-propia th { background:#2a3b4e; color:#edf2f7; }
 #modal-declinados-ventas .declinados-clasificacion { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; padding:3px 6px; border-radius:3px; font-size:9px; font-weight:500; }
 #modal-declinados-ventas .declinados-clasificacion-diversos { background:#dceefd; color:#075a94; }
 #modal-declinados-ventas .declinados-clasificacion-valvulas { background:#def4ed; color:#087766; }
