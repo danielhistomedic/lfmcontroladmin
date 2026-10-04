@@ -6,7 +6,7 @@ $memory = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE=>PDO::ERRMOD
 $memory->sqliteCreateFunction('CONCAT_WS', static fn($separator, ...$parts) => implode($separator, array_filter($parts, static fn($value) => $value !== null)));
 $memory->exec('CREATE TABLE tb_ventas (id INTEGER PRIMARY KEY, proyecto_id TEXT, fecha TEXT, fecha_cotizacion TEXT, clasificacion_proyecto_id INTEGER, estatus_proyecto_id INTEGER, activo TEXT, ccveusuario_vendedor TEXT, moneda_id INTEGER, estatus_pedido_reporte INTEGER)');
 $memory->exec('CREATE TABLE tb_ventas_cotizacion_cliente (id INTEGER PRIMARY KEY, venta_id INTEGER, fecha TEXT, enviado INTEGER, cotizacion_interna_id INTEGER)');
-$memory->exec('CREATE TABLE tb_pedidos_cliente (id INTEGER, venta_id INTEGER, enviado INTEGER)');
+$memory->exec('CREATE TABLE tb_pedidos_cliente (id INTEGER, venta_id INTEGER, enviado INTEGER, fecha_pedido TEXT)');
 $memory->exec('CREATE TABLE tb_compras_cotizacion_interna (id INTEGER, venta_id INTEGER, enviado INTEGER)');
 $memory->exec('CREATE TABLE cat_medico (ccvemedico TEXT, cNombre TEXT, cPriApellido TEXT, cSegApellido TEXT)');
 $memory->exec('CREATE TABLE tb_ventas_detalle (id INTEGER, tipo_partida TEXT)');
@@ -44,6 +44,14 @@ verificar((int)$counts['cotizacion_cliente']===2, 'Cotizados actuales incluyen c
 verificar((int)$execute($capture->calls[8])[0]['cotizacion_cliente_anteriores']===1, 'Cotizados anteriores incluyen cerrados sin duplicar proyectos');
 $amounts = $execute($capture->calls[1]);
 cerca(array_sum(array_column($amounts,'monto')),750, 'Importe y vendedor incluyen exactamente las partidas cotizadas elegibles');
+$annualCounts = $execute($capture->calls[13]);
+$february = array_values(array_filter($annualCounts,static fn($row)=>(int)$row['mes']===2 && $row['tipo']==='cotizado'));
+verificar(count($annualCounts)===24 && (int)$february[0]['proyectos']===3,
+    'SQL anual ejecutado: mismas cantidades mensuales del KPI y dos tipos por cada mes');
+$memory->sqliteCreateFunction('YEAR',static fn($date)=>(int)substr($date,0,4));
+$memory->sqliteCreateFunction('MONTH',static fn($date)=>(int)substr($date,5,2));
+$annualAmounts = $execute($capture->calls[14]);
+cerca(array_sum(array_column($annualAmounts,'monto')),750,'SQL monetario anual conserva las partidas y no multiplica importes');
 $builder = new ReflectionMethod(ReportesmensualesModel::class, 'documentadosPeriodoSql');
 $quoted = $execute($builder->invoke(null,2024,2,'V1','cotizados'));
 verificar(array_column($quoted,'id')===[1,2,4], 'Conjunto de grafica, vendedor y detalle cotizado incluye cerrados una sola vez');

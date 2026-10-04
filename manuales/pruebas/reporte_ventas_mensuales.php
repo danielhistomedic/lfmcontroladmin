@@ -43,7 +43,7 @@ class ConexionSimulada
                 verificar(substr_count($this->sql,'?')===count($params),'Todos los valores SQL están parametrizados');
                 $this->owner->calls[]=[$this->sql,$params]; return true;
             }
-            public function fetchAll($mode) { return array_shift($this->owner->responses); }
+            public function fetchAll($mode) { return array_shift($this->owner->responses) ?? []; }
         };
     }
 }
@@ -75,7 +75,7 @@ cerca($currencyReport['colocado'],250.0,'Mantener importe convertido por la cons
 cerca($currencyReport['colocado_moneda_original']['USD'],150.0,'Conservar importe originalmente USD');
 cerca($currencyReport['colocado_moneda_original']['MXN'],1800.0,'Conservar importe originalmente MXN');
 verificar($currencyReport['tipo_cambio_aplicado'] === 18.0 && $currencyReport['fecha_tipo_cambio'] === '2026-09-30'
-    && count($currencyDb->calls) === 13, 'Misma fuente del tipo de cambio y fecha sin consultas adicionales');
+    && count($currencyDb->calls)===16, 'Misma fuente del tipo de cambio y fecha sin consultas adicionales');
 foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
     verificar(str_contains($currencyDb->calls[1][0], "SUM(CASE WHEN v.moneda_id = $currencyId THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_{$key}_original"),
         'Moneda cotizada original utiliza las mismas partidas sin agregar consultas');
@@ -83,8 +83,23 @@ foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
         'Sumar monedas originales en la misma consulta y con las mismas partidas del importe convertido');
 }
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
+$evolutionResponses = $currencyResponses;
+$evolutionResponses[13] = [['anio'=>2024,'mes'=>1,'tipo'=>'cotizado','proyectos'=>4],['anio'=>2024,'mes'=>1,'tipo'=>'colocado','proyectos'=>1]];
+$evolutionResponses[14] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>1],$currencyResponses[1]);
+$evolutionResponses[15] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>1],$currencyResponses[2]);
+$evolutionDb = new ConexionSimulada($evolutionResponses);
+$evolutionReport = (new ModeloSimulado($evolutionDb))->dashboard(2024,2,'V1');
+verificar(count($evolutionReport['evolucion_mensual'])===12 && $evolutionReport['evolucion_mensual'][0]['cotizado']===4
+    && $evolutionReport['evolucion_mensual'][0]['colocado']===1, 'Enero a diciembre independientes del filtro de febrero');
+cerca($evolutionReport['evolucion_mensual'][0]['importe_cotizado'],600,'Misma conversion y redondeo cotizado en evolucion');
+cerca($evolutionReport['evolucion_mensual'][0]['importe_colocado'],250,'Importe colocado reutiliza el monto ya convertido');
+verificar(count($evolutionDb->calls)===16 && substr_count($evolutionDb->calls[13][0],'UNION ALL')===23,
+    'Conteos de ambos tipos para doce meses en una consulta, sin consultas por vendedor');
+foreach ([14,15] as $index) verificar(in_array('2024-01-01',$evolutionDb->calls[$index][1],true)
+    && in_array('2025-01-01',$evolutionDb->calls[$index][1],true) && end($evolutionDb->calls[$index][1])==='V1',
+    'Importes anuales mantienen vendedor y abarcan el anio completo');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
-verificar(count($db->calls)===13,'Consultas por conjunto');
+verificar(count($db->calls)===16,'Consultas por conjunto');
 foreach ([11,12] as $index) {
     verificar(str_contains($db->calls[$index][0], 'FROM cat_medico GROUP BY ccvemedico) nombres')
         && str_contains($db->calls[$index][0], "COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre"),
@@ -511,7 +526,7 @@ verificar(substr_count($html,'data-bs-target="#modal-declinados-ventas"')===2, '
 verificar(str_contains($html, 'Importes sin IVA en USD') && !str_contains($html, 'con IVA'), 'Pantalla informa subtotales sin IVA');
 verificar(!str_contains($html,'Colocado / cotizado'),'Retirar el indicador de relación anterior');
 verificar(!str_contains($html,'Ventas por vendedor') && !str_contains($html,'ventas-productos') && !str_contains($html,'ventas-cruce') && !str_contains($html,'Criterios del reporte'), 'Secciones inferiores retiradas');
-foreach ($db->calls as $index => [$sql]) if (!in_array($index, [1,2], true)) verificar(!str_contains($sql,'tb_ventas_detalle'), 'Partidas solo en los importes de pedidos');
+foreach ($db->calls as $index => [$sql]) if (!in_array($index, [1,2,14,15], true)) verificar(!str_contains($sql,'tb_ventas_detalle'), 'Partidas solo en las consultas monetarias');
 
 $data['filtros']['mes'] = [2,9,12];
 ob_start(); eval('?>'.$view); $multiHtml=ob_get_clean();

@@ -20,12 +20,15 @@ function run(data,width=1200,dark=false) {
             {renderer:'svg',ssr:true,width,height:220});charts.push(chart);return chart;}}
     });
     ready();
-    assert.equal(charts.length,2,'Graficas independientes para cantidad e importe');
+    assert.equal(charts.length,3,'Dos anillos y evolucion mensual');
     charts.forEach(chart=>assert.ok(!chart.renderToSVGString().includes('NaN'),'Geometria valida en escritorio, movil, oscuro y vacio'));
     resize();
     return {node,charts};
 }
 const fixture={
+    anios_seleccionados:[2026,2025],meses_seleccionados:[9],
+    evolucion_mensual:[{anio:2026,mes:1,cotizado:8,colocado:2,importe_cotizado:600,importe_colocado:150},
+        {anio:2025,mes:12,cotizado:4,colocado:1,importe_cotizado:400,importe_colocado:100}],
     cotizado:600,colocado:250,
     cotizado_moneda_original:{USD:500,MXN:1800},
     colocado_moneda_original:{USD:150,MXN:1800},tipo_cambio_aplicado:18,fecha_tipo_cambio:'2026-09-30 12:00:00',
@@ -57,9 +60,18 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     assert.equal(node('ventas-eficiencia-moneda-original').textContent,'USD: $ 150.00 | MXN: $ 1,800.00');
     assert.equal(node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');
     assert.equal(node('ventas-eficiencia-colocacion-monetaria').textContent,'41.67 %');
+    const annual=charts[2];
+    assert.equal(annual.getOption().xAxis[0].data.length,12);
+    assert.deepEqual(annual.getOption().series.map(series=>[series.type,series.yAxisIndex]),[['bar',0],['bar',0],['line',1],['line',1]]);
+    assert.equal(annual.getOption().series[0].data[11],4,'Selector inicial conserva el primer anio ordenado');
+    node('ventas-eficiencia-evolucion-anio').value='2026';
+    node('ventas-eficiencia-evolucion-anio').events.change();
+    assert.equal(annual.getOption().series[0].data[0],8,'Enero aparece aun con filtro de septiembre');
+    assert.equal(annual.getOption().series[2].data[0],600);
+    assert.ok(annual.getOption().tooltip[0].formatter([{dataIndex:0}]).includes('% Colocación Monetaria: 25.00 %'));
     assert.deepEqual(charts[0].getOption().series[0].data.map(row=>row.value),[9,0]);
     assert.deepEqual(charts[1].getOption().series[0].data.map(row=>row.value),[250,350]);
-    charts.forEach(chart=>assert.equal(chart.getOption().series[0].type,'pie','Sustituir barras por donas'));
+    charts.slice(0,2).forEach(chart=>assert.equal(chart.getOption().series[0].type,'pie','Sustituir barras por donas'));
     assert.equal(charts[0].getOption().title[0].text,'100.00 %');
     assert.equal(charts[1].getOption().title[0].text,'41.67 %');
     assert.equal(charts[0].getOption().tooltip[0].formatter(),'Cotizados: 9\nColocados: 9\nPendientes: 0');

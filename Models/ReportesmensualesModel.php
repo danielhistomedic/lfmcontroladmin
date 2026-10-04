@@ -117,7 +117,7 @@ class ReportesmensualesModel extends Mysql
         $columns = "v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id, v.moneda_id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
         // Cotizaciones enviadas: incluir proyectos cerrados, conservando los filtros comerciales.
-        $sent = $this->consultar("SELECT $columns, 'cotizado' AS tipo,
+        $sentSql = "SELECT $columns, 'cotizado' AS tipo,
             SUM(CASE WHEN v.moneda_id = 3 THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_usd_original,
             SUM(CASE WHEN v.moneda_id = 1 THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_mxn_original,
             SUM(COALESCE(cp.subtotal_partidas, 0)) AS monto, COUNT(DISTINCT cc.id) AS cotizaciones,
@@ -131,9 +131,10 @@ class ReportesmensualesModel extends Mysql
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE cc.enviado = 1 AND v.estatus_pedido_reporte IN (1,2)
             AND $sentPeriod $scope
-            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido", $params);
+            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido";
+        $sent = $this->consultar($sentSql, $params);
         // Pedidos enviados: sumar cada partida una vez y convertir con el tipo de cambio existente.
-        $placed = $this->consultar("SELECT v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id,
+        $placedSqlMoney = "SELECT v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id,
             3 AS moneda_id, COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor,
             'colocado' AS tipo,
             SUM(CASE WHEN pc.moneda_id = 3 THEN pd.cantidad_pedido * pd.precio_unitario ELSE 0 END) AS monto_usd_original,
@@ -149,7 +150,8 @@ class ReportesmensualesModel extends Mysql
             WHERE pc.enviado = 1 AND vd.tipo_partida IN ('PRODUCTO','SERVICIO')
                 AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND v.estatus_pedido_reporte = 2
                 AND $placedPeriod $scope
-            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido ORDER BY v.id", $params);
+            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido ORDER BY v.id";
+        $placed = $this->consultar($placedSqlMoney, $params);
         $projects = [];
         foreach ($placed as $row) {
             $folio = (string)$row['proyecto_id'];
@@ -276,6 +278,10 @@ class ReportesmensualesModel extends Mysql
             COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre
             FROM ($placedSql) colocados $sellerNames ON nombres.ccvemedico = colocados.vendedor_id
             GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $placedParams);
+        $evolution = $this->evolucionMensual($year, $seller, $divisor, [
+            ['cotizado', $sentSql, $sentPeriod, 'COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha)'],
+            ['colocado', $placedSqlMoney, $placedPeriod, 'pc.fecha_pedido']
+        ]);
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -286,6 +292,7 @@ class ReportesmensualesModel extends Mysql
                 'estatus_por_clasificacion' => $annualStatuses,
                 'cotizados_por_periodo' => $quotedPeriods,
                 'colocados_por_periodo' => $placedPeriods,
+                'evolucion_mensual' => $evolution,
                 'anios_seleccionados' => is_array($year) ? $year : [$year],
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
@@ -300,6 +307,43 @@ class ReportesmensualesModel extends Mysql
                 ],
                 'fecha_tipo_cambio' => $rateRows[0]['fecha'] ?? null
             ];
+    }
+
+    /** Cada mes aplica el mismo conjunto del KPI y las mismas partidas/conversion monetaria. */
+    private function evolucionMensual(int|array $years, string $seller, float $divisor, array $moneyQueries): array
+    {
+        $years = array_values(array_unique(is_array($years) ? $years : [$years]));
+        sort($years, SORT_NUMERIC);
+        $result = [];
+        $countQueries = [];
+        $countParams = [];
+        foreach ($years as $year) {
+            foreach (range(1,12) as $month) {
+                $result["$year-$month"] = ['anio'=>$year,'mes'=>$month,'cotizado'=>0,'colocado'=>0,'importe_cotizado'=>0.0,'importe_colocado'=>0.0];
+                foreach (['cotizados'=>'cotizado','colocados'=>'colocado'] as $type=>$key) {
+                    [$sql,$params] = self::documentadosPeriodoSql($year,$month,$seller,$type);
+                    $countQueries[] = "SELECT $year AS anio, $month AS mes, '$key' AS tipo, COUNT(*) AS proyectos FROM ($sql) documentos";
+                    array_push($countParams,...$params);
+                }
+            }
+        }
+        foreach ($this->consultar(implode(' UNION ALL ', $countQueries), $countParams) as $row) {
+            $result[$row['anio'].'-'.$row['mes']][$row['tipo']] = (int)$row['proyectos'];
+        }
+        foreach ($moneyQueries as [$type,$sql,$selectedPeriod,$date]) {
+            $params = [];
+            $annualPeriod = self::periodo($date,$years,range(1,12),$params);
+            if ($seller !== '') $params[] = $seller;
+            // Reutilizar el SQL monetario original; solo ampliar fechas y separar por mes.
+            $sql = str_replace($selectedPeriod,$annualPeriod,$sql);
+            $sql = preg_replace('/^SELECT /',"SELECT YEAR($date) AS anio, MONTH($date) AS mes, ",$sql,1);
+            $sql = str_replace('GROUP BY v.id, v.proyecto_id',"GROUP BY YEAR($date), MONTH($date), v.id, v.proyecto_id",$sql);
+            foreach ($this->consultar($sql,$params) as $row) {
+                $key = $row['anio'].'-'.$row['mes'];
+                $result[$key]['importe_'.$type] += self::resumir([$row],$divisor)[$type];
+            }
+        }
+        return array_values($result);
     }
 
     /** Un registro por proyecto del KPI; anteriores se asignan a su primera cotizacion del filtro. */
