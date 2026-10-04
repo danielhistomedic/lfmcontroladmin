@@ -278,7 +278,7 @@ class ReportesmensualesModel extends Mysql
             COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre
             FROM ($placedSql) colocados $sellerNames ON nombres.ccvemedico = colocados.vendedor_id
             GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $placedParams);
-        $evolution = $this->evolucionMensual($year, $seller, $divisor, [
+        $evolution = $this->evolucionMensual($year, $month, $seller, $divisor, [
             ['cotizado', $sentSql, $sentPeriod, 'COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha)'],
             ['colocado', $placedSqlMoney, $placedPeriod, 'pc.fecha_pedido']
         ]);
@@ -310,15 +310,17 @@ class ReportesmensualesModel extends Mysql
     }
 
     /** Cada mes aplica el mismo conjunto del KPI y las mismas partidas/conversion monetaria. */
-    private function evolucionMensual(int|array $years, string $seller, float $divisor, array $moneyQueries): array
+    private function evolucionMensual(int|array $years, int|array $months, string $seller, float $divisor, array $moneyQueries): array
     {
         $years = array_values(array_unique(is_array($years) ? $years : [$years]));
         sort($years, SORT_NUMERIC);
+        $months = array_values(array_unique(is_array($months) ? $months : [$months]));
+        sort($months, SORT_NUMERIC);
         $result = [];
         $countQueries = [];
         $countParams = [];
         foreach ($years as $year) {
-            foreach (range(1,12) as $month) {
+            foreach ($months as $month) {
                 $result["$year-$month"] = ['anio'=>$year,'mes'=>$month,'cotizado'=>0,'colocado'=>0,'importe_cotizado'=>0.0,'importe_colocado'=>0.0];
                 foreach (['cotizados'=>'cotizado','colocados'=>'colocado'] as $type=>$key) {
                     [$sql,$params] = self::documentadosPeriodoSql($year,$month,$seller,$type);
@@ -332,10 +334,10 @@ class ReportesmensualesModel extends Mysql
         }
         foreach ($moneyQueries as [$type,$sql,$selectedPeriod,$date]) {
             $params = [];
-            $annualPeriod = self::periodo($date,$years,range(1,12),$params);
+            $filteredPeriod = self::periodo($date,$years,$months,$params);
             if ($seller !== '') $params[] = $seller;
-            // Reutilizar el SQL monetario original; solo ampliar fechas y separar por mes.
-            $sql = str_replace($selectedPeriod,$annualPeriod,$sql);
+            // Reutilizar el SQL monetario original con los filtros globales y separar por mes.
+            $sql = str_replace($selectedPeriod,$filteredPeriod,$sql);
             $sql = preg_replace('/^SELECT /',"SELECT YEAR($date) AS anio, MONTH($date) AS mes, ",$sql,1);
             $sql = str_replace('GROUP BY v.id, v.proyecto_id',"GROUP BY YEAR($date), MONTH($date), v.id, v.proyecto_id",$sql);
             foreach ($this->consultar($sql,$params) as $row) {

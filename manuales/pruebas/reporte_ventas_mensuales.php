@@ -84,20 +84,19 @@ foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
 }
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
 $evolutionResponses = $currencyResponses;
-$evolutionResponses[13] = [['anio'=>2024,'mes'=>1,'tipo'=>'cotizado','proyectos'=>4],['anio'=>2024,'mes'=>1,'tipo'=>'colocado','proyectos'=>1]];
-$evolutionResponses[14] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>1],$currencyResponses[1]);
-$evolutionResponses[15] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>1],$currencyResponses[2]);
+$evolutionResponses[13] = [['anio'=>2024,'mes'=>2,'tipo'=>'cotizado','proyectos'=>4],['anio'=>2024,'mes'=>2,'tipo'=>'colocado','proyectos'=>1]];
+$evolutionResponses[14] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>2],$currencyResponses[1]);
+$evolutionResponses[15] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>2],$currencyResponses[2]);
 $evolutionDb = new ConexionSimulada($evolutionResponses);
 $evolutionReport = (new ModeloSimulado($evolutionDb))->dashboard(2024,2,'V1');
-verificar(count($evolutionReport['evolucion_mensual'])===12 && $evolutionReport['evolucion_mensual'][0]['cotizado']===4
-    && $evolutionReport['evolucion_mensual'][0]['colocado']===1, 'Enero a diciembre independientes del filtro de febrero');
+verificar(count($evolutionReport['evolucion_mensual'])===1 && $evolutionReport['evolucion_mensual'][0]['mes']===2 && $evolutionReport['evolucion_mensual'][0]['cotizado']===4
+    && $evolutionReport['evolucion_mensual'][0]['colocado']===1, 'Evolucion muestra solamente el mes seleccionado');
 cerca($evolutionReport['evolucion_mensual'][0]['importe_cotizado'],600,'Misma conversion y redondeo cotizado en evolucion');
 cerca($evolutionReport['evolucion_mensual'][0]['importe_colocado'],250,'Importe colocado reutiliza el monto ya convertido');
-verificar(count($evolutionDb->calls)===16 && substr_count($evolutionDb->calls[13][0],'UNION ALL')===23,
-    'Conteos de ambos tipos para doce meses en una consulta, sin consultas por vendedor');
-foreach ([14,15] as $index) verificar(in_array('2024-01-01',$evolutionDb->calls[$index][1],true)
-    && in_array('2025-01-01',$evolutionDb->calls[$index][1],true) && end($evolutionDb->calls[$index][1])==='V1',
-    'Importes anuales mantienen vendedor y abarcan el anio completo');
+verificar(count($evolutionDb->calls)===16 && substr_count($evolutionDb->calls[13][0],'UNION ALL')===1,
+    'Conteos de ambos tipos para el mes seleccionado en una consulta');
+foreach ([14,15] as $index) verificar($evolutionDb->calls[$index][1]===['2024-02-01','2024-03-01','V1'],
+    'Importes de evolucion mantienen los filtros globales');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
 verificar(count($db->calls)===16,'Consultas por conjunto');
 foreach ([11,12] as $index) {

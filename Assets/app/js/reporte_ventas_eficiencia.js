@@ -118,31 +118,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const evolution = echarts.init(evolutionElement, dark ? 'dark' : null);
     charts.push(evolution);
     const years = [...new Set((data.anios_seleccionados || []).map(Number))].sort((a,b)=>a-b);
-    const yearSelect = byId('evolucion-anio');
-    years.forEach(year => {
-        const option = document.createElement('option'); option.value = String(year); option.textContent = String(year);
-        yearSelect.appendChild(option);
-    });
-    yearSelect.value = String(years[0] || '');
-    byId('evolucion-selector').hidden = years.length <= 1;
-    byId('evolucion-selector').addEventListener('click', event => event.stopPropagation());
-    byId('evolucion-selector').addEventListener('keydown', event => event.stopPropagation());
+    const months = [...new Set((data.meses_seleccionados || []).map(Number))].sort((a,b)=>a-b);
     evolutionElement.addEventListener('click', event => event.stopPropagation());
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     function renderEvolution() {
-        const rows = monthNames.map((name,index) => (data.evolucion_mensual || []).find(row =>
-            Number(row.anio) === Number(yearSelect.value) && Number(row.mes) === index+1) || {});
+        const periods = years.flatMap(year=>months.map(month=>({year,month})));
+        const labels = periods.map(period=>monthNames[period.month-1]+(years.length>1?' '+period.year:''));
+        const rows = periods.map(period => (data.evolucion_mensual || []).find(row =>
+            Number(row.anio) === period.year && Number(row.mes) === period.month) || {});
         evolution.setOption({backgroundColor:'transparent',aria:{enabled:true},
             legend:{top:0,type:'scroll',textStyle:{color:textColor,fontSize:10}},
             grid:{left:12,right:12,top:65,bottom:35,containLabel:true},
-            xAxis:{type:'category',data:monthNames,axisLabel:{color:textColor,fontSize:10,formatter:value=>value.slice(0,3)}},
+            xAxis:{type:'category',data:labels,axisLabel:{color:textColor,fontSize:10,formatter:value=>value.slice(0,3)+(years.length>1?' '+value.slice(-4):'')}},
             yAxis:[{type:'value',name:'Proyectos',minInterval:1,axisLabel:{color:textColor},nameTextStyle:{color:textColor}},
                 {type:'value',name:'USD',axisLabel:{color:textColor,formatter:value=>currency(value)},nameTextStyle:{color:textColor},splitLine:{show:false}}],
             tooltip:{trigger:'axis',renderMode:'richText',formatter:items=>{
                 const index = items[0]?.dataIndex ?? 0; const row = rows[index];
                 const quoted=count(row.cotizado),placed=count(row.colocado);
                 const quotedAmount=money(row.importe_cotizado),placedAmount=money(row.importe_colocado);
-                return monthNames[index]+' '+yearSelect.value+'\nCotizados: '+integer.format(quoted)+'\nColocados: '+integer.format(placed)+
+                const period = periods[index];
+                if (!period) return '';
+                return monthNames[period.month-1]+' '+period.year+'\nCotizados: '+integer.format(quoted)+'\nColocados: '+integer.format(placed)+
                     '\nImporte Cotizado USD: '+currency(quotedAmount)+'\nImporte Colocado USD: '+currency(placedAmount)+
                     '\n% Colocación: '+ratio(placed,quoted)+'\n% Colocación Monetaria: '+ratio(placedAmount,quotedAmount);
             }},
@@ -152,7 +148,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 {name:'Importe colocado USD',type:'line',yAxisIndex:1,itemStyle:{color:'#198754'},symbolSize:6,data:rows.map(row=>money(row.importe_colocado))}]
         });
     }
-    yearSelect.addEventListener('change',renderEvolution);
     renderEvolution();
     window.addEventListener('resize',()=>charts.forEach(chart=>chart.resize()));
 });

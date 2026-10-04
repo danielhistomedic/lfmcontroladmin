@@ -46,7 +46,7 @@ $amounts = $execute($capture->calls[1]);
 cerca(array_sum(array_column($amounts,'monto')),750, 'Importe y vendedor incluyen exactamente las partidas cotizadas elegibles');
 $annualCounts = $execute($capture->calls[13]);
 $february = array_values(array_filter($annualCounts,static fn($row)=>(int)$row['mes']===2 && $row['tipo']==='cotizado'));
-verificar(count($annualCounts)===24 && (int)$february[0]['proyectos']===3,
+verificar(count($annualCounts)===2 && (int)$february[0]['proyectos']===3,
     'SQL anual ejecutado: mismas cantidades mensuales del KPI y dos tipos por cada mes');
 $memory->sqliteCreateFunction('YEAR',static fn($date)=>(int)substr($date,0,4));
 $memory->sqliteCreateFunction('MONTH',static fn($date)=>(int)substr($date,5,2));

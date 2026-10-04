@@ -21,7 +21,6 @@ html.dark #ventas-financiero-eficiencia .ventas-eficiencia-desglose { color:#c8d
 #ventas-financiero-eficiencia .ventas-eficiencia-chart { width:100%; height:220px; }
 #ventas-financiero-eficiencia #ventas-eficiencia-evolucion { width:100%; height:330px; }
 #ventas-financiero-eficiencia .ventas-eficiencia-evolucion { cursor:default; }
-#ventas-financiero-eficiencia #ventas-eficiencia-evolucion-selector { display:block; max-width:140px; margin-bottom:10px; }
 #ventas-financiero-eficiencia .table { font-size:11px; }
 #ventas-financiero-eficiencia .table th { background:#eaf1fa !important; color:#174b66 !important; font-weight:600; }
 #ventas-financiero-eficiencia .table td { padding:6px 8px; font-size:11px; white-space:normal; overflow-wrap:anywhere; }
