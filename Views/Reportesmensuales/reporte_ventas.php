@@ -246,6 +246,7 @@
                                                         <?php foreach ([1 => 'ID Proyecto', 2 => 'Fecha', 3 => 'Cliente', 5 => 'Clasificación', 6 => 'Título'] as $index => $heading): ?>
                                                             <th scope="col" aria-sort="<?= $index === 2 ? 'descending' : 'none'; ?>"><button type="button" data-order="<?= $index; ?>" data-label="<?= $esc($heading); ?>"><?= $esc($heading); ?><?= $index === 2 ? ' ↓' : ''; ?></button></th>
                                                         <?php endforeach; ?>
+                                                        <th scope="col" class="declinados-col-seguimiento">Seguimiento</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="declinados-tabla-filas"></tbody>

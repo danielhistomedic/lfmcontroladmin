@@ -237,9 +237,11 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
 #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(1) { width:5% !important; }
 #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(2) { width:15% !important; }
 #modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(3) { width:12% !important; }
-#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(4) { width:23% !important; }
-#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(5) { width:20% !important; }
-#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(6) { width:25% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(4) { width:20% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(5) { width:18% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-detalle th:nth-child(6) { width:20% !important; }
+#modal-declinados-ventas[data-lista="declinados"] #declinados-tabla-propia .declinados-col-seguimiento { width:88px; text-align:center; }
+#modal-declinados-ventas #declinados-tabla-propia .declinados-col-seguimiento .btn { padding:4px 8px; font-size:11px; }
 #modal-declinados-ventas .declinados-celda { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #modal-declinados-ventas .declinados-buscar { display:block; margin-bottom:12px; font-size:10px; color:var(--declinados-secundario); }
 #modal-declinados-ventas .declinados-buscar input { margin-top:4px; border-color:var(--declinados-borde); font-size:11px; }

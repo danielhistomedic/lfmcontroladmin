@@ -8,9 +8,15 @@ async function run() {
     const nodes = new Map(), events = {}, calls = []; let exported, failure = false;
     function node(id) {
         if (!nodes.has(id)) nodes.set(id, {id, dataset:{}, style:{}, children:[], events:{}, value:'', textContent:'',
-            addEventListener(name,cb){this.events[name]=cb;}, setAttribute(name,value){this[name]=value;},
+            addEventListener(name,cb,options={}){
+                this.listeners??={};(this.listeners[name]??=[]).push({cb,once:options.once});
+                this.events[name]=(...args)=>{let result;for(const entry of [...this.listeners[name]]){
+                    if(entry.once)this.listeners[name]=this.listeners[name].filter(item=>item!==entry);
+                    const value=entry.cb(...args);if(value!==undefined)result=value;
+                }return result;};
+            }, setAttribute(name,value){this[name]=value;},
             appendChild(child){child.parentElement=this;this.children.push(child);}, replaceChildren(){this.children=[];},
-            click(){this.clicked=true;}, parentElement:{clientWidth:900,setAttribute(name,value){this[name]=value;}}
+            click(){this.clicked=true;}, focus(){this.focused=true;}, parentElement:{clientWidth:900,setAttribute(name,value){this[name]=value;}}
         });
         return nodes.get(id);
     }
@@ -18,9 +24,9 @@ async function run() {
     const modal=node('modal-declinados-ventas');modal.dataset={url:'/declinados',anio:'2024,2026',mes:'9,10',vendedor:''};
     node('filtros-ventas-mensuales').querySelector=()=>node('submit');
     node('ventas-mensuales-datos').textContent=JSON.stringify({vendedores:[],productos:[],cruce:[]});
-    const rows=Array.from({length:27},(_,i)=>({id:i+1,proyecto_id:'P'+String(i+1).padStart(2,'0'),fecha:'2026-09-'+String(i%28+1).padStart(2,'0'),cliente:'Cliente '+i,clasificacion:'VÁLVULAS FLOWSERVE',titulo:'<img src=x> & =SUM(1)',seller:i<23?'V1':'V2'}));
+    const rows=Array.from({length:27},(_,i)=>({id:i+1,proyecto_id:'P'+String(i+1).padStart(2,'0'),fecha:'2026-09-'+String(i%28+1).padStart(2,'0'),cliente:'Cliente '+i,clasificacion:'VÁLVULAS FLOWSERVE',titulo:'<img src=x> & =SUM(1)',seller:i<23?'V1':'V2',activo:i%2?'ACTIVO':'CERRADO'}));
     const context={document:{addEventListener:(name,cb)=>events[name]=cb,getElementById:node,createElement:tag=>node('created-'+Math.random()),querySelectorAll:selector=>selector.includes('[data-order]')?headers:[]},
-        window:{addEventListener(){}}, jQuery:()=>({find:()=>({on(){}}),DataTable(){throw Error('No debe inicializar DataTable');}}),
+        window:{addEventListener(){},verSeguimientosProyecto(id,project){context.followup=[id,project];}}, jQuery:()=>({find:()=>({on(){}}),DataTable(){throw Error('No debe inicializar DataTable');}}),
         bootstrap:{Modal:{getOrCreateInstance:()=>({show(){},hide(){}})}},echarts:{init:()=>({setOption(){},resize(){},on(){}})},
         AbortController,URLSearchParams,Intl,Map,JSON,setTimeout,clearTimeout,
         JSZip:class extends JSZip{generateAsync(options){return super.generateAsync({...options,type:'nodebuffer'});}},
@@ -50,6 +56,18 @@ async function run() {
     assert.equal(node('declinados-tabla-filas').children[0].children[5].children[0].textContent,'<img src=x> & =SUM(1)');
     assert.deepEqual(calls.at(-1).getAll('anio[]'),['2024','2026']);assert.deepEqual(calls.at(-1).getAll('mes[]'),['9','10']);
     node('declinados-siguiente').events.click();await settle();assert.equal(node('declinados-tabla-pagina').textContent,'11–20 de 23');
+    const pageRows=node('declinados-tabla-filas').children;
+    assert.equal(pageRows[0].children.length,7);
+    const followButton=pageRows[0].children[6].children[0];
+    assert.ok(followButton.className.includes('btn-danger'));assert.ok(pageRows[1].children[6].children[0].className.includes('btn-primary'));
+    assert.equal(followButton.title,'Ver seguimiento del proyecto');
+    const callsBefore=calls.length;
+    followButton.events.click({stopPropagation(){}});modal.events['hidden.bs.modal']();
+    assert.deepEqual(context.followup,[13,'P13'],'Usar tb_ventas.id, no folio ni índice de fila');
+    assert.equal(node('modalSeguimientosVenta').dataset.lista,'declinados');
+    node('modalSeguimientosVenta').events['hidden.bs.modal']();await modal.events['shown.bs.modal']();
+    assert.equal(calls.length,callsBefore,'Regresar sin recargar ni perder búsqueda, orden o página');
+    assert.equal(node('declinados-tabla-pagina').textContent,'11–20 de 23');assert.equal(followButton.focused,true);
     node('declinados-vendedores').children[1].events.click();await settle();
     assert.equal(node('declinados-tabla-pagina').textContent,'1–4 de 4','Ajustar página al último rango disponible');
     headers[1].events.click();await settle();assert.equal(calls.at(-1).get('order_dir'),'asc');assert.equal(headers[1].textContent,'Fecha ↑');
