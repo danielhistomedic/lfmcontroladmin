@@ -53,6 +53,7 @@
                 <label for="ventas-eficiencia-vendedores-orden">Ordenar<select id="ventas-eficiencia-vendedores-orden" class="form-select form-select-sm">
                     <option value="colocado">Mayor colocación</option>
                     <option value="importe_colocado">Mayor importe colocado</option>
+                    <option value="importe_cotizado">Mayor importe cotizado</option>
                     <option value="colocacion">Mayor % colocación</option>
                     <option value="colocacion_monetaria">Mayor % colocación monetaria</option>
                     <option value="nombre">Nombre</option>

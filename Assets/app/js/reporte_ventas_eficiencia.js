@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let charts = [];
     let sellerRows = [];
     let sellerPage = 0;
-    const sellerPageSize = 10;
+    const sellerPageSize = 15;
     function render(data, classificationLabel = 'TODOS') {
     byId('vendedores-etiqueta').textContent = 'Desglose por vendedor · ' + classificationLabel;
     charts.forEach(chart => chart.dispose());
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const order = byId('vendedores-orden').value || 'colocado';
         const score = seller => order === 'colocacion' ? (seller.cotizado ? seller.colocado/seller.cotizado : null) :
             order === 'colocacion_monetaria' ? (seller.importe_cotizado ? seller.importe_colocado/seller.importe_cotizado : null) :
-            (order === 'importe_colocado' ? seller.importe_colocado : seller.colocado);
+            (order === 'importe_colocado' ? seller.importe_colocado : order === 'importe_cotizado' ? seller.importe_cotizado : seller.colocado);
         const rows = sellerRows.filter(seller=>!search || sellerCells(seller).some(value=>String(value).toLocaleLowerCase('es').includes(search)));
         rows.sort((a,b)=>{
             const name = a.nombre.localeCompare(b.nombre,'es') || a.id.localeCompare(b.id);
@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const body=byId('vendedores-filas'); body.replaceChildren();
         page.forEach(seller=>{
             const tr=document.createElement('tr');
+            if(seller.colocado === 0) tr.className='ventas-eficiencia-sin-colocacion';
             sellerCells(seller).forEach((value,index)=>{
                 const td=document.createElement('td');td.textContent=value;if(index)td.className='text-end';tr.appendChild(td);
             });body.appendChild(tr);
