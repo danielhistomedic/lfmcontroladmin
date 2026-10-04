@@ -116,7 +116,7 @@ class ReportesmensualesModel extends Mysql
         $divisor = $rate == 0 ? 1.0 : $rate;
         $columns = "v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id, v.moneda_id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
-        // Cotizaciones enviadas: se excluye CERRADO por indicación del usuario para este dashboard.
+        // Cotizaciones enviadas: incluir proyectos cerrados, conservando los filtros comerciales.
         $sent = $this->consultar("SELECT $columns, 'cotizado' AS tipo,
             SUM(COALESCE(cp.subtotal_partidas, 0)) AS monto, COUNT(DISTINCT cc.id) AS cotizaciones,
             COALESCE(MAX(cc.fecha), v.fecha_cotizacion, v.fecha) AS fecha
@@ -128,7 +128,6 @@ class ReportesmensualesModel extends Mysql
                 ON cp.cotizacion_cliente_id = cc.id
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE cc.enviado = 1 AND v.estatus_pedido_reporte IN (1,2)
-            AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
             AND $sentPeriod $scope
             GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido", $params);
         // Pedidos enviados: sumar cada partida una vez y convertir con el tipo de cambio existente.
@@ -164,7 +163,7 @@ class ReportesmensualesModel extends Mysql
         $criticalCondition = self::condicionInternaSinCliente();
         $counts = $this->consultar("SELECT COUNT(*) AS total_proyectos,
             COALESCE(SUM(CASE WHEN v.activo = 'CERRADO' THEN 1 ELSE 0 END),0) AS declinados,
-            COALESCE(SUM(CASE WHEN cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+            COALESCE(SUM(CASE WHEN cc.venta_id IS NOT NULL
                 THEN 1 ELSE 0 END),0) AS cotizacion_cliente,
             COALESCE(SUM(CASE WHEN pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
                 THEN 1 ELSE 0 END),0) AS orden_compra_cliente,
@@ -225,7 +224,6 @@ class ReportesmensualesModel extends Mysql
         $previousQuoted = $this->consultar("SELECT COUNT(DISTINCT v.id) AS cotizacion_cliente_anteriores
             FROM tb_ventas v
             WHERE NOT COALESCE(($projectPeriod), 0)
-                AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
                 AND EXISTS (SELECT 1 FROM tb_ventas_cotizacion_cliente cc
                     WHERE cc.venta_id = v.id AND cc.enviado = 1 AND ($quotationPeriod))
                 $scope", $previousParams);
@@ -318,6 +316,7 @@ class ReportesmensualesModel extends Mysql
         $params = [...$projectParams,...$projectParams,...$quoteParams,...$projectParams];
         $scope = self::FILTRO_PROYECTOS;
         if ($seller !== '') { $scope .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        $activeFilter = $type === 'colocados' ? "AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'" : '';
         $sql = "SELECT v.id, v.ccveusuario_vendedor AS vendedor_id,
             CASE WHEN ($projectPeriod) THEN v.fecha ELSE q.fecha END AS fecha_reporte,
             CASE WHEN ($projectPeriod) THEN 'periodo' ELSE 'anteriores' END AS origen
@@ -326,7 +325,7 @@ class ReportesmensualesModel extends Mysql
                 WHERE $alias.enviado = 1 AND ($quotePeriod) GROUP BY $alias.venta_id
             ) q ON q.venta_id = v.id
             WHERE (($projectPeriod) OR q.fecha IS NOT NULL)
-                AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'
+                $activeFilter
                 AND EXISTS (SELECT 1 FROM $table $alias WHERE $alias.venta_id = v.id AND $alias.enviado = 1)
                 AND $scope";
         return [$sql,$params];

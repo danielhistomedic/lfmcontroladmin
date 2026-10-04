@@ -97,7 +97,7 @@ foreach ($placedListDb->calls as [$sql,$params]) verificar(str_contains($sql,'co
     'Listado de colocados coincide con su barra y conserva el alcance autorizado');
 verificar(str_contains($db->calls[11][0],'MIN(cc.fecha) AS fecha')
     && str_contains($db->calls[11][0],'cc.enviado = 1')
-    && str_contains($db->calls[11][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
+    && !str_contains($db->calls[11][0],"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
     && str_contains($db->calls[11][0],'v.estatus_proyecto_id <> 2')
     && str_contains($db->calls[11][0],"THEN 'periodo' ELSE 'anteriores' END AS origen"),
     'Grafica cotizada reutiliza ambos grupos del KPI y asigna anteriores una sola vez');
@@ -142,7 +142,7 @@ verificar(str_contains($previousSql,'COUNT(DISTINCT v.id)') && str_contains($pre
 verificar(str_contains($previousSql,'NOT COALESCE((v.fecha >= ? AND v.fecha < ?), 0)')
     && str_contains($previousSql,'cc.enviado = 1 AND (cc.fecha >= ? AND cc.fecha < ?)'),
     'Excluir todos los proyectos del periodo y usar exclusivamente la fecha de cotizacion enviada');
-verificar(str_contains($previousSql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
+verificar(!str_contains($previousSql,"COALESCE(v.activo,'ACTIVO') <> 'CERRADO'")
     && str_contains($previousSql,'v.ccveusuario_vendedor = ?')
     && str_contains($previousSql,'v.clasificacion_proyecto_id IN (2,3,4,5)')
     && !str_contains($previousSql,'fecha_cotizacion') && !str_contains($previousSql,'estatus_pedido_reporte'),
@@ -230,7 +230,7 @@ $sellerModel->vendedores('V1');
 $sellerModel->proyectoDeclinadoAutorizado(633,'V1');
 foreach ($sellerDb->calls as [$sql]) verificar(str_contains($sql,'v.clasificacion_proyecto_id IN (2,3,4,5) AND (v.estatus_proyecto_id IS NULL OR v.estatus_proyecto_id <> 2)'), 'Clasificaciones en vendedores e historial declinado');
 verificar($db->calls[1][1]===['2024-02-01','2024-03-01',"V'1"],'Límites del mes y vendedor parametrizado');
-verificar(str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados de importes cotizados conservando activo NULL');
+verificar(!str_contains($db->calls[1][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRADO'") && str_contains($db->calls[1][0], 'v.estatus_proyecto_id <> 2'), 'Incluir cerrados en importes cotizados y excluir estatus 2');
 verificar(str_contains($db->calls[2][0], 'pc.enviado = 1') && str_contains($db->calls[2][0], "vd.tipo_partida IN ('PRODUCTO','SERVICIO')"), 'Colocados solo pedidos enviados y tipos validos');
 cerca($actual['cotizado'],2000,'Tipo de cambio cero usa divisor 1');
 verificar($actual['cantidades']===array_replace($quantities,['cotizacion_cliente'=>14,'cotizacion_cliente_periodo'=>6,'cotizacion_cliente_anteriores'=>8,'orden_compra_cliente'=>5,'orden_compra_cliente_periodo'=>3,'orden_compra_cliente_anteriores'=>2,'declinados'=>5,'declinados_periodo'=>2,'declinados_anteriores'=>3]),'Cantidades independientes de los conjuntos cotizado y colocado');
@@ -244,7 +244,7 @@ verificar(str_contains($db->calls[3][0], "COALESCE(v.activo,'ACTIVO') <> 'CERRAD
 verificar(substr_count($db->calls[3][0],'WHERE enviado = 1 GROUP BY venta_id')===2,'Cotizaciones y pedidos deben estar enviados, sin restringir su fecha');
 verificar(str_contains($db->calls[3][0], "pc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados del conteo de pedidos, conservando el total de proyectos');
 verificar(str_contains($db->calls[3][0],"v.activo = 'CERRADO'"),'Usar el estatus explícito solicitado');
-verificar(str_contains($db->calls[3][0], "cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'"), 'Excluir declinados sólo del conteo de cotizaciones, conservando total y declinados');
+verificar(!str_contains($db->calls[3][0], "cc.venta_id IS NOT NULL AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'") && str_contains($db->calls[3][0], 'v.estatus_proyecto_id <> 2'), 'Incluir cerrados solo en el conteo cotizado, conservando total y declinados');
 verificar(!str_contains($db->calls[2][0],'v.fecha >=') && str_contains($db->calls[2][0],'fecha_pedido >= ?'),'Colocados incluyen proyectos anteriores con pedido en el mes');
 $dup=$headers[1]; $dup['id']=3;
 $duplicateModel=new ModeloSimulado(new ConexionSimulada([[],[],[$headers[1],$dup]]));
