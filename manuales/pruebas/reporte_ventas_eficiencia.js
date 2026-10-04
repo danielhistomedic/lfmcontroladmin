@@ -103,9 +103,9 @@ const localData={...fixture,
 const originalLocal=JSON.stringify(localData);
 const local=run(localData);
 const buttons=local.node('ventas-eficiencia-filtro-clasificacion').children;
-assert.deepEqual(buttons.map(button=>button.textContent),['TODOS','DIVERSOS','BOMBAS FLOWSERVE','VÁLVULAS FLOWSERVE','SELLOS FLOWSERVE']);
-buttons[2].events.click();
-assert.equal(buttons[2]['aria-pressed'],'true');assert.equal(buttons[0]['aria-pressed'],'false');
+assert.deepEqual(buttons.map(button=>button.textContent),['TODOS','DIVERSOS','FLOWSERVE','BOMBAS FLOWSERVE','VÁLVULAS FLOWSERVE','SELLOS FLOWSERVE']);
+buttons[3].events.click();
+assert.equal(buttons[3]['aria-pressed'],'true');assert.equal(buttons[0]['aria-pressed'],'false');
 assert.equal(local.node('ventas-eficiencia-cotizado').textContent,'3');
 assert.equal(local.node('ventas-eficiencia-colocado').textContent,'1');
 assert.equal(local.node('ventas-eficiencia-colocacion').textContent,'33.33 %');
@@ -122,6 +122,33 @@ assert.equal(local.node('ventas-eficiencia-cotizado').textContent,'9');
 assert.equal(local.node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00','TODOS restaura importes generales');
 assert.equal(JSON.stringify(localData),originalLocal,'El filtro no modifica datos compartidos');
 local.charts.slice(-3).forEach(chart=>chart.dispose());
+const flowserveData={...localData,
+    comparativo_clasificacion_local:[34,22,91,17].map(id=>({clasificacion_id:id,vendedor_id:'V1',nombre:'Ana',
+        cotizado:id===17?100:3,colocado:id===17?100:1,importe_cotizado:id===17?10000:100,importe_colocado:id===17?10000:50,
+        cotizado_usd:id===17?10000:100,colocado_usd:id===17?10000:50,cotizado_mxn:0,colocado_mxn:0})),
+    evolucion_clasificacion:[34,22,91,17].map(id=>({clasificacion_id:id,anio:2026,mes:9,
+        cotizado:id===17?100:3,colocado:id===17?100:1,importe_cotizado:id===17?10000:100,importe_colocado:id===17?10000:50}))};
+const flowserveSnapshot=JSON.stringify(flowserveData);
+const flowserve=run(flowserveData);
+const flowserveButtons=flowserve.node('ventas-eficiencia-filtro-clasificacion').children;
+flowserveButtons[2].events.click();
+assert.equal(flowserveButtons[2]['aria-pressed'],'true');
+assert.equal(flowserve.node('ventas-eficiencia-cotizado').textContent,'9');
+assert.equal(flowserve.node('ventas-eficiencia-colocado').textContent,'3');
+assert.equal(flowserve.node('ventas-eficiencia-colocacion').textContent,'33.33 %');
+assert.equal(flowserve.node('ventas-eficiencia-importe-cotizado').textContent,'$ 300.00');
+assert.equal(flowserve.node('ventas-eficiencia-importe-colocado').textContent,'$ 150.00');
+assert.equal(flowserve.node('ventas-eficiencia-colocacion-monetaria').textContent,'50.00 %');
+assert.deepEqual(flowserve.charts.at(-3).getOption().series[0].data.map(row=>row.value),[3,6]);
+assert.deepEqual(flowserve.charts.at(-1).getOption().series[0].data,[0,0,9,0],'Consolidar clasificaciones del mismo mes');
+assert.deepEqual(flowserve.charts.at(-1).getOption().series[2].data,[0,0,300,0]);
+assert.equal(flowserve.node('ventas-eficiencia-vendedores-filas').children.length,1,'Consolidar el mismo vendedor entre clasificaciones');
+flowserveButtons[3].events.click();
+assert.equal(flowserve.node('ventas-eficiencia-cotizado').textContent,'3','Mantener filtro individual');
+flowserveButtons[0].events.click();
+assert.equal(flowserve.node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00','TODOS restaura el general');
+assert.equal(JSON.stringify(flowserveData),flowserveSnapshot,'No modificar datos del dashboard');
+flowserve.charts.slice(-3).forEach(chart=>chart.dispose());
 assert.equal(empty.node('ventas-eficiencia-colocacion').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-colocacion-monetaria').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-tipo-cambio').textContent,'TC: — | Fecha TC: —','Datos ausentes sin tipo de cambio inventado');

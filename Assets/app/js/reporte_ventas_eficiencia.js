@@ -165,10 +165,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const ai=order.indexOf(normalized(a.clasificacion)),bi=order.indexOf(normalized(b.clasificacion));
         return (ai<0?99:ai)-(bi<0?99:bi) || String(a.clasificacion).localeCompare(String(b.clasificacion),'es');
     });
-    function filtered(classId) {
-        const rows=(data.comparativo_clasificacion_local || []).filter(row=>String(row.clasificacion_id)===String(classId));
+    const flowserveIds = catalog.filter(row=>order.slice(1).includes(normalized(row.clasificacion))).map(row=>row.id);
+    function filtered(classIds) {
+        const ids = new Set(classIds.map(String));
+        const rows=(data.comparativo_clasificacion_local || []).filter(row=>ids.has(String(row.clasificacion_id)));
         const totals={cotizado:0,colocado:0,importe_cotizado:0,importe_colocado:0,cotizado_usd:0,cotizado_mxn:0,colocado_usd:0,colocado_mxn:0};
         rows.forEach(row=>Object.keys(totals).forEach(key=>totals[key]+=money(row[key])));
+        const monthly = new Map();
+        (data.evolucion_clasificacion || []).filter(row=>ids.has(String(row.clasificacion_id))).forEach(row=>{
+            const key=String(row.anio)+'-'+String(row.mes);
+            if(!monthly.has(key))monthly.set(key,{anio:row.anio,mes:row.mes,cotizado:0,colocado:0,importe_cotizado:0,importe_colocado:0});
+            ['cotizado','colocado','importe_cotizado','importe_colocado'].forEach(metric=>monthly.get(key)[metric]+=money(row[metric]));
+        });
         return {...data,cotizado:totals.importe_cotizado,colocado:totals.importe_colocado,
             cantidades:{cotizacion_cliente:totals.cotizado,orden_compra_cliente:totals.colocado},
             cotizado_moneda_original:{USD:totals.cotizado_usd,MXN:totals.cotizado_mxn},
@@ -177,14 +185,17 @@ document.addEventListener('DOMContentLoaded', function () {
             cotizados_por_periodo:rows.map(row=>({...row,proyectos:row.cotizado})),
             colocados_por_periodo:rows.map(row=>({...row,proyectos:row.colocado})),
             importes_por_vendedor:rows,
-            evolucion_mensual:(data.evolucion_clasificacion || []).filter(row=>String(row.clasificacion_id)===String(classId))};
+            evolucion_mensual:[...monthly.values()]};
     }
-    [{id:'',clasificacion:'TODOS'},...catalog].forEach(row=>{
+    const options = [{id:'',clasificacion:'TODOS'},...catalog];
+    const diverseIndex = options.findIndex(row=>normalized(row.clasificacion)==='DIVERSOS');
+    options.splice(diverseIndex >= 0 ? diverseIndex+1 : 1,0,{id:'flowserve',clasificacion:'FLOWSERVE'});
+    options.forEach(row=>{
         const button=document.createElement('button');button.type='button';button.textContent=String(row.clasificacion).toUpperCase();
         button.setAttribute('aria-pressed',String(row.id===''));
         button.addEventListener('click',()=>{
             [...filter.children].forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-            render(row.id===''?data:filtered(row.id));
+            render(row.id===''?data:filtered(row.id==='flowserve'?flowserveIds:[row.id]));
         });filter.appendChild(button);
     });
     render(data);
