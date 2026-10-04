@@ -75,7 +75,7 @@ cerca($currencyReport['colocado'],250.0,'Mantener importe convertido por la cons
 cerca($currencyReport['colocado_moneda_original']['USD'],150.0,'Conservar importe originalmente USD');
 cerca($currencyReport['colocado_moneda_original']['MXN'],1800.0,'Conservar importe originalmente MXN');
 verificar($currencyReport['tipo_cambio_aplicado'] === 18.0 && $currencyReport['fecha_tipo_cambio'] === '2026-09-30'
-    && count($currencyDb->calls)===16, 'Misma fuente del tipo de cambio y fecha sin consultas adicionales');
+    && count($currencyDb->calls)===18, 'Misma fuente del tipo de cambio y fecha sin consultas adicionales');
 foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
     verificar(str_contains($currencyDb->calls[1][0], "SUM(CASE WHEN v.moneda_id = $currencyId THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_{$key}_original"),
         'Moneda cotizada original utiliza las mismas partidas sin agregar consultas');
@@ -83,6 +83,21 @@ foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
         'Sumar monedas originales en la misma consulta y con las mismas partidas del importe convertido');
 }
 verificar($actual['proyectos_por_vendedor'][0]['proyectos']===10, 'Cantidad entera por vendedor');
+$localResponses=$currencyResponses;
+$localResponses[13]=[['anio'=>2024,'mes'=>2,'clasificacion_id'=>2,'tipo'=>'cotizado','proyectos'=>4],
+    ['anio'=>2024,'mes'=>2,'clasificacion_id'=>3,'tipo'=>'cotizado','proyectos'=>2]];
+$localResponses[14]=[array_replace($currencyResponses[1][0],['anio'=>2024,'mes'=>2,'clasificacion_id'=>2]),
+    array_replace($currencyResponses[1][1],['anio'=>2024,'mes'=>2,'clasificacion_id'=>3])];
+$localResponses[15]=[];
+$localResponses[16]=[];
+$localResponses[17]=[['id'=>2,'clasificacion'=>'DIVERSOS'],['id'=>3,'clasificacion'=>'BOMBAS FLOWSERVE']];
+$localReport=(new ModeloSimulado(new ConexionSimulada($localResponses)))->dashboard(2024,2,'V1');
+verificar($localReport['evolucion_mensual'][0]['cotizado']===6 && count($localReport['evolucion_clasificacion'])===2,
+    'Evolucion general suma clasificaciones sin duplicar proyectos');
+cerca($localReport['evolucion_clasificacion'][0]['importe_cotizado'],100,'Clase MXN usa conversion actual');
+cerca($localReport['evolucion_clasificacion'][1]['importe_cotizado'],500,'Clase USD no hereda importe de otra clase');
+cerca(array_sum(array_column($localReport['evolucion_clasificacion'],'importe_cotizado')),
+    $localReport['evolucion_mensual'][0]['importe_cotizado'],'Evolucion local concilia con general');
 $evolutionResponses = $currencyResponses;
 $evolutionResponses[13] = [['anio'=>2024,'mes'=>2,'tipo'=>'cotizado','proyectos'=>4],['anio'=>2024,'mes'=>2,'tipo'=>'colocado','proyectos'=>1]];
 $evolutionResponses[14] = array_map(static fn($row)=>$row+['anio'=>2024,'mes'=>2],$currencyResponses[1]);
@@ -93,12 +108,12 @@ verificar(count($evolutionReport['evolucion_mensual'])===1 && $evolutionReport['
     && $evolutionReport['evolucion_mensual'][0]['colocado']===1, 'Evolucion muestra solamente el mes seleccionado');
 cerca($evolutionReport['evolucion_mensual'][0]['importe_cotizado'],600,'Misma conversion y redondeo cotizado en evolucion');
 cerca($evolutionReport['evolucion_mensual'][0]['importe_colocado'],250,'Importe colocado reutiliza el monto ya convertido');
-verificar(count($evolutionDb->calls)===16 && substr_count($evolutionDb->calls[13][0],'UNION ALL')===1,
+verificar(count($evolutionDb->calls)===18 && substr_count($evolutionDb->calls[13][0],'UNION ALL')===1,
     'Conteos de ambos tipos para el mes seleccionado en una consulta');
 foreach ([14,15] as $index) verificar($evolutionDb->calls[$index][1]===['2024-02-01','2024-03-01','V1'],
     'Importes de evolucion mantienen los filtros globales');
 verificar($db->calls[4][1]===['2024-02-01','2024-03-01',"V'1"] && str_contains($db->calls[4][0],'COUNT(*) AS proyectos') && !str_contains($db->calls[4][0],'activo'), 'Proyectos del mes por vendedor incluyen todos los estados');
-verificar(count($db->calls)===16,'Consultas por conjunto');
+verificar(count($db->calls)===18,'Consultas por conjunto');
 foreach ([11,12] as $index) {
     verificar(str_contains($db->calls[$index][0], 'FROM cat_medico GROUP BY ccvemedico) nombres')
         && str_contains($db->calls[$index][0], "COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre"),

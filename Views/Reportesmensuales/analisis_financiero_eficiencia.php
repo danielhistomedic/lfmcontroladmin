@@ -8,6 +8,7 @@
         <p class="ventas-eficiencia-nota">Cantidades: mismos proyectos únicos de los KPI, incluidos los anteriores. Importes: documentos enviados del período, sin IVA, con los filtros y la conversión a USD del dashboard. Cada porcentaje usa su propia unidad; «—» indica un denominador cero.</p>
         <div id="ventas-eficiencia-general" class="ventas-eficiencia-seccion ventas-eficiencia-abrir" role="button" tabindex="0" aria-expanded="false" aria-controls="ventas-eficiencia-vendedores" aria-label="Mostrar desglose de cantidades e importes por vendedor">
             <h6><i class="fa-solid fa-chart-simple ventas-eficiencia-icono" aria-hidden="true"></i>Comparativo General · Pedidos Cotizados vs Pedidos Colocados</h6>
+            <div id="ventas-eficiencia-filtro-clasificacion" class="ventas-eficiencia-filtro-clasificacion" role="group" aria-label="Clasificación local del Comparativo General"></div>
             <div class="ventas-eficiencia-indicadores">
                 <?php foreach (['cotizado' => 'Total Cotizado', 'colocado' => 'Total Colocado', 'colocacion' => '% Colocación'] as $key => $label): ?>
                     <div class="ventas-eficiencia-metrica ventas-eficiencia-<?= $key; ?>"><span><?= $esc($label); ?></span><strong id="ventas-eficiencia-<?= $key; ?>">—</strong></div>

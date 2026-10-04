@@ -114,7 +114,7 @@ class ReportesmensualesModel extends Mysql
         $rateRows = $this->consultar('SELECT valor, fecha FROM tb_historial_tipos_cambio WHERE idMoneda = 3 ORDER BY fecha DESC, id DESC LIMIT 1');
         $rate = (float)($rateRows[0]['valor'] ?? 0);
         $divisor = $rate == 0 ? 1.0 : $rate;
-        $columns = "v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id, v.moneda_id,
+        $columns = "v.id, v.proyecto_id, v.clasificacion_proyecto_id AS clasificacion_id, v.ccveusuario_vendedor AS vendedor_id, v.moneda_id,
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
         // Cotizaciones enviadas: incluir proyectos cerrados, conservando los filtros comerciales.
         $sentSql = "SELECT $columns, 'cotizado' AS tipo,
@@ -131,10 +131,10 @@ class ReportesmensualesModel extends Mysql
             LEFT JOIN cat_medico m ON m.ccvemedico = v.ccveusuario_vendedor
             WHERE cc.enviado = 1 AND v.estatus_pedido_reporte IN (1,2)
             AND $sentPeriod $scope
-            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido";
+            GROUP BY v.id, v.proyecto_id, v.clasificacion_proyecto_id, v.ccveusuario_vendedor, v.moneda_id, v.fecha_cotizacion, v.fecha, m.cNombre, m.cPriApellido, m.cSegApellido";
         $sent = $this->consultar($sentSql, $params);
         // Pedidos enviados: sumar cada partida una vez y convertir con el tipo de cambio existente.
-        $placedSqlMoney = "SELECT v.id, v.proyecto_id, v.ccveusuario_vendedor AS vendedor_id,
+        $placedSqlMoney = "SELECT v.id, v.proyecto_id, v.clasificacion_proyecto_id AS clasificacion_id, v.ccveusuario_vendedor AS vendedor_id,
             3 AS moneda_id, COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor,
             'colocado' AS tipo,
             SUM(CASE WHEN pc.moneda_id = 3 THEN pd.cantidad_pedido * pd.precio_unitario ELSE 0 END) AS monto_usd_original,
@@ -150,7 +150,7 @@ class ReportesmensualesModel extends Mysql
             WHERE pc.enviado = 1 AND vd.tipo_partida IN ('PRODUCTO','SERVICIO')
                 AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO' AND v.estatus_pedido_reporte = 2
                 AND $placedPeriod $scope
-            GROUP BY v.id, v.proyecto_id, v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido ORDER BY v.id";
+            GROUP BY v.id, v.proyecto_id, v.clasificacion_proyecto_id, v.ccveusuario_vendedor, m.cNombre, m.cPriApellido, m.cSegApellido ORDER BY v.id";
         $placed = $this->consultar($placedSqlMoney, $params);
         $projects = [];
         foreach ($placed as $row) {
@@ -278,10 +278,24 @@ class ReportesmensualesModel extends Mysql
             COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre
             FROM ($placedSql) colocados $sellerNames ON nombres.ccvemedico = colocados.vendedor_id
             GROUP BY vendedor_id, YEAR(fecha_reporte), MONTH(fecha_reporte), origen", $placedParams);
+        $evolutionClasses = [];
         $evolution = $this->evolucionMensual($year, $month, $seller, $divisor, [
             ['cotizado', $sentSql, $sentPeriod, 'COALESCE(cc.fecha, v.fecha_cotizacion, v.fecha)'],
             ['colocado', $placedSqlMoney, $placedPeriod, 'pc.fecha_pedido']
-        ]);
+        ], $evolutionClasses);
+        $classificationQueries = [];
+        $classificationParams = [];
+        foreach (['cotizados'=>'cotizado','colocados'=>'colocado'] as $type=>$metric) {
+            [$sql,$queryParams] = self::documentadosPeriodoSql($year,$month,$seller,$type);
+            $classificationQueries[] = "SELECT v.clasificacion_proyecto_id AS clasificacion_id, documentos.vendedor_id,
+                '$metric' AS tipo, COUNT(*) AS proyectos, COALESCE(MAX(nombres.nombre), 'Sin vendedor') AS nombre
+                FROM ($sql) documentos INNER JOIN tb_ventas v ON v.id = documentos.id
+                $sellerNames ON nombres.ccvemedico = documentos.vendedor_id
+                GROUP BY v.clasificacion_proyecto_id, documentos.vendedor_id";
+            array_push($classificationParams,...$queryParams);
+        }
+        $classificationRows = $this->consultar(implode(' UNION ALL ', $classificationQueries),$classificationParams);
+        $classificationCatalog = $this->consultar('SELECT id, clasificacion FROM cat_clasificacion_proyectos WHERE id IN (2,3,4,5) ORDER BY id');
         return self::resumir($headers, $divisor)
             // El desglose por clasificación utiliza el mismo conjunto y estatus del catálogo.
             + [
@@ -293,6 +307,9 @@ class ReportesmensualesModel extends Mysql
                 'cotizados_por_periodo' => $quotedPeriods,
                 'colocados_por_periodo' => $placedPeriods,
                 'evolucion_mensual' => $evolution,
+                'evolucion_clasificacion' => $evolutionClasses,
+                'comparativo_clasificacion_local' => self::resumenClasificacionLocal($classificationRows,$headers,$divisor),
+                'clasificaciones_comparativo' => $classificationCatalog,
                 'anios_seleccionados' => is_array($year) ? $year : [$year],
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
@@ -310,7 +327,7 @@ class ReportesmensualesModel extends Mysql
     }
 
     /** Cada mes aplica el mismo conjunto del KPI y las mismas partidas/conversion monetaria. */
-    private function evolucionMensual(int|array $years, int|array $months, string $seller, float $divisor, array $moneyQueries): array
+    private function evolucionMensual(int|array $years, int|array $months, string $seller, float $divisor, array $moneyQueries, array &$byClass): array
     {
         $years = array_values(array_unique(is_array($years) ? $years : [$years]));
         sort($years, SORT_NUMERIC);
@@ -324,13 +341,19 @@ class ReportesmensualesModel extends Mysql
                 $result["$year-$month"] = ['anio'=>$year,'mes'=>$month,'cotizado'=>0,'colocado'=>0,'importe_cotizado'=>0.0,'importe_colocado'=>0.0];
                 foreach (['cotizados'=>'cotizado','colocados'=>'colocado'] as $type=>$key) {
                     [$sql,$params] = self::documentadosPeriodoSql($year,$month,$seller,$type);
-                    $countQueries[] = "SELECT $year AS anio, $month AS mes, '$key' AS tipo, COUNT(*) AS proyectos FROM ($sql) documentos";
+                    $countQueries[] = "SELECT $year AS anio, $month AS mes, v.clasificacion_proyecto_id AS clasificacion_id,
+                        '$key' AS tipo, COUNT(*) AS proyectos FROM ($sql) documentos INNER JOIN tb_ventas v ON v.id = documentos.id
+                        GROUP BY v.clasificacion_proyecto_id";
                     array_push($countParams,...$params);
                 }
             }
         }
         foreach ($this->consultar(implode(' UNION ALL ', $countQueries), $countParams) as $row) {
-            $result[$row['anio'].'-'.$row['mes']][$row['tipo']] = (int)$row['proyectos'];
+            $key = $row['anio'].'-'.$row['mes'];
+            $classKey = $key.'-'.(int)($row['clasificacion_id'] ?? 0);
+            if (!isset($byClass[$classKey])) $byClass[$classKey] = array_replace($result[$key],['cotizado'=>0,'colocado'=>0,'clasificacion_id'=>(int)($row['clasificacion_id'] ?? 0)]);
+            $byClass[$classKey][$row['tipo']] += (int)$row['proyectos'];
+            $result[$key][$row['tipo']] += (int)$row['proyectos'];
         }
         foreach ($moneyQueries as [$type,$sql,$selectedPeriod,$date]) {
             $params = [];
@@ -342,10 +365,36 @@ class ReportesmensualesModel extends Mysql
             $sql = str_replace('GROUP BY v.id, v.proyecto_id',"GROUP BY YEAR($date), MONTH($date), v.id, v.proyecto_id",$sql);
             foreach ($this->consultar($sql,$params) as $row) {
                 $key = $row['anio'].'-'.$row['mes'];
-                $result[$key]['importe_'.$type] += self::resumir([$row],$divisor)[$type];
+                $classKey = $key.'-'.(int)($row['clasificacion_id'] ?? 0);
+                if (!isset($byClass[$classKey])) $byClass[$classKey] = array_replace($result[$key],['cotizado'=>0,'colocado'=>0,'importe_cotizado'=>0.0,'importe_colocado'=>0.0,'clasificacion_id'=>(int)($row['clasificacion_id'] ?? 0)]);
+                $amount = self::resumir([$row],$divisor)[$type];
+                $result[$key]['importe_'.$type] += $amount;
+                $byClass[$classKey]['importe_'.$type] += $amount;
             }
         }
+        $byClass = array_values($byClass);
         return array_values($result);
+    }
+
+    /** Desglose local sin volver a consultar partidas ni recalcular su conversion. */
+    public static function resumenClasificacionLocal(array $counts, array $headers, float $divisor): array
+    {
+        $rows = [];
+        foreach (array_merge($counts,$headers) as $row) {
+            $class = (int)($row['clasificacion_id'] ?? 0);
+            $seller = (string)($row['vendedor_id'] ?? '');
+            $key = json_encode([$class,$seller]);
+            if (!isset($rows[$key])) $rows[$key] = ['clasificacion_id'=>$class,'vendedor_id'=>$seller,'nombre'=>$row['nombre'] ?? $row['vendedor'] ?? 'Sin vendedor',
+                'cotizado'=>0,'colocado'=>0,'importe_cotizado'=>0.0,'importe_colocado'=>0.0,
+                'cotizado_usd'=>0.0,'cotizado_mxn'=>0.0,'colocado_usd'=>0.0,'colocado_mxn'=>0.0];
+            $type = $row['tipo'];
+            if (array_key_exists('monto',$row)) {
+                $rows[$key]['importe_'.$type] += self::resumir([$row],$divisor)[$type];
+                $rows[$key][$type.'_usd'] += (float)($row['monto_usd_original'] ?? 0);
+                $rows[$key][$type.'_mxn'] += (float)($row['monto_mxn_original'] ?? 0);
+            } else $rows[$key][$type] += (int)$row['proyectos'];
+        }
+        return array_values($rows);
     }
 
     /** Un registro por proyecto del KPI; anteriores se asignan a su primera cotizacion del filtro. */

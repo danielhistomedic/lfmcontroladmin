@@ -8,7 +8,7 @@ const code = fs.readFileSync(__dirname+'/../../Assets/app/js/reporte_ventas_efic
 function run(data,width=1200,dark=false) {
     const nodes = new Map();
     const make = () => ({children:[],events:{},textContent:'',hidden:false,
-        appendChild(child){this.children.push(child);},setAttribute(key,value){this[key]=value;},addEventListener(key,fn){this.events[key]=fn;}});
+        replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);},setAttribute(key,value){this[key]=value;},addEventListener(key,fn){this.events[key]=fn;}});
     const node = id => { if (!nodes.has(id)) nodes.set(id,make()); return nodes.get(id); };
     node('ventas-mensuales-datos').textContent=JSON.stringify(data);
     node('ventas-eficiencia-vendedores').hidden=true;
@@ -94,6 +94,34 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     charts.forEach(chart=>chart.dispose());
 }
 const empty=run({cantidades:{total_proyectos:0,cotizacion_cliente:0,orden_compra_cliente:0}});
+const localData={...fixture,
+    clasificaciones_comparativo:[{id:34,clasificacion:'BOMBAS FLOWSERVE'},{id:91,clasificacion:'SELLOS FLOWSERVE'},
+        {id:17,clasificacion:'DIVERSOS'},{id:22,clasificacion:'VÁLVULAS FLOWSERVE'}],
+    comparativo_clasificacion_local:[{clasificacion_id:34,vendedor_id:'V1',nombre:'Ana',cotizado:3,colocado:1,
+        importe_cotizado:200,importe_colocado:50,cotizado_usd:100,cotizado_mxn:1800,colocado_usd:50,colocado_mxn:0}],
+    evolucion_clasificacion:[{clasificacion_id:34,anio:2026,mes:9,cotizado:3,colocado:1,importe_cotizado:200,importe_colocado:50}]};
+const originalLocal=JSON.stringify(localData);
+const local=run(localData);
+const buttons=local.node('ventas-eficiencia-filtro-clasificacion').children;
+assert.deepEqual(buttons.map(button=>button.textContent),['TODOS','DIVERSOS','BOMBAS FLOWSERVE','VÁLVULAS FLOWSERVE','SELLOS FLOWSERVE']);
+buttons[2].events.click();
+assert.equal(buttons[2]['aria-pressed'],'true');assert.equal(buttons[0]['aria-pressed'],'false');
+assert.equal(local.node('ventas-eficiencia-cotizado').textContent,'3');
+assert.equal(local.node('ventas-eficiencia-colocado').textContent,'1');
+assert.equal(local.node('ventas-eficiencia-colocacion').textContent,'33.33 %');
+assert.equal(local.node('ventas-eficiencia-importe-cotizado').textContent,'$ 200.00');
+assert.equal(local.node('ventas-eficiencia-cotizado-moneda-original').textContent,'USD: $ 100.00 | MXN: $ 1,800.00');
+assert.equal(local.node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');
+assert.equal(local.charts.at(-3).getOption().title[0].text,'33.33 %');
+assert.deepEqual(local.charts.at(-1).getOption().series[0].data,[0,0,3,0]);
+assert.equal(local.node('ventas-eficiencia-vendedores-filas').children.length,1);
+buttons[1].events.click();
+assert.equal(local.node('ventas-eficiencia-colocacion').textContent,'—','Clasificacion vacia sin porcentaje inventado');
+buttons[0].events.click();
+assert.equal(local.node('ventas-eficiencia-cotizado').textContent,'9');
+assert.equal(local.node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00','TODOS restaura importes generales');
+assert.equal(JSON.stringify(localData),originalLocal,'El filtro no modifica datos compartidos');
+local.charts.slice(-3).forEach(chart=>chart.dispose());
 assert.equal(empty.node('ventas-eficiencia-colocacion').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-colocacion-monetaria').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-tipo-cambio').textContent,'TC: — | Fecha TC: —','Datos ausentes sin tipo de cambio inventado');

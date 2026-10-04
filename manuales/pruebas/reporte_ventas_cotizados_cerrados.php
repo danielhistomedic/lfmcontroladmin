@@ -9,6 +9,8 @@ $memory->exec('CREATE TABLE tb_ventas_cotizacion_cliente (id INTEGER PRIMARY KEY
 $memory->exec('CREATE TABLE tb_pedidos_cliente (id INTEGER, venta_id INTEGER, enviado INTEGER, fecha_pedido TEXT)');
 $memory->exec('CREATE TABLE tb_compras_cotizacion_interna (id INTEGER, venta_id INTEGER, enviado INTEGER)');
 $memory->exec('CREATE TABLE cat_medico (ccvemedico TEXT, cNombre TEXT, cPriApellido TEXT, cSegApellido TEXT)');
+$memory->exec('CREATE TABLE cat_clasificacion_proyectos (id INTEGER PRIMARY KEY, clasificacion TEXT)');
+$memory->exec("INSERT INTO cat_clasificacion_proyectos VALUES (2,'DIVERSOS'),(3,'BOMBAS FLOWSERVE'),(4,'VALVULAS FLOWSERVE'),(5,'SELLOS FLOWSERVE')");
 $memory->exec('CREATE TABLE tb_ventas_detalle (id INTEGER, tipo_partida TEXT)');
 $memory->exec('CREATE TABLE tb_ventas_cotizacion_cliente_detalle (cotizacion_cliente_id INTEGER, venta_detalle_id_partida INTEGER, cantidad REAL, precio_unitario REAL)');
 $project = $memory->prepare('INSERT INTO tb_ventas VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 3, 1)');
@@ -44,9 +46,16 @@ verificar((int)$counts['cotizacion_cliente']===2, 'Cotizados actuales incluyen c
 verificar((int)$execute($capture->calls[8])[0]['cotizacion_cliente_anteriores']===1, 'Cotizados anteriores incluyen cerrados sin duplicar proyectos');
 $amounts = $execute($capture->calls[1]);
 cerca(array_sum(array_column($amounts,'monto')),750, 'Importe y vendedor incluyen exactamente las partidas cotizadas elegibles');
+$localCounts=$execute($capture->calls[16]);
+$localRows=ReportesmensualesModel::resumenClasificacionLocal($localCounts,$amounts,1);
+verificar(count($localRows)===1 && $localRows[0]['clasificacion_id']===2 && $localRows[0]['cotizado']===3,
+    'Cantidad local incluye actuales y anteriores sin duplicar cotizaciones');
+cerca($localRows[0]['importe_cotizado'],750,'Importe local concilia con general');
+cerca($localRows[0]['cotizado_usd'],750,'Desglose original conserva la misma moneda');
+verificar(count($execute($capture->calls[17]))===4,'Botones usan IDs y descripciones del catalogo existente');
 $annualCounts = $execute($capture->calls[13]);
 $february = array_values(array_filter($annualCounts,static fn($row)=>(int)$row['mes']===2 && $row['tipo']==='cotizado'));
-verificar(count($annualCounts)===2 && (int)$february[0]['proyectos']===3,
+verificar(count($annualCounts)===1 && (int)$february[0]['proyectos']===3,
     'SQL anual ejecutado: mismas cantidades mensuales del KPI y dos tipos por cada mes');
 $memory->sqliteCreateFunction('YEAR',static fn($date)=>(int)substr($date,0,4));
 $memory->sqliteCreateFunction('MONTH',static fn($date)=>(int)substr($date,5,2));

@@ -19,6 +19,12 @@ html.dark #ventas-financiero-eficiencia .ventas-eficiencia-desglose { color:#c8d
 #ventas-financiero-eficiencia .ventas-eficiencia-graficas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 #ventas-financiero-eficiencia .ventas-eficiencia-graficas > section { min-width:0; }
 #ventas-financiero-eficiencia .ventas-eficiencia-chart { width:100%; height:220px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion button { padding:6px 10px; border:1px solid #009bc4; border-radius:0; background:transparent; color:#0086ac; font-size:11px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion button[aria-pressed="true"] { background:#008caf; color:#fff; }
+#ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion button:focus-visible { outline:3px solid #2385bd; outline-offset:2px; }
+html.dark #ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion button { color:#9dddef; }
+html.dark #ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion button[aria-pressed="true"] { color:#fff; }
 #ventas-financiero-eficiencia #ventas-eficiencia-evolucion { width:100%; height:330px; }
 #ventas-financiero-eficiencia .ventas-eficiencia-evolucion { cursor:default; }
 #ventas-financiero-eficiencia .table { font-size:11px; }

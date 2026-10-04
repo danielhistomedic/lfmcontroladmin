@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const money = value => Number.isFinite(Number(value)) ? Number(value) : 0;
     const currency = value => '$ ' + decimal.format(value);
     const ratio = (numerator, denominator) => denominator !== 0 ? decimal.format(numerator / denominator * 100) + ' %' : '—';
+    let charts = [];
+    function render(data) {
+    charts.forEach(chart => chart.dispose());
+    charts = [];
     const quantities = data.cantidades || {};
     const totals = {
         cotizado:count(quantities.cotizacion_cliente),
@@ -52,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     const rows = [...sellers.values()].sort((a,b) => b.colocado-a.colocado || a.nombre.localeCompare(b.nombre,'es') || a.id.localeCompare(b.id));
     const body = byId('vendedores-filas');
+    body.replaceChildren();
     rows.forEach(seller => {
         const tr = document.createElement('tr');
         [seller.nombre,integer.format(seller.cotizado),integer.format(seller.colocado),ratio(seller.colocado,seller.cotizado),
@@ -70,14 +75,6 @@ document.addEventListener('DOMContentLoaded', function () {
         td.textContent = 'No hay proyectos para los filtros seleccionados.';
         tr.appendChild(td); body.appendChild(tr);
     }
-    function showSellers() {
-        byId('vendedores').hidden = false;
-        byId('general').setAttribute('aria-expanded','true');
-    }
-    byId('general').addEventListener('click', showSellers);
-    byId('general').addEventListener('keydown', event => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSellers(); }
-    });
     if (typeof echarts === 'undefined') return;
     const dark = typeof theme_chart !== 'undefined' && theme_chart === 'dark';
     const textColor = dark ? '#edf2f7' : '#243447';
@@ -112,14 +109,13 @@ document.addEventListener('DOMContentLoaded', function () {
         chart.on('click',showSellers);
         return chart;
     }
-    const charts = [conversion('grafica',totals.cotizado,totals.colocado,false),
+    charts = [conversion('grafica',totals.cotizado,totals.colocado,false),
         conversion('grafica-importes',totals.importe_cotizado,totals.importe_colocado,true)];
     const evolutionElement = byId('evolucion');
     const evolution = echarts.init(evolutionElement, dark ? 'dark' : null);
     charts.push(evolution);
     const years = [...new Set((data.anios_seleccionados || []).map(Number))].sort((a,b)=>a-b);
     const months = [...new Set((data.meses_seleccionados || []).map(Number))].sort((a,b)=>a-b);
-    evolutionElement.addEventListener('click', event => event.stopPropagation());
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     function renderEvolution() {
         const periods = years.flatMap(year=>months.map(month=>({year,month})));
@@ -149,5 +145,48 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     renderEvolution();
+    }
+    function showSellers() {
+        byId('vendedores').hidden = false;
+        byId('general').setAttribute('aria-expanded','true');
+    }
+    byId('general').addEventListener('click',showSellers);
+    byId('general').addEventListener('keydown',event=>{
+        if(event.key==='Enter'||event.key===' '){event.preventDefault();showSellers();}
+    });
+    byId('evolucion').addEventListener('click',event=>event.stopPropagation());
+    const filter = byId('filtro-clasificacion');
+    filter.addEventListener('click',event=>event.stopPropagation());
+    filter.addEventListener('keydown',event=>event.stopPropagation());
+    const catalog = [...(data.clasificaciones_comparativo || [])];
+    const order = ['DIVERSOS','BOMBAS FLOWSERVE','VALVULAS FLOWSERVE','SELLOS FLOWSERVE'];
+    const normalized = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
+    catalog.sort((a,b)=>{
+        const ai=order.indexOf(normalized(a.clasificacion)),bi=order.indexOf(normalized(b.clasificacion));
+        return (ai<0?99:ai)-(bi<0?99:bi) || String(a.clasificacion).localeCompare(String(b.clasificacion),'es');
+    });
+    function filtered(classId) {
+        const rows=(data.comparativo_clasificacion_local || []).filter(row=>String(row.clasificacion_id)===String(classId));
+        const totals={cotizado:0,colocado:0,importe_cotizado:0,importe_colocado:0,cotizado_usd:0,cotizado_mxn:0,colocado_usd:0,colocado_mxn:0};
+        rows.forEach(row=>Object.keys(totals).forEach(key=>totals[key]+=money(row[key])));
+        return {...data,cotizado:totals.importe_cotizado,colocado:totals.importe_colocado,
+            cantidades:{cotizacion_cliente:totals.cotizado,orden_compra_cliente:totals.colocado},
+            cotizado_moneda_original:{USD:totals.cotizado_usd,MXN:totals.cotizado_mxn},
+            colocado_moneda_original:{USD:totals.colocado_usd,MXN:totals.colocado_mxn},
+            proyectos_por_vendedor:rows,
+            cotizados_por_periodo:rows.map(row=>({...row,proyectos:row.cotizado})),
+            colocados_por_periodo:rows.map(row=>({...row,proyectos:row.colocado})),
+            importes_por_vendedor:rows,
+            evolucion_mensual:(data.evolucion_clasificacion || []).filter(row=>String(row.clasificacion_id)===String(classId))};
+    }
+    [{id:'',clasificacion:'TODOS'},...catalog].forEach(row=>{
+        const button=document.createElement('button');button.type='button';button.textContent=String(row.clasificacion).toUpperCase();
+        button.setAttribute('aria-pressed',String(row.id===''));
+        button.addEventListener('click',()=>{
+            [...filter.children].forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+            render(row.id===''?data:filtered(row.id));
+        });filter.appendChild(button);
+    });
+    render(data);
     window.addEventListener('resize',()=>charts.forEach(chart=>chart.resize()));
 });
