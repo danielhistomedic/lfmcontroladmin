@@ -319,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function renderSellerDonut(entry, base, groups, allGroups, rows, rowKey, groupKey, groupName) {
         const totalProjects = Number(projectCounts[selectedIndex].proyectos);
+        const declinedTotal = rows.reduce((sum,row)=>sum+Number(row.declinados),0);
         const distribution = groups.flatMap(group => {
             const selected = rows.filter(row => rowKey(row) === groupKey(group));
             const total = selected.reduce((sum,row)=>sum+Number(row.proyectos),0);
@@ -327,9 +328,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const common = {group:groupName(group),total,declined};
             const slices = [];
             if (total > declined) slices.push({...common,name:groupName(group),value:total-declined,itemStyle:base.series[index].itemStyle});
-            if (declined > 0) slices.push({...common,name:'Declinados',value:declined,itemStyle:{color:'#dc3545'}});
             return slices;
         });
+        if (declinedTotal > 0) distribution.push({group:'Declinados',name:'Declinados',value:declinedTotal,
+            total:declinedTotal,declined:declinedTotal,itemStyle:{color:'#dc3545'}});
         entry.donut = true; entry.height = 360; entry.element.style.height = '360px';
         entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
             title:[{text:String(totalProjects),left:'center',top:'37%',textStyle:{color:cascadeText,fontSize:25,fontWeight:600}},
@@ -337,9 +339,11 @@ document.addEventListener('DOMContentLoaded', function () {
             legend:{bottom:0,type:'scroll',textStyle:{color:cascadeText,fontSize:10},data:[...new Set(distribution.map(row=>row.name))]},
             tooltip:{trigger:'item',renderMode:'richText',formatter:params=>{
                 const row=params.data; const percentage=totalProjects ? row.value/totalProjects*100 : 0;
+                if (row.name === 'Declinados') return 'Declinados: '+row.value+' ('+amount.format(percentage)+' %)'+
+                    '\nTotal del vendedor: '+totalProjects;
                 return row.group+'\n'+row.name+': '+row.value+' ('+amount.format(percentage)+' %)'+
-                    '\nTotal de la categoría: '+row.total+' ('+amount.format(totalProjects ? row.total/totalProjects*100 : 0)+' %)'+
-                    '\nDeclinados: '+row.declined+'\nTotal del vendedor: '+totalProjects;
+                    '\nTotal de la categoría: '+row.value+' ('+amount.format(percentage)+' %)'+
+                    '\nTotal del vendedor: '+totalProjects;
             }},
             series:[{type:'pie',radius:['47%','68%'],center:['50%','44%'],
                 label:{show:true,formatter:'{b}\n{c} ({d} %)',color:cascadeText,fontSize:10,overflow:'break',width:110},

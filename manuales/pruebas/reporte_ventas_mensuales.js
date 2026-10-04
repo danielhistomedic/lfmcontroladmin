@@ -8,7 +8,7 @@ Object.defineProperty(globalThis, 'navigator', { value: undefined });
 const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
-function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false) {
+function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false, groupedDeclines = false) {
     const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -34,6 +34,7 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:1,declinados:0},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:11,estatus:'Facturado',proyectos:2,declinados:1}];
     data.estatus_por_clasificacion = data.estatus_por_clasificacion.map(row => ({anio:2026,mes:9,vendedor_id:'V1',...row}));
+    if (groupedDeclines) data.estatus_por_clasificacion.find(row=>row.vendedor_id==='V1' && row.clasificacion_id===3).declinados=1;
     if (quoted) {
         data.estatus_por_clasificacion.push({anio:2026,mes:9,vendedor_id:'V1',clasificacion_id:3,estatus_id:5,
             estatus:'PEDIDO COTIZADO (SIN OC CLIENTE)',proyectos:99,declinados:1});
@@ -69,6 +70,23 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
     events.DOMContentLoaded();
     assert.equal(charts.length, 3, 'Inicializar las tres gráficas generales restantes');
     assert.ok(!nodes.has('ventas-comparativo'), 'No inicializar el comparativo retirado');
+    if (groupedDeclines) {
+        charts[0].trigger('click',{componentType:'series',dataIndex:0});
+        [3,4].forEach(index=>{
+            const option=charts[index].getOption();
+            const slices=option.series[0].data;
+            const declined=slices.filter(row=>row.name==='Declinados');
+            assert.equal(declined.length,1,'Una sola seccion roja para todas las categorias');
+            assert.equal(declined[0].value,3,'Sumar declinados de distintos estatus/clasificaciones');
+            assert.equal(declined[0].itemStyle.color,'#dc3545');
+            assert.equal(slices.reduce((sum,row)=>sum+row.value,0),8,'Sin duplicar declinados en su categoria original');
+            assert.equal(slices.filter(row=>row.name!=='Declinados').reduce((sum,row)=>sum+row.value,0),5);
+            assert.equal(option.title[0].text,'8','Total central conservado');
+            assert.ok(option.tooltip[0].formatter({data:declined[0]}).includes('Declinados: 3 (37.5 %)'));
+            assert.ok(!charts[index].renderToSVGString().includes('NaN'));
+        });
+        charts.forEach(chart=>chart.dispose()); return;
+    }
     for (const chart of charts) {
         const svg = chart.renderToSVGString();
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
@@ -241,6 +259,8 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
     charts.forEach(chart => chart.dispose());
 }
 ejecutar(false, 900, 'walden', true);
+ejecutar(false, 900, 'walden', false, false, false, true);
+ejecutar(false, 320, 'dark', false, false, false, true);
 ejecutar(false, 900, 'walden', false, false, true);
 ejecutar(false, 320, 'dark', false, false, true);
 ejecutar(false, 900, 'walden', false, true);
