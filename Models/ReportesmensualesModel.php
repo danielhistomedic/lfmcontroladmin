@@ -118,6 +118,8 @@ class ReportesmensualesModel extends Mysql
             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor') AS vendedor";
         // Cotizaciones enviadas: incluir proyectos cerrados, conservando los filtros comerciales.
         $sent = $this->consultar("SELECT $columns, 'cotizado' AS tipo,
+            SUM(CASE WHEN v.moneda_id = 3 THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_usd_original,
+            SUM(CASE WHEN v.moneda_id = 1 THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_mxn_original,
             SUM(COALESCE(cp.subtotal_partidas, 0)) AS monto, COUNT(DISTINCT cc.id) AS cotizaciones,
             COALESCE(MAX(cc.fecha), v.fecha_cotizacion, v.fecha) AS fecha
             FROM tb_ventas_cotizacion_cliente cc INNER JOIN tb_ventas v ON v.id = cc.venta_id
@@ -288,6 +290,10 @@ class ReportesmensualesModel extends Mysql
                 'meses_seleccionados' => is_array($month) ? $month : [$month],
                 'tipo_cambio' => $rate,
                 'tipo_cambio_aplicado' => $divisor,
+                'cotizado_moneda_original' => [
+                    'USD' => array_sum(array_column($sent, 'monto_usd_original')),
+                    'MXN' => array_sum(array_column($sent, 'monto_mxn_original'))
+                ],
                 'colocado_moneda_original' => [
                     'USD' => array_sum(array_column($placed, 'monto_usd_original')),
                     'MXN' => array_sum(array_column($placed, 'monto_mxn_original'))

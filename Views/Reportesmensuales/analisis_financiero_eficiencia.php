@@ -20,6 +20,9 @@
                         <?php if ($key === 'importe-colocado'): ?>
                             <small id="ventas-eficiencia-moneda-original" class="ventas-eficiencia-desglose">USD: — | MXN: —</small>
                             <small id="ventas-eficiencia-tipo-cambio" class="ventas-eficiencia-desglose">TC: — | Fecha TC: —</small>
+                        <?php elseif ($key === 'importe-cotizado'): ?>
+                            <small id="ventas-eficiencia-cotizado-moneda-original" class="ventas-eficiencia-desglose">USD: — | MXN: —</small>
+                            <small id="ventas-eficiencia-cotizado-tipo-cambio" class="ventas-eficiencia-desglose">TC: — | Fecha TC: —</small>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>

@@ -21,15 +21,19 @@ document.addEventListener('DOMContentLoaded', function () {
     ['cotizado','colocado'].forEach(key => { byId('importe-'+key).textContent = currency(totals['importe_'+key]); });
     byId('colocacion').textContent = ratio(totals.colocado, totals.cotizado);
     byId('colocacion-monetaria').textContent = ratio(totals.importe_colocado, totals.importe_cotizado);
-    const original = data.colocado_moneda_original || {};
     const originalAmount = value => value != null && Number.isFinite(Number(value)) ? currency(Number(value)) : '—';
-    byId('moneda-original').textContent = 'USD: ' + originalAmount(original.USD) + ' | MXN: ' + originalAmount(original.MXN);
     const rate = data.tipo_cambio_aplicado;
     const rateText = rate != null && Number.isFinite(Number(rate)) ? '$ ' +
         new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:8}).format(Number(rate)) : '—';
     const rateDate = String(data.fecha_tipo_cambio || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-    byId('tipo-cambio').textContent = 'TC: ' + rateText + ' | Fecha TC: ' +
+    const exchangeText = 'TC: ' + rateText + ' | Fecha TC: ' +
         (rateDate ? rateDate[3]+'/'+rateDate[2]+'/'+rateDate[1] : '—');
+    ['cotizado','colocado'].forEach(key => {
+        const original = data[key + '_moneda_original'] || {};
+        const prefix = key === 'cotizado' ? 'cotizado-' : '';
+        byId(prefix + 'moneda-original').textContent = 'USD: ' + originalAmount(original.USD) + ' | MXN: ' + originalAmount(original.MXN);
+        byId(prefix + 'tipo-cambio').textContent = exchangeText;
+    });
     const sellers = new Map();
     function sellerFor(row) {
         const key = String(row.vendedor_id ?? '');

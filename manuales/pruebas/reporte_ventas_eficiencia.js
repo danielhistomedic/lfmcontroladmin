@@ -27,6 +27,7 @@ function run(data,width=1200,dark=false) {
 }
 const fixture={
     cotizado:600,colocado:250,
+    cotizado_moneda_original:{USD:500,MXN:1800},
     colocado_moneda_original:{USD:150,MXN:1800},tipo_cambio_aplicado:18,fecha_tipo_cambio:'2026-09-30 12:00:00',
     cantidades:{total_proyectos:10,cotizacion_cliente:9,orden_compra_cliente:9},
     proyectos_por_vendedor:[{vendedor_id:'V1',nombre:'Ana',proyectos:6},{vendedor_id:'V2',nombre:'Beto',proyectos:4}],
@@ -50,6 +51,8 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     assert.equal(node('ventas-eficiencia-colocacion').textContent,'100.00 %');
     assert.ok(!node('ventas-eficiencia-eficiencia').textContent,'Eficiencia retirada');
     assert.equal(node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00');
+    assert.equal(node('ventas-eficiencia-cotizado-moneda-original').textContent,'USD: $ 500.00 | MXN: $ 1,800.00');
+    assert.equal(node('ventas-eficiencia-cotizado-tipo-cambio').textContent,node('ventas-eficiencia-tipo-cambio').textContent);
     assert.equal(node('ventas-eficiencia-importe-colocado').textContent,'$ 250.00');
     assert.equal(node('ventas-eficiencia-moneda-original').textContent,'USD: $ 150.00 | MXN: $ 1,800.00');
     assert.equal(node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');

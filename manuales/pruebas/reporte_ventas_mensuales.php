@@ -60,16 +60,25 @@ $actual=$model->dashboard(2024,2,"V'1");
 verificar($actual['tipo_cambio_aplicado'] === 1.0 && $actual['tipo_cambio'] === 0.0,
     'Informar el divisor realmente utilizado cuando el tipo de cambio registrado es cero');
 $currencyResponses[0] = [['valor'=>'18.00','fecha'=>'2026-09-30']];
+$currencyResponses[1] = [
+    array_replace($headers[0], ['monto'=>1800,'monto_usd_original'=>0,'monto_mxn_original'=>1800]),
+    array_replace($headers[2], ['monto'=>500,'monto_usd_original'=>500,'monto_mxn_original'=>0])
+];
 $currencyResponses[2] = [array_replace($headers[1], ['moneda_id'=>3,'monto'=>250,
     'monto_usd_original'=>'150.00','monto_mxn_original'=>'1800.00'])];
 $currencyDb = new ConexionSimulada($currencyResponses);
 $currencyReport = (new ModeloSimulado($currencyDb))->dashboard(2024,2,"V'1");
+cerca($currencyReport['cotizado'],600.0,'Importe cotizado conserva la conversion actual');
+cerca($currencyReport['cotizado_moneda_original']['USD'],500.0,'Cotizado originalmente USD');
+cerca($currencyReport['cotizado_moneda_original']['MXN'],1800.0,'Cotizado originalmente MXN');
 cerca($currencyReport['colocado'],250.0,'Mantener importe convertido por la consulta existente');
 cerca($currencyReport['colocado_moneda_original']['USD'],150.0,'Conservar importe originalmente USD');
 cerca($currencyReport['colocado_moneda_original']['MXN'],1800.0,'Conservar importe originalmente MXN');
 verificar($currencyReport['tipo_cambio_aplicado'] === 18.0 && $currencyReport['fecha_tipo_cambio'] === '2026-09-30'
     && count($currencyDb->calls) === 13, 'Misma fuente del tipo de cambio y fecha sin consultas adicionales');
 foreach ([3=>'usd',1=>'mxn'] as $currencyId=>$key) {
+    verificar(str_contains($currencyDb->calls[1][0], "SUM(CASE WHEN v.moneda_id = $currencyId THEN COALESCE(cp.subtotal_partidas, 0) ELSE 0 END) AS monto_{$key}_original"),
+        'Moneda cotizada original utiliza las mismas partidas sin agregar consultas');
     verificar(str_contains($currencyDb->calls[2][0], "SUM(CASE WHEN pc.moneda_id = $currencyId THEN pd.cantidad_pedido * pd.precio_unitario ELSE 0 END) AS monto_{$key}_original"),
         'Sumar monedas originales en la misma consulta y con las mismas partidas del importe convertido');
 }
