@@ -269,7 +269,7 @@ async function probarModal(critical = false, unscoped = false) {
     }
     response = { status: true, data: { draw: 1, recordsTotal: 8, recordsFiltered: 8,
         data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
-    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'interna_sin_cliente'}:{}}});
+    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'cotizados_periodo'}:{}}});
     await modal.events['shown.bs.modal']();
     if(!critical){
         assert.equal(summaryCalls.length,1);assert.equal(options,undefined,'Resumen antes de cargar tabla plana');
@@ -328,8 +328,8 @@ async function probarModal(critical = false, unscoped = false) {
     tableNode.events.click({ target: { closest: () => selectedButton }, stopPropagation() {} });
     modal.events['hidden.bs.modal']();
     assert.deepEqual(context.selected,[633,'PV-2026-20035'],'Historial del proyecto seleccionado');
-    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'interna_sin_cliente':'declinados');
-    assert.ok(calls[0][0].includes('lista='+(critical?'interna_sin_cliente':'declinados')));
+    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'cotizados_periodo':'declinados');
+    assert.ok(calls[0][0].includes('lista='+(critical?'cotizados_periodo':'declinados')));
     requestData.start = 10; await draw();
     assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
     delegated.call({ dataset: { column: '3' }, value: 'Cliente' });

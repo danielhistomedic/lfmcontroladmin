@@ -239,19 +239,20 @@
                                         <div id="declinados-tabla-propia" hidden>
                                             <label class="declinados-buscar" for="declinados-buscar">Buscar<input type="search" id="declinados-buscar" maxlength="200" class="form-control form-control-sm" placeholder="Cliente, título o ID de proyecto"></label>
                                             <table class="declinados-tabla w-100">
-                                                <caption class="visually-hidden">Proyectos declinados del vendedor y período seleccionados</caption>
+                                                <caption class="visually-hidden">Proyectos del período y vendedor seleccionados</caption>
                                                 <thead>
                                                     <tr>
                                                         <th scope="col">No.</th>
-                                                        <?php foreach ([1 => 'ID Proyecto', 2 => 'Fecha', 3 => 'Cliente', 5 => 'Clasificación', 6 => 'Título'] as $index => $heading): ?>
-                                                            <th scope="col" aria-sort="<?= $index === 2 ? 'descending' : 'none'; ?>"><button type="button" data-order="<?= $index; ?>" data-label="<?= $esc($heading); ?>"><?= $esc($heading); ?><?= $index === 2 ? ' ↓' : ''; ?></button></th>
+                                                        <?php foreach ([1 => 'ID Proyecto', 2 => 'Fecha', 3 => 'Cliente', 4 => 'Vendedor', 5 => 'Clasificación', 6 => 'Título', 7 => 'Activo'] as $index => $heading): ?>
+                                                            <th scope="col" <?= in_array($index,[4,7],true) ? 'hidden' : ''; ?> aria-sort="<?= $index === 2 ? 'descending' : 'none'; ?>"><button type="button" data-order="<?= $index; ?>" data-label="<?= $esc($heading); ?>"><?= $esc($heading); ?><?= $index === 2 ? ' ↓' : ''; ?></button></th>
                                                         <?php endforeach; ?>
-                                                        <th scope="col" class="declinados-col-seguimiento">Seguimiento</th>
+                                                        <th scope="col" id="declinados-seguimiento-cabecera" class="declinados-col-seguimiento">Seguimiento</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="declinados-tabla-filas"></tbody>
                                             </table>
                                             <div class="declinados-tabla-pie">
+                                                <button type="button" id="declinados-exportar-pagina" class="btn btn-sm" hidden>Excel (página actual)</button>
                                                 <span id="declinados-tabla-pagina" aria-live="polite">0 resultados</span>
                                                 <nav aria-label="Páginas de proyectos declinados"><button type="button" id="declinados-anterior" class="btn btn-sm" disabled>Anterior</button><button type="button" id="declinados-siguiente" class="btn btn-sm" disabled>Siguiente</button></nav>
                                             </div>

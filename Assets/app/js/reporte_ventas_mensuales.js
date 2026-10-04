@@ -52,6 +52,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
+        const isLightTable = () => ['declinados','interna_sin_cliente'].includes(lista);
+        let currentPageRows = [];
         const isDrill = () => ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo','cotizados_periodo','colocados_periodo'].includes(lista);
         const listTitle = () => isDrill() ? modal.dataset.desgloseTitulo : lista === 'interna_sin_cliente'
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
@@ -82,6 +84,14 @@ document.addEventListener('DOMContentLoaded', function () {
             initializeTable();
         }
         allSellers.addEventListener('click',()=>selectDeclinedSeller(null));
+        document.getElementById('declinados-exportar-pagina').addEventListener('click',async()=>{
+            if(lista!=='interna_sin_cliente'||exportRequest||request)return;
+            const current=new AbortController();exportRequest=current;
+            const button=document.getElementById('declinados-exportar-pagina');button.disabled=true;
+            try{await downloadDeclinedExcel(currentPageRows,current.signal,declinedPage*10);}
+            catch(error){status.textContent='No se pudo exportar: '+error.message;status.className='mb-2 text-danger';}
+            finally{if(exportRequest===current)exportRequest=null;button.disabled=false;}
+        });
         exportButton.addEventListener('click',()=>{
             if (lista !== 'declinados' || !declinedSummary || exportRequest) return;
             if (detailTable.hidden) selectDeclinedSeller(null);
@@ -99,20 +109,23 @@ document.addEventListener('DOMContentLoaded', function () {
             declinedOrder=order;declinedPage=0;loadDeclinedTable();
         }));
         async function loadDeclinedTable() {
-            if(lista!=='declinados'||!declinedSummary||detailTable.hidden)return;
+            if(!isLightTable()||(lista==='declinados'&&!declinedSummary)||detailTable.hidden)return;
             if(request)request.abort();
             const current=new AbortController();request=current;
             const body=document.getElementById('declinados-tabla-filas');body.replaceChildren();
+            currentPageRows=[];document.getElementById('declinados-exportar-pagina').disabled=true;
             document.getElementById('declinados-anterior').disabled=true;document.getElementById('declinados-siguiente').disabled=true;
             customPanel.setAttribute('aria-busy','true');status.textContent='Cargando proyectos…';status.className='mb-2 text-muted';retry.hidden=true;
             sortButtons.forEach(button=>{
+                button.parentElement.hidden=[4,7].includes(Number(button.dataset.order))&&lista!=='interna_sin_cliente';
                 const active=Number(button.dataset.order)===declinedOrder;
                 button.textContent=button.dataset.label+(active?(declinedDirection==='asc'?' ↑':' ↓'):'');
                 button.parentElement.setAttribute('aria-sort',active?(declinedDirection==='asc'?'ascending':'descending'):'none');
             });
-            const params=declinedParams();params.set('datatable','1');params.set('start',String(declinedPage*10));params.set('length','10');
+            document.getElementById('declinados-seguimiento-cabecera').textContent=lista==='interna_sin_cliente'?'Seguimientos':'Seguimiento';
+            const params=declinedParams();params.set('lista',lista);params.set('datatable','1');params.set('start',String(declinedPage*10));params.set('length','10');
             params.set('search',declinedSearch.value || '');params.set('order_column',String(declinedOrder));params.set('order_dir',declinedDirection);
-            if(selectedDeclinedSeller)params.set('declinado_vendedor',selectedDeclinedSeller.vendedor_id);
+            if(lista==='declinados'&&selectedDeclinedSeller)params.set('declinado_vendedor',selectedDeclinedSeller.vendedor_id);
             try{
                 const response=await fetch(modal.dataset.url+'?'+params,{signal:current.signal,credentials:'same-origin',headers:{Accept:'application/json'}});
                 const payload=await response.json();if(!response.ok||!payload.status)throw new Error(payload.message || 'No se pudo cargar el detalle.');
@@ -120,30 +133,33 @@ document.addEventListener('DOMContentLoaded', function () {
                 declinedTotal=payload.data.recordsFiltered;
                 const last=Math.max(0,Math.ceil(declinedTotal/10)-1);
                 if(declinedPage>last){declinedPage=last;return loadDeclinedTable();}
-                detailHeading(selectedDeclinedSeller?selectedDeclinedSeller.nombre:'TODOS',payload.data.recordsTotal);
+                if(lista==='declinados')detailHeading(selectedDeclinedSeller?selectedDeclinedSeller.nombre:'TODOS',payload.data.recordsTotal);
+                else badge.textContent=payload.data.recordsTotal+' Proyectos';
+                currentPageRows=payload.data.data;
                 payload.data.data.forEach((row,index)=>{
                     const tr=document.createElement('tr');const date=String(row.fecha || '').slice(0,10);
-                    const values=[declinedPage*10+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'—',row.cliente,row.clasificacion,row.titulo];
+                    const internal=lista==='interna_sin_cliente';
+                    const values=[declinedPage*10+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'—',row.cliente,...(internal?[row.vendedor]:[]),row.clasificacion,row.titulo];
                     values.forEach((value,column)=>{
                         const td=document.createElement('td'),span=document.createElement('span');span.textContent=String(value ?? '');span.title=String(value ?? '');
                         span.className='declinados-celda'+(column===1?' text-danger':'');
-                        if(column===4){const name=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                        if(column===(internal?5:4)){const name=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
                             span.className='declinados-clasificacion declinados-clasificacion-'+(name.includes('VALVULAS')?'valvulas':name.includes('BOMBAS')?'bombas':name.includes('SELLOS')?'sellos':name.includes('DIVERSOS')?'diversos':'neutral');}
                         td.appendChild(span);tr.appendChild(td);
                     });
-                    const actionCell=document.createElement('td'),button=document.createElement('button');
-                    actionCell.className='declinados-col-seguimiento';button.type='button';
-                    button.className='btn btn-'+(row.activo==='CERRADO'?'danger':'primary')+' btn-sm ventas-ver-seguimientos';
-                    button.title='Ver seguimiento del proyecto';button.setAttribute('aria-label','Ver seguimiento del proyecto '+row.proyecto_id);
-                    const icon=document.createElement('i');icon.className='fa-solid fa-list-check';icon.setAttribute('aria-hidden','true');button.appendChild(icon);
-                    button.addEventListener('click',event=>openProjectFollowup(row,button,event));
+                    if(internal){const td=document.createElement('td'),active=followupButton(row);
+                        active.prepend(document.createTextNode((row.activo||'ACTIVO')+' '));td.appendChild(active);tr.appendChild(td);}
+                    const actionCell=document.createElement('td'),button=followupButton(row);
+                    actionCell.className='declinados-col-seguimiento';
+                    if(internal)button.appendChild(document.createTextNode(' Ver seguimientos'));
                     actionCell.appendChild(button);tr.appendChild(actionCell);body.appendChild(tr);
                 });
-                if(!payload.data.data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='No hay proyectos para la búsqueda seleccionada.';tr.appendChild(td);body.appendChild(tr);}
+                if(!payload.data.data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=lista==='interna_sin_cliente'?9:7;td.textContent='No hay proyectos para la búsqueda seleccionada.';tr.appendChild(td);body.appendChild(tr);}
                 const start=declinedPage*10;
                 document.getElementById('declinados-tabla-pagina').textContent=declinedTotal?(start+1)+'–'+(start+payload.data.data.length)+' de '+declinedTotal:'0 resultados';
                 document.getElementById('declinados-anterior').disabled=declinedPage===0;document.getElementById('declinados-siguiente').disabled=start+10>=declinedTotal;
                 status.textContent='';
+                document.getElementById('declinados-exportar-pagina').disabled=!currentPageRows.length;
             }catch(error){if(error.name==='AbortError'||request!==current)return;
                 document.getElementById('declinados-tabla-pagina').textContent='—';
                 status.textContent=error instanceof SyntaxError?'No se pudo cargar el detalle. Intente nuevamente.':error.message;
@@ -209,7 +225,11 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('declinados-detalle-cabecera').hidden = true;
             detailPanel.hidden = false; detailTable.hidden = false; detailEmpty.hidden = true;
             detailTitle.textContent = ''; detailCount.textContent = '';
-            initializeTable();
+            if(lista==='interna_sin_cliente'){
+                if(restoreList){restoreList=false;return;}
+                declinedPage=0;declinedOrder=2;declinedDirection='desc';declinedSearch.value='';
+            }
+            return initializeTable();
         }
         async function exportDeclined(event,dt,node,config) {
             if (lista !== 'declinados') return jQuery.fn.dataTable.ext.buttons.excelHtml5.action.call(this,event,dt,node,config);
@@ -239,12 +259,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 status.className = 'mb-2 text-danger';
             } finally { if (exportRequest === current) { exportRequest = null; exportButton.disabled = false; this.processing(false); } }
         }
-        async function downloadDeclinedExcel(rows,signal) {
+        async function downloadDeclinedExcel(rows,signal,offset=0) {
+            const sourceList=lista,internal=sourceList==='interna_sin_cliente';
             if(typeof JSZip==='undefined')throw new Error('La biblioteca de Excel no está disponible.');
             const xml=value=>String(value ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
-            const values=[['No.','ID Proyecto','Fecha','Cliente','Clasificación','Título'],...rows.map((row,index)=>{
+            const values=[['No.','ID Proyecto','Fecha','Cliente',...(internal?['Vendedor']:[]),'Clasificación','Título',...(internal?['Activo']:[])],...rows.map((row,index)=>{
                 const date=String(row.fecha || '').slice(0,10);
-                return [index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'',row.cliente,row.clasificacion,row.titulo];
+                return [offset+index+1,row.proyecto_id,/^\d{4}-\d{2}-\d{2}$/.test(date)?date.split('-').reverse().join('/'):'',row.cliente,...(internal?[row.vendedor]:[]),row.clasificacion,row.titulo,...(internal?[row.activo||'ACTIVO']:[])];
             })];
             const sheet=values.map((row,index)=>'<row r="'+(index+1)+'">'+row.map((value,column)=>'<c r="'+String.fromCharCode(65+column)+(index+1)+'" t="inlineStr"><is><t xml:space="preserve">'+xml(value)+'</t></is></c>').join('')+'</row>').join('');
             const zip=new JSZip();const declaration='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
@@ -252,10 +273,10 @@ document.addEventListener('DOMContentLoaded', function () {
             zip.file('_rels/.rels',declaration+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
             zip.file('xl/workbook.xml',declaration+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Proyectos" sheetId="1" r:id="rId1"/></sheets></workbook>');
             zip.file('xl/_rels/workbook.xml.rels',declaration+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
-            zip.file('xl/worksheets/sheet1.xml',declaration+'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="6" customWidth="1"/><col min="2" max="3" width="19" customWidth="1"/><col min="4" max="5" width="30" customWidth="1"/><col min="6" max="6" width="60" customWidth="1"/></cols><sheetData>'+sheet+'</sheetData><autoFilter ref="A1:F'+values.length+'"/></worksheet>');
+            zip.file('xl/worksheets/sheet1.xml',declaration+'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="6" customWidth="1"/><col min="2" max="3" width="19" customWidth="1"/><col min="4" max="5" width="30" customWidth="1"/><col min="6" max="6" width="60" customWidth="1"/></cols><sheetData>'+sheet+'</sheetData><autoFilter ref="A1:'+String.fromCharCode(64+values[0].length)+values.length+'"/></worksheet>');
             const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE'});
-            if(lista!=='declinados'||signal.aborted)return;
-            const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='Proyectos_declinados.xlsx';link.click();
+            if(lista!==sourceList||signal.aborted)return;
+            const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=internal?'Proyectos_cotizacion_interna.xlsx':'Proyectos_declinados.xlsx';link.click();
             setTimeout(()=>URL.revokeObjectURL(url),1000);
         }
         function detailColumns() {
@@ -263,8 +284,9 @@ document.addEventListener('DOMContentLoaded', function () {
             table.column(8).visible(lista === 'interna_sin_cliente');
         }
         function initializeTable() {
-            customPanel.hidden=lista!=='declinados';legacyPanel.hidden=lista==='declinados';
-            if(lista==='declinados')return loadDeclinedTable();
+            customPanel.hidden=!isLightTable();legacyPanel.hidden=isLightTable();
+            document.getElementById('declinados-exportar-pagina').hidden=lista!=='interna_sin_cliente';
+            if(isLightTable())return loadDeclinedTable();
             if (table) { detailColumns(); table.columns.adjust(); if (!restoreList) table.ajax.reload(null, true); restoreList = false; return; }
             const filterRow = document.createElement('tr');
             filterRow.className = 'filters';
@@ -411,6 +433,14 @@ document.addEventListener('DOMContentLoaded', function () {
             const row = table.row(button.closest('tr')).data();
             openProjectFollowup(row,button,event);
         });
+        function followupButton(row) {
+            const button=document.createElement('button');button.type='button';
+            button.className='btn btn-'+(row.activo==='CERRADO'?'danger':'primary')+' btn-sm ventas-ver-seguimientos';
+            button.title='Ver seguimiento del proyecto';button.setAttribute('aria-label','Ver seguimiento del proyecto '+row.proyecto_id);
+            const icon=document.createElement('i');icon.className='fa-solid fa-list-check';icon.setAttribute('aria-hidden','true');button.appendChild(icon);
+            button.addEventListener('click',event=>openProjectFollowup(row,button,event));
+            return button;
+        }
         function openProjectFollowup(row,button,event) {
             if (!row || !row.id || openingFollowup) return;
             event.stopPropagation();
@@ -436,6 +466,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 jQuery(table.table().container()).find('thead input').val('');
                 table.order([]);
             }
+            if(next!==lista){if(request)request.abort();request=null;clearTimeout(filterTimer);}
             lista = next;
             modal.dataset.lista = lista;
             if (summaryRequest) summaryRequest.abort(); summaryRequest = null;
@@ -457,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (summaryRequest) summaryRequest.abort(); summaryRequest = null;
             if (exportRequest) exportRequest.abort();
         });
-        retry.addEventListener('click', () => { if(lista==='declinados'){if(!declinedSummary)loadDeclinedSummary();else loadDeclinedTable();}else if(table)table.ajax.reload(null,false); });
+        retry.addEventListener('click', () => { if(isLightTable()){if(lista==='declinados'&&!declinedSummary)loadDeclinedSummary();else loadDeclinedTable();}else if(table)table.ajax.reload(null,false); });
         document.querySelectorAll('#ventas-mensuales .ventas-abrir-declinados').forEach(card => {
             card.addEventListener('keydown', event => {
                 if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
