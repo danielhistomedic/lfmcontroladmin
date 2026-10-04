@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let sellerRows = [];
     let sellerPage = 0;
     const sellerPageSize = 10;
-    function render(data) {
+    function render(data, classificationLabel = 'TODOS') {
+    byId('vendedores-etiqueta').textContent = 'Desglose por vendedor · ' + classificationLabel;
     charts.forEach(chart => chart.dispose());
     charts = [];
     const quantities = data.cantidades || {};
@@ -221,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         button.setAttribute('aria-pressed',String(row.id===''));
         button.addEventListener('click',()=>{
             [...filter.children].forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-            render(row.id===''?data:filtered(row.id==='flowserve'?flowserveIds:[row.id]));
+            render(row.id===''?data:filtered(row.id==='flowserve'?flowserveIds:[row.id]), button.textContent);
         });filter.appendChild(button);
     });
     render(data);

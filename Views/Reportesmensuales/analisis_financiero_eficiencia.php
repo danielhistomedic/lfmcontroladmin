@@ -46,7 +46,7 @@
             <p class="ventas-eficiencia-nota mb-0">Selecciona el resumen o un anillo para ver el desglose por vendedor.</p>
         </div>
         <section id="ventas-eficiencia-vendedores" class="ventas-eficiencia-seccion" hidden aria-labelledby="ventas-eficiencia-vendedores-titulo">
-            <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i>Desglose por vendedor</h6>
+            <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i><span id="ventas-eficiencia-vendedores-etiqueta">Desglose por vendedor · TODOS</span></h6>
             <p class="ventas-eficiencia-nota">% Colocación = Total Colocado / Total Cotizado × 100. % Colocación Monetaria = Importe Colocado / Importe Cotizado × 100. Importes en USD, sin IVA.</p>
             <div class="ventas-eficiencia-tabla-controles">
                 <label for="ventas-eficiencia-vendedores-buscar">Buscar<input id="ventas-eficiencia-vendedores-buscar" type="search" maxlength="200" placeholder="Nombre o valor" class="form-control form-control-sm"></label>
