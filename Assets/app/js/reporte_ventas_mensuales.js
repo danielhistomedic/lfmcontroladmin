@@ -27,6 +27,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const badge = document.getElementById('declinados-total');
         const retry = document.getElementById('declinados-reintentar');
         const tableElement = document.getElementById('table-declinados-ventas');
+        const summaryPanel = document.getElementById('declinados-resumen');
+        const detailPanel = document.getElementById('declinados-detalle');
+        const detailTitle = document.getElementById('declinados-detalle-titulo');
+        const sellerButtons = document.getElementById('declinados-vendedores');
+        const allSellers = document.getElementById('declinados-todos');
+        let selectedDeclinedSeller = null;
+        let declinedSummary = null;
+        let summaryRequest = null;
+        let exportRequest = null;
         let table = null;
         let request = null;
         let filterTimer;
@@ -38,8 +47,116 @@ document.addEventListener('DOMContentLoaded', function () {
             ? 'Proyectos con cotización interna sin cotización a cliente' : 'Listado de Proyectos Declinados';
         const escape = jQuery.fn.dataTable.render.text().display;
         const text = value => escape(String(value == null ? '' : value));
+        function declinedParams() {
+            const params = new URLSearchParams({lista:'declinados',vendedor:modal.dataset.vendedor});
+            modal.dataset.anio.split(',').forEach(value=>params.append('anio[]',value));
+            modal.dataset.mes.split(',').forEach(value=>params.append('mes[]',value));
+            return params;
+        }
+        function selectDeclinedSeller(seller) {
+            if (!declinedSummary || lista !== 'declinados') return;
+            if (exportRequest) exportRequest.abort();
+            selectedDeclinedSeller = seller;
+            allSellers.setAttribute('aria-pressed',String(seller === null));
+            [...sellerButtons.children].forEach(button=>button.setAttribute('aria-pressed',String(seller !== null && button.dataset.vendedor === String(seller.vendedor_id))));
+            detailTitle.textContent = (seller ? seller.nombre : 'TODOS') + ' · ' +
+                (seller ? seller.proyectos : declinedSummary.total) + ' proyectos declinados';
+            detailPanel.hidden = false;
+            if (table) {
+                table.search(''); table.columns().search(''); table.order([]);
+                jQuery(table.table().container()).find('thead input').val('');
+            }
+            initializeTable();
+        }
+        allSellers.addEventListener('click',()=>selectDeclinedSeller(null));
+        async function loadDeclinedSummary() {
+            if (summaryRequest) summaryRequest.abort();
+            const current = new AbortController(); summaryRequest = current;
+            declinedSummary = null; selectedDeclinedSeller = null;
+            summaryPanel.hidden = false; detailPanel.hidden = true;
+            sellerButtons.replaceChildren(); allSellers.disabled = true;
+            allSellers.setAttribute('aria-pressed','false');
+            ['total','vendedores','lider'].forEach(key=>document.getElementById('declinados-resumen-'+key).textContent='—');
+            status.textContent = 'Cargando resumen por vendedor…'; status.className = 'mb-2 text-muted'; retry.hidden = true;
+            const params = declinedParams(); params.set('resumen','1');
+            try {
+                const response = await fetch(modal.dataset.url+'?'+params,{signal:current.signal,credentials:'same-origin',headers:{Accept:'application/json'}});
+                const payload = await response.json();
+                if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo cargar el resumen.');
+                if (summaryRequest !== current) return;
+                declinedSummary = payload.data;
+                const sellers = declinedSummary.vendedores;
+                badge.textContent = declinedSummary.total+' Proyectos';
+                document.getElementById('declinados-resumen-total').textContent = declinedSummary.total+' proyectos';
+                document.getElementById('declinados-resumen-vendedores').textContent = String(sellers.length);
+                document.getElementById('declinados-resumen-lider').textContent = sellers.length ? sellers[0].nombre+' · '+sellers[0].proyectos+' proyectos' : 'Sin proyectos';
+                const percent = new Intl.NumberFormat('es-MX',{maximumFractionDigits:2});
+                sellers.forEach(seller=>{
+                    const button = document.createElement('button'); button.type = 'button';
+                    button.className = 'declinados-vendedor'; button.dataset.vendedor = seller.vendedor_id;
+                    button.setAttribute('aria-pressed','false');
+                    const name = document.createElement('span'); name.textContent = seller.nombre;
+                    const quantity = document.createElement('span'); quantity.textContent = seller.proyectos+' proyectos · '+percent.format(seller.porcentaje)+' %';
+                    const track = document.createElement('span'); track.className = 'declinados-vendedor-barra'; track.setAttribute('aria-hidden','true');
+                    const fill = document.createElement('span'); fill.style.width = (sellers[0].proyectos ? seller.proyectos/sellers[0].proyectos*100 : 0)+'%';
+                    track.appendChild(fill); button.appendChild(name); button.appendChild(quantity); button.appendChild(track);
+                    button.addEventListener('click',()=>selectDeclinedSeller(seller)); sellerButtons.appendChild(button);
+                });
+                allSellers.disabled = false;
+                status.textContent = sellers.length ? '' : 'No hay proyectos declinados para el período seleccionado.';
+            } catch(error) {
+                if (error.name === 'AbortError' || summaryRequest !== current) return;
+                badge.textContent = '— Proyectos'; status.textContent = error instanceof SyntaxError ? 'No se pudo cargar el resumen. Intente nuevamente.' : error.message;
+                status.className = 'mb-2 text-danger'; retry.hidden = false;
+            } finally { if (summaryRequest === current) summaryRequest = null; }
+        }
         function initialize() {
-            if (table) { table.columns.adjust(); if (!restoreList) table.ajax.reload(null, true); restoreList = false; return; }
+            if (lista === 'declinados') {
+                if (restoreList) { restoreList = false; if (table) table.columns.adjust(); return; }
+                return loadDeclinedSummary();
+            }
+            summaryPanel.hidden = true; detailPanel.hidden = false; detailTitle.textContent = '';
+            initializeTable();
+        }
+        async function exportDeclined(event,dt,node,config) {
+            const excel = jQuery.fn.dataTable.ext.buttons.excelHtml5.action;
+            if (lista !== 'declinados') return excel.call(this,event,dt,node,config);
+            if (exportRequest) return;
+            const current = new AbortController(); exportRequest = current;
+            this.processing(true);
+            const params = declinedParams(); params.set('datatable','1'); params.set('length','100'); params.set('order_column','2'); params.set('order_dir','desc');
+            if (selectedDeclinedSeller) params.set('declinado_vendedor',selectedDeclinedSeller.vendedor_id);
+            const rows = new Map(); let expected = null;
+            try {
+                for (let start=0; expected === null || start<expected; start+=100) {
+                    params.set('start',String(start));
+                    const response = await fetch(modal.dataset.url+'?'+params,{signal:current.signal,credentials:'same-origin',headers:{Accept:'application/json'}});
+                    const payload = await response.json();
+                    if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo exportar.');
+                    if (current.signal.aborted) return;
+                    if (expected === null) expected = payload.data.recordsTotal;
+                    if (expected !== payload.data.recordsTotal || (start<expected && !payload.data.data.length)) throw new Error('La lista cambió durante la exportación. Intente nuevamente.');
+                    payload.data.data.forEach(row=>rows.set(String(row.id),row));
+                }
+                if (rows.size !== expected) throw new Error('La lista cambió durante la exportación. Intente nuevamente.');
+                excel.call(this,event,dt,node,{...config,title:detailTitle.textContent,
+                    customizeData:out=>{
+                        out.header = ['ID Proyecto','Fecha','Cliente','Clasificación','Título'];
+                        out.body = [...rows.values()].map(row=>[row.proyecto_id,String(row.fecha || '').slice(0,10),row.cliente,row.clasificacion,row.titulo].map(value=>String(value ?? '')));
+                        out.footer = [];
+                    }});
+            } catch(error) {
+                if (error.name === 'AbortError') return;
+                status.textContent = 'No se pudo exportar: '+(error instanceof SyntaxError ? 'respuesta inválida.' : error.message);
+                status.className = 'mb-2 text-danger';
+            } finally { if (exportRequest === current) exportRequest = null; this.processing(false); }
+        }
+        function detailColumns() {
+            [0,4,7].forEach(index=>table.column(index).visible(lista !== 'declinados'));
+            table.column(8).visible(lista === 'interna_sin_cliente');
+        }
+        function initializeTable() {
+            if (table) { detailColumns(); table.columns.adjust(); if (!restoreList) table.ajax.reload(null, true); restoreList = false; return; }
             const filterRow = document.createElement('tr');
             filterRow.className = 'filters';
             Array.from(tableElement.tHead.rows[0].cells).forEach((header, index) => {
@@ -63,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 iDisplayLength: 10, lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
                 dom: '<"declinados-toolbar d-flex flex-wrap align-items-center gap-3 mb-2"<"declinados-length"l><"declinados-buttons"B><"declinados-search ms-auto"f>>rt<"d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2"ip>',
                 buttons: [
-                    { extend: 'excelHtml5', text: 'Excel (página actual)', autoFilter: true,
+                    { extend: 'excelHtml5', text: () => lista === 'declinados' ? 'Excel (detalle completo)' : 'Excel (página actual)', autoFilter: true, action:exportDeclined,
                         sheetName: 'Proyectos', title: listTitle,
                         exportOptions: { columns: ':visible:not(.ventas-col-seguimientos)' } },
                     { extend: 'colvis', columns: ':not(.ventas-col-seguimientos)', text: '<i class="fa-solid fa-table-columns me-1"></i> Columnas' }
@@ -127,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         vendedor: modal.dataset.vendedor, draw: String(data.draw), start: String(data.start), length: String(data.length),
                         search: data.search.value, order_column: String(order.column), order_dir: order.dir });
                     params.set('lista', lista);
+                    if (lista === 'declinados' && selectedDeclinedSeller) params.set('declinado_vendedor',selectedDeclinedSeller.vendedor_id);
                     const years = isDrill() && modal.dataset.desgloseAnio ? modal.dataset.desgloseAnio : modal.dataset.anio;
                     const months = isDrill() && modal.dataset.desgloseMes ? modal.dataset.desgloseMes : modal.dataset.mes;
                     years.split(',').forEach(year => params.append('anio[]', year));
@@ -149,12 +267,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         const payload = await response.json();
                         if (!response.ok || !payload.status) throw new Error(payload.message || 'No se pudo cargar la lista.');
                         if (request !== current) return;
-                        badge.textContent = payload.data.recordsTotal + ' Proyectos';
+                        badge.textContent = (lista === 'declinados' && declinedSummary ? declinedSummary.total : payload.data.recordsTotal) + ' Proyectos';
+                        if (lista === 'declinados') detailTitle.textContent = (selectedDeclinedSeller ? selectedDeclinedSeller.nombre : 'TODOS')+' · '+payload.data.recordsTotal+' proyectos declinados';
                         status.textContent = '';
                         callback(payload.data);
                     } catch (error) {
                         if (error.name === 'AbortError' || request !== current) return;
-                        badge.textContent = '— Proyectos';
+                        badge.textContent = lista === 'declinados' && declinedSummary ? declinedSummary.total+' Proyectos' : '— Proyectos';
                         status.textContent = error instanceof SyntaxError ? 'No se pudo cargar la lista. Intente nuevamente.' : error.message;
                         status.className = 'mb-2 text-danger';
                         retry.hidden = false;
@@ -162,6 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     } finally { if (request === current) request = null; }
                 }
             });
+            detailColumns();
             // Delegación sobre el contenedor: incluye la cabecera clonada por scrollX.
             jQuery(table.table().container()).on('input', 'thead input', function () {
                 const index = Number(this.dataset.column);
@@ -199,6 +319,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 table.order([]);
             }
             lista = next;
+            if (summaryRequest) summaryRequest.abort(); summaryRequest = null;
+            if (exportRequest) exportRequest.abort();
             if (periodLabel) {
                 const year = Number(modal.dataset.desgloseAnio);
                 const month = Number(modal.dataset.desgloseMes);
@@ -213,8 +335,10 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.addEventListener('shown.bs.modal', initialize);
         modal.addEventListener('hidden.bs.modal', () => {
             if (request) request.abort(); request = null; clearTimeout(filterTimer);
+            if (summaryRequest) summaryRequest.abort(); summaryRequest = null;
+            if (exportRequest) exportRequest.abort();
         });
-        retry.addEventListener('click', () => { if (table) table.ajax.reload(null, false); });
+        retry.addEventListener('click', () => { if (lista === 'declinados' && !declinedSummary) loadDeclinedSummary(); else if (table) table.ajax.reload(null, false); });
         document.querySelectorAll('#ventas-mensuales .ventas-abrir-declinados').forEach(card => {
             card.addEventListener('keydown', event => {
                 if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }

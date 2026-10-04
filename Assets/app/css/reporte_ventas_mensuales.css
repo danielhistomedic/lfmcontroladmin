@@ -191,3 +191,29 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
     padding-bottom: 5px;
     font-size: 12px;
 }
+/* Resumen de declinados: botones accesibles y detalle sin recargar el modal. */
+#modal-declinados-ventas .declinados-indicadores { display:grid; grid-template-columns:1fr 1fr 2fr; gap:12px; }
+#modal-declinados-ventas .declinados-indicadores > div { background:#eef5fd; border-left:3px solid #2385bd; border-radius:4px; padding:10px 12px; }
+#modal-declinados-ventas .declinados-indicadores span { display:block; color:#62758e; font-size:11px; }
+#modal-declinados-ventas .declinados-indicadores strong { display:block; margin-top:4px; color:#174b66; font-size:15px; overflow-wrap:anywhere; }
+#modal-declinados-ventas .declinados-vendedores { display:grid; gap:8px; }
+#modal-declinados-ventas .declinados-vendedor { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; padding:9px 12px; background:transparent; border:1px solid #dfe8f2; border-radius:5px; color:#174b66; text-align:left; font-size:12px; }
+#modal-declinados-ventas .declinados-vendedor > span:first-child { overflow-wrap:anywhere; }
+#modal-declinados-ventas .declinados-vendedor > span:nth-child(2) { font-variant-numeric:tabular-nums; }
+#modal-declinados-ventas .declinados-vendedor:hover { background:#f5f9fc; }
+#modal-declinados-ventas .declinados-vendedor[aria-pressed="true"] { background:#eef5fd; border-color:#2385bd; }
+#modal-declinados-ventas #declinados-todos[aria-pressed="true"] { background:#008caf; color:#fff; }
+#modal-declinados-ventas .declinados-vendedor:focus-visible { outline:3px solid #2385bd; outline-offset:2px; }
+#modal-declinados-ventas .declinados-vendedor-barra { grid-column:1/-1; display:block; height:5px; background:#f5e9ec; border-radius:3px; overflow:hidden; }
+#modal-declinados-ventas .declinados-vendedor-barra > span { display:block; height:100%; background:#b76c79; border-radius:3px; }
+html.dark #modal-declinados-ventas .declinados-indicadores > div { background:#2c405b; }
+html.dark #modal-declinados-ventas .declinados-indicadores span { color:#cbd5e1; }
+html.dark #modal-declinados-ventas .declinados-indicadores strong { color:#cee5ff; }
+html.dark #modal-declinados-ventas .declinados-vendedor { border-color:#455563; color:#edf2f7; }
+html.dark #modal-declinados-ventas .declinados-vendedor:hover { background:#2a4050; }
+html.dark #modal-declinados-ventas .declinados-vendedor[aria-pressed="true"] { background:#2c405b; border-color:#81b6ed; }
+html.dark #modal-declinados-ventas .declinados-vendedor-barra { background:#49323a; }
+@media(max-width:575px) {
+    #modal-declinados-ventas .declinados-indicadores { grid-template-columns:1fr; }
+    #modal-declinados-ventas .declinados-vendedor { grid-template-columns:1fr; }
+}

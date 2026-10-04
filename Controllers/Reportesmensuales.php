@@ -283,12 +283,29 @@ class Reportesmensuales extends Controllers
                 echo json_encode(['status'=>false, 'message'=>'La lista solicitada no es válida.']);
                 return;
             }
-            if (($_GET['datatable'] ?? '') === '1') {
+            if (($_GET['resumen'] ?? '') === '1' && $lista === 'declinados') {
+                $result = $this->model->declinadosResumen(count($year) === 1 ? $year[0] : $year,
+                    count($month) === 1 ? $month[0] : $month, $seller);
+            } elseif (($_GET['datatable'] ?? '') === '1') {
                 $integer = static fn($key,$default,$min,$max) => filter_var($_GET[$key] ?? $default,
                     FILTER_VALIDATE_INT, ['options'=>['min_range'=>$min,'max_range'=>$max]]);
                 $options = ['draw'=>$integer('draw',1,0,1000000000), 'start'=>$integer('start',0,0,1000000),
                     'length'=>$integer('length',10,5,100), 'order_column'=>$integer('order_column',2,0,7),
                     'order_dir'=>$_GET['order_dir'] ?? 'desc', 'search'=>$_GET['search'] ?? '', 'filters'=>[]];
+                if ($lista === 'declinados' && array_key_exists('declinado_vendedor', $_GET)) {
+                    $selectedSeller = $_GET['declinado_vendedor'];
+                    if (!is_string($selectedSeller) || strlen($selectedSeller) > 100) {
+                        http_response_code(400);
+                        echo json_encode(['status'=>false,'message'=>'El vendedor seleccionado no es válido.']);
+                        return;
+                    }
+                    if ($seller !== '' && $selectedSeller !== $seller) {
+                        http_response_code(403);
+                        echo json_encode(['status'=>false,'message'=>'Vendedor no autorizado.']);
+                        return;
+                    }
+                    $options['declinado_vendedor'] = $selectedSeller;
+                }
                 if (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true)) {
                     $options['clasificacion_id'] = $lista === 'estatus_periodo' ? null : $integer('clasificacion_id', 0, 1, 2147483647);
                     $options['estatus_id'] = $lista === 'estatus_periodo' && in_array($_GET['estatus_id'] ?? '', ['colocados','proceso_cotizacion'], true)

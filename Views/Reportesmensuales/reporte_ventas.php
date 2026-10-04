@@ -204,6 +204,21 @@
                             </div>
                             <div id="declinados-estado" class="mb-2" role="status" aria-live="polite"></div>
                             <button type="button" id="declinados-reintentar" class="btn btn-outline-primary mb-3" hidden>Reintentar</button>
+                            <section id="declinados-resumen" hidden aria-labelledby="declinados-resumen-titulo">
+                                <h6 id="declinados-resumen-titulo">Resumen por vendedor</h6>
+                                <div class="declinados-indicadores mb-3">
+                                    <div><span>Total proyectos declinados</span><strong id="declinados-resumen-total">—</strong></div>
+                                    <div><span>Vendedores con declinados</span><strong id="declinados-resumen-vendedores">—</strong></div>
+                                    <div><span>Vendedor con más declinados</span><strong id="declinados-resumen-lider">—</strong></div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <button type="button" id="declinados-todos" class="btn btn-outline-primary btn-sm" aria-pressed="false" disabled>TODOS</button>
+                                    <span class="text-muted">Selecciona un vendedor para ver sus proyectos.</span>
+                                </div>
+                                <div id="declinados-vendedores" class="declinados-vendedores mb-3" role="group" aria-label="Vendedores con proyectos declinados"></div>
+                            </section>
+                            <section id="declinados-detalle" hidden aria-labelledby="declinados-detalle-titulo">
+                            <h6 id="declinados-detalle-titulo" aria-live="polite"></h6>
                             <div class="table-responsive export-table">
                                 <table class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100" id="table-declinados-ventas">
                                     <caption class="visually-hidden">Lista de proyectos del período y vendedor seleccionados</caption>
@@ -217,6 +232,7 @@
                                     <tbody id="declinados-proyectos"></tbody>
                                 </table>
                             </div>
+                            </section>
                         </div>
                         <div class="modal-footer bg-light p-2">
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>

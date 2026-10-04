@@ -480,6 +480,30 @@ class ReportesmensualesModel extends Mysql
         return ['proyectos' => $rows, 'total' => $total, 'pagina' => $page, 'paginas' => $pages, 'por_pagina' => $pageSize];
     }
 
+    /** Distribución del mismo conjunto de declinados, antes de paginar el detalle. */
+    public function declinadosResumen(int|array $year, int|array $month, string $seller): array
+    {
+        $params = [];
+        $period = self::periodoDeclinados($year, $month, $params);
+        $where = "$period AND v.activo = 'CERRADO' AND " . self::FILTRO_PROYECTOS;
+        if ($seller !== '') { $where .= ' AND v.ccveusuario_vendedor = ?'; $params[] = $seller; }
+        // Contar ventas antes de unir nombres evita duplicarlas si el catálogo repite una clave.
+        $rows = $this->consultar("SELECT proyectos.vendedor_id,
+            COALESCE(nombres.nombre, 'Sin vendedor') AS nombre, proyectos.proyectos
+            FROM (SELECT COALESCE(v.ccveusuario_vendedor,'') AS vendedor_id, COUNT(*) AS proyectos
+                FROM tb_ventas v WHERE $where GROUP BY COALESCE(v.ccveusuario_vendedor,'')) proyectos
+            LEFT JOIN (SELECT ccvemedico,
+                MAX(NULLIF(TRIM(CONCAT_WS(' ', cNombre, cPriApellido, cSegApellido)),'')) AS nombre
+                FROM cat_medico GROUP BY ccvemedico) nombres ON nombres.ccvemedico = proyectos.vendedor_id
+            ORDER BY proyectos.proyectos DESC, nombre ASC, proyectos.vendedor_id ASC", $params);
+        $total = 0;
+        foreach ($rows as &$row) { $row['proyectos'] = (int)$row['proyectos']; $total += $row['proyectos']; }
+        unset($row);
+        foreach ($rows as &$row) $row['porcentaje'] = $total > 0 ? round($row['proyectos'] / $total * 100, 2) : 0;
+        unset($row);
+        return ['total'=>$total, 'vendedores'=>$rows];
+    }
+
     /** DataTables: búsqueda y paginación en servidor, dentro del alcance autorizado. */
     public function declinadosTabla(int|array $year, int|array $month, string $seller, array $options, string $lista = 'declinados'): array
     {
@@ -492,6 +516,10 @@ class ReportesmensualesModel extends Mysql
         if ($seller !== '') {
             $where .= ' AND v.ccveusuario_vendedor = ?';
             $params[] = $seller;
+        }
+        if ($lista === 'declinados' && isset($options['declinado_vendedor'])) {
+            $where .= " AND COALESCE(v.ccveusuario_vendedor,'') = ?";
+            $params[] = $options['declinado_vendedor'];
         }
         if (in_array($lista,['cotizados_periodo','colocados_periodo'],true)) {
             [$quotedSql,$params] = self::documentadosPeriodoSql($options['periodo_anios'] ?? $year,$options['periodo_meses'] ?? $month,$seller,
@@ -523,6 +551,14 @@ class ReportesmensualesModel extends Mysql
             LEFT JOIN cat_medico m ON m.ccvemedico=v.ccveusuario_vendedor
             LEFT JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id';
         $sellerName = "COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.cNombre, m.cPriApellido, m.cSegApellido)), ''), 'Sin vendedor')";
+        if ($lista === 'declinados') {
+            $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id
+                LEFT JOIN (SELECT ccvemedico,
+                    MAX(NULLIF(TRIM(CONCAT_WS(\' \', cNombre, cPriApellido, cSegApellido)),\'\')) AS nombre
+                    FROM cat_medico GROUP BY ccvemedico) m ON m.ccvemedico=v.ccveusuario_vendedor
+                LEFT JOIN cat_clasificacion_proyectos cl ON cl.id=v.clasificacion_proyecto_id';
+            $sellerName = "COALESCE(m.nombre, 'Sin vendedor')";
+        }
         $fields = [
             1 => 'v.proyecto_id',
             2 => "DATE_FORMAT(v.fecha, '%d/%m/%Y')",

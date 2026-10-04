@@ -211,11 +211,11 @@ ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
 console.log('OK: pasteles del periodo, estatus actuales, declinados unificados, detalle, donas por vendedor, movil, oscuro y filtros globales.');
 
-async function probarModal(critical = false) {
+async function probarModal(critical = false, unscoped = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;
     function node(id) {
         if (!nodes.has(id)) nodes.set(id, { id, children: [], events: {}, textContent: '', dataset: {}, style: {}, disabled: false,
-            addEventListener(name, cb) { this.events[name] = cb; }, setAttribute() {},
+            addEventListener(name, cb) { this.events[name] = cb; }, setAttribute(key,value) { this[key]=value; },
             appendChild(child) { this.children.push(child); }, replaceChildren() { this.children = []; },
             click() { this.clicked = true; }
         });
@@ -223,7 +223,7 @@ async function probarModal(critical = false) {
     }
     const form = node('filtros-ventas-mensuales'); form.querySelector = () => node('submit');
     const modal = node('modal-declinados-ventas');
-    modal.dataset = { url: '/portal/reportesmensuales/declinados', anio: '2026', mes: '9', vendedor: 'V1' };
+    modal.dataset = { url: '/portal/reportesmensuales/declinados', anio: '2026', mes: '9', vendedor: unscoped ? '' : 'V1' };
     const source = node('ventas-mensuales-datos');
     source.textContent = JSON.stringify({ cotizado: 0, colocado: 0, vendedores: [], productos: [], cruce: [] });
     const cards = [node('declinados-card'), node('critico-card')];
@@ -233,12 +233,17 @@ async function probarModal(critical = false) {
         columns: Array.from({ length: 8 }, () => ({ search: { value: '' } })) };
     let result;
     function draw() { pending = options.ajax(requestData, payload => { result = payload; }); return pending; }
-    const dt = { columns: { adjust() {} }, ajax: { reload() { return draw(); } }, table: () => ({ container: () => node('container') }),
+    const columns = () => ({search(){requestData.columns.forEach(column=>column.search.value='');}}); columns.adjust=()=>{};
+    const dt = { columns, search(value){requestData.search.value=value;}, order(value){requestData.order=value;}, ajax: { reload() { requestData.start=0; return draw(); } }, table: () => ({ container: () => node('container') }),
         row: () => ({ data: () => ({id:633, proyecto_id:'PV-2026-20035'}) }),
-        column: index => ({ search(value) { requestData.columns[index].search.value = value; return { draw }; } }) };
-    const jquery = element => ({ find: () => ({ on() {} }), on: (name, selector, handler) => { delegated = handler; },
+        column: index => ({visible(){}, search(value) { requestData.columns[index].search.value = value; return { draw }; } }) };
+    const jquery = element => ({ find: () => ({ on() {},val(){} }), on: (name, selector, handler) => { delegated = handler; },
         DataTable(configuration) { if (element === tableNode) { options = configuration; draw(); return dt; } } });
     jquery.fn = { dataTable: { render: { text: () => ({ display: value => value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }) } } };
+    const summaryCalls=[]; let exported;
+    jquery.fn.dataTable.ext={buttons:{excelHtml5:{action(event,table,button,configuration){
+        exported={header:[],body:[],footer:[]};configuration.customizeData(exported);
+    }}}};
     const context = {
         document: { addEventListener: (name, cb) => { events[name] = cb; }, getElementById: node,
             createElement: tag => node('created-'+Math.random()),
@@ -246,7 +251,14 @@ async function probarModal(critical = false) {
         window: { addEventListener() {}, verSeguimientosProyecto(id,project) { context.selected=[id,project]; } }, jQuery: jquery,
         bootstrap: { Modal: { getOrCreateInstance: () => ({hide() {}, show() {}}) } },
         echarts: { init: () => ({ setOption() {}, resize() {}, on() {} }) },
-        fetch: async (url, settings) => { calls.push([url, settings]); return { ok: response.status, json: async () => response }; },
+        fetch: async (url, settings) => {
+            if(new URL(url,'http://localhost').searchParams.get('resumen')==='1'){
+                summaryCalls.push(url);return {ok:true,json:async()=>({status:true,data:{total:8,
+                    vendedores:unscoped ? [{vendedor_id:'V1',nombre:'José',proyectos:5,porcentaje:62.5},{vendedor_id:'V2',nombre:'Ana',proyectos:3,porcentaje:37.5}]
+                        : [{vendedor_id:'V1',nombre:'José',proyectos:8,porcentaje:100}]}})};
+            }
+            calls.push([url, settings]); return { ok: response.status, json: async () => response };
+        },
         AbortController, URLSearchParams, Intl, Map, JSON, setTimeout, clearTimeout
     };
     vm.runInNewContext(code, context); events.DOMContentLoaded();
@@ -258,15 +270,35 @@ async function probarModal(critical = false) {
     response = { status: true, data: { draw: 1, recordsTotal: 8, recordsFiltered: 8,
         data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
     modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'interna_sin_cliente'}:{}}});
-    modal.events['shown.bs.modal'](); await pending;
+    await modal.events['shown.bs.modal']();
+    if(!critical){
+        assert.equal(summaryCalls.length,1);assert.equal(options,undefined,'Resumen antes de cargar tabla plana');
+        assert.equal(node('declinados-detalle').hidden,true);
+        assert.equal(node('declinados-resumen-total').textContent,'8 proyectos');
+        assert.equal(node('declinados-resumen-lider').textContent,unscoped ? 'José · 5 proyectos' : 'José · 8 proyectos');
+        node('declinados-vendedores').children[0].events.click();
+        assert.equal(node('declinados-vendedores').children[0]['aria-pressed'],'true');
+        assert.equal(node('declinados-detalle').hidden,false);
+    }
+    await pending;
     assert.equal(options.serverSide, true);
     assert.ok(options.dom.includes('declinados-length"l') && options.dom.includes('declinados-buttons"B') && options.dom.includes('declinados-search ms-auto"f'), 'Separar cantidad, botones y búsqueda en la barra');
     assert.equal(options.buttons[1].extend, 'colvis');
     assert.equal(tableNode.tHead.filterRow.children.length, 9, 'Cabecera con filtros');
     const query = new URL(calls[0][0], 'http://localhost').searchParams;
     assert.deepEqual(query.getAll('anio[]'), ['2026']);
-    assert.equal(query.get('vendedor'), 'V1');
+    assert.equal(query.get('vendedor'), unscoped ? '' : 'V1');
     assert.deepEqual(query.getAll('mes[]'), ['9'], 'Filtrar meses y vendedor');
+    if(!critical)assert.equal(query.get('declinado_vendedor'),'V1','Seleccion local separada del vendedor global');
+    if(unscoped){
+        node('declinados-vendedores').children[1].events.click();await pending;
+        assert.equal(new URL(calls.pop()[0],'http://localhost').searchParams.get('declinado_vendedor'),'V2');
+        assert.equal(node('declinados-vendedores').children[0]['aria-pressed'],'false');
+        assert.equal(node('declinados-vendedores').children[1]['aria-pressed'],'true');
+        assert.equal(node('declinados-detalle-titulo').textContent,'Ana · 8 proyectos declinados');
+        node('declinados-vendedores').children[0].events.click();await pending;calls.pop();
+        assert.equal(summaryCalls.length,1,'Cambiar vendedor actualiza solo detalle');
+    }
     modal.dataset.mes = '2,9,12';
     modal.dataset.anio = '2024,2026';
     await dt.ajax.reload();
@@ -286,7 +318,7 @@ async function probarModal(critical = false) {
     assert.deepEqual(context.selected,[633,'PV-2026-20035'],'Historial del proyecto seleccionado');
     assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'interna_sin_cliente':'declinados');
     assert.ok(calls[0][0].includes('lista='+(critical?'interna_sin_cliente':'declinados')));
-    requestData.start = 10; await dt.ajax.reload();
+    requestData.start = 10; await draw();
     assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
     delegated.call({ dataset: { column: '3' }, value: 'Cliente' });
     await new Promise(resolve => setTimeout(resolve, 400)); await pending;
@@ -296,8 +328,27 @@ async function probarModal(critical = false) {
     assert.equal(result.data.length, 0, 'Vaciar tabla ante error');
     response = { status: true, data: { draw: 1, recordsTotal: 0, recordsFiltered: 0, data: [] } };
     node('declinados-reintentar').events.click(); await pending;
-    assert.equal(node('declinados-total').textContent, '0 Proyectos');
+    assert.equal(node('declinados-total').textContent, critical ? '0 Proyectos' : '8 Proyectos','El resumen global no cambia al filtrar el detalle');
+    if(!critical){
+        await modal.events['shown.bs.modal'](); // Regresar del historial conserva el detalle.
+        node('declinados-todos').events.click();await pending;
+        assert.equal(new URL(calls.at(-1)[0],'http://localhost').searchParams.has('declinado_vendedor'),false);
+        assert.equal(node('declinados-todos')['aria-pressed'],'true');
+        assert.equal(summaryCalls.length,1,'Seleccionar TODOS no recarga resumen ni modal');
+        // Exportar 105 proyectos en dos paginas; nunca solo la pagina visible.
+        context.fetch=async(url,settings)=>{
+            calls.push([url,settings]);const start=Number(new URL(url,'http://localhost').searchParams.get('start'));
+            return {ok:true,json:async()=>({status:true,data:{recordsTotal:105,
+                data:Array.from({length:start?5:100},(_,i)=>({id:start+i,proyecto_id:'P'+(start+i),fecha:'2026-09-01',cliente:'Cliente',clasificacion:'Diversos',titulo:'Título'}))}})};
+        };
+        await options.buttons[0].action.call({processing(){}},{},dt,{},options.buttons[0]);
+        assert.equal(exported.body.length,105);assert.deepEqual(Array.from(exported.header),['ID Proyecto','Fecha','Cliente','Clasificación','Título']);
+        node('declinados-vendedores').children[0].events.click();await pending;
+        await options.buttons[0].action.call({processing(){}},{},dt,{},options.buttons[0]);
+        assert.equal(new URL(calls.at(-1)[0],'http://localhost').searchParams.get('declinado_vendedor'),'V1');
+        assert.equal(exported.body.length,105,'Exportar completo el vendedor elegido');
+    }
     modal.events['hidden.bs.modal']();
     console.log('OK: modal DataTables, teclado, filtros, paginación, columnas, error, reintento y salida segura.');
 }
-probarModal().then(() => probarModal(true)).catch(error => { console.error(error); process.exitCode = 1; });
+probarModal().then(() => probarModal(true)).then(() => probarModal(false,true)).catch(error => { console.error(error); process.exitCode = 1; });
