@@ -357,11 +357,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return Number(row.estatus_id) >= 6 ? 'colocados' :
             ([1,3].includes(Number(row.estatus_id)) ? 'proceso_cotizacion' : String(row.estatus_id));
     }
-    function kpiRows(groupId) {
-        const rows = groupId === 'cotizados_periodo' ? data.cotizados_por_periodo :
-            (groupId === 'colocados' ? data.colocados_por_periodo : null);
-        return Array.isArray(rows) ? rows : null;
-    }
     sellerChart.instance.on('click', event => {
         if (event.componentType === 'series') selectSeller(event.dataIndex);
     });
@@ -379,179 +374,85 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     const generalClassifications = [...classificationTotals.values()]
         .sort((a, b) => b.proyectos - a.proyectos || Number(a.clasificacion_id) - Number(b.clasificacion_id));
-    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const selectedYears = data.anios_seleccionados || [...new Set((data.estatus_por_clasificacion || []).map(row => Number(row.anio)).filter(Boolean))];
     const selectedMonths = data.meses_seleccionados || [];
     const periods = selectedYears.slice().sort((a,b)=>a-b).flatMap(anio => selectedMonths.slice().sort((a,b)=>a-b).map(mes => ({anio,mes})));
-    const periodCounts = new Map();
-    (data.estatus_por_clasificacion || []).forEach(row => {
-        const key = [row.clasificacion_id,row.anio,row.mes].join(':');
-        if (!periodCounts.has(key)) periodCounts.set(key,{proyectos:0,declinados:0});
-        const total=periodCounts.get(key);
-        total.proyectos+=Number(row.proyectos);
-        total.declinados+=Number(row.declinados);
-    });
     const classificationColors=['#2385bd','#239c83','#d48825','#8064b0'];
-    const groupedSeries=generalClassifications.flatMap((classification,index) => {
-        const totals=periods.map(period=>periodCounts.get([classification.clasificacion_id,period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
-        return [
-            {name:classification.clasificacion,type:'bar',stack:'clase-'+classification.clasificacion_id,barWidth:26,barGap:'230%',
-                itemStyle:{color:classificationColors[index%classificationColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
-                label:{show:true,position:'bottom',distance:5,color:cascadeText,fontSize:9,width:82,overflow:'break',lineHeight:11,formatter:()=>classification.clasificacion}},
-            {name:'Declinados',type:'bar',stack:'clase-'+classification.clasificacion_id,barWidth:26,barGap:'230%',
-                itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
-                label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
-        ];
-    });
-    const classificationChart = cascade('ventas-clasificaciones-general');
-    classificationChart.count = periods.length;
-    classificationChart.slotWidth = Math.max(280,generalClassifications.length*88);
-    const principalOption = cascadeOption([]);
-    principalOption.legend={top:0,type:'scroll',data:generalClassifications.length?[...generalClassifications.map(row=>row.clasificacion),'Declinados']:[],textStyle:{color:cascadeText,fontSize:10}};
-    principalOption.grid.bottom=115;
-    principalOption.xAxis.data=periods.map(period=>monthNames[Number(period.mes)-1]);
-    principalOption.xAxis.axisLabel.margin=46;
-    principalOption.xAxis.splitLine={show:true,lineStyle:{color:"#dce5ed"}};
-    const yearAxis={type:'category',data:periods.map(period=>String(period.anio)),position:'bottom',offset:75,
-        axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,color:cascadeText,formatter:(value,index)=>{
-            const first=periods.findIndex(period=>String(period.anio)===value);
-            const last=periods.length-1-periods.slice().reverse().findIndex(period=>String(period.anio)===value);
-            return index===Math.floor((first+last)/2)?value:'';
-        }}};
-    principalOption.xAxis=[principalOption.xAxis,yearAxis];
-    principalOption.series=groupedSeries;
-    principalOption.tooltip={trigger:'item',renderMode:'richText',formatter:params=>{
-        const classification=generalClassifications[Math.floor(params.seriesIndex/2)];
-        const period=periods[params.dataIndex];
-        const total=periodCounts.get([classification.clasificacion_id,period.anio,period.mes].join(':')) || {proyectos:0,declinados:0};
-        return classification.clasificacion+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-            '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
-    }};
-    classificationChart.instance.setOption(principalOption);
-    fitCascade(classificationChart);
-    classificationChart.instance.on('click', event => {
-        if (event.componentType !== 'series') return;
-        const row = generalClassifications[Math.floor(event.seriesIndex / 2)];
-        const period = periods[event.dataIndex];
-        if (!row || !period) return;
-        const modal = document.getElementById('modal-declinados-ventas');
-        modal.dataset.desglose = '1';
-        modal.dataset.desgloseLista = 'clasificacion_periodo';
-        modal.dataset.clasificacionId = String(row.clasificacion_id);
-        modal.dataset.desgloseAnio = String(period.anio);
-        modal.dataset.desgloseMes = String(period.mes);
-        modal.dataset.segmento = event.seriesIndex % 2 === 1 ? 'declinados' : 'no_declinados';
-        modal.dataset.desgloseTitulo = row.clasificacion + ' · ' + monthNames[Number(period.mes)-1] + ' ' + period.anio +
-            (event.seriesIndex % 2 === 1 ? ' · Declinados' : ' · No declinados');
-        bootstrap.Modal.getOrCreateInstance(modal).show();
-    });
-    // El mismo conjunto autorizado se consolida por estatus, sin consultas adicionales.
+    // Las bases conservan los colores de las donas por vendedor.
+    const principalOption={series:generalClassifications.flatMap((group,index)=>[
+        {itemStyle:{color:classificationColors[index%classificationColors.length]}},{itemStyle:{color:'#dc3545'}}])};
     const statusGroups = new Map();
-    const statusPeriodCounts = new Map();
-    (data.estatus_por_clasificacion || []).forEach(row => {
-        const placed = Number(row.estatus_id) >= 6;
-        const quotation = [1,3].includes(Number(row.estatus_id));
-        const key = statusGroupKey(row);
-        if (!statusGroups.has(key)) statusGroups.set(key, { id: placed || quotation ? key : row.estatus_id,
-            orden: placed ? 6 : (quotation ? 1 : Number(row.estatus_id)),
-            nombre: placed ? 'Pedidos Colocados' : (quotation ? 'PROCESO DE COTIZACION' : (row.estatus || 'Sin estatus')) });
-        const periodKey = [key,row.anio,row.mes].join(':');
-        if (!statusPeriodCounts.has(periodKey)) statusPeriodCounts.set(periodKey,{proyectos:0,declinados:0});
-        const total = statusPeriodCounts.get(periodKey);
-        total.proyectos += Number(row.proyectos);
-        total.declinados += Number(row.declinados);
+    (data.estatus_por_clasificacion || []).forEach(row=>{
+        const placed=Number(row.estatus_id)>=6, quotation=[1,3].includes(Number(row.estatus_id));
+        const key=statusGroupKey(row);
+        if(!statusGroups.has(key)) statusGroups.set(key,{id:placed||quotation?key:row.estatus_id,
+            orden:placed?6:(quotation?1:Number(row.estatus_id)),
+            nombre:placed?'Pedidos Colocados':(quotation?'PROCESO DE COTIZACION':(row.estatus||'Sin estatus'))});
     });
-    if (Array.isArray(data.cotizados_por_periodo)) {
-        const quoted = [...statusGroups.entries()].find(([,group]) => group.nombre.toUpperCase().startsWith('PEDIDO COTIZADO'));
-        if (quoted) { quotedStatusKey = String(quoted[1].id); statusGroups.delete(quoted[0]); }
-        statusGroups.set('cotizados_periodo',{id:'cotizados_periodo',orden:quoted ? quoted[1].orden : 5,
-            nombre:quoted ? quoted[1].nombre : 'PEDIDO COTIZADO (SIN OC CLIENTE)'});
-        periods.forEach(period => statusPeriodCounts.set(['cotizados_periodo',period.anio,period.mes].join(':'),
-            {proyectos:0,declinados:0,periodo:0,anteriores:0}));
-        data.cotizados_por_periodo.forEach(row => {
-            const total = statusPeriodCounts.get(['cotizados_periodo',row.anio,row.mes].join(':'));
-            if (!total) return;
-            total.proyectos += Number(row.proyectos);
-            total[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
-        });
+    if(Array.isArray(data.cotizados_por_periodo)) {
+        const quoted=[...statusGroups.entries()].find(([,group])=>group.nombre.toUpperCase().startsWith('PEDIDO COTIZADO'));
+        if(quoted){quotedStatusKey=String(quoted[1].id);statusGroups.delete(quoted[0]);}
+        statusGroups.set('cotizados_periodo',{id:'cotizados_periodo',orden:quoted?quoted[1].orden:5,
+            nombre:quoted?quoted[1].nombre:'PEDIDO COTIZADO (SIN OC CLIENTE)'});
     }
-    if (Array.isArray(data.colocados_por_periodo)) {
-        statusGroups.set('colocados',{id:'colocados',orden:6,nombre:'Pedidos Colocados'});
-        periods.forEach(period => statusPeriodCounts.set(['colocados',period.anio,period.mes].join(':'),
-            {proyectos:0,declinados:0,periodo:0,anteriores:0}));
-        data.colocados_por_periodo.forEach(row => {
-            const total = statusPeriodCounts.get(['colocados',row.anio,row.mes].join(':'));
-            if (!total) return;
-            total.proyectos += Number(row.proyectos);
-            total[row.origen === 'periodo' ? 'periodo' : 'anteriores'] += Number(row.proyectos);
-        });
+    if(Array.isArray(data.colocados_por_periodo)) statusGroups.set('colocados',{id:'colocados',orden:6,nombre:'Pedidos Colocados'});
+    const statuses=[...statusGroups.values()].sort((a,b)=>a.orden-b.orden);
+    const statusColors=['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
+    const statusOption={series:statuses.flatMap((group,index)=>[
+        {itemStyle:{color:statusColors[index%statusColors.length]}},{itemStyle:{color:'#dc3545'}}])};
+    function periodPie(entry,groups) {
+        const total=groups.reduce((sum,row)=>sum+Number(row.proyectos),0);
+        const declined=groups.reduce((sum,row)=>sum+Number(row.declinados),0);
+        const slices=groups.filter(row=>row.proyectos>row.declinados).map(row=>({
+            name:row.nombre,value:row.proyectos-row.declinados,id:row.id,itemStyle:{color:row.color}}));
+        if(declined>0) slices.push({name:'Declinados',value:declined,declined:true,itemStyle:{color:'#dc3545'}});
+        entry.donut=true;entry.height=370;entry.element.style.height='370px';
+        entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
+            legend:{bottom:0,type:'scroll',textStyle:{color:cascadeText,fontSize:10}},
+            title:total?[]:[{text:'Sin proyectos',left:'center',top:'43%',textStyle:{color:cascadeText,fontSize:12}}],
+            tooltip:{trigger:'item',renderMode:'richText',formatter:params=>params.data.name+' | '+params.data.value+' | '+
+                amount.format(total?params.data.value/total*100:0)+' %'},
+            series:[{type:'pie',radius:'65%',center:['50%','45%'],
+                label:{show:true,color:cascadeText,fontSize:10,width:110,overflow:'break',
+                    formatter:params=>params.data.name+'\n'+params.data.value+' ('+amount.format(total?params.data.value/total*100:0)+' %)'},
+                labelLine:{length:8,length2:6},avoidLabelOverlap:true,data:slices}]
+        },true);
+        fitCascade(entry);
     }
-    const statuses = [...statusGroups.values()].sort((a,b) => a.orden - b.orden);
-    const statusColors = ['#2385bd','#239c83','#d48825','#8064b0','#56748c','#9b713a','#458f96','#b66489'];
-    const statusOption = { ...principalOption, grid: { ...principalOption.grid },
-        legend: {
-            show:true, type:'scroll', top:0, left:0, right:0, itemWidth:12, itemHeight:8, itemGap:12,
-            textStyle:{color:cascadeText,fontSize:10},
-            formatter:name=>{
-                const characters = Array.from(String(name));
-                return characters.slice(0, Math.max(1, Math.floor(characters.length * .66))).join('') + '...';
-            },
-            tooltip:{show:true,renderMode:'richText',formatter:params=>params.name}
-        },
-        series: statuses.flatMap((status,index) => {
-            const totals = periods.map(period=>statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0});
-            return [
-                {name:status.nombre,type:'bar',stack:'estatus-'+status.id,barWidth:26,barGap:'230%',
-                    itemStyle:{color:statusColors[index%statusColors.length]},data:totals.map(row=>row.proyectos-row.declinados),
-                    label:{show:true,position:'bottom',distance:5,color:cascadeText,fontSize:9,width:82,overflow:'break',lineHeight:11,formatter:()=>status.nombre}},
-                {name:'Declinados',type:'bar',stack:'estatus-'+status.id,barWidth:26,barGap:'230%',
-                    itemStyle:{color:'#dc3545'},data:totals.map(row=>row.declinados),
-                    label:{show:true,position:'top',color:cascadeText,formatter:params=>String(totals[params.dataIndex].proyectos)}}
-            ];
-        }),
-        tooltip:{trigger:'item',renderMode:'richText',formatter:params=>{
-            const status = statuses[Math.floor(params.seriesIndex/2)];
-            const period = periods[params.dataIndex];
-            const total = statusPeriodCounts.get([String(status.id),period.anio,period.mes].join(':')) || {proyectos:0,declinados:0};
-            if (kpiRows(status.id)) return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-                '\nProyectos del período: '+total.periodo+'\nProyectos anteriores: '+total.anteriores+
-                '\nTotal '+(status.id === 'colocados' ? 'colocado' : 'cotizado')+': '+total.proyectos;
-            return status.nombre+'\n'+monthNames[Number(period.mes)-1]+' '+period.anio+
-                '\nProyectos activos: '+(total.proyectos-total.declinados)+'\nDeclinados: '+total.declinados+'\nTotal: '+total.proyectos;
-        }}
-    };
-    const generalStatusChart = cascade('ventas-estatus-general');
-    generalStatusChart.height = 370;
-    generalStatusChart.element.style.height = '370px';
-    generalStatusChart.count = periods.length;
-    generalStatusChart.slotWidth = Math.max(280,statuses.length*88);
-    statusOption.grid.top = 55;
-    statusOption.grid.bottom = 125;
-    statusOption.xAxis = principalOption.xAxis.map(axis => ({...axis,axisLabel:{...axis.axisLabel}}));
-    statusOption.xAxis[0].axisLabel.margin = 83;
-    statusOption.xAxis[0].axisLabel.fontSize = 10;
-    statusOption.xAxis[1].offset = 100;
-    statusOption.xAxis[1].axisLabel.fontSize = 10;
-    generalStatusChart.instance.setOption(statusOption);
-    fitCascade(generalStatusChart);
-    generalStatusChart.instance.on('click', event => {
-        if (event.componentType !== 'series') return;
-        const status = statuses[Math.floor(event.seriesIndex / 2)];
-        const period = periods[event.dataIndex];
-        const modal = document.getElementById('modal-declinados-ventas');
-        if (!status || !period || !modal) return;
-        modal.dataset.desglose = '1';
-        if (kpiRows(status.id) && event.seriesIndex % 2 === 1) return;
-        modal.dataset.desgloseLista = status.id === 'cotizados_periodo' ? 'cotizados_periodo' :
-            (status.id === 'colocados' && kpiRows(status.id) ? 'colocados_periodo' : 'estatus_periodo');
-        modal.dataset.estatusId = status.id == null ? 'sin_estatus' : String(status.id);
-        modal.dataset.desgloseAnio = String(period.anio);
-        modal.dataset.desgloseMes = String(period.mes);
-        modal.dataset.segmento = event.seriesIndex % 2 === 1 ? 'declinados' : 'no_declinados';
-        modal.dataset.desgloseTitulo = status.nombre + ' · ' + monthNames[Number(period.mes)-1] + ' ' + period.anio +
-            (event.seriesIndex % 2 === 1 ? ' · Declinados' : ' · No declinados');
+    function openPeriodSlice(event,kind) {
+        if(event.componentType!=='series'||!event.data)return;
+        const row=event.data,modal=document.getElementById('modal-declinados-ventas');
+        if(!modal)return;
+        modal.dataset.desglose='1';
+        modal.dataset.desgloseLista=row.declined?'declinados':kind;
+        modal.dataset.desgloseAnio=selectedYears.join(',');
+        modal.dataset.desgloseMes=selectedMonths.join(',');
+        if(kind==='clasificacion_periodo')modal.dataset.clasificacionId=String(row.id);
+        else modal.dataset.estatusId=row.id==null?'sin_estatus':String(row.id);
+        modal.dataset.segmento=row.declined?'declinados':'no_declinados';
+        modal.dataset.desgloseTitulo=row.name+' · Todo el período seleccionado';
         bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+    const classificationChart=cascade('ventas-clasificaciones-general');
+    periodPie(classificationChart,generalClassifications.map((row,index)=>({id:row.clasificacion_id,nombre:row.clasificacion,
+        proyectos:row.proyectos,declinados:row.declinados,color:classificationColors[index%classificationColors.length]})));
+    classificationChart.instance.on('click',event=>openPeriodSlice(event,'clasificacion_periodo'));
+    // Estatus actuales del mismo conjunto de proyectos registrados en el periodo.
+    // Los KPI de documentos pueden incluir proyectos anteriores; no se suman aqui.
+    const periodStatuses=new Map();
+    (data.estatus_por_vendedor || []).forEach(row=>{
+        const key=String(row.estatus_id);
+        if(!periodStatuses.has(key)) {
+            const index=statuses.findIndex(group=>String(group.id)===statusGroupKey(row));
+            periodStatuses.set(key,{id:row.estatus_id,nombre:row.estatus||'Sin estatus',proyectos:0,declinados:0,
+                color:statusColors[Math.max(0,index)%statusColors.length]});
+        }
+        const group=periodStatuses.get(key);
+        group.proyectos+=Number(row.proyectos);group.declinados+=Number(row.declinados);
     });
+    const generalStatusChart=cascade('ventas-estatus-general');
+    periodPie(generalStatusChart,[...periodStatuses.values()].sort((a,b)=>Number(a.id)-Number(b.id)));
+    generalStatusChart.instance.on('click',event=>openPeriodSlice(event,'estatus_periodo'));
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
 });

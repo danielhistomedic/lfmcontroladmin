@@ -48,6 +48,20 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         {anio:2026,mes:9,vendedor_id:'V1',origen:'periodo',proyectos:3},
         {anio:2026,mes:9,vendedor_id:'V1',origen:'anteriores',proyectos:2},
         {anio:2026,mes:9,vendedor_id:'V2',origen:'anteriores',proyectos:1}];
+    // Simular los agregados del modelo a partir de proyectos disjuntos por mes.
+    const classNames=new Map(data.clasificaciones_por_vendedor.map(row=>[row.clasificacion_id,row.clasificacion]));
+    const classTotals=new Map(),statusTotals=new Map();
+    data.estatus_por_clasificacion.forEach(row=>{
+        if(!data.anios_seleccionados.includes(row.anio)||!data.meses_seleccionados.includes(row.mes))return;
+        [[classTotals,'clasificacion_id','clasificacion'],[statusTotals,'estatus_id','estatus']].forEach(([totals,id,label])=>{
+            const key=row.vendedor_id+':'+row[id];
+            if(!totals.has(key))totals.set(key,{vendedor_id:row.vendedor_id,[id]:row[id],
+                [label]:label==='clasificacion'?classNames.get(row[id]):row[label],proyectos:0,declinados:0});
+            const total=totals.get(key);total.proyectos+=row.proyectos;total.declinados+=row.declinados;
+        });
+    });
+    data.clasificaciones_por_vendedor=[...classTotals.values()];
+    data.estatus_por_vendedor=[...statusTotals.values()];
     const context = {
         document: {
             createElement: () => ({value:'',textContent:''}),
@@ -92,114 +106,39 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         assert.ok(svg.includes('<svg'), 'Renderizar con ECharts instalado');
         assert.ok(!svg.includes('NaN'), 'Sin geometría inválida en vacío ni móvil');
     }
-    if (!empty) {
-        const classificationSeries = charts[1].getOption().series;
-        classificationSeries.filter(series=>series.name !== 'Declinados').forEach(series=>{
-            assert.equal(series.label.formatter(),series.name,'Nombre completo de clasificacion debajo de cada barra');
-            assert.equal(series.label.overflow,'break');
-        });
-    }
-    if (placed) {
-        const option=charts[2].getOption();
-        const index=option.series.findIndex(series=>series.name==='Pedidos Colocados');
-        assert.deepEqual(option.series[index].data,[0,0,0,6],'Colocados suman ambos grupos del KPI');
-        assert.deepEqual(option.series[index+1].data,[0,0,0,0],'Excluir los cerrados del conjunto colocado');
-        const tip=option.tooltip[0].formatter({seriesIndex:index,dataIndex:3});
-        assert.ok(tip.includes('Proyectos del período: 3') && tip.includes('Proyectos anteriores: 3') && tip.includes('Total colocado: 6'));
-        charts[2].trigger('click',{componentType:'series',seriesIndex:index,dataIndex:3});
-        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'colocados_periodo');
+    assert.equal(data.clasificaciones_por_vendedor.reduce((sum,row)=>sum+row.proyectos,0),
+        data.estatus_por_vendedor.reduce((sum,row)=>sum+row.proyectos,0),'Ambos pasteles representan el mismo conjunto');
+    [1,2].forEach(index=>{
+        const option=charts[index].getOption(),slices=option.series[0].data;
+        assert.equal(option.series[0].type,'pie');
+        assert.equal(option.series[0].radius,'65%');
+        assert.equal(option.xAxis,undefined,'Sin eje mensual');assert.equal(option.yAxis,undefined);
+        const source=index===1?data.clasificaciones_por_vendedor:data.estatus_por_vendedor;
+        const total=source.reduce((sum,row)=>sum+row.proyectos,0),declined=source.reduce((sum,row)=>sum+row.declinados,0);
+        assert.equal(slices.reduce((sum,row)=>sum+row.value,0),total,'Conciliar proyectos registrados del periodo');
+        assert.equal(slices.filter(row=>row.name==='Declinados').length,declined?1:0);
+        if(declined){const slice=slices.find(row=>row.name==='Declinados');
+            assert.equal(slice.value,declined);assert.equal(slice.itemStyle.color,'#dc3545');
+            assert.ok(option.tooltip[0].formatter({data:slice}).includes(' | '+declined+' | '));
+            charts[index].trigger('click',{componentType:'series',data:slice});
+            assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'declinados');
+        }
+        const slice=slices.find(row=>row.name!=='Declinados');
+        if(slice){charts[index].trigger('click',{componentType:'series',data:slice});
+            const modal=nodes.get('modal-declinados-ventas');
+            assert.equal(modal.dataset.desgloseLista,index===1?'clasificacion_periodo':'estatus_periodo');
+            assert.equal(modal.dataset.desgloseAnio,'2024,2026');assert.equal(modal.dataset.desgloseMes,'2,9');
+            assert.equal(modal.dataset.segmento,'no_declinados');}
+    });
+    if(placed||quoted||periods){
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='Pedidos Colocados').total,5);
-        const dropdown=nodes.get('ventas-vendedor-desglose');dropdown.value='1';dropdown.events.change();
-        assert.equal(charts[4].getOption().title[0].text,'2');
-        assert.deepEqual(charts[4].getOption().series[0].data.map(row=>row.value),[2]);
-        charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
-        return;
-    }
-    if (quoted) {
-        const option = charts[2].getOption();
-        const quotedIndex = option.series.findIndex(series => series.name==='PEDIDO COTIZADO (SIN OC CLIENTE)');
-        assert.equal(quotedIndex,2);
-        assert.deepEqual(option.series[quotedIndex].data,[0,0,0,10],'La barra usa el KPI, no el conteo crudo de estatus');
-        assert.deepEqual(option.series[quotedIndex+1].data,[0,0,0,0],'El conjunto cotizado excluye cerrados');
-        const tip=option.tooltip[0].formatter({seriesIndex:quotedIndex,dataIndex:3});
-        assert.ok(tip.includes('Proyectos del período: 7') && tip.includes('Proyectos anteriores: 3') && tip.includes('Total cotizado: 10'));
-        charts[2].trigger('click',{componentType:'series',seriesIndex:quotedIndex,dataIndex:3});
-        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'cotizados_periodo');
-        charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').total,99,'Dona usa la distribucion de estatus registrada del vendedor');
-        const dropdown=nodes.get('ventas-vendedor-desglose'); dropdown.value='1';dropdown.events.change();
-        assert.ok(!charts[4].getOption().series[0].data.some(row=>row.name==='PEDIDO COTIZADO (SIN OC CLIENTE)'),'No incorporar cotizados anteriores ajenos al conjunto de proyectos del vendedor');
-        charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});
-        return;
-    }
-    if (periods) {
-        const statusOption = charts[2].getOption();
-        assert.equal(statusOption.legend[0].show,true);
-        assert.equal(statusOption.legend[0].type,'scroll');
-        const statusName = 'PROCESO DE COTIZACION';
-        assert.equal(statusOption.legend[0].formatter(statusName), statusName.slice(0,Math.floor(statusName.length*.66))+'...');
-        assert.equal(statusOption.legend[0].formatter('Declinados'),'Declin...');
-        assert.equal(statusOption.legend[0].tooltip.formatter({name:statusName}),statusName);
-        assert.equal(statusOption.grid[0].top,55,'Espacio para leyenda y nombre del eje');
-        assert.equal(statusOption.series[0].label.formatter(),'PROCESO DE COTIZACION');
-        assert.equal(statusOption.series[0].name,'PROCESO DE COTIZACION');
-        assert.equal(statusOption.series[2].name,'Pedidos Colocados');
-        assert.equal(statusOption.series.length,4,'Una sola barra apilada para los estatus >= 6');
-        assert.deepEqual(statusOption.series[0].data,[0,0,0,3]);
-        assert.deepEqual(statusOption.series[1].data,[0,0,0,1]);
-        assert.deepEqual(statusOption.series[2].data,[1,0,0,2]);
-        assert.deepEqual(statusOption.series[3].data,[1,0,0,1],'Declinados de todo el grupo');
-        assert.ok(statusOption.tooltip[0].formatter({seriesIndex:2,dataIndex:3}).includes('Total: 3'));
-        assert.equal(statusOption.series[1].itemStyle.color,'#dc3545');
-        assert.equal(statusOption.series[0].stack,statusOption.series[1].stack);
-        const tip = statusOption.tooltip[0].formatter({seriesIndex:0,dataIndex:3});
-        assert.ok(tip.includes('PROCESO DE COTIZACION') && tip.includes('Septiembre 2026') && tip.includes('Total: 4'));
-        assert.equal(statusOption.series[0].barWidth,26);
-        assert.equal(statusOption.series[0].label.fontSize,9);
-        assert.equal(statusOption.xAxis[1].offset,100);
-        charts[2].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:1});
-        const statusModal = nodes.get('modal-declinados-ventas');
-        assert.equal(statusModal.dataset.desgloseLista,'estatus_periodo');
-        assert.equal(statusModal.dataset.estatusId,'proceso_cotizacion');
-        assert.equal(statusModal.dataset.segmento,'declinados');
-        assert.equal(statusModal.dataset.desgloseAnio,'2026');
-        assert.equal(statusModal.dataset.desgloseMes,'9');
-        charts[2].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:2});
-        assert.equal(statusModal.dataset.estatusId,'colocados');
-        assert.equal(statusModal.dataset.segmento,'no_declinados');
-        assert.equal(statusModal.dataset.desgloseAnio,'2024');
-        assert.equal(statusModal.dataset.desgloseMes,'2');
-
-        assert.deepEqual(charts[1].getOption().xAxis[0].data, ['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.deepEqual(charts[1].getOption().xAxis[1].data,['2024','2024','2026','2026']);
-        assert.deepEqual(charts[1].getOption().series[2].data,[1,0,0,5]);
-        assert.deepEqual(charts[1].getOption().series[3].data,[1,0,0,2]);
-        charts[1].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:3});
-        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'clasificacion_periodo');
-        assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'declinados');
-        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseAnio,'2026');
-        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseMes,'9');
-        assert.equal(charts.length,3,'Abrir modal sin crear los graficos retirados');
-        charts[0].trigger('click',{componentType:'series',dataIndex:0});
-        const sellerClassification = charts[3].getOption();
-        const sellerStatus = charts[4].getOption();
-        assert.equal(sellerClassification.xAxis,undefined);
-        assert.deepEqual(sellerClassification.series[0].data.map(row=>row.value),[5,2],'Acumular meses y anios del vendedor');
-        assert.equal(sellerClassification.series[0].data[0].itemStyle.color,charts[1].getOption().series[2].itemStyle.color);
-        assert.equal(sellerClassification.series[0].data[0].name,'Bombas');
-        assert.deepEqual(sellerStatus.series[0].data.map(row=>row.value),[2,3,2],'Distribucion registrada, sin repetir proyectos anteriores de los KPI');
-        assert.equal(sellerStatus.series[0].data[1].name,'Pedidos Colocados');
-        assert.ok(sellerStatus.tooltip[0].formatter({data:sellerStatus.series[0].data[0]}).includes('Total de la categoría: 2'));
-        charts[3].renderToSVGString(); charts[4].renderToSVGString();
-        charts.forEach(chart=>chart.dispose());
-        return;
-    }
-    if (!empty) {
-        assert.deepEqual(charts[1].getOption().xAxis[0].data,['Febrero','Septiembre','Febrero','Septiembre']);
-        assert.deepEqual(charts[1].getOption().series[0].data,[0,0,0,3]);
-        assert.deepEqual(charts[1].getOption().series[1].data,[0,0,0,2]);
-        assert.equal(charts[1].getOption().series[1].itemStyle.color,'#dc3545');
+        if(placed)assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='Pedidos Colocados').total,5);
+        if(quoted)assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='PEDIDO COTIZADO (SIN OC CLIENTE)').total,99);
+        if(periods){assert.deepEqual(charts[3].getOption().series[0].data.map(row=>row.value),[5,2]);
+            assert.deepEqual(charts[4].getOption().series[0].data.map(row=>row.value),[2,3,2]);}
+        else {const dropdown=nodes.get('ventas-vendedor-desglose');dropdown.value='1';dropdown.events.change();
+            assert.deepEqual(charts[4].getOption().series[0].data.map(row=>row.value),[2]);}
+        charts.forEach(chart=>{assert.ok(!chart.renderToSVGString().includes('NaN'));chart.dispose();});return;
     }
     const counts=charts[0].getOption();
     assert.equal(counts.yAxis[0].name,'Proyectos');
@@ -270,7 +209,7 @@ ejecutar(false, 900, 'walden');
 ejecutar(false, 320, 'dark');
 ejecutar(true, 900, 'walden');
 ejecutar(true, 320, 'dark');
-console.log('OK: cascada, clasificaciones, estatus, declinados apilados, movil, oscuro y filtros globales.');
+console.log('OK: pasteles del periodo, estatus actuales, declinados unificados, detalle, donas por vendedor, movil, oscuro y filtros globales.');
 
 async function probarModal(critical = false) {
     const nodes = new Map(); const events = {}; const calls = []; let response; let options; let pending; let delegated;
