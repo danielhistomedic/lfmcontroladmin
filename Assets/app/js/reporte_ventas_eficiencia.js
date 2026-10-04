@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const currency = value => '$ ' + decimal.format(value);
     const ratio = (numerator, denominator) => denominator !== 0 ? decimal.format(numerator / denominator * 100) + ' %' : '—';
     let charts = [];
+    let sellerRows = [];
+    let sellerPage = 0;
+    const sellerPageSize = 10;
     function render(data) {
     charts.forEach(chart => chart.dispose());
     charts = [];
@@ -55,26 +58,9 @@ document.addEventListener('DOMContentLoaded', function () {
         seller.importe_colocado += money(row.importe_colocado);
     });
     const rows = [...sellers.values()].sort((a,b) => b.colocado-a.colocado || a.nombre.localeCompare(b.nombre,'es') || a.id.localeCompare(b.id));
-    const body = byId('vendedores-filas');
-    body.replaceChildren();
-    rows.forEach(seller => {
-        const tr = document.createElement('tr');
-        [seller.nombre,integer.format(seller.cotizado),integer.format(seller.colocado),ratio(seller.colocado,seller.cotizado),
-            currency(seller.importe_cotizado),currency(seller.importe_colocado),ratio(seller.importe_colocado,seller.importe_cotizado)].forEach((value,index) => {
-            const td = document.createElement('td');
-            td.textContent = value;
-            if (index) td.className = 'text-end';
-            tr.appendChild(td);
-        });
-        body.appendChild(tr);
-    });
-    if (!rows.length) {
-        const tr = document.createElement('tr');
-        const td = document.createElement('td');
-        td.colSpan = 7;
-        td.textContent = 'No hay proyectos para los filtros seleccionados.';
-        tr.appendChild(td); body.appendChild(tr);
-    }
+    sellerRows = rows;
+    sellerPage = 0;
+    renderSellerTable();
     if (typeof echarts === 'undefined') return;
     const dark = typeof theme_chart !== 'undefined' && theme_chart === 'dark';
     const textColor = dark ? '#edf2f7' : '#243447';
@@ -146,6 +132,46 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     renderEvolution();
     }
+    function sellerCells(seller) {
+        return [seller.nombre,integer.format(seller.cotizado),integer.format(seller.colocado),ratio(seller.colocado,seller.cotizado),
+            currency(seller.importe_cotizado),currency(seller.importe_colocado),ratio(seller.importe_colocado,seller.importe_cotizado)];
+    }
+    function renderSellerTable() {
+        const search = String(byId('vendedores-buscar').value || '').trim().toLocaleLowerCase('es');
+        const order = byId('vendedores-orden').value || 'colocado';
+        const score = seller => order === 'colocacion' ? (seller.cotizado ? seller.colocado/seller.cotizado : null) :
+            order === 'colocacion_monetaria' ? (seller.importe_cotizado ? seller.importe_colocado/seller.importe_cotizado : null) :
+            (order === 'importe_colocado' ? seller.importe_colocado : seller.colocado);
+        const rows = sellerRows.filter(seller=>!search || sellerCells(seller).some(value=>String(value).toLocaleLowerCase('es').includes(search)));
+        rows.sort((a,b)=>{
+            const name = a.nombre.localeCompare(b.nombre,'es') || a.id.localeCompare(b.id);
+            if(order === 'nombre') return name;
+            const aa=score(a),bb=score(b);
+            if(aa===null || bb===null) return aa===bb ? name : (aa===null ? 1 : -1);
+            return bb-aa || name;
+        });
+        sellerPage = Math.min(sellerPage,Math.max(0,Math.ceil(rows.length/sellerPageSize)-1));
+        const start=sellerPage*sellerPageSize;
+        const page=rows.slice(start,start+sellerPageSize);
+        const body=byId('vendedores-filas'); body.replaceChildren();
+        page.forEach(seller=>{
+            const tr=document.createElement('tr');
+            sellerCells(seller).forEach((value,index)=>{
+                const td=document.createElement('td');td.textContent=value;if(index)td.className='text-end';tr.appendChild(td);
+            });body.appendChild(tr);
+        });
+        if(!page.length){
+            const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;
+            td.textContent='No hay proyectos para los filtros seleccionados.';tr.appendChild(td);body.appendChild(tr);
+        }
+        byId('vendedores-pagina').textContent=rows.length ? (start+1)+'–'+(start+page.length)+' de '+rows.length : '0 resultados';
+        byId('vendedores-anterior').disabled=sellerPage===0;
+        byId('vendedores-siguiente').disabled=start+sellerPageSize>=rows.length;
+    }
+    byId('vendedores-buscar').addEventListener('input',()=>{sellerPage=0;renderSellerTable();});
+    byId('vendedores-orden').addEventListener('change',()=>{sellerPage=0;renderSellerTable();});
+    byId('vendedores-anterior').addEventListener('click',()=>{sellerPage=Math.max(0,sellerPage-1);renderSellerTable();});
+    byId('vendedores-siguiente').addEventListener('click',()=>{sellerPage++;renderSellerTable();});
     function showSellers() {
         byId('vendedores').hidden = false;
         byId('general').setAttribute('aria-expanded','true');

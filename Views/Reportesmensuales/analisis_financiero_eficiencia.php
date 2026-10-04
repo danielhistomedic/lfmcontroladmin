@@ -47,7 +47,17 @@
         </div>
         <section id="ventas-eficiencia-vendedores" class="ventas-eficiencia-seccion" hidden aria-labelledby="ventas-eficiencia-vendedores-titulo">
             <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i>Desglose por vendedor</h6>
-            <p class="ventas-eficiencia-nota">Ordenado de mayor a menor por proyectos colocados. % Colocación = Total Colocado / Total Cotizado × 100. % Colocación Monetaria = Importe Colocado / Importe Cotizado × 100. Importes en USD, sin IVA.</p>
+            <p class="ventas-eficiencia-nota">% Colocación = Total Colocado / Total Cotizado × 100. % Colocación Monetaria = Importe Colocado / Importe Cotizado × 100. Importes en USD, sin IVA.</p>
+            <div class="ventas-eficiencia-tabla-controles">
+                <label for="ventas-eficiencia-vendedores-buscar">Buscar<input id="ventas-eficiencia-vendedores-buscar" type="search" maxlength="200" placeholder="Nombre o valor" class="form-control form-control-sm"></label>
+                <label for="ventas-eficiencia-vendedores-orden">Ordenar<select id="ventas-eficiencia-vendedores-orden" class="form-select form-select-sm">
+                    <option value="colocado">Mayor colocación</option>
+                    <option value="importe_colocado">Mayor importe colocado</option>
+                    <option value="colocacion">Mayor % colocación</option>
+                    <option value="colocacion_monetaria">Mayor % colocación monetaria</option>
+                    <option value="nombre">Nombre</option>
+                </select></label>
+            </div>
             <div class="table-responsive">
                 <table class="table mb-0">
                     <thead>
@@ -63,6 +73,10 @@
                     </thead>
                     <tbody id="ventas-eficiencia-vendedores-filas"></tbody>
                 </table>
+            </div>
+            <div class="ventas-eficiencia-tabla-pie">
+                <span id="ventas-eficiencia-vendedores-pagina" aria-live="polite"></span>
+                <nav aria-label="Paginación del desglose por vendedor"><button id="ventas-eficiencia-vendedores-anterior" type="button" class="btn btn-light btn-sm" disabled>Anterior</button><button id="ventas-eficiencia-vendedores-siguiente" type="button" class="btn btn-light btn-sm" disabled>Siguiente</button></nav>
             </div>
         </section>
     </div>

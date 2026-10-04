@@ -94,6 +94,39 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     charts.forEach(chart=>chart.dispose());
 }
 const empty=run({cantidades:{total_proyectos:0,cotizacion_cliente:0,orden_compra_cliente:0}});
+const tableSellers=Array.from({length:12},(_,i)=>({vendedor_id:String(i),nombre:'Vendedor '+String(i).padStart(2,'0')}));
+const tableData={cantidades:{cotizacion_cliente:306,orden_compra_cliente:66},cotizado:7800,colocado:3300,
+    proyectos_por_vendedor:tableSellers,
+    cotizados_por_periodo:tableSellers.map((row,i)=>({...row,proyectos:20+i})),
+    colocados_por_periodo:tableSellers.map((row,i)=>({...row,proyectos:i})),
+    importes_por_vendedor:tableSellers.map((row,i)=>({...row,importe_cotizado:100*(i+1),importe_colocado:50*i}))};
+const tableSnapshot=JSON.stringify(tableData);
+const table=run(tableData);
+const tableBody=table.node('ventas-eficiencia-vendedores-filas');
+assert.equal(tableBody.children.length,10);
+assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'1–10 de 12');
+assert.equal(table.node('ventas-eficiencia-vendedores-anterior').disabled,true);
+table.node('ventas-eficiencia-vendedores-siguiente').events.click();
+assert.equal(tableBody.children.length,2);
+assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'11–12 de 12');
+assert.equal(table.node('ventas-eficiencia-vendedores-siguiente').disabled,true);
+for(const criterion of ['colocado','importe_colocado','colocacion','colocacion_monetaria','nombre']){
+    table.node('ventas-eficiencia-vendedores-orden').value=criterion;
+    table.node('ventas-eficiencia-vendedores-orden').events.change();
+    assert.equal(tableBody.children[0].children[0].textContent,criterion==='nombre'?'Vendedor 00':'Vendedor 11');
+    assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'1–10 de 12');
+}
+table.node('ventas-eficiencia-vendedores-buscar').value='vendedor 01';
+table.node('ventas-eficiencia-vendedores-buscar').events.input();
+assert.equal(tableBody.children.length,1);assert.equal(tableBody.children[0].children.length,7);
+assert.equal(tableBody.children[0].children[1].textContent,'21');assert.equal(tableBody.children[0].children[5].textContent,'$ 50.00');
+table.node('ventas-eficiencia-vendedores-buscar').value='sin coincidencia';
+table.node('ventas-eficiencia-vendedores-buscar').events.input();
+assert.equal(tableBody.children[0].children[0].colSpan,7);
+assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'0 resultados');
+assert.equal(table.node('ventas-eficiencia-importe-cotizado').textContent,'$ 7,800.00','Busqueda no cambia KPI');
+assert.equal(JSON.stringify(tableData),tableSnapshot,'Busqueda y orden no modifican datos');
+table.charts.forEach(chart=>chart.dispose());
 const localData={...fixture,
     clasificaciones_comparativo:[{id:34,clasificacion:'BOMBAS FLOWSERVE'},{id:91,clasificacion:'SELLOS FLOWSERVE'},
         {id:17,clasificacion:'DIVERSOS'},{id:22,clasificacion:'VÁLVULAS FLOWSERVE'}],

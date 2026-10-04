@@ -31,6 +31,26 @@ html.dark #ventas-financiero-eficiencia .ventas-eficiencia-filtro-clasificacion 
 #ventas-financiero-eficiencia .table th { background:#eaf1fa !important; color:#174b66 !important; font-weight:600; }
 #ventas-financiero-eficiencia .table td { padding:6px 8px; font-size:11px; white-space:normal; overflow-wrap:anywhere; }
 #ventas-financiero-eficiencia .table td.text-end { font-variant-numeric:tabular-nums; white-space:nowrap; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores { border-color:#e0d6ef; border-top:3px solid #7554ad; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores h6 { color:#60438f; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores .ventas-eficiencia-icono { background:#f2edf9; color:#7554ad; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores .table { margin:0; border-collapse:separate; border-spacing:0; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores .table th { padding:9px 8px; border:0; background:#f2edf9 !important; color:#60438f !important; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores .table td { padding:9px 8px; border:0; border-bottom:1px solid #edf1f6; }
+#ventas-financiero-eficiencia #ventas-eficiencia-vendedores tbody tr:hover { background:#f5f9fc; }
+#ventas-financiero-eficiencia .ventas-eficiencia-tabla-controles { display:flex; gap:12px; margin-bottom:12px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-tabla-controles label { flex:1; min-width:0; color:#62758e; font-size:10px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-tabla-controles :is(input,select) { margin-top:4px; border-radius:5px; border-color:#dfe8f2; font-size:11px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-tabla-pie { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; color:#62758e; font-size:10px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-tabla-pie nav { display:flex; gap:6px; }
+#ventas-financiero-eficiencia .ventas-eficiencia-tabla-pie button { border:1px solid #dfe8f2; border-radius:5px; color:#174b66; font-size:11px; }
+html.dark #ventas-financiero-eficiencia #ventas-eficiencia-vendedores { border-color:#635277; border-top-color:#bda2e7; }
+html.dark #ventas-financiero-eficiencia #ventas-eficiencia-vendedores h6 { color:#e4d6f7; }
+html.dark #ventas-financiero-eficiencia #ventas-eficiencia-vendedores .ventas-eficiencia-icono { background:#393149; color:#bda2e7; }
+html.dark #ventas-financiero-eficiencia #ventas-eficiencia-vendedores .table th { background:#393149 !important; color:#e4d6f7 !important; }
+html.dark #ventas-financiero-eficiencia #ventas-eficiencia-vendedores .table td { border-color:#455563; }
+html.dark #ventas-financiero-eficiencia #ventas-eficiencia-vendedores tbody tr:hover { background:#2a4050; }
+@media(max-width:479px) { #ventas-financiero-eficiencia .ventas-eficiencia-tabla-controles { flex-direction:column; } }
 html.dark #ventas-financiero-eficiencia { color:#edf2f7; }
 html.dark #ventas-financiero-eficiencia .ventas-eficiencia-contenido { background:#21313e; }
 html.dark #ventas-financiero-eficiencia .ventas-eficiencia-seccion { border-color:#455563; }
