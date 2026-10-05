@@ -186,7 +186,14 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
     assert.equal(counts.yAxis[0].minInterval,1);
     assert.equal((counts.dataZoom || []).length,0,'Sin control lateral en cantidades por vendedor');
     if (!empty) {
-        assert.deepEqual(counts.series[0].data.map(row=>row.value),[8,2]);
+        assert.deepEqual(counts.series[0].data.map(row=>row.value),[6,0]);
+        assert.deepEqual(counts.series[1].data.map(row=>row.value),[2,2]);
+        assert.deepEqual(counts.series[0].data.map((row,index)=>row.value+counts.series[1].data[index].value),[8,2],'No sumar declinados nuevamente');
+        assert.deepEqual(counts.legend[0].data,['Proyectos','Declinados']);
+        assert.equal(counts.series[0].stack,counts.series[1].stack);
+        assert.equal(counts.tooltip[0].formatter([{data:counts.series[0].data[0],dataIndex:0}]),'Vendedor 1\nTotal: 8\nNo declinados: 6\nDeclinados: 2');
+        assert.equal(counts.series[0].label.formatter({data:counts.series[0].data[0]}),'');
+        assert.equal(counts.series[1].label.formatter({data:counts.series[1].data[0]}),'8');
 
     }
     if (!empty) {
@@ -207,7 +214,12 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         assert.deepEqual(charts[3].getOption().series[0].data.map(row=>row.value),[3,3,2]);
         assert.equal(charts[3].getOption().series[0].data[2].itemStyle.color,'#dc3545');
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
-        assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#d48825');
+        assert.equal(charts[0].getOption().series[0].data[0].itemStyle.color,'#2385bd');
+        assert.equal(charts[0].getOption().series[0].data[0].itemStyle.borderWidth,2);
+        const before=charts[3].getOption().series[0].data.map(row=>[row.name,row.value]);
+        charts[0].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
+        assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
+        assert.deepEqual(charts[3].getOption().series[0].data.map(row=>[row.name,row.value]),before,'Segmento rojo reutiliza seleccion completa del vendedor');
         dropdown.value='1'; dropdown.events.change();
         assert.equal(charts.length,5,'Reutilizar grafica secundaria');
         assert.equal(nodes.has('ventas-vendedor-mensual'),false);

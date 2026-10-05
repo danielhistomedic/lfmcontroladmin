@@ -612,6 +612,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const colors = ['#2385bd', '#27a58c', '#e5a543', '#8c6bb1', '#cf6478', '#428582', '#718bbd', '#ad7e56'];
     const projectCounts = [...(data.proyectos_por_vendedor || [])].sort((a, b) => b.proyectos - a.proyectos);
     const statusCounts = data.clasificaciones_por_vendedor || [];
+    const declinedBySeller = new Map();
+    statusCounts.forEach(row=>{
+        const key=String(row.vendedor_id??'');
+        declinedBySeller.set(key,(declinedBySeller.get(key)||0)+Number(row.declinados));
+    });
     const selector = document.getElementById('ventas-vendedor-desglose');
     const statusPanel = document.getElementById('ventas-estatus-panel');
     const cascadeCharts = [];
@@ -662,14 +667,30 @@ document.addEventListener('DOMContentLoaded', function () {
     sellerChart.element.style.height = '260px';
     function sellerOption(selected = -1) {
         const option = cascadeOption(projectCounts, selected);
-        option.grid = {left:38,right:12,top:24,bottom:76};
+        option.grid = {left:38,right:12,top:44,bottom:76};
+        option.legend = {data:['Proyectos','Declinados'],top:2,right:12,itemWidth:12,itemHeight:9,
+            selectedMode:false,textStyle:{color:cascadeText,fontSize:10}};
+        option.tooltip = {trigger:'axis',renderMode:'richText',formatter:items=>{
+            const row=items[0]?.data;
+            return row ? projectCounts[items[0].dataIndex].nombre+'\nTotal: '+row.total+
+                '\nNo declinados: '+(row.total-row.declined)+'\nDeclinados: '+row.declined : '';
+        }};
         option.xAxis.axisLabel = {...option.xAxis.axisLabel,fontSize:9,width:92,lineHeight:12,margin:8};
         option.yAxis.axisLabel.fontSize = 10;
         option.yAxis.nameTextStyle.fontSize = 10;
         option.yAxis.splitLine = {lineStyle:{color: typeof theme_chart !== 'undefined' && theme_chart === 'dark' ? '#354a64' : '#e7edf4'}};
-        option.series[0].barMaxWidth = 42;
-        option.series[0].label.fontSize = 10;
-        option.series[0].itemStyle = {borderRadius:[2,2,0,0]};
+        option.series = ['Proyectos','Declinados'].map((name,segment)=>({
+            name,type:'bar',stack:'proyectos-vendedor',barMaxWidth:42,
+            label:{show:true,position:'top',fontSize:10,color:cascadeText,
+                formatter:params=>(segment===1?params.data.declined>0:params.data.declined===0)?String(params.data.total):''},
+            data:projectCounts.map((row,index)=>{
+                const total=Number(row.proyectos),declined=declinedBySeller.get(String(row.vendedor_id??''))||0;
+                return {value:segment===1?declined:total-declined,total,declined,itemStyle:{
+                    color:segment===1?'#dc3545':'#2385bd',
+                    borderColor:segment===1?'#9f2431':'#80510f',borderWidth:index===selected?2:0,
+                    borderRadius:segment===1||declined===0?[2,2,0,0]:0}};
+            })
+        }));
         return option;
     }
     sellerChart.instance.setOption(sellerOption());
