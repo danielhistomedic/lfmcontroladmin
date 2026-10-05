@@ -6,7 +6,7 @@
     <div class="ventas-eficiencia-contenido">
         <p class="mb-1"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Período: <strong><?= $esc($monthNames); ?> <?= $esc($yearNames); ?></strong></p>
         <p class="ventas-eficiencia-nota">Cantidades: mismos proyectos únicos de los KPI, incluidos los anteriores. Importes: documentos enviados del período, sin IVA, con los filtros y la conversión a USD del dashboard. Cada porcentaje usa su propia unidad; «—» indica un denominador cero.</p>
-        <div id="ventas-eficiencia-general" class="ventas-eficiencia-seccion ventas-eficiencia-abrir" role="button" tabindex="0" aria-expanded="false" aria-controls="ventas-eficiencia-vendedores" aria-label="Mostrar desglose de cantidades e importes por vendedor">
+        <div id="ventas-eficiencia-general" class="ventas-eficiencia-seccion ventas-eficiencia-abrir" role="button" tabindex="0" aria-expanded="true" aria-controls="ventas-eficiencia-vendedores" aria-label="Mostrar desglose de cantidades e importes por vendedor">
             <h6><i class="fa-solid fa-chart-simple ventas-eficiencia-icono" aria-hidden="true"></i>Comparativo General · Pedidos Cotizados vs Pedidos Colocados</h6>
             <div id="ventas-eficiencia-filtro-clasificacion" class="ventas-eficiencia-filtro-clasificacion" role="group" aria-label="Clasificación local del Comparativo General"></div>
             <div class="ventas-eficiencia-indicadores">
@@ -43,9 +43,9 @@
                 <p class="ventas-eficiencia-nota">Período y vendedor seleccionados · Proyectos e importes en USD · Mismo tipo de cambio del resumen.</p>
                 <div id="ventas-eficiencia-evolucion" role="img" aria-label="Evolución mensual de proyectos e importes cotizados y colocados"></div>
             </section>
-            <p class="ventas-eficiencia-nota mb-0">Selecciona el resumen o un anillo para ver el desglose por vendedor.</p>
+            <p class="ventas-eficiencia-nota mb-0">Desglose por vendedor disponible debajo del comparativo.</p>
         </div>
-        <section id="ventas-eficiencia-vendedores" class="ventas-eficiencia-seccion" hidden aria-labelledby="ventas-eficiencia-vendedores-titulo">
+        <section id="ventas-eficiencia-vendedores" class="ventas-eficiencia-seccion" aria-labelledby="ventas-eficiencia-vendedores-titulo">
             <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i><span id="ventas-eficiencia-vendedores-etiqueta">Desglose por vendedor · TODOS · <?= $esc($monthNames . ' ' . $yearNames); ?></span></h6>
             <p class="ventas-eficiencia-nota">% Colocación = Total Colocado / Total Cotizado × 100. % Colocación Monetaria = Importe Colocado / Importe Cotizado × 100. Importes en USD, sin IVA.</p>
             <div class="ventas-eficiencia-tabla-controles">
@@ -53,7 +53,7 @@
                 <label for="ventas-eficiencia-vendedores-orden">Ordenar<select id="ventas-eficiencia-vendedores-orden" class="form-select form-select-sm">
                     <option value="colocado">Mayor colocación</option>
                     <option value="importe_colocado">Mayor importe colocado</option>
-                    <option value="importe_cotizado">Mayor importe cotizado</option>
+                    <option value="importe_cotizado" selected>Mayor importe cotizado</option>
                     <option value="colocacion">Mayor % colocación</option>
                     <option value="colocacion_monetaria">Mayor % colocación monetaria</option>
                     <option value="nombre">Nombre</option>

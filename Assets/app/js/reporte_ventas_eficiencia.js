@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function renderSellerTable() {
         const search = String(byId('vendedores-buscar').value || '').trim().toLocaleLowerCase('es');
-        const order = byId('vendedores-orden').value || 'colocado';
+        const order = byId('vendedores-orden').value || 'importe_cotizado';
         const score = seller => order === 'colocacion' ? (seller.cotizado ? seller.colocado/seller.cotizado : null) :
             order === 'colocacion_monetaria' ? (seller.importe_cotizado ? seller.importe_colocado/seller.importe_cotizado : null) :
             (order === 'importe_colocado' ? seller.importe_colocado : order === 'importe_cotizado' ? seller.importe_cotizado : seller.colocado);
@@ -227,6 +227,8 @@ document.addEventListener('DOMContentLoaded', function () {
             render(row.id===''?data:filtered(row.id==='flowserve'?flowserveIds:[row.id]), button.textContent);
         });filter.appendChild(button);
     });
+    byId('vendedores-orden').value = 'importe_cotizado';
+    showSellers();
     render(data);
     window.addEventListener('resize',()=>charts.forEach(chart=>chart.resize()));
 });
