@@ -28,16 +28,6 @@
                     </div>
                 <?php endforeach; ?>
             </div>
-            <div class="ventas-eficiencia-graficas mt-3">
-                <section aria-labelledby="ventas-eficiencia-cantidad-titulo">
-                    <h6 id="ventas-eficiencia-cantidad-titulo">Colocación por cantidad</h6>
-                    <div id="ventas-eficiencia-grafica" class="ventas-eficiencia-chart" role="img" aria-label="Anillo de conversión por cantidad de proyectos"></div>
-                </section>
-                <section aria-labelledby="ventas-eficiencia-importe-titulo">
-                    <h6 id="ventas-eficiencia-importe-titulo">Colocación monetaria · USD</h6>
-                    <div id="ventas-eficiencia-grafica-importes" class="ventas-eficiencia-chart" role="img" aria-label="Anillo de conversión monetaria en USD"></div>
-                </section>
-            </div>
             <section class="ventas-eficiencia-seccion ventas-eficiencia-evolucion mt-3" aria-labelledby="ventas-eficiencia-evolucion-titulo">
                 <h6 id="ventas-eficiencia-evolucion-titulo"><i class="fa-solid fa-chart-line ventas-eficiencia-icono" aria-hidden="true"></i>Evolución mensual · Cotizado vs Colocado</h6>
                 <p class="ventas-eficiencia-nota">Período y vendedor seleccionados · Proyectos e importes en USD · Mismo tipo de cambio del resumen.</p>

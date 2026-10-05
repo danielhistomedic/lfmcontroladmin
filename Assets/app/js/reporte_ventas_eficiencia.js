@@ -66,39 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof echarts === 'undefined') return;
     const dark = typeof theme_chart !== 'undefined' && theme_chart === 'dark';
     const textColor = dark ? '#edf2f7' : '#243447';
-    function conversion(id,quoted,placed,monetary) {
-        const element = byId(id);
-        const chart = echarts.init(element, dark ? 'dark' : null);
-        const format = monetary ? value => currency(value)+' USD' : value => integer.format(value);
-        const pending = Math.max(0,quoted-placed);
-        const validRing = quoted > 0 && placed >= 0;
-        const placedName = monetary ? 'Importe colocado' : 'Colocado';
-        const pendingName = monetary ? 'Importe pendiente de colocar' : 'Pendiente de colocar';
-        const percentage = ratio(placed,quoted);
-        const pendingColor = dark ? '#3d5669' : '#dce7f0';
-        element.setAttribute('aria-label',(monetary?'Colocación monetaria: ':'Colocación por cantidad: ')+percentage);
-        chart.setOption({
-            backgroundColor:'transparent',aria:{enabled:true},
-            title:[{text:percentage,left:'center',top:'34%',textStyle:{color:textColor,fontSize:22,fontWeight:600}},
-                {text:monetary?'Colocación monetaria':'Colocación',left:'center',top:'47%',textStyle:{color:dark?'#cbd5e1':'#62758e',fontSize:10,fontWeight:400}}],
-            legend:{bottom:0,left:'center',type:'scroll',itemWidth:10,itemHeight:10,
-                data:[placedName,pendingName],textStyle:{color:textColor,fontSize:10}},
-            tooltip:{trigger:'item',renderMode:'richText',formatter:() => monetary ?
-                'Importe cotizado: '+format(quoted)+'\nImporte colocado: '+format(placed)+
-                    '\nImporte pendiente de colocar: '+format(pending) :
-                'Cotizados: '+format(quoted)+'\nColocados: '+format(placed)+'\nPendientes: '+format(pending)},
-            series:[{name:monetary?'Colocación monetaria':'Colocación por cantidad',type:'pie',
-                radius:['52%','70%'],center:['50%','43%'],label:{show:false},labelLine:{show:false},
-                emphasis:{scale:false},itemStyle:{borderRadius:4,borderWidth:2,borderColor:dark?'#21313e':'#fff'},
-                // El anillo alcanza 100%; el centro y el tooltip conservan la conversión real.
-                data:[{name:placedName,value:validRing?Math.min(placed,quoted):0,itemStyle:{color:'#198754'}},
-                    {name:pendingName,value:validRing?pending:1,itemStyle:{color:pendingColor}}]}]
-        });
-        chart.on('click',showSellers);
-        return chart;
-    }
-    charts = [conversion('grafica',totals.cotizado,totals.colocado,false),
-        conversion('grafica-importes',totals.importe_cotizado,totals.importe_colocado,true)];
     const evolutionElement = byId('evolucion');
     const evolution = echarts.init(evolutionElement, dark ? 'dark' : null);
     charts.push(evolution);

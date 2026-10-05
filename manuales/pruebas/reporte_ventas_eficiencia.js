@@ -20,7 +20,8 @@ function run(data,width=1200,dark=false) {
             {renderer:'svg',ssr:true,width,height:220});charts.push(chart);return chart;}}
     });
     ready();
-    assert.equal(charts.length,3,'Dos anillos y evolucion mensual');
+    assert.equal(charts.length,1,'Solo evolucion mensual, sin inicializar las donas retiradas');
+    assert.ok(!nodes.has('ventas-eficiencia-grafica')&&!nodes.has('ventas-eficiencia-grafica-importes'));
     charts.forEach(chart=>assert.ok(!chart.renderToSVGString().includes('NaN'),'Geometria valida en escritorio, movil, oscuro y vacio'));
     resize();
     return {node,charts};
@@ -60,33 +61,23 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     assert.equal(node('ventas-eficiencia-moneda-original').textContent,'USD: $ 150.00 | MXN: $ 1,800.00');
     assert.equal(node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');
     assert.equal(node('ventas-eficiencia-colocacion-monetaria').textContent,'41.67 %');
-    const annual=charts[2];
+    const annual=charts[0];
     assert.deepEqual(annual.getOption().xAxis[0].data,['Septiembre 2025','Octubre 2025','Septiembre 2026','Octubre 2026']);
     assert.deepEqual(annual.getOption().series.map(series=>[series.type,series.yAxisIndex]),[['bar',0],['bar',0],['line',1],['line',1]]);
     assert.equal(annual.getOption().series[0].data[1],4,'Mantener todos los anios del filtro general');
     assert.equal(annual.getOption().series[0].data[2],8,'Septiembre conserva sus datos');
     assert.equal(annual.getOption().series[2].data[2],600);
     assert.ok(annual.getOption().tooltip[0].formatter([{dataIndex:2}]).includes('% Colocación Monetaria: 25.00 %'));
-    assert.deepEqual(charts[0].getOption().series[0].data.map(row=>row.value),[9,0]);
-    assert.deepEqual(charts[1].getOption().series[0].data.map(row=>row.value),[250,350]);
-    charts.slice(0,2).forEach(chart=>assert.equal(chart.getOption().series[0].type,'pie','Sustituir barras por donas'));
-    assert.equal(charts[0].getOption().title[0].text,'100.00 %');
-    assert.equal(charts[1].getOption().title[0].text,'41.67 %');
-    assert.equal(charts[0].getOption().tooltip[0].formatter(),'Cotizados: 9\nColocados: 9\nPendientes: 0');
-    assert.equal(charts[1].getOption().tooltip[0].formatter(),
-        'Importe cotizado: $ 600.00 USD\nImporte colocado: $ 250.00 USD\nImporte pendiente de colocar: $ 350.00 USD');
     const rows=node('ventas-eficiencia-vendedores-filas').children.map(row=>row.children.map(cell=>cell.textContent));
-    assert.deepEqual(rows,[['<script>','2','4','200.00 %','$ 100.00','$ 0.00','0.00 %'],
+    assert.deepEqual(rows,[['Ana','4','2','50.00 %','$ 300.00','$ 100.00','33.33 %'],
         ['Beto','3','3','100.00 %','$ 200.00','$ 150.00','75.00 %'],
-        ['Ana','4','2','50.00 %','$ 300.00','$ 100.00','33.33 %']]);
+        ['<script>','2','4','200.00 %','$ 100.00','$ 0.00','0.00 %']]);
     [1,2].forEach(index=>assert.equal(rows.reduce((sum,row)=>sum+Number(row[index]),0),9,'Conciliar cantidades de vendedores y resumen'));
-    assert.equal(node('ventas-eficiencia-vendedores').hidden,true);
-    charts[0].trigger('click',{componentType:'series',seriesIndex:0,dataIndex:1});
     assert.equal(node('ventas-eficiencia-vendedores').hidden,false);
     assert.equal(node('ventas-eficiencia-general')['aria-expanded'],'true');
     node('ventas-eficiencia-vendedores').hidden=true;
-    charts[1].trigger('click',{componentType:'series',seriesIndex:0,dataIndex:1});
-    assert.equal(node('ventas-eficiencia-vendedores').hidden,false,'Importes abren el mismo desglose');
+    node('ventas-eficiencia-general').events.click();
+    assert.equal(node('ventas-eficiencia-vendedores').hidden,false,'Comparativo mantiene acceso al desglose');
     node('ventas-eficiencia-vendedores').hidden=true;
     let prevented=false;
     node('ventas-eficiencia-general').events.keydown({key:' ',preventDefault(){prevented=true;}});
@@ -94,7 +85,7 @@ for (const [width,dark] of [[1200,false],[320,false],[320,true]]) {
     charts.forEach(chart=>chart.dispose());
 }
 const empty=run({cantidades:{total_proyectos:0,cotizacion_cliente:0,orden_compra_cliente:0}});
-const tableSellers=Array.from({length:12},(_,i)=>({vendedor_id:String(i),nombre:'Vendedor '+String(i).padStart(2,'0')}));
+const tableSellers=Array.from({length:20},(_,i)=>({vendedor_id:String(i),nombre:'Vendedor '+String(i).padStart(2,'0')}));
 const tableData={cantidades:{cotizacion_cliente:306,orden_compra_cliente:66},cotizado:7800,colocado:3300,
     proyectos_por_vendedor:tableSellers,
     cotizados_por_periodo:tableSellers.map((row,i)=>({...row,proyectos:20+i})),
@@ -103,18 +94,18 @@ const tableData={cantidades:{cotizacion_cliente:306,orden_compra_cliente:66},cot
 const tableSnapshot=JSON.stringify(tableData);
 const table=run(tableData);
 const tableBody=table.node('ventas-eficiencia-vendedores-filas');
-assert.equal(tableBody.children.length,10);
-assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'1–10 de 12');
+assert.equal(tableBody.children.length,15);
+assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'1–15 de 20');
 assert.equal(table.node('ventas-eficiencia-vendedores-anterior').disabled,true);
 table.node('ventas-eficiencia-vendedores-siguiente').events.click();
-assert.equal(tableBody.children.length,2);
-assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'11–12 de 12');
+assert.equal(tableBody.children.length,5);
+assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'16–20 de 20');
 assert.equal(table.node('ventas-eficiencia-vendedores-siguiente').disabled,true);
-for(const criterion of ['colocado','importe_colocado','colocacion','colocacion_monetaria','nombre']){
+for(const criterion of ['colocado','importe_colocado','importe_cotizado','colocacion','colocacion_monetaria','nombre']){
     table.node('ventas-eficiencia-vendedores-orden').value=criterion;
     table.node('ventas-eficiencia-vendedores-orden').events.change();
-    assert.equal(tableBody.children[0].children[0].textContent,criterion==='nombre'?'Vendedor 00':'Vendedor 11');
-    assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'1–10 de 12');
+    assert.equal(tableBody.children[0].children[0].textContent,criterion==='nombre'?'Vendedor 00':'Vendedor 19');
+    assert.equal(table.node('ventas-eficiencia-vendedores-pagina').textContent,'1–15 de 20');
 }
 table.node('ventas-eficiencia-vendedores-buscar').value='vendedor 01';
 table.node('ventas-eficiencia-vendedores-buscar').events.input();
@@ -145,7 +136,6 @@ assert.equal(local.node('ventas-eficiencia-colocacion').textContent,'33.33 %');
 assert.equal(local.node('ventas-eficiencia-importe-cotizado').textContent,'$ 200.00');
 assert.equal(local.node('ventas-eficiencia-cotizado-moneda-original').textContent,'USD: $ 100.00 | MXN: $ 1,800.00');
 assert.equal(local.node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 18.00 | Fecha TC: 30/09/2026');
-assert.equal(local.charts.at(-3).getOption().title[0].text,'33.33 %');
 assert.deepEqual(local.charts.at(-1).getOption().series[0].data,[0,0,3,0]);
 assert.equal(local.node('ventas-eficiencia-vendedores-filas').children.length,1);
 buttons[1].events.click();
@@ -154,7 +144,7 @@ buttons[0].events.click();
 assert.equal(local.node('ventas-eficiencia-cotizado').textContent,'9');
 assert.equal(local.node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00','TODOS restaura importes generales');
 assert.equal(JSON.stringify(localData),originalLocal,'El filtro no modifica datos compartidos');
-local.charts.slice(-3).forEach(chart=>chart.dispose());
+local.charts.slice(-1).forEach(chart=>chart.dispose());
 const flowserveData={...localData,
     comparativo_clasificacion_local:[34,22,91,17].map(id=>({clasificacion_id:id,vendedor_id:'V1',nombre:'Ana',
         cotizado:id===17?100:3,colocado:id===17?100:1,importe_cotizado:id===17?10000:100,importe_colocado:id===17?10000:50,
@@ -172,7 +162,6 @@ assert.equal(flowserve.node('ventas-eficiencia-colocacion').textContent,'33.33 %
 assert.equal(flowserve.node('ventas-eficiencia-importe-cotizado').textContent,'$ 300.00');
 assert.equal(flowserve.node('ventas-eficiencia-importe-colocado').textContent,'$ 150.00');
 assert.equal(flowserve.node('ventas-eficiencia-colocacion-monetaria').textContent,'50.00 %');
-assert.deepEqual(flowserve.charts.at(-3).getOption().series[0].data.map(row=>row.value),[3,6]);
 assert.deepEqual(flowserve.charts.at(-1).getOption().series[0].data,[0,0,9,0],'Consolidar clasificaciones del mismo mes');
 assert.deepEqual(flowserve.charts.at(-1).getOption().series[2].data,[0,0,300,0]);
 assert.equal(flowserve.node('ventas-eficiencia-vendedores-filas').children.length,1,'Consolidar el mismo vendedor entre clasificaciones');
@@ -181,13 +170,11 @@ assert.equal(flowserve.node('ventas-eficiencia-cotizado').textContent,'3','Mante
 flowserveButtons[0].events.click();
 assert.equal(flowserve.node('ventas-eficiencia-importe-cotizado').textContent,'$ 600.00','TODOS restaura el general');
 assert.equal(JSON.stringify(flowserveData),flowserveSnapshot,'No modificar datos del dashboard');
-flowserve.charts.slice(-3).forEach(chart=>chart.dispose());
+flowserve.charts.slice(-1).forEach(chart=>chart.dispose());
 assert.equal(empty.node('ventas-eficiencia-colocacion').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-colocacion-monetaria').textContent,'—');
 assert.equal(empty.node('ventas-eficiencia-tipo-cambio').textContent,'TC: — | Fecha TC: —','Datos ausentes sin tipo de cambio inventado');
 assert.equal(empty.node('ventas-eficiencia-vendedores-filas').children[0].children[0].colSpan,7);
-assert.equal(empty.charts[0].getOption().title[0].text,'—','Sin porcentaje falso cuando no hay cotizados');
-assert.equal(empty.charts[0].getOption().tooltip[0].formatter(),'Cotizados: 0\nColocados: 0\nPendientes: 0');
 empty.charts.forEach(chart=>chart.dispose());
 const scoped=run({cantidades:{total_proyectos:6,cotizacion_cliente:4,orden_compra_cliente:2},
     proyectos_por_vendedor:[fixture.proyectos_por_vendedor[0]],
@@ -211,9 +198,7 @@ const fallback=run({cantidades:{},tipo_cambio:0,tipo_cambio_aplicado:1,fecha_tip
 assert.equal(fallback.node('ventas-eficiencia-tipo-cambio').textContent,'TC: $ 1.00 | Fecha TC: —','Mostrar divisor efectivo del backend sin reconvertir importes');
 fallback.charts.forEach(chart=>chart.dispose());
 const excess=run({cantidades:{cotizacion_cliente:5,orden_compra_cliente:8},cotizado:100,colocado:150});
-assert.equal(excess.charts[0].getOption().title[0].text,'160.00 %','Mostrar conversion real aunque supere el anillo completo');
-assert.equal(excess.charts[1].getOption().title[0].text,'150.00 %');
-assert.deepEqual(excess.charts[0].getOption().series[0].data.map(row=>row.value),[5,0],'Pendientes no negativos');
-assert.equal(excess.charts[0].getOption().tooltip[0].formatter(),'Cotizados: 5\nColocados: 8\nPendientes: 0');
+assert.equal(excess.node('ventas-eficiencia-colocacion').textContent,'160.00 %','Conservar conversion real en KPI');
+assert.equal(excess.node('ventas-eficiencia-colocacion-monetaria').textContent,'150.00 %');
 excess.charts.forEach(chart=>chart.dispose());
-console.log('OK: donas de conversion, porcentajes y pendientes, importes USD, anteriores, vendedor, teclado, XSS, cero, movil y oscuro.');
+console.log('OK: donas retiradas, evolucion mensual, filtros, KPI, vendedor visible, orden, paginas de 15, teclado, XSS, cero, movil y oscuro.');
