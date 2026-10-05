@@ -8,7 +8,7 @@ Object.defineProperty(globalThis, 'navigator', { value: undefined });
 const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
-function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false, groupedDeclines = false) {
+function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false, groupedDeclines = false, consolidated = false) {
     const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -33,6 +33,14 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         {clasificacion_id:3,anio:2024,mes:2,estatus_id:6,estatus:'Pedido',proyectos:2,declinados:1},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:6,estatus:'Pedido',proyectos:1,declinados:0},
         {clasificacion_id:3,anio:2026,mes:9,estatus_id:11,estatus:'Facturado',proyectos:2,declinados:1}];
+    if(consolidated)data.estatus_por_clasificacion=[
+        {estatus_id:1,estatus:'Oportunidad',proyectos:4,declinados:1,anio:2024,mes:2},
+        {estatus_id:3,estatus:'Cotizacion',proyectos:3,declinados:0,anio:2026,mes:9},
+        {estatus_id:6,estatus:'Pedido colocado',proyectos:2,declinados:0,anio:2024,mes:2},
+        {estatus_id:7,estatus:'Orden compra proveedor',proyectos:5,declinados:2,anio:2026,mes:9},
+        {estatus_id:8,estatus:'Facturado',proyectos:6,declinados:1,anio:2026,mes:9,vendedor_id:'V2'},
+        {estatus_id:null,estatus:'Sin estatus',proyectos:1,declinados:1,anio:2026,mes:9}
+    ].map(row=>({clasificacion_id:3,...row}));
     data.estatus_por_clasificacion = data.estatus_por_clasificacion.map(row => ({anio:2026,mes:9,vendedor_id:'V1',...row}));
     if (groupedDeclines) data.estatus_por_clasificacion.find(row=>row.vendedor_id==='V1' && row.clasificacion_id===3).declinados=1;
     if (quoted) {
@@ -138,9 +146,18 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         if(index===2)for(const row of slices.filter(slice=>slice.name!=='Declinados')){
             charts[index].trigger('click',{componentType:'series',data:row});const modal=nodes.get('modal-declinados-ventas');
             assert.equal(modal.dataset.desgloseLista,'estatus_periodo');assert.equal(modal.dataset.estatusId,row.id==null?'sin_estatus':String(row.id));
-            assert.equal(modal.dataset.desgloseTitulo,row.name+' · Todo el período seleccionado');assert.equal(modal.dataset.estatusAgrupados,'');
+            assert.equal(modal.dataset.desgloseTitulo,row.name+' · Todo el período seleccionado');
+            assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados),Array.from(row.estatusIds),'El modal recibe todos los IDs del segmento consolidado');
         }
     });
+    if(consolidated){
+        const slices=charts[2].getOption().series[0].data;
+        assert.deepEqual(slices.map(row=>[row.name,row.value]),[['PROCESO DE COTIZACION',6],['Pedidos Colocados',10],['Declinados',5]],
+            'Recuperar las categorias de barras y consolidar meses, vendedores y declinados sin doble conteo');
+        assert.deepEqual(Array.from(slices[0].estatusIds),['1','3']);
+        assert.deepEqual(Array.from(slices[1].estatusIds),['6','7','8']);
+        charts.forEach(chart=>chart.dispose());return;
+    }
     if(placed||quoted||periods){
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
         if(placed)assert.equal(charts[4].getOption().series[0].data.find(row=>row.name==='Pedidos Colocados').total,5);
@@ -208,6 +225,8 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
     events.resize();
     charts.forEach(chart => chart.dispose());
 }
+ejecutar(false, 900, 'walden', false, false, false, false, true);
+ejecutar(false, 320, 'dark', false, false, false, false, true);
 ejecutar(false, 900, 'walden', true);
 ejecutar(false, 900, 'walden', false, false, false, true);
 ejecutar(false, 320, 'dark', false, false, false, true);

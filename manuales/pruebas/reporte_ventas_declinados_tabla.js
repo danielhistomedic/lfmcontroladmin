@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const JSZip = require('../../Assets/vendor/datatable/JSZip-3.10.1/jszip.js');
 const code = fs.readFileSync('Assets/app/js/reporte_ventas_mensuales.js', 'utf8');
 async function run(internal=false,quoted=false,documents=false) {
-    const nodes = new Map(), events = {}, calls = []; let exported, failure = false;
+    const nodes = new Map(), events = {}, calls = []; let exported, failure = false, consolidated = false;
     function node(id) {
         if (!nodes.has(id)) nodes.set(id, {id, dataset:{}, style:{}, children:[], events:{}, value:'', textContent:'',
             addEventListener(name,cb,options={}){
@@ -39,6 +39,7 @@ async function run(internal=false,quoted=false,documents=false) {
             if(p.has('resumen'))return {ok:true,json:async()=>({status:true,data:{total:27,vendedores:[{vendedor_id:'V1',nombre:'José',proyectos:23,porcentaje:85.19},{vendedor_id:'V2',nombre:'Ana',proyectos:4,porcentaje:14.81}]}})};
             if(failure)return {ok:false,json:async()=>({status:false,message:'Error controlado'})};
             let source=rows.filter(row=>!p.has('declinado_vendedor')||row.seller===p.get('declinado_vendedor'));
+            if(consolidated)source=source.filter(row=>row.activo!=='CERRADO'&&String([1,3,6,7,8][row.id%5])===p.get('estatus_id'));
             if(quoted&&p.get('segmento')==='declinados'&&modal.dataset.estatusAgrupados)
                 source=source.filter(row=>row.activo==='CERRADO'&&['sin_estatus','1','3'][row.id%3]===p.get('estatus_id'));
             const filtered=source.filter(row=>JSON.stringify(row).toLowerCase().includes((p.get('search')||'').toLowerCase()));
@@ -91,6 +92,16 @@ async function run(internal=false,quoted=false,documents=false) {
                 assert.equal(calls.at(-1).get('estatus_id'),id);assert.equal(modal.dataset.tablaEstatus,'1');
                 assert.equal(node('declinados-total').textContent,'205 Proyectos');assert.equal(node('declinados-seguimiento-cabecera').hidden,true);
             }
+            consolidated=true;
+            for(const [ids,name] of [[['1','3'],'PROCESO DE COTIZACION'],[['6','7','8'],'Pedidos Colocados']]){
+                modal.dataset.estatusAgrupados=JSON.stringify(ids);modal.dataset.segmento='no_declinados';modal.dataset.desgloseTitulo=name+' · Todo el período seleccionado';
+                const beforeGroup=calls.length;await modal.events['shown.bs.modal']();
+                assert.deepEqual(calls.slice(beforeGroup).map(params=>params.get('estatus_id')),ids);
+                const total=rows.filter(row=>row.activo!=='CERRADO'&&ids.includes(String([1,3,6,7,8][row.id%5]))).length;
+                assert.equal(node('declinados-total').textContent,total+' Proyectos','Incluir todos los IDs de la categoria y excluir declinados');
+                assert.equal(node('declinados-vendedores').children.reduce((sum,button)=>sum+Number(button.children[1].textContent),0),total);
+            }
+            consolidated=false;
             modal.dataset.estatusAgrupados=JSON.stringify(['1','3','sin_estatus']);modal.dataset.segmento='declinados';modal.dataset.desgloseTitulo='Declinados · Todo el período seleccionado';
             const beforeDeclined=calls.length;await modal.events['shown.bs.modal']();
             assert.deepEqual(calls.slice(beforeDeclined).map(params=>params.get('estatus_id')),['1','3','sin_estatus']);

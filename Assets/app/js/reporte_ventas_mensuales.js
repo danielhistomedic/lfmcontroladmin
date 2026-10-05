@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const total=groups.reduce((sum,row)=>sum+Number(row.proyectos),0);
         const declined=groups.reduce((sum,row)=>sum+Number(row.declinados),0);
         const slices=groups.filter(row=>row.proyectos>row.declinados).map(row=>({
-            name:row.nombre,value:row.proyectos-row.declinados,id:row.id,itemStyle:{color:row.color}}));
+            name:row.nombre,value:row.proyectos-row.declinados,id:row.id,estatusIds:row.estatusIds,itemStyle:{color:row.color}}));
         if(declined>0) slices.push({name:'Declinados',value:declined,declined:true,itemStyle:{color:'#dc3545'}});
         entry.donut=true;entry.height=370;entry.element.style.height='370px';
         entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
@@ -807,8 +807,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if(!modal)return;
         modal.dataset.desglose='1';
         modal.dataset.desgloseLista=kind==='estatus_periodo'?kind:row.declined?'declinados':kind;
-        modal.dataset.estatusAgrupados=kind==='estatus_periodo'&&row.declined
-            ? JSON.stringify([...new Set((data.estatus_por_vendedor||[]).filter(project=>Number(project.declinados)>0).map(project=>project.estatus_id==null?'sin_estatus':String(project.estatus_id)))]) : '';
+        modal.dataset.estatusAgrupados=kind==='estatus_periodo'
+            ? JSON.stringify(row.declined
+                ? [...new Set((data.estatus_por_vendedor||[]).filter(project=>Number(project.declinados)>0).map(project=>project.estatus_id==null?'sin_estatus':String(project.estatus_id)))]
+                : row.estatusIds) : '';
         modal.dataset.desgloseAnio=selectedYears.join(',');
         modal.dataset.desgloseMes=selectedMonths.join(',');
         if(kind==='clasificacion_periodo')modal.dataset.clasificacionId=String(row.id);
@@ -825,17 +827,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // Los KPI de documentos pueden incluir proyectos anteriores; no se suman aqui.
     const periodStatuses=new Map();
     (data.estatus_por_vendedor || []).forEach(row=>{
-        const key=String(row.estatus_id);
+        const key=statusGroupKey(row);
         if(!periodStatuses.has(key)) {
-            const index=statuses.findIndex(group=>String(group.id)===statusGroupKey(row));
-            periodStatuses.set(key,{id:row.estatus_id,nombre:row.estatus||'Sin estatus',proyectos:0,declinados:0,
+            const index=statuses.findIndex(group=>String(group.id)===key);
+            const status=statuses[index];
+            periodStatuses.set(key,{id:status?status.id:row.estatus_id,nombre:status?status.nombre:(row.estatus||'Sin estatus'),
+                orden:status?status.orden:Number(row.estatus_id),estatusIds:[],proyectos:0,declinados:0,
                 color:statusColors[Math.max(0,index)%statusColors.length]});
         }
         const group=periodStatuses.get(key);
+        const statusId=row.estatus_id==null?'sin_estatus':String(row.estatus_id);
+        if(!group.estatusIds.includes(statusId))group.estatusIds.push(statusId);
         group.proyectos+=Number(row.proyectos);group.declinados+=Number(row.declinados);
     });
     const generalStatusChart=cascade('ventas-estatus-general');
-    periodPie(generalStatusChart,[...periodStatuses.values()].sort((a,b)=>Number(a.id)-Number(b.id)));
+    periodPie(generalStatusChart,[...periodStatuses.values()].sort((a,b)=>a.orden-b.orden));
     generalStatusChart.instance.on('click',event=>openPeriodSlice(event,'estatus_periodo'));
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
