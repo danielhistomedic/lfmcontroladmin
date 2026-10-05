@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
             detailTable.hidden=true;detailEmpty.hidden=false;detailTitle.textContent='Proyectos del vendedor';detailCount.textContent='';
             sellerButtons.replaceChildren();allSellers.disabled=true;retry.hidden=true;
             status.textContent='Cargando proyectos y vendedores…';status.className='mb-2 text-muted';
-            const params=new URLSearchParams({lista,datatable:'1',vendedor:modal.dataset.vendedor,length:'100',order_column:'2',order_dir:'desc'});
+            const params=new URLSearchParams({lista,datatable:'1',vendedor:modal.dataset.desgloseVendedor??modal.dataset.vendedor,length:'100',order_column:'2',order_dir:'desc'});
             const years=modal.dataset.desgloseAnio||modal.dataset.anio,months=modal.dataset.desgloseMes||modal.dataset.mes;
             years.split(',').forEach(value=>params.append('anio[]',value));months.split(',').forEach(value=>params.append('mes[]',value));
             if(lista==='estatus_periodo'){params.set('estatus_id',modal.dataset.estatusId);params.set('segmento',modal.dataset.segmento);}
@@ -216,7 +216,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     payload.data.data.forEach(row=>projects.set(String(row.id),row));
                 }
                 }
-                statusRows=[...projects.values()];const sellers=new Map();
+                statusRows=[...projects.values()];
+                if(modal.dataset.desgloseVendedor!==undefined)statusRows=statusRows.filter(row=>String(row.vendedor_id??'')===modal.dataset.desgloseVendedor);
+                const sellers=new Map();
                 statusRows.forEach(row=>{
                     const key=String(row.vendedor_id??'');
                     if(!sellers.has(key))sellers.set(key,{vendedor_id:key,nombre:row.vendedor||'Sin vendedor',proyectos:0});
@@ -226,7 +228,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 distribution.forEach(seller=>{seller.porcentaje=statusRows.length?seller.proyectos/statusRows.length*100:0;});
                 declinedSummary={total:statusRows.length,vendedores:distribution};
                 badge.textContent=declinedSummary.total+' Proyectos';renderSellerButtons(distribution);allSellers.disabled=false;status.textContent='';
-                selectDeclinedSeller(null);
+                selectDeclinedSeller(modal.dataset.desgloseVendedor!==undefined
+                    ? distribution.find(seller=>seller.vendedor_id===modal.dataset.desgloseVendedor)||null : null);
             }catch(error){
                 if(error.name==='AbortError'||summaryRequest!==current)return;
                 statusRows=null;status.textContent=error instanceof SyntaxError?'No se pudo cargar el listado. Intente nuevamente.':error.message;
@@ -569,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.addEventListener('show.bs.modal', event => {
             if (!event.relatedTarget && modal.dataset.desglose !== '1') return;
             const next = event.relatedTarget ? (event.relatedTarget.dataset.lista || 'declinados') : (modal.dataset.desgloseLista || 'estatus_clasificacion');
-            if (event.relatedTarget) modal.dataset.desglose = '';
+            if (event.relatedTarget) { modal.dataset.desglose = ''; delete modal.dataset.desgloseVendedor; }
             if ((next !== lista || ['estatus_clasificacion','vendedor_clasificacion','clasificacion_periodo','estatus_periodo'].includes(next)) && table) {
                 table.search('');
                 table.columns().search('');
@@ -714,16 +717,16 @@ document.addEventListener('DOMContentLoaded', function () {
         classificationSummary.textContent = classifications.length ? '' : 'Sin clasificaciones registradas para los meses seleccionados.';
         if (!statusChart) statusChart = cascade('ventas-estatus-vendedor');
         renderSellerDonut(statusChart, principalOption, classifications, generalClassifications, sellerRows,
-            row => String(row.clasificacion_id), group => String(group.clasificacion_id), group => group.clasificacion, classificationChart);
+            row => String(row.clasificacion_id), group => String(group.clasificacion_id), group => group.clasificacion, 'clasificacion_periodo');
         document.getElementById('ventas-desglose-estatus-titulo').textContent = seller.nombre + ' — Estatus de proyectos';
         const statusSummary = document.getElementById('ventas-desglose-estatus-resumen');
         statusSummary.hidden = sellerStatuses.length > 0;
         statusSummary.textContent = sellerStatuses.length ? '' : 'Sin estatus registrados para los meses seleccionados.';
         if (!projectStatusChart) projectStatusChart = cascade('ventas-desglose-estatus');
         renderSellerDonut(projectStatusChart, statusOption, sellerStatuses, statuses, sellerRows,
-            statusGroupKey, group => String(group.id), group => group.nombre, generalStatusChart);
+            statusGroupKey, group => String(group.id), group => group.nombre, 'estatus_periodo');
     }
-    function renderSellerDonut(entry, base, groups, allGroups, rows, rowKey, groupKey, groupName) {
+    function renderSellerDonut(entry, base, groups, allGroups, rows, rowKey, groupKey, groupName, kind) {
         const totalProjects = Number(projectCounts[selectedIndex].proyectos);
         const declinedTotal = rows.reduce((sum,row)=>sum+Number(row.declinados),0);
         const distribution = groups.flatMap(group => {
@@ -731,13 +734,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const total = selected.reduce((sum,row)=>sum+Number(row.proyectos),0);
             const declined = selected.reduce((sum,row)=>sum+Number(row.declinados),0);
             const index = allGroups.indexOf(group)*2;
-            const common = {group:groupName(group),total,declined};
+            const common = {group:groupName(group),total,declined:false,id:groupKey(group),
+                estatusIds:[...new Set(selected.map(row=>row.estatus_id==null?'sin_estatus':String(row.estatus_id)))]};
             const slices = [];
             if (total > declined) slices.push({...common,name:groupName(group),value:total-declined,itemStyle:base.series[index].itemStyle});
             return slices;
         });
         if (declinedTotal > 0) distribution.push({group:'Declinados',name:'Declinados',value:declinedTotal,
-            total:declinedTotal,declined:declinedTotal,itemStyle:{color:'#dc3545'}});
+            total:declinedTotal,declined:true,
+            estatusIds:[...new Set(rows.filter(row=>Number(row.declinados)>0).map(row=>row.estatus_id==null?'sin_estatus':String(row.estatus_id)))],itemStyle:{color:'#dc3545'}});
         entry.donut = true; entry.height = 360; entry.element.style.height = '360px';
         entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
             title:[{text:String(totalProjects),left:'center',top:'37%',textStyle:{color:cascadeText,fontSize:25,fontWeight:600}},
@@ -757,6 +762,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 data:distribution.length ? distribution : [{name:'Sin proyectos',value:1,itemStyle:{color:'#dce7f0'},label:{show:false},tooltip:{show:false}}]}]
         },true);
         fitCascade(entry);
+        if(!entry.drillBound){
+            entry.drillBound=true;
+            entry.instance.on('click',event=>{
+                if(selectedIndex>=0)openPeriodSlice(event,kind,projectCounts[selectedIndex]);
+            });
+        }
     }
     function statusGroupKey(row) {
         if (quotedStatusKey !== null && String(row.estatus_id) === quotedStatusKey) return 'cotizados_periodo';
@@ -764,7 +775,13 @@ document.addEventListener('DOMContentLoaded', function () {
             ([1,3].includes(Number(row.estatus_id)) ? 'proceso_cotizacion' : String(row.estatus_id));
     }
     sellerChart.instance.on('click', event => {
-        if (event.componentType === 'series') selectSeller(event.dataIndex);
+        if (event.componentType !== 'series')return;
+        selectSeller(event.dataIndex);
+        if(selectedIndex<0)return;
+        const seller=projectCounts[selectedIndex];
+        const ids=[...new Set((data.estatus_por_vendedor||[]).filter(row=>String(row.vendedor_id??'')===String(seller.vendedor_id??''))
+            .map(row=>row.estatus_id==null?'sin_estatus':String(row.estatus_id)))];
+        openPeriodSlice({componentType:'series',data:{name:'Todos los proyectos',estatusIds:ids,segmento:'todos'}},'estatus_periodo',seller);
     });
     selector.addEventListener('change', () => selectSeller(selector.value === '' ? -1 : Number(selector.value)));
     // Consolida las clasificaciones del mismo conjunto filtrado, sin otra consulta.
@@ -826,24 +843,26 @@ document.addEventListener('DOMContentLoaded', function () {
         },true);
         fitCascade(entry);
     }
-    function openPeriodSlice(event,kind) {
+    function openPeriodSlice(event,kind,seller=null) {
         if(event.componentType!=='series'||!event.data)return;
         const row=event.data,modal=document.getElementById('modal-declinados-ventas');
-        if(!modal)return;
+        if(!modal||row.name==='Sin proyectos')return;
+        if(seller)modal.dataset.desgloseVendedor=String(seller.vendedor_id??'');
+        else delete modal.dataset.desgloseVendedor;
         // El segmento rojo comparte el detalle agrupado por estatus del mismo periodo.
         if(kind==='clasificacion_periodo'&&row.declined)kind='estatus_periodo';
         modal.dataset.desglose='1';
         modal.dataset.desgloseLista=kind==='estatus_periodo'?kind:row.declined?'declinados':kind;
         modal.dataset.estatusAgrupados=kind==='estatus_periodo'
-            ? JSON.stringify(row.declined
+            ? JSON.stringify(row.estatusIds|| (row.declined
                 ? [...new Set((data.estatus_por_vendedor||[]).filter(project=>Number(project.declinados)>0).map(project=>project.estatus_id==null?'sin_estatus':String(project.estatus_id)))]
-                : row.estatusIds) : '';
+                : [])) : '';
         modal.dataset.desgloseAnio=selectedYears.join(',');
         modal.dataset.desgloseMes=selectedMonths.join(',');
         if(kind==='clasificacion_periodo')modal.dataset.clasificacionId=String(row.id);
         else modal.dataset.estatusId=row.id==null?'sin_estatus':String(row.id);
-        modal.dataset.segmento=row.declined?'declinados':'no_declinados';
-        modal.dataset.desgloseTitulo=row.name+' · Todo el período seleccionado';
+        modal.dataset.segmento=row.segmento||(row.declined?'declinados':'no_declinados');
+        modal.dataset.desgloseTitulo=row.name+(seller?' · '+seller.nombre:'')+' · Todo el período seleccionado';
         bootstrap.Modal.getOrCreateInstance(modal).show();
     }
     const classificationChart=cascade('ventas-clasificaciones-general');

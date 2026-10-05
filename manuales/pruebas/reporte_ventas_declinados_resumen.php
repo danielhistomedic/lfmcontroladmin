@@ -62,6 +62,14 @@ $db=new ConexionSimulada([[['total'=>1]],[['total'=>1]],[]]);
 (new ModeloSimulado($db))->declinadosTabla(2026,[9,10],'',$options+['declinado_vendedor'=>'']);
 verificar(array_column(ejecutarDeclinados($memory,$db->calls[2]),'id')===[6],'Filtrar Sin vendedor sin confundirlo con TODOS');
 $_SERVER['REQUEST_METHOD']='GET'; Session::$active=true;
+// La barra incluye los dos estados; el mismo filtro por vendedor y periodo sigue vigente.
+foreach (['todos'=>2,'declinados'=>1,'no_declinados'=>1] as $segment=>$expected) {
+    $captured=new ConexionSimulada([[['total'=>$expected]],[['total'=>$expected]],[]]);
+    (new ModeloSimulado($captured))->declinadosTabla(2026,[9,10],'V1',$options+['estatus_id'=>3,'segmento'=>$segment],'estatus_periodo');
+    verificar((int)ejecutarDeclinados($memory,$captured->calls[0])[0]['total']===$expected,'Barra y segmentos usan mismo conjunto con ambos estados y vendedor');
+    $ids=array_unique(array_column(ejecutarDeclinados($memory,$captured->calls[2]),'id'));
+    verificar(count($ids)===$expected,'Detalle reutilizado coincide por ID con el conjunto del segmento');
+}
 $api=new Reportesmensuales();
 $api->model=new class {
     public array $calls=[];
@@ -84,6 +92,12 @@ $_GET['declinado_vendedor']=['V1'];verificar(llamarLista($api)[0]===400,'Rechaza
 $_GET['declinado_vendedor']='V1';verificar(llamarLista($api)[0]===200,'Detalle del vendedor autorizado');
 Session::$values=['rol_id'=>1,'ccveusuario'=>'ADMIN'];$_GET['declinado_vendedor']='';
 verificar(llamarLista($api)[0]===200 && end($api->model->calls)[3]['declinado_vendedor']==='','Sin vendedor se transmite explícitamente');
+Session::$values=['rol_id'=>4,'ccveusuario'=>'V1'];
+$_GET=['anio'=>'2026','mes'=>['9','10'],'datatable'=>'1','lista'=>'estatus_periodo','estatus_id'=>'3','segmento'=>'todos','vendedor'=>'V1'];
+verificar(llamarLista($api)[0]===200 && end($api->model->calls)[3]['segmento']==='todos','Barra admite ambos estados en el listado existente');
+$_GET['vendedor']='V2';verificar(llamarLista($api)[0]===403,'Drill-down no permite ampliar alcance del vendedor autenticado');
+$_GET['vendedor']='V1';$_GET['lista']='estatus_clasificacion';$_GET['clasificacion_id']='2';
+verificar(llamarLista($api)[0]===400,'Opcion ambos estados queda limitada al listado del periodo');
 Session::$active=false;$_GET['resumen']='1';verificar(llamarLista($api)[0]===401,'Resumen exige sesión');
 Session::$active=true;$testPermissions=[];verificar(llamarLista($api)[0]===403,'Resumen exige permiso');
 echo "OK: resumen y detalle de declinados, fechas, porcentajes, vendedor, vacío y claves de catálogo repetidas.\n";

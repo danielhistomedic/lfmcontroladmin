@@ -544,8 +544,10 @@ class ReportesmensualesModel extends Mysql
             elseif ($lista === 'estatus_periodo' && $options['estatus_id'] === 'proceso_cotizacion') $where .= ' AND v.estatus_proyecto_id IN (1,3)';
             elseif (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true) && $options['estatus_id'] === null) $where .= ' AND v.estatus_proyecto_id IS NULL';
             elseif (in_array($lista, ['estatus_clasificacion','estatus_periodo'], true)) { $where .= ' AND v.estatus_proyecto_id = ?'; $params[] = $options['estatus_id']; }
-            $where .= $options['segmento'] === 'declinados'
-                ? " AND v.activo = 'CERRADO'" : " AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'";
+            if ($lista !== 'estatus_periodo' || $options['segmento'] !== 'todos') {
+                $where .= $options['segmento'] === 'declinados'
+                    ? " AND v.activo = 'CERRADO'" : " AND COALESCE(v.activo,'ACTIVO') <> 'CERRADO'";
+            }
         }
         $joins = 'FROM tb_ventas v LEFT JOIN cat_clientes c ON c.id=v.cliente_id
             LEFT JOIN cat_medico m ON m.ccvemedico=v.ccveusuario_vendedor

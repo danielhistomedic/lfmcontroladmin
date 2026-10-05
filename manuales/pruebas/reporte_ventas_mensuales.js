@@ -220,6 +220,17 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         charts[0].trigger('click',{componentType:'series',dataIndex:0,seriesIndex:1});
         assert.equal(nodes.get('ventas-estatus-titulo').textContent,'Vendedor 1 — 8 proyectos');
         assert.deepEqual(charts[3].getOption().series[0].data.map(row=>[row.name,row.value]),before,'Segmento rojo reutiliza seleccion completa del vendedor');
+        const modal=nodes.get('modal-declinados-ventas');
+        assert.equal(modal.dataset.desgloseLista,'estatus_periodo');assert.equal(modal.dataset.segmento,'todos');
+        assert.equal(modal.dataset.desgloseVendedor,'V1');assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados).sort(),['3','6']);
+        for(const index of [3,4])for(const slice of charts[index].getOption().series[0].data){
+            charts[index].trigger('click',{componentType:'series',data:slice});
+            assert.equal(modal.dataset.desgloseVendedor,'V1');assert.equal(modal.dataset.segmento,slice.declined?'declinados':'no_declinados');
+            assert.equal(modal.dataset.desgloseLista,index===3&&!slice.declined?'clasificacion_periodo':'estatus_periodo');
+            if(index===3&&!slice.declined)assert.equal(modal.dataset.clasificacionId,slice.id);
+            else assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados),Array.from(slice.estatusIds));
+            assert.ok(modal.dataset.desgloseTitulo.includes('Vendedor 1'));
+        }
         dropdown.value='1'; dropdown.events.change();
         assert.equal(charts.length,5,'Reutilizar grafica secundaria');
         assert.equal(nodes.has('ventas-vendedor-mensual'),false);
@@ -233,8 +244,9 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         });
     }
     if (!empty) {
-        charts[1].trigger('click',{componentType:'series',dataIndex:3,seriesIndex:0});
+        charts[1].trigger('click',{componentType:'series',data:charts[1].getOption().series[0].data.find(row=>!row.declined)});
         assert.equal(nodes.get('modal-declinados-ventas').dataset.segmento,'no_declinados');
+        assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseVendedor,undefined,'Grafica general elimina el filtro local de vendedor');
         assert.equal(nodes.get('modal-declinados-ventas').shown,true);
         assert.equal(charts.length,5,'Modal conserva las graficas existentes sin agregar A ni B');
     }

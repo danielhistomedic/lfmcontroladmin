@@ -313,7 +313,7 @@ class Reportesmensuales extends Controllers
                         ? null : $integer('estatus_id', 0, 1, 2147483647));
                     $options['segmento'] = $_GET['segmento'] ?? '';
                     if ($options['clasificacion_id'] === false || $options['estatus_id'] === false
-                        || !in_array($options['segmento'], ['declinados','no_declinados'], true)) {
+                        || !in_array($options['segmento'], $lista === 'estatus_periodo' ? ['declinados','no_declinados','todos'] : ['declinados','no_declinados'], true)) {
                         http_response_code(400);
                         echo json_encode(['status'=>false,'message'=>'El desglose solicitado no es válido.']);
                         return;

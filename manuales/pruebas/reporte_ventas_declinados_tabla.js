@@ -100,6 +100,18 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.deepEqual(calls.slice(before).map(params=>params.get('start')),['0','100','200'],'Obtener distribución completa mediante el contrato paginado existente');
         assert.equal(node('declinados-total').textContent,'205 Proyectos');
         assert.equal(node('declinados-vendedores').children.reduce((sum,button)=>sum+Number(button.children[1].textContent),0),205);
+        modal.dataset.desglose='1';modal.dataset.desgloseLista=modal.dataset.lista;modal.dataset.desgloseVendedor='V2';
+        modal.events['show.bs.modal']({});await modal.events['shown.bs.modal']();
+        assert.equal(calls.at(-1).get('vendedor'),'V2','El drill-down envia vendedor al endpoint compartido');
+        assert.equal(node('declinados-total').textContent,'4 Proyectos');
+        assert.equal(node('declinados-vendedores').children.length,1);
+        assert.equal(node('declinados-vendedores').children[0]['aria-pressed'],'true');
+        assert.equal(node('declinados-detalle-titulo').textContent,'Proyectos de: Vendedor V2');
+        node('declinados-todos').events.click();await settle();
+        assert.equal(body.children.filter(row=>row.children.length===8).length,4,'TODOS conserva el universo del vendedor del grafico');
+        modal.events['show.bs.modal']({relatedTarget:{dataset:{lista:modal.dataset.lista}}});await modal.events['shown.bs.modal']();
+        assert.equal(modal.dataset.desgloseVendedor,undefined);assert.equal(calls.at(-1).get('vendedor'),'');
+        assert.equal(node('declinados-total').textContent,'205 Proyectos','Otra apertura restaura el alcance general');
         if(documents==='clasificacion_periodo')for(const id of ['2','3','4','5']){
             modal.dataset.clasificacionId=id;
             modal.events['show.bs.modal']({relatedTarget:{dataset:{lista:'clasificacion_periodo'}}});await modal.events['shown.bs.modal']();
