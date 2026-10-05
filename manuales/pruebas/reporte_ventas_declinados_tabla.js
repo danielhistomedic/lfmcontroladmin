@@ -38,7 +38,9 @@ async function run(internal=false,quoted=false,documents=false) {
             const p=new URL(url,'http://localhost').searchParams;calls.push(p);
             if(p.has('resumen'))return {ok:true,json:async()=>({status:true,data:{total:27,vendedores:[{vendedor_id:'V1',nombre:'José',proyectos:23,porcentaje:85.19},{vendedor_id:'V2',nombre:'Ana',proyectos:4,porcentaje:14.81}]}})};
             if(failure)return {ok:false,json:async()=>({status:false,message:'Error controlado'})};
-            const source=rows.filter(row=>!p.has('declinado_vendedor')||row.seller===p.get('declinado_vendedor'));
+            let source=rows.filter(row=>!p.has('declinado_vendedor')||row.seller===p.get('declinado_vendedor'));
+            if(quoted&&p.get('segmento')==='declinados'&&modal.dataset.estatusAgrupados)
+                source=source.filter(row=>row.activo==='CERRADO'&&['sin_estatus','1','3'][row.id%3]===p.get('estatus_id'));
             const filtered=source.filter(row=>JSON.stringify(row).toLowerCase().includes((p.get('search')||'').toLowerCase()));
             const key={1:'proyecto_id',2:'fecha',3:'cliente',4:'vendedor',5:'clasificacion',6:'titulo',7:'activo'}[p.get('order_column')];
             filtered.sort((a,b)=>a[key].localeCompare(b[key])*(p.get('order_dir')==='asc'?1:-1));
@@ -54,7 +56,7 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.equal(calls.length,1);assert.equal(calls[0].get('length'),'100');assert.deepEqual(calls[0].getAll('anio[]'),['2026']);
         if(documents){assert.deepEqual(calls[0].getAll('periodo_anio[]'),['2024','2026']);assert.deepEqual(calls[0].getAll('periodo_mes[]'),['9','10']);}
         else {assert.equal(calls[0].get('estatus_id'),'5');assert.equal(calls[0].get('segmento'),'no_declinados');}
-        assert.equal(modal.dataset.tablaCotizados,'1');assert.equal(node('declinados-tabla-legado').hidden,true);
+        assert.equal(modal.dataset.tablaEstatus,'1');assert.equal(node('declinados-tabla-legado').hidden,true);
         const vendors=node('declinados-vendedores').children;assert.equal(vendors.length,2);
         assert.equal(vendors[0].dataset.vendedor,'V1');assert.equal(vendors[0].children[1].textContent,'23');assert.equal(vendors[0].children[3].textContent,'85.19 %');
         const body=node('declinados-tabla-filas');assert.equal(body.children.filter(row=>row.children.length===7).length,10);
@@ -81,6 +83,21 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.deepEqual(calls.slice(before).map(params=>params.get('start')),['0','100','200'],'Obtener distribución completa mediante el contrato paginado existente');
         assert.equal(node('declinados-total').textContent,'205 Proyectos');
         assert.equal(node('declinados-vendedores').children.reduce((sum,button)=>sum+Number(button.children[1].textContent),0),205);
+        if(!documents){
+            for(const [id,name] of [['1','EN OPORTUNIDAD DE VENTA'],['3','EN COTIZACIÓN INTERNA (SIN COT. CLIENTE)'],['6','PEDIDO COLOCADO'],['7','PEDIDO COLOCADO (EN ORDEN COMPRA PROVEEDOR)'],['8','PEDIDO COLOCADO (FACTURADO)'],['sin_estatus','Sin estatus']]){
+                modal.dataset.estatusId=id;modal.dataset.desgloseTitulo=name+' · Todo el período seleccionado';
+                modal.events['show.bs.modal']({relatedTarget:{dataset:{lista:'estatus_periodo'}}});await modal.events['shown.bs.modal']();
+                assert.equal(node('modal-declinados-titulo').textContent,modal.dataset.desgloseTitulo);
+                assert.equal(calls.at(-1).get('estatus_id'),id);assert.equal(modal.dataset.tablaEstatus,'1');
+                assert.equal(node('declinados-total').textContent,'205 Proyectos');assert.equal(node('declinados-seguimiento-cabecera').hidden,true);
+            }
+            modal.dataset.estatusAgrupados=JSON.stringify(['1','3','sin_estatus']);modal.dataset.segmento='declinados';modal.dataset.desgloseTitulo='Declinados · Todo el período seleccionado';
+            const beforeDeclined=calls.length;await modal.events['shown.bs.modal']();
+            assert.deepEqual(calls.slice(beforeDeclined).map(params=>params.get('estatus_id')),['1','3','sin_estatus']);
+            const total=rows.filter(row=>row.activo==='CERRADO').length;
+            assert.equal(node('declinados-total').textContent,total+' Proyectos','Declinados de varios estatus, sin doble conteo');
+            assert.equal(node('declinados-vendedores').children.reduce((sum,button)=>sum+Number(button.children[1].textContent),0),total);
+        }
         console.log('OK: Pedido Cotizado, siete columnas, grupos por vendedor, TODOS, resumen, búsqueda, orden, páginas, Excel y parámetros '+(documents?'documentales':'de estatus')+'.');return;
     }
     if(internal){

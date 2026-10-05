@@ -121,7 +121,13 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
             assert.equal(slice.value,declined);assert.equal(slice.itemStyle.color,'#dc3545');
             assert.ok(option.tooltip[0].formatter({data:slice}).includes(' | '+declined+' | '));
             charts[index].trigger('click',{componentType:'series',data:slice});
-            assert.equal(nodes.get('modal-declinados-ventas').dataset.desgloseLista,'declinados');
+            const modal=nodes.get('modal-declinados-ventas');
+            assert.equal(modal.dataset.desgloseLista,index===1?'declinados':'estatus_periodo');
+            if(index===2){
+                assert.equal(modal.dataset.segmento,'declinados');
+                const ids=[...new Set(data.estatus_por_vendedor.filter(row=>row.declinados>0).map(row=>row.estatus_id==null?'sin_estatus':String(row.estatus_id)))];
+                assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados),ids);
+            }
         }
         const slice=slices.find(row=>row.name!=='Declinados');
         if(slice){charts[index].trigger('click',{componentType:'series',data:slice});
@@ -129,6 +135,11 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
             assert.equal(modal.dataset.desgloseLista,index===1?'clasificacion_periodo':'estatus_periodo');
             assert.equal(modal.dataset.desgloseAnio,'2024,2026');assert.equal(modal.dataset.desgloseMes,'2,9');
             assert.equal(modal.dataset.segmento,'no_declinados');}
+        if(index===2)for(const row of slices.filter(slice=>slice.name!=='Declinados')){
+            charts[index].trigger('click',{componentType:'series',data:row});const modal=nodes.get('modal-declinados-ventas');
+            assert.equal(modal.dataset.desgloseLista,'estatus_periodo');assert.equal(modal.dataset.estatusId,row.id==null?'sin_estatus':String(row.id));
+            assert.equal(modal.dataset.desgloseTitulo,row.name+' · Todo el período seleccionado');assert.equal(modal.dataset.estatusAgrupados,'');
+        }
     });
     if(placed||quoted||periods){
         charts[0].trigger('click',{componentType:'series',dataIndex:0});
