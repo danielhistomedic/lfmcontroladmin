@@ -23,7 +23,7 @@ async function run(internal=false,quoted=false,documents=false) {
     }
     const headers=[1,2,3,4,5,6].map((order,i)=>{const button=node('sort-'+order);button.dataset={order:String(order),label:['ID Proyecto','Fecha','Cliente','Vendedor','Clasificación','Título'][i]};return button;});
     const modal=node('modal-declinados-ventas');modal.dataset={url:'/declinados',anio:'2024,2026',mes:'9,10',vendedor:''};
-    if(quoted)Object.assign(modal.dataset,{desgloseTitulo:'PEDIDO COTIZADO (SIN OC CLIENTE) · Todo el período seleccionado',desgloseAnio:'2026',desgloseMes:'9,10',estatusId:'5',segmento:'no_declinados'});
+    if(quoted)Object.assign(modal.dataset,{desgloseTitulo:(documents==='clasificacion_periodo'?'VÁLVULAS FLOWSERVE':'PEDIDO COTIZADO (SIN OC CLIENTE)')+' · Todo el período seleccionado',desgloseAnio:'2026',desgloseMes:'9,10',estatusId:'5',clasificacionId:'4',segmento:'no_declinados'});
     node('filtros-ventas-mensuales').querySelector=()=>node('submit');
     node('ventas-mensuales-datos').textContent=JSON.stringify({vendedores:[],productos:[],cruce:[]});
     const rows=Array.from({length:27},(_,i)=>({id:i+1,proyecto_id:'P'+String(i+1).padStart(2,'0'),fecha:'2026-09-'+String(i%28+1).padStart(2,'0'),cliente:'Cliente '+i,clasificacion:'VÁLVULAS FLOWSERVE',titulo:'<img src=x> & =SUM(1)',seller:i<23?'V1':'V2',activo:i%2?'ACTIVO':'CERRADO'}));
@@ -52,10 +52,14 @@ async function run(internal=false,quoted=false,documents=false) {
     const settle=()=>new Promise(resolve=>setTimeout(resolve,20));
     vm.runInNewContext(code,context);events.DOMContentLoaded();
     assert.equal(calls.length,0);
-    modal.events['show.bs.modal']({relatedTarget:{dataset:quoted?{lista:documents==='colocados_periodo'?documents:documents?'cotizados_periodo':'estatus_periodo'}:internal?{lista:'interna_sin_cliente'}:{}}});await modal.events['shown.bs.modal']();
+    modal.events['show.bs.modal']({relatedTarget:{dataset:quoted?{lista:['colocados_periodo','clasificacion_periodo'].includes(documents)?documents:documents?'cotizados_periodo':'estatus_periodo'}:internal?{lista:'interna_sin_cliente'}:{}}});await modal.events['shown.bs.modal']();
     if(quoted){
         assert.equal(calls.length,1);assert.equal(calls[0].get('length'),'100');assert.deepEqual(calls[0].getAll('anio[]'),['2026']);
-        if(documents){assert.deepEqual(calls[0].getAll('periodo_anio[]'),['2024','2026']);assert.deepEqual(calls[0].getAll('periodo_mes[]'),['9','10']);assert.equal(calls[0].get('lista'),documents==='colocados_periodo'?documents:'cotizados_periodo');assert.ok(!calls[0].has('estatus_id'));assert.ok(!calls[0].has('segmento'));}
+        if(documents==='clasificacion_periodo'){
+            assert.equal(calls[0].get('lista'),'clasificacion_periodo');assert.equal(calls[0].get('clasificacion_id'),'4');assert.equal(calls[0].get('segmento'),'no_declinados');
+            assert.ok(!calls[0].has('estatus_id'));assert.ok(!calls[0].has('periodo_anio[]'));
+        }
+        else if(documents){assert.deepEqual(calls[0].getAll('periodo_anio[]'),['2024','2026']);assert.deepEqual(calls[0].getAll('periodo_mes[]'),['9','10']);assert.equal(calls[0].get('lista'),documents==='colocados_periodo'?documents:'cotizados_periodo');assert.ok(!calls[0].has('estatus_id'));assert.ok(!calls[0].has('segmento'));}
         else {assert.equal(calls[0].get('estatus_id'),'5');assert.equal(calls[0].get('segmento'),'no_declinados');}
         assert.equal(modal.dataset.tablaEstatus,'1');assert.equal(node('declinados-tabla-legado').hidden,true);
         const vendors=node('declinados-vendedores').children;assert.equal(vendors.length,2);
@@ -96,6 +100,15 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.deepEqual(calls.slice(before).map(params=>params.get('start')),['0','100','200'],'Obtener distribución completa mediante el contrato paginado existente');
         assert.equal(node('declinados-total').textContent,'205 Proyectos');
         assert.equal(node('declinados-vendedores').children.reduce((sum,button)=>sum+Number(button.children[1].textContent),0),205);
+        if(documents==='clasificacion_periodo')for(const id of ['2','3','4','5']){
+            modal.dataset.clasificacionId=id;
+            modal.events['show.bs.modal']({relatedTarget:{dataset:{lista:'clasificacion_periodo'}}});await modal.events['shown.bs.modal']();
+            assert.equal(calls.at(-1).get('clasificacion_id'),id);
+            assert.equal(calls.at(-1).get('segmento'),'no_declinados');
+            assert.equal(node('declinados-seguimiento-cabecera').hidden,false);
+            assert.equal(node('declinados-tabla-legado').hidden,true);
+            assert.equal(node('declinados-vendedores').children.length,2);
+        }
         if(!documents){
             for(const [id,name] of [['1','EN OPORTUNIDAD DE VENTA'],['3','EN COTIZACIÓN INTERNA (SIN COT. CLIENTE)'],['6','PEDIDO COLOCADO'],['7','PEDIDO COLOCADO (EN ORDEN COMPRA PROVEEDOR)'],['8','PEDIDO COLOCADO (FACTURADO)'],['sin_estatus','Sin estatus']]){
                 modal.dataset.estatusId=id;modal.dataset.desgloseTitulo=name+' · Todo el período seleccionado';
@@ -197,4 +210,4 @@ async function run(internal=false,quoted=false,documents=false) {
     modal.events['hidden.bs.modal']();
     console.log('OK: tabla sin DataTables, búsqueda, cinco encabezados, paginación, vendedores, error/reintento, salida segura y Excel real.');
 }
-run().then(()=>run(true)).then(()=>run(false,true)).then(()=>run(false,true,true)).then(()=>run(false,true,'colocados_periodo')).catch(error=>{console.error(error);process.exitCode=1;});
+run().then(()=>run(true)).then(()=>run(false,true)).then(()=>run(false,true,true)).then(()=>run(false,true,'colocados_periodo')).then(()=>run(false,true,'clasificacion_periodo')).catch(error=>{console.error(error);process.exitCode=1;});

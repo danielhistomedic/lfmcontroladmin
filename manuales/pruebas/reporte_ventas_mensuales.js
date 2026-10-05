@@ -142,8 +142,8 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
             assert.ok(option.tooltip[0].formatter({data:slice}).includes(' | '+declined+' | '));
             charts[index].trigger('click',{componentType:'series',data:slice});
             const modal=nodes.get('modal-declinados-ventas');
-            assert.equal(modal.dataset.desgloseLista,index===1?'declinados':'estatus_periodo');
-            if(index===2){
+            assert.equal(modal.dataset.desgloseLista,'estatus_periodo');
+            if(declined){
                 assert.equal(modal.dataset.segmento,'declinados');
                 const ids=[...new Set(data.estatus_por_vendedor.filter(row=>row.declinados>0).map(row=>row.estatus_id==null?'sin_estatus':String(row.estatus_id)))];
                 assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados),ids);
@@ -314,7 +314,7 @@ async function probarModal(critical = false, unscoped = false) {
     }
     response = { status: true, data: { draw: 1, recordsTotal: 8, recordsFiltered: 8,
         data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
-    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'clasificacion_periodo'}:{}}});
+    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'estatus_clasificacion'}:{}}});
     await modal.events['shown.bs.modal']();
     if(!critical){
         assert.equal(summaryCalls.length,1);assert.equal(options,undefined,'Resumen antes de cargar tabla plana');
@@ -373,8 +373,8 @@ async function probarModal(critical = false, unscoped = false) {
     tableNode.events.click({ target: { closest: () => selectedButton }, stopPropagation() {} });
     modal.events['hidden.bs.modal']();
     assert.deepEqual(context.selected,[633,'PV-2026-20035'],'Historial del proyecto seleccionado');
-    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'clasificacion_periodo':'declinados');
-    assert.ok(calls[0][0].includes('lista='+(critical?'clasificacion_periodo':'declinados')));
+    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'estatus_clasificacion':'declinados');
+    assert.ok(calls[0][0].includes('lista='+(critical?'estatus_clasificacion':'declinados')));
     requestData.start = 10; await draw();
     assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
     delegated.call({ dataset: { column: '3' }, value: 'Cliente' });

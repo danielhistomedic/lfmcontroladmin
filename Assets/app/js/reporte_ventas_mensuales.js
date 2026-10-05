@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const isStatusTable = () => ['cotizados_periodo','colocados_periodo','estatus_periodo'].includes(lista);
+        const isStatusTable = () => ['cotizados_periodo','colocados_periodo','estatus_periodo','clasificacion_periodo'].includes(lista);
         const isLightTable = () => ['declinados','interna_sin_cliente'].includes(lista)||isStatusTable();
         const hasSellerColumn = () => lista==='interna_sin_cliente'||isStatusTable();
         const projectColumnCount = () => hasSellerColumn()?8:7;
@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const years=modal.dataset.desgloseAnio||modal.dataset.anio,months=modal.dataset.desgloseMes||modal.dataset.mes;
             years.split(',').forEach(value=>params.append('anio[]',value));months.split(',').forEach(value=>params.append('mes[]',value));
             if(lista==='estatus_periodo'){params.set('estatus_id',modal.dataset.estatusId);params.set('segmento',modal.dataset.segmento);}
+            else if(lista==='clasificacion_periodo'){params.set('clasificacion_id',modal.dataset.clasificacionId);params.set('segmento',modal.dataset.segmento);}
             else {
                 modal.dataset.anio.split(',').forEach(value=>params.append('periodo_anio[]',value));
                 modal.dataset.mes.split(',').forEach(value=>params.append('periodo_mes[]',value));
@@ -808,6 +809,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if(event.componentType!=='series'||!event.data)return;
         const row=event.data,modal=document.getElementById('modal-declinados-ventas');
         if(!modal)return;
+        // El segmento rojo comparte el detalle agrupado por estatus del mismo periodo.
+        if(kind==='clasificacion_periodo'&&row.declined)kind='estatus_periodo';
         modal.dataset.desglose='1';
         modal.dataset.desgloseLista=kind==='estatus_periodo'?kind:row.declined?'declinados':kind;
         modal.dataset.estatusAgrupados=kind==='estatus_periodo'
