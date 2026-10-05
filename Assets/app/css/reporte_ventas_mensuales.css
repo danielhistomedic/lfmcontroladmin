@@ -240,16 +240,16 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
 #modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) #declinados-detalle th:nth-child(4) { width:20% !important; }
 #modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) #declinados-detalle th:nth-child(5) { width:18% !important; }
 #modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) #declinados-detalle th:nth-child(6) { width:20% !important; }
-#modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) #declinados-tabla-propia .declinados-col-seguimiento { width:88px; text-align:center; }
-#modal-declinados-ventas #declinados-tabla-propia .declinados-col-seguimiento .btn { padding:4px 8px; font-size:11px; }
+#modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) #declinados-tabla-propia .declinados-col-seguimiento { width:120px !important; text-align:center; }
+#modal-declinados-ventas #declinados-tabla-propia .declinados-col-seguimiento .btn { display:inline-flex; align-items:center; gap:4px; padding:4px 6px; font-size:10px; white-space:nowrap; }
 #modal-declinados-ventas .declinados-celda { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(1) { width:4% !important; }
-#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(2) { width:14% !important; }
-#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(3) { width:11% !important; }
-#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(4) { width:18% !important; }
-#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(5) { width:18% !important; }
-#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(6) { width:16% !important; }
-#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(7) { width:19% !important; }
+#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(2) { width:13% !important; }
+#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(3) { width:10% !important; }
+#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(4) { width:15% !important; }
+#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(5) { width:15% !important; }
+#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(6) { width:14% !important; }
+#modal-declinados-ventas[data-tabla-estatus="1"] #declinados-tabla-propia th:nth-child(7) { width:17% !important; }
 #modal-declinados-ventas #declinados-tabla-propia .declinados-grupo-vendedor { background:var(--declinados-suave); color:#087e98; font-weight:600; }
 #modal-declinados-ventas[data-lista="declinados"] #declinados-tabla-propia th:nth-child(6) { width:18% !important; }
 #modal-declinados-ventas[data-lista="declinados"] #declinados-tabla-propia th:nth-child(7) { width:20% !important; }
@@ -261,8 +261,6 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
 #modal-declinados-ventas[data-lista="interna_sin_cliente"] #declinados-tabla-propia th:nth-child(5) { width:15% !important; }
 #modal-declinados-ventas[data-lista="interna_sin_cliente"] #declinados-tabla-propia th:nth-child(6) { width:13% !important; }
 #modal-declinados-ventas[data-lista="interna_sin_cliente"] #declinados-tabla-propia th:nth-child(7) { width:24% !important; }
-#modal-declinados-ventas[data-lista="interna_sin_cliente"] #declinados-tabla-propia th:nth-child(8) { width:88px !important; }
-#modal-declinados-ventas[data-lista="interna_sin_cliente"] #declinados-tabla-propia .ventas-ver-seguimientos { padding:4px; font-size:10px; }
 #modal-declinados-ventas .declinados-buscar { display:block; margin-bottom:12px; font-size:10px; color:var(--declinados-secundario); }
 #modal-declinados-ventas .declinados-buscar input { margin-top:4px; border-color:var(--declinados-borde); font-size:11px; }
 #modal-declinados-ventas #declinados-tabla-propia table { border-collapse:collapse; }

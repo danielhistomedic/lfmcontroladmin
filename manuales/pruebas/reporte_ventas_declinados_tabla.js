@@ -60,15 +60,27 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.equal(modal.dataset.tablaEstatus,'1');assert.equal(node('declinados-tabla-legado').hidden,true);
         const vendors=node('declinados-vendedores').children;assert.equal(vendors.length,2);
         assert.equal(vendors[0].dataset.vendedor,'V1');assert.equal(vendors[0].children[1].textContent,'23');assert.equal(vendors[0].children[3].textContent,'85.19 %');
-        const body=node('declinados-tabla-filas');assert.equal(body.children.filter(row=>row.children.length===7).length,10);
-        assert.equal(body.children[0].children[0].textContent,'Vendedor V1');assert.equal(body.children[0].children[0].colSpan,7);
-        assert.equal(node('declinados-seguimiento-cabecera').hidden,true);assert.equal(node('declinados-todos')['aria-pressed'],'true');
+        const body=node('declinados-tabla-filas');assert.equal(body.children.filter(row=>row.children.length===8).length,10);
+        assert.equal(body.children[0].children[0].textContent,'Vendedor V1');assert.equal(body.children[0].children[0].colSpan,8);
+        assert.equal(node('declinados-seguimiento-cabecera').hidden,false);assert.equal(node('declinados-todos')['aria-pressed'],'true');
         node('declinados-siguiente').events.click();await settle();node('declinados-siguiente').events.click();await settle();
         assert.equal(node('declinados-tabla-pagina').textContent,'21–27 de 27');
         assert.equal(body.children.filter(row=>row.children.length===1).length,2,'Mantener grupos al cambiar de página');
-        vendors[1].events.click();await settle();assert.equal(body.children.length,4);assert.ok(body.children.every(row=>row.children.length===7));
+        vendors[1].events.click();await settle();assert.equal(body.children.length,4);assert.ok(body.children.every(row=>row.children.length===8));
         assert.equal(node('declinados-detalle-titulo').textContent,'Proyectos de: Vendedor V2');assert.equal(node('declinados-tabla-pagina').textContent,'1–4 de 4');
         assert.equal(vendors[1]['aria-pressed'],'true');assert.ok(body.children.every(row=>row.children[4].children[0].textContent==='Vendedor V2'));
+        for(const projectRow of body.children){
+            const button=projectRow.children[7].children[0];
+            const id=Number(projectRow.children[1].children[0].textContent.slice(1));
+            assert.equal(button.children[1].textContent,'Ver seguimiento');
+            assert.ok(button.className.includes(rows[id-1].activo==='CERRADO'?'btn-danger':'btn-primary'));
+        }
+        const followupButton=body.children[0].children[7].children[0];
+        followupButton.events.click({stopPropagation(){}});modal.events['hidden.bs.modal']();
+        assert.deepEqual(context.followup,[27,'P27'],'Todos los estatus usan el historial existente con tb_ventas.id');
+        node('modalSeguimientosVenta').events['hidden.bs.modal']();await modal.events['shown.bs.modal']();
+        assert.equal(calls.length,1,'Volver del historial conserva vendedor y pagina sin recargar proyectos');
+        assert.equal(node('declinados-tabla-pagina').textContent,'1–4 de 4');
         for(const header of headers){header.events.click();await settle();assert.ok(header.textContent.includes('↑')||header.textContent.includes('↓'));}
         node('declinados-buscar').value='Cliente 2';node('declinados-buscar').events.input();await new Promise(resolve=>setTimeout(resolve,330));
         vendors[0].events.click();await settle();assert.equal(node('declinados-buscar').value,'Cliente 2');assert.equal(body.children.length,4);
@@ -76,7 +88,7 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.equal(calls.length,1,'Vendedor, búsqueda, orden y páginas no repiten consultas');
         node('declinados-exportar-pagina').events.click();for(let i=0;i<100&&!exported;i++)await settle();
         const sheet=await (await JSZip.loadAsync(exported)).file('xl/worksheets/sheet1.xml').async('string');assert.ok(sheet.includes('Vendedor'));assert.ok(sheet.includes('A1:G9'));
-        node('declinados-buscar').value='sin-coincidencias';node('declinados-buscar').events.input();await new Promise(resolve=>setTimeout(resolve,330));assert.equal(body.children[0].children[0].colSpan,7);
+        node('declinados-buscar').value='sin-coincidencias';node('declinados-buscar').events.input();await new Promise(resolve=>setTimeout(resolve,330));assert.equal(body.children[0].children[0].colSpan,8);
         failure=true;await modal.events['shown.bs.modal']();assert.equal(node('declinados-reintentar').hidden,false);
         failure=false;node('declinados-reintentar').events.click();await settle();assert.equal(node('declinados-total').textContent,'27 Proyectos');
         for(let i=28;i<=205;i++)rows.push({...rows[0],id:i,proyecto_id:'P'+i});
@@ -90,7 +102,7 @@ async function run(internal=false,quoted=false,documents=false) {
                 modal.events['show.bs.modal']({relatedTarget:{dataset:{lista:'estatus_periodo'}}});await modal.events['shown.bs.modal']();
                 assert.equal(node('modal-declinados-titulo').textContent,modal.dataset.desgloseTitulo);
                 assert.equal(calls.at(-1).get('estatus_id'),id);assert.equal(modal.dataset.tablaEstatus,'1');
-                assert.equal(node('declinados-total').textContent,'205 Proyectos');assert.equal(node('declinados-seguimiento-cabecera').hidden,true);
+                assert.equal(node('declinados-total').textContent,'205 Proyectos');assert.equal(node('declinados-seguimiento-cabecera').hidden,false);
             }
             consolidated=true;
             for(const [ids,name] of [[['1','3'],'PROCESO DE COTIZACION'],[['6','7','8'],'Pedidos Colocados']]){
@@ -122,7 +134,7 @@ async function run(internal=false,quoted=false,documents=false) {
         assert.ok(body.children[0].children[5].children[0].className.includes('clasificacion-valvulas'));
         assert.equal(body.children[0].children[6].children[0].textContent,'<img src=x> & =SUM(1)');
         const button=body.children[0].children[7].children[0];
-        assert.equal(button.children.length,1,'Solo icono');assert.equal(button.children[0].className,'fa-solid fa-list-check');
+        assert.equal(button.children.length,2,'Icono y etiqueta compacta');assert.equal(button.children[1].textContent,'Ver seguimiento');assert.equal(button.children[0].className,'fa-solid fa-list-check');
         assert.equal(button.title,'Ver seguimiento del proyecto');assert.ok(button.className.includes('btn-danger'));
         button.events.click({stopPropagation(){}});modal.events['hidden.bs.modal']();
         assert.deepEqual(context.followup,[27,'P27']);assert.equal(node('modalSeguimientosVenta').dataset.lista,'interna_sin_cliente');
