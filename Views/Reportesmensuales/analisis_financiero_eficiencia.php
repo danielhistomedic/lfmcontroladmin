@@ -1,4 +1,4 @@
-<section id="ventas-financiero-eficiencia" class="mb-4" aria-labelledby="ventas-eficiencia-titulo">
+<section id="ventas-financiero-eficiencia" class="mb-4" aria-labelledby="ventas-eficiencia-titulo" data-periodo="<?= $esc($monthNames . ' ' . $yearNames); ?>">
     <div class="ventas-encabezado-cuantitativo mb-4">
         <h3 id="ventas-eficiencia-titulo" class="mt-0 mb-1 fw-bold"><i class="fa-solid fa-chart-column me-2" aria-hidden="true"></i>Análisis financiero · Comparativo de Pedidos Cotizados vs Pedidos Colocados</h3>
         <p class="mb-0">Comparativo de cantidades de proyectos e importes del período seleccionado.</p>
@@ -46,7 +46,7 @@
             <p class="ventas-eficiencia-nota mb-0">Selecciona el resumen o un anillo para ver el desglose por vendedor.</p>
         </div>
         <section id="ventas-eficiencia-vendedores" class="ventas-eficiencia-seccion" hidden aria-labelledby="ventas-eficiencia-vendedores-titulo">
-            <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i><span id="ventas-eficiencia-vendedores-etiqueta">Desglose por vendedor · TODOS</span></h6>
+            <h6 id="ventas-eficiencia-vendedores-titulo"><i class="fa-solid fa-user-tie ventas-eficiencia-icono" aria-hidden="true"></i><span id="ventas-eficiencia-vendedores-etiqueta">Desglose por vendedor · TODOS · <?= $esc($monthNames . ' ' . $yearNames); ?></span></h6>
             <p class="ventas-eficiencia-nota">% Colocación = Total Colocado / Total Cotizado × 100. % Colocación Monetaria = Importe Colocado / Importe Cotizado × 100. Importes en USD, sin IVA.</p>
             <div class="ventas-eficiencia-tabla-controles">
                 <label for="ventas-eficiencia-vendedores-buscar">Buscar<input id="ventas-eficiencia-vendedores-buscar" type="search" maxlength="200" placeholder="Nombre o valor" class="form-control form-control-sm"></label>

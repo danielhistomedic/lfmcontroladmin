@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let sellerPage = 0;
     const sellerPageSize = 15;
     function render(data, classificationLabel = 'TODOS') {
-    byId('vendedores-etiqueta').textContent = 'Desglose por vendedor · ' + classificationLabel;
+    byId('vendedores-etiqueta').textContent = 'Desglose por vendedor · ' + classificationLabel +
+        (root.dataset?.periodo ? ' · ' + root.dataset.periodo : '');
     charts.forEach(chart => chart.dispose());
     charts = [];
     const quantities = data.cantidades || {};
