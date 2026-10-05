@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let restoreList = false;
         let openingFollowup = false;
         let lista = 'declinados';
-        const isStatusTable = () => ['cotizados_periodo','estatus_periodo'].includes(lista);
+        const isStatusTable = () => ['cotizados_periodo','colocados_periodo','estatus_periodo'].includes(lista);
         const isLightTable = () => ['declinados','interna_sin_cliente'].includes(lista)||isStatusTable();
         const hasSellerColumn = () => lista==='interna_sin_cliente'||isStatusTable();
         const projectColumnCount = () => hasSellerColumn()?8:7;
@@ -785,10 +785,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const statusOption={series:statuses.flatMap((group,index)=>[
         {itemStyle:{color:statusColors[index%statusColors.length]}},{itemStyle:{color:'#dc3545'}}])};
     function periodPie(entry,groups) {
-        const total=groups.reduce((sum,row)=>sum+Number(row.proyectos),0);
         const declined=groups.reduce((sum,row)=>sum+Number(row.declinados),0);
-        const slices=groups.filter(row=>row.proyectos>row.declinados).map(row=>({
-            name:row.nombre,value:row.proyectos-row.declinados,id:row.id,estatusIds:row.estatusIds,itemStyle:{color:row.color}}));
+        const sliceValue=row=>row.valorSegmento??(row.proyectos-row.declinados);
+        const total=groups.reduce((sum,row)=>sum+sliceValue(row),declined);
+        const slices=groups.filter(row=>sliceValue(row)>0).map(row=>({
+            name:row.nombre,value:sliceValue(row),id:row.id,lista:row.lista,estatusIds:row.estatusIds,itemStyle:{color:row.color}}));
         if(declined>0) slices.push({name:'Declinados',value:declined,declined:true,itemStyle:{color:'#dc3545'}});
         entry.donut=true;entry.height=370;entry.element.style.height='370px';
         entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
@@ -826,7 +827,7 @@ document.addEventListener('DOMContentLoaded', function () {
         proyectos:row.proyectos,declinados:row.declinados,color:classificationColors[index%classificationColors.length]})));
     classificationChart.instance.on('click',event=>openPeriodSlice(event,'clasificacion_periodo'));
     // Estatus actuales del mismo conjunto de proyectos registrados en el periodo.
-    // Los KPI de documentos pueden incluir proyectos anteriores; no se suman aqui.
+    // Solo Cotizados y Colocados reutilizan abajo los conjuntos de los KPI.
     const periodStatuses=new Map();
     (data.estatus_por_vendedor || []).forEach(row=>{
         const key=statusGroupKey(row);
@@ -842,9 +843,23 @@ document.addEventListener('DOMContentLoaded', function () {
         if(!group.estatusIds.includes(statusId))group.estatusIds.push(statusId);
         group.proyectos+=Number(row.proyectos);group.declinados+=Number(row.declinados);
     });
+    // Igual que en las barras originales: periodo + anteriores del conjunto documental.
+    // Conservar los declinados originales y todos los otros estatus sin cambios.
+    [['cotizados_periodo',data.cotizados_por_periodo],['colocados',data.colocados_por_periodo]].forEach(([key,rows])=>{
+        if(!Array.isArray(rows))return;
+        const status=statusGroups.get(key);
+        if(!status)return;
+        if(!periodStatuses.has(key)){
+            const index=statuses.findIndex(group=>String(group.id)===key);
+            periodStatuses.set(key,{...status,proyectos:0,declinados:0,color:statusColors[Math.max(0,index)%statusColors.length]});
+        }
+        const group=periodStatuses.get(key);
+        group.valorSegmento=rows.reduce((sum,row)=>sum+Number(row.proyectos),0);
+        group.lista=key==='colocados'?'colocados_periodo':'cotizados_periodo';
+    });
     const generalStatusChart=cascade('ventas-estatus-general');
     periodPie(generalStatusChart,[...periodStatuses.values()].sort((a,b)=>a.orden-b.orden));
-    generalStatusChart.instance.on('click',event=>openPeriodSlice(event,'estatus_periodo'));
+    generalStatusChart.instance.on('click',event=>openPeriodSlice(event,event.data?.lista||'estatus_periodo'));
     window.addEventListener('resize', function () { charts.forEach(c => c.resize()); cascadeCharts.forEach(fitCascade); });
 
 });

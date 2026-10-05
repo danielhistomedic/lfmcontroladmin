@@ -8,7 +8,7 @@ Object.defineProperty(globalThis, 'navigator', { value: undefined });
 const echarts = require('../../Assets/vendor/echarts/dist/echarts.js');
 const code = fs.readFileSync(path.join(__dirname, '../../Assets/app/js/reporte_ventas_mensuales.js'), 'utf8');
 
-function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false, groupedDeclines = false, consolidated = false) {
+function ejecutar(empty, width, theme, periods = false, quoted = false, placed = false, groupedDeclines = false, consolidated = false, kpiExample = false) {
     const nodes = new Map();
     const charts = []; const events = {}; const formEvents = {}; let change; let requests = 0;
     const button = { disabled: false }; const loading = { hidden: true };
@@ -56,6 +56,10 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         {anio:2026,mes:9,vendedor_id:'V1',origen:'periodo',proyectos:3},
         {anio:2026,mes:9,vendedor_id:'V1',origen:'anteriores',proyectos:2},
         {anio:2026,mes:9,vendedor_id:'V2',origen:'anteriores',proyectos:1}];
+    if(kpiExample){
+        data.cotizados_por_periodo=[{origen:'periodo',proyectos:56},{origen:'anteriores',proyectos:12}];
+        data.colocados_por_periodo=[{origen:'periodo',proyectos:10},{origen:'anteriores',proyectos:6}];
+    }
     // Simular los agregados del modelo a partir de proyectos disjuntos por mes.
     const classNames=new Map(data.clasificaciones_por_vendedor.map(row=>[row.clasificacion_id,row.clasificacion]));
     const classTotals=new Map(),statusTotals=new Map();
@@ -123,7 +127,15 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         assert.equal(option.xAxis,undefined,'Sin eje mensual');assert.equal(option.yAxis,undefined);
         const source=index===1?data.clasificaciones_por_vendedor:data.estatus_por_vendedor;
         const total=source.reduce((sum,row)=>sum+row.proyectos,0),declined=source.reduce((sum,row)=>sum+row.declinados,0);
-        assert.equal(slices.reduce((sum,row)=>sum+row.value,0),total,'Conciliar proyectos registrados del periodo');
+        let expected=total;
+        if(index===2){
+            if(quoted)expected+=data.cotizados_por_periodo.reduce((sum,row)=>sum+row.proyectos,0)-source.filter(row=>row.estatus_id===5).reduce((sum,row)=>sum+row.proyectos-row.declinados,0);
+            if(placed)expected+=data.colocados_por_periodo.reduce((sum,row)=>sum+row.proyectos,0)-source.filter(row=>row.estatus_id>=6).reduce((sum,row)=>sum+row.proyectos-row.declinados,0);
+            if(quoted)assert.equal(slices.find(row=>row.lista==='cotizados_periodo').value,kpiExample?68:10);
+            if(placed)assert.equal(slices.find(row=>row.lista==='colocados_periodo').value,kpiExample?16:6);
+            assert.equal(slices.find(row=>row.name==='PROCESO DE COTIZACION')?.value,source.filter(row=>[1,3].includes(row.estatus_id)).reduce((sum,row)=>sum+row.proyectos-row.declinados,0)||undefined,'Otros estatus conservan su valor');
+        }
+        assert.equal(slices.reduce((sum,row)=>sum+row.value,0),expected,'Cambiar exclusivamente A/B por sus conjuntos KPI');
         assert.equal(slices.filter(row=>row.name==='Declinados').length,declined?1:0);
         if(declined){const slice=slices.find(row=>row.name==='Declinados');
             assert.equal(slice.value,declined);assert.equal(slice.itemStyle.color,'#dc3545');
@@ -140,14 +152,15 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
         const slice=slices.find(row=>row.name!=='Declinados');
         if(slice){charts[index].trigger('click',{componentType:'series',data:slice});
             const modal=nodes.get('modal-declinados-ventas');
-            assert.equal(modal.dataset.desgloseLista,index===1?'clasificacion_periodo':'estatus_periodo');
+            assert.equal(modal.dataset.desgloseLista,index===1?'clasificacion_periodo':slice.lista||'estatus_periodo');
             assert.equal(modal.dataset.desgloseAnio,'2024,2026');assert.equal(modal.dataset.desgloseMes,'2,9');
             assert.equal(modal.dataset.segmento,'no_declinados');}
         if(index===2)for(const row of slices.filter(slice=>slice.name!=='Declinados')){
             charts[index].trigger('click',{componentType:'series',data:row});const modal=nodes.get('modal-declinados-ventas');
-            assert.equal(modal.dataset.desgloseLista,'estatus_periodo');assert.equal(modal.dataset.estatusId,row.id==null?'sin_estatus':String(row.id));
+            assert.equal(modal.dataset.desgloseLista,row.lista||'estatus_periodo');assert.equal(modal.dataset.estatusId,row.id==null?'sin_estatus':String(row.id));
             assert.equal(modal.dataset.desgloseTitulo,row.name+' · Todo el período seleccionado');
-            assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados),Array.from(row.estatusIds),'El modal recibe todos los IDs del segmento consolidado');
+            if(row.lista)assert.equal(modal.dataset.estatusAgrupados,'','El listado usa el universo documental del KPI');
+            else assert.deepEqual(JSON.parse(modal.dataset.estatusAgrupados),Array.from(row.estatusIds),'El modal recibe todos los IDs del segmento consolidado');
         }
     });
     if(consolidated){
@@ -225,6 +238,8 @@ function ejecutar(empty, width, theme, periods = false, quoted = false, placed =
     events.resize();
     charts.forEach(chart => chart.dispose());
 }
+ejecutar(false, 900, 'walden', false, true, true, false, false, true);
+ejecutar(false, 320, 'dark', false, true, true, false, false, true);
 ejecutar(false, 900, 'walden', false, false, false, false, true);
 ejecutar(false, 320, 'dark', false, false, false, false, true);
 ejecutar(false, 900, 'walden', true);
@@ -299,7 +314,7 @@ async function probarModal(critical = false, unscoped = false) {
     }
     response = { status: true, data: { draw: 1, recordsTotal: 8, recordsFiltered: 8,
         data: [{ proyecto_id: 'P1', fecha: '2026-09-30', titulo: '<img src=x onerror=alert(1)>', cliente: 'Cliente', vendedor: 'José', clasificacion: 'Diversos', activo: 'CERRADO' }] } };
-    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'colocados_periodo'}:{}}});
+    modal.events['show.bs.modal']({relatedTarget:{dataset:critical?{lista:'clasificacion_periodo'}:{}}});
     await modal.events['shown.bs.modal']();
     if(!critical){
         assert.equal(summaryCalls.length,1);assert.equal(options,undefined,'Resumen antes de cargar tabla plana');
@@ -358,8 +373,8 @@ async function probarModal(critical = false, unscoped = false) {
     tableNode.events.click({ target: { closest: () => selectedButton }, stopPropagation() {} });
     modal.events['hidden.bs.modal']();
     assert.deepEqual(context.selected,[633,'PV-2026-20035'],'Historial del proyecto seleccionado');
-    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'colocados_periodo':'declinados');
-    assert.ok(calls[0][0].includes('lista='+(critical?'colocados_periodo':'declinados')));
+    assert.equal(node('modalSeguimientosVenta').dataset.lista,critical?'clasificacion_periodo':'declinados');
+    assert.ok(calls[0][0].includes('lista='+(critical?'clasificacion_periodo':'declinados')));
     requestData.start = 10; await draw();
     assert.ok(calls[1][0].includes('start=10'), 'DataTables gestiona paginación');
     delegated.call({ dataset: { column: '3' }, value: 'Cliente' });

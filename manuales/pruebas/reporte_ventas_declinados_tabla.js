@@ -52,10 +52,10 @@ async function run(internal=false,quoted=false,documents=false) {
     const settle=()=>new Promise(resolve=>setTimeout(resolve,20));
     vm.runInNewContext(code,context);events.DOMContentLoaded();
     assert.equal(calls.length,0);
-    modal.events['show.bs.modal']({relatedTarget:{dataset:quoted?{lista:documents?'cotizados_periodo':'estatus_periodo'}:internal?{lista:'interna_sin_cliente'}:{}}});await modal.events['shown.bs.modal']();
+    modal.events['show.bs.modal']({relatedTarget:{dataset:quoted?{lista:documents==='colocados_periodo'?documents:documents?'cotizados_periodo':'estatus_periodo'}:internal?{lista:'interna_sin_cliente'}:{}}});await modal.events['shown.bs.modal']();
     if(quoted){
         assert.equal(calls.length,1);assert.equal(calls[0].get('length'),'100');assert.deepEqual(calls[0].getAll('anio[]'),['2026']);
-        if(documents){assert.deepEqual(calls[0].getAll('periodo_anio[]'),['2024','2026']);assert.deepEqual(calls[0].getAll('periodo_mes[]'),['9','10']);}
+        if(documents){assert.deepEqual(calls[0].getAll('periodo_anio[]'),['2024','2026']);assert.deepEqual(calls[0].getAll('periodo_mes[]'),['9','10']);assert.equal(calls[0].get('lista'),documents==='colocados_periodo'?documents:'cotizados_periodo');assert.ok(!calls[0].has('estatus_id'));assert.ok(!calls[0].has('segmento'));}
         else {assert.equal(calls[0].get('estatus_id'),'5');assert.equal(calls[0].get('segmento'),'no_declinados');}
         assert.equal(modal.dataset.tablaEstatus,'1');assert.equal(node('declinados-tabla-legado').hidden,true);
         const vendors=node('declinados-vendedores').children;assert.equal(vendors.length,2);
@@ -197,4 +197,4 @@ async function run(internal=false,quoted=false,documents=false) {
     modal.events['hidden.bs.modal']();
     console.log('OK: tabla sin DataTables, búsqueda, cinco encabezados, paginación, vendedores, error/reintento, salida segura y Excel real.');
 }
-run().then(()=>run(true)).then(()=>run(false,true)).then(()=>run(false,true,true)).catch(error=>{console.error(error);process.exitCode=1;});
+run().then(()=>run(true)).then(()=>run(false,true)).then(()=>run(false,true,true)).then(()=>run(false,true,'colocados_periodo')).catch(error=>{console.error(error);process.exitCode=1;});
