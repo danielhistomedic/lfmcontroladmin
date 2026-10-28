@@ -1,6 +1,6 @@
 ---
 name: dalia
-description: "Integrar DALIA/OpenAI y análisis de documentos en el portal PHP."
+description: "Integrar IA o análisis de documentos en LFM Control cuando se solicite; verificar primero si DALIA/OpenAI existe en el portal."
 ---
 # dalia — lfm_admin
 Leer [instructions.md](instructions.md) completo y aplicar [AGENTS.md](../../../AGENTS.md) antes de trabajar.

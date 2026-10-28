@@ -1,6 +1,6 @@
 ---
 name: php-api
-description: "Crear y mantener endpoints REST, JSON e integración con clientes existentes."
+description: "Crear y mantener acciones AJAX y respuestas JSON del portal PHP, conservando contratos con los clientes existentes."
 ---
 # php-api — lfm_admin
 Leer [instructions.md](instructions.md) completo y aplicar [AGENTS.md](../../../AGENTS.md) antes de trabajar.

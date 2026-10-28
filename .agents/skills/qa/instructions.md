@@ -1,7 +1,9 @@
 # QA web — LFM Control
-Identificar alcance y criterios verificables. Usar desarrollo autorizado y datos de prueba; no asumir que XAMPP conecta a una base local.
-Ejecutar php -l con PHP 8.2 en los archivos modificados. Usar las herramientas existentes de prueba sin instalar un framework para cambios mínimos.
-Según el riesgo, probar éxito, vacíos, tipos inválidos, NULL, límites, duplicados, reenvío, concurrencia, acceso denegado y registro de otro usuario.
-Para APIs verificar método, parámetros, JSON, códigos, autenticación, autorización, errores y compatibilidad. Para interfaz verificar teclado, móvil, mensajes, filtros y ñ/acentos.
-Revisar regresiones en procesos relacionados, orden de fechas, cantidades, monedas, permisos y estatus.
-Clasificar defectos por impacto y mostrar escenario, resultado esperado, observado y severidad. Separar pruebas ejecutadas, revisión estática y pendientes. No declarar que todo funciona sin evidencia.
+Definir criterios según el cambio y revisar contratos actuales. Usar desarrollo autorizado y datos sintéticos; XAMPP no implica una base local.
+Para PHP comprobar versión CLI y ejecutar php -l en archivos modificados. No ejecutar index.php, cargar configuración ni instanciar modelos para validar sintaxis. Si se usa php -n -l, aclarar que no valida configuración ni extensiones.
+Para APIs comprobar método, entradas, JSON, errores, sesión, permisos por acción y rechazo de registros ajenos. Una redirección debe detener el flujo. Incluir búsqueda vacía y alcance de vendedor, empresa, sucursal o almacén cuando aplique.
+En ventas y almacén revisar estatus, fechas de corte, moneda, conversión, cantidades, unidades y duplicados de JOIN. Conciliar indicadores, tablas y exportaciones; distinguir proyectos únicos, pedidos y partidas.
+En módulos nuevos verificar ssf_modulos, constante, rutas, vista, scripts, menú activo y permisos del rol autorizado. No registrar ni asignar permisos al abrir páginas.
+En interfaz revisar teclado, etiquetas, foco, móvil, temas, filtros, DataTables, Select2, carga/vacío/error y español. Para gráficas consultar [ECharts](../echarts/SKILL.md).
+Localizar pruebas disponibles antes de indicar comandos; no exigir archivos de otro portal ni instalar un framework para una comprobación puntual. Distinguir pruebas aisladas de validación del backend. En adjuntos comprobar fallos sin perder el archivo anterior; en dependencias revisar manifiesto, lock e instalación sin actualizaciones automáticas.
+Revisar documentación del código y coherencia con firmas, permisos y errores. Reportar esperado, observado e impacto de defectos. Separar pruebas ejecutadas, revisión estática y pendientes; una auditoría documental no demuestra funcionamiento del portal.

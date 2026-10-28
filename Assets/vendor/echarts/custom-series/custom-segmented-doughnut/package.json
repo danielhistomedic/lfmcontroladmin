@@ -1,0 +1,50 @@
+{
+  "name": "@echarts-x/custom-segmented-doughnut",
+  "version": "1.1.1",
+  "description": "Custom segmentedDoughnut series for Apache ECharts",
+  "main": "dist/segmented-doughnut.js",
+  "module": "dist/segmented-doughnut.esm.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/segmented-doughnut.d.ts",
+      "import": "./dist/segmented-doughnut.esm.mjs",
+      "require": "./dist/segmented-doughnut.js"
+    }
+  },
+  "types": "dist/segmented-doughnut.d.ts",
+  "keywords": [
+    "echarts",
+    "apache-echarts",
+    "data-visualization",
+    "chart",
+    "dataviz"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apache/echarts-custom-series.git"
+  },
+  "scripts": {
+    "test:browser": "npx http-server . -p 8088 -o examples/index.html",
+    "test:ssr": "node examples/ssr.js",
+    "test": "npm run test:ssr"
+  },
+  "devDependencies": {
+    "echarts": "^6.0.0",
+    "typescript": "^5.5.4"
+  },
+  "peerDependencies": {
+    "echarts": "^6.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

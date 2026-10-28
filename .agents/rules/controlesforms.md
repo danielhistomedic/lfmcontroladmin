@@ -1,28 +1,33 @@
 ---
 trigger: always_on
 ---
-# Formularios y controles web
+# Formularios y controles web — LFM Control
 
-## Identidad visual
-Tomar como referencia las páginas y componentes reales de lfm_admin. Conservar layout, menú, encabezados, espaciado, paleta, iconos y sistema de diseño instalado. No copiar controles de WinForms ni tamaños de fuentes de escritorio a CSS.
-Reutilizar fuentes y variables CSS existentes. Si se requiere un nuevo estilo, integrarlo al mecanismo común y limitar su alcance. No descargar fuentes, añadir CDN o instalar un framework solo para igualar un formulario.
+## Recursos e identidad
+Tomar como referencia las vistas vigentes y Template. Reutilizar layout, menú, encabezados, paleta, iconos y las versiones de Bootstrap, jQuery, Select2 y DataTables realmente cargadas.
+La tipografía de reportes está centralizada en Assets/app/css/variables.css, typography.css y reports.css; --font-family-report usa Inter y alternativas. Reutilizar sus variables de tamaños, pesos, espaciados y tablas. No imponer Arial global, clases hm-* ni hojas de otro proyecto. Limitar estilos particulares al módulo; no descargar fuentes ni añadir frameworks por una homologación.
+Revisar datatable-style.css y select2-style.css donde estén cargados. No asumir helpers de layout, form-standard.css, module-header.css ni tests inexistentes.
 
-## Captura y acciones
-Mantener etiquetas visibles asociadas a campos, obligatoriedad y formato esperado. Validar en cliente para comodidad y en servidor para seguridad. Mostrar mensajes contextuales y conservar valores tras errores.
-Diferenciar la acción principal. Utilizar el sistema de avisos y confirmaciones existente; no asumir que Msj_Adv o Msj_AdvOnly son funciones JavaScript.
-Confirmar acciones destructivas y volver a verificar permisos/estatus en backend. Una acción de cerrar un modal no equivale a cancelar un documento.
-Agrupar secciones por flujo de trabajo. Usar tooltips existentes para acciones ambiguas, sin sustituir etiquetas esenciales.
+## Formularios y acciones
+Conservar IDs, nombres, métodos, rutas, eventos, campos ocultos, CSRF, validaciones y contratos PHP/JavaScript. Mantener etiquetas visibles, foco, acceso por teclado y valores tras errores. Verificar el control real antes de cambiar for/id.
+Distinguir la acción principal y reutilizar avisos/modales existentes. No asumir nombres de helpers de otros sistemas. Mostrar acciones según permisos y comprobarlos en backend. Confirmar operaciones destructivas; cerrar un modal no equivale a cancelar un documento.
+Agrupar por flujo comercial; no trasladar controles de escritorio ni reglas clínicas al portal.
 
-## Tablas, filtros y totales
-Conservar biblioteca de tablas instalada, filtros, selección y ordenamiento. Selección múltiple solo cuando la operación la requiera, con casillas y estado de selección claro; no seleccionarla obligatoriamente por herencia de DataGridViewX.
-Alinear importes/cantidades, indicar moneda y unidad y separar totales por moneda o convertir según reglas existentes. Ordenar fechas por su valor real, no por el texto formateado.
-Mostrar estados con texto y color. Mantener paginación, vacío, carga y error. No cargar miles de registros por defecto ni modificar reglas de filtro existentes para simplificar el diseño.
+## Tablas, filtros y reportes
+Conservar filtros, selección, orden, paginación y exportaciones autorizadas. Comprobar columnas y alineación al mostrar pestañas, modales o paneles ocultos; ajustar cuando el contenedor sea visible usando la API instalada, sin duplicar instancias, listeners ni peticiones.
+No exportar HTML de acciones ni datos fuera del alcance autorizado. Mantener estados vacío, carga y error; no ocultar fallos de consulta con ceros.
+Alinear importes y cantidades e indicar moneda y unidad. Separar monedas o usar la conversión comercial verificada; no sumar unidades incompatibles ni inventar tipos de cambio. Ordenar fechas por su valor real.
+Distinguir cotizado, colocado, pedido, facturado y cancelado según campos y estatus reales. Usar alcance coherente de fechas y vendedor en indicadores, gráficas, tablas y exportaciones y explicar diferencias intencionales. Evitar duplicar proyectos o partidas por JOIN.
+Mostrar progreso real, deshabilitar temporalmente acciones en proceso y restituirlas ante error. No sustituir prevención backend de duplicados por un botón deshabilitado.
 
-## Responsividad y accesibilidad
-Usar CSS responsive y componentes disponibles, evitando posiciones rígidas. Comprobar escritorio, tablet y móvil; permitir desplazamiento local en tablas anchas sin ocultar acciones.
-Mantener foco visible, navegación por teclado, contraste y nombres accesibles para botones con iconos. Al abrir/cerrar modales, gestionar el foco según el componente instalado.
+## Menú y módulos
+Reutilizar Template/aside.php y Config/Modulos.php. Menú y página deben verificar el permiso de lectura propio; conservar expansión del padre y submenú activo.
+Cuando corresponda y el entorno esté autorizado, comprobar nombre, descripción, etiquetas, breadcrumb, vista y recursos de ssf_modulos. No registrar módulos ni conceder permisos al renderizar vistas.
 
-## Procesos, errores e impresión
-Indicar carga real, deshabilitar temporalmente la acción mientras se procesa y restituir controles ante error. Prevenir duplicados también en servidor; no confiar solo en el botón deshabilitado.
-Mostrar porcentaje solo si se conoce el avance. Mantener las librerías de gráficos/PDF y plantillas de impresión existentes; no imponer Crystal Reports al navegador.
-Los ajustes visuales no deben alterar SQL, lógica comercial o contratos. Verificar español, ñ, acentos, filtros y estados tras el cambio.
+## Accesibilidad y adaptación
+Comprobar escritorio, tablet y móvil, con scroll local en tablas anchas y acciones esenciales accesibles. Mantener nombres accesibles, foco y gestión de foco de modales; no depender solo del color para estatus o errores.
+Respetar temas soportados y contraste de al menos 4.5:1 para texto normal sobre su fondo efectivo. Cubrir hover, foco, selección, validación, disabled/readonly, menús y componentes dinámicos. No aplicar filtros globales de brillo ni recolorear logos; conservar filtros y valores al alternar tema.
+Para ECharts aplicar [la regla de gráficas](echarts.md); el CSS exterior no garantiza que el canvas cambie de tema.
+
+## Validación
+Usar datos sintéticos para revisar disposición, filtros, controles, acentos, estados, temas y exportaciones. Ejecutar pruebas disponibles del módulo y separar validación estática de funcional. Una corrección visual no autoriza conectar a producción ni cambiar SQL o lógica comercial.
