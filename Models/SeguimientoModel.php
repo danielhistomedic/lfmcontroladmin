@@ -467,7 +467,7 @@ class SeguimientoModel extends Mysql
                 $arrResponse = array_merge($arrResponse, $res4);
             }
 
-            // 5. tb_pedidos_cliente_adjuntos
+            // 5. Adjuntos de OCC exclusivamente finalizadas; un archivo no valida su encabezado.
             $sql5 = "SELECT 
                         pca.id,
                         pca.venta_id,
@@ -480,6 +480,7 @@ class SeguimientoModel extends Mysql
                         'Pedido Cliente / Orden de Compra' AS origen_etiqueta,
                         'warning' AS badge_color
                     FROM tb_pedidos_cliente_adjuntos pca
+                    INNER JOIN tb_pedidos_cliente pc ON pc.id = pca.pedidos_cliente_id AND pc.enviado = 1
                     WHERE pca.venta_id = :venta_id AND pca.archivo IS NOT NULL AND TRIM(pca.archivo) != ''
                     ORDER BY pca.id ASC";
             $res5 = $this->select($sql5, ['venta_id' => $venta_id]);
@@ -487,7 +488,7 @@ class SeguimientoModel extends Mysql
                 $arrResponse = array_merge($arrResponse, $res5);
             }
 
-            // 6. tb_pedidos_proveedor_adjuntos
+            // 6. Adjuntos de OCP exclusivamente finalizadas (enviado = 1).
             $sql6 = "SELECT 
                         ppa.id,
                         ppa.venta_id,
@@ -500,6 +501,7 @@ class SeguimientoModel extends Mysql
                         'Pedido Proveedor' AS origen_etiqueta,
                         'danger' AS badge_color
                     FROM tb_pedidos_proveedor_adjuntos ppa
+                    INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppa.pedido_proveedor_id AND pp.enviado = 1
                     WHERE ppa.venta_id = :venta_id AND ppa.archivo IS NOT NULL AND TRIM(ppa.archivo) != ''
                     ORDER BY ppa.id ASC";
             $res6 = $this->select($sql6, ['venta_id' => $venta_id]);
@@ -879,7 +881,7 @@ class SeguimientoModel extends Mysql
                 ORDER BY fecha DESC, id DESC
                 LIMIT 1
             ) tc ON 1=1
-            WHERE pp.enviado > 0 ";
+            WHERE pp.enviado = 1 ";
 
             $arr_values = [];
 
@@ -977,7 +979,7 @@ class SeguimientoModel extends Mysql
             LEFT  JOIN tb_recibos r            ON r.cNumRecibo = rd.cNumRecibo
             WHERE ppd.fecha_estimada_entrega IS NOT NULL
               AND ppd.fecha_estimada_entrega != '0000-00-00'
-              AND pp.enviado > 0 ";
+              AND pp.enviado = 1 ";
 
             $arr_values = [];
 
@@ -1009,7 +1011,7 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene el detalle completo del encabezado de una orden de compra a proveedor.
+     * Obtiene el encabezado de una OCP exclusivamente finalizada (enviado = 1).
      *
      * @param int $pedido_proveedor_id
      * @return array
@@ -1046,7 +1048,7 @@ class SeguimientoModel extends Mysql
             LEFT JOIN tb_ventas v            ON v.id = pp.venta_id
             LEFT JOIN cat_medico vd          ON vd.ccvemedico = pp.ccveusuario
             LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-            WHERE pp.id = :pedido_id
+            WHERE pp.id = :pedido_id AND pp.enviado = 1
             LIMIT 1";
 
             $arrResponse = $this->selectModel($sql, ['pedido_id' => $pedido_proveedor_id]);
@@ -1058,7 +1060,7 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene las partidas de una orden de compra a proveedor (tb_pedidos_proveedor_detalle).
+     * Obtiene partidas de una OCP finalizada (tb_pedidos_proveedor.enviado = 1).
      *
      * @param int $pedido_proveedor_id
      * @return array
@@ -1082,6 +1084,7 @@ class SeguimientoModel extends Mysql
                 COALESCE(r.cNumFactura, '') AS factura_serie_folio,
                 COALESCE(r.FolioFiscal, '') AS factura_folio_fiscal
             FROM tb_pedidos_proveedor_detalle ppd
+            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id AND pp.enviado = 1
             LEFT JOIN tb_recibos_detalle rd ON rd.pedido_proveedor_detalle_id = ppd.id
             LEFT JOIN tb_recibos r ON r.cNumRecibo = rd.cNumRecibo
             WHERE ppd.pedido_proveedor_id = :pedido_id
@@ -1096,7 +1099,7 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene los archivos adjuntos de una orden de compra a proveedor (tb_pedidos_proveedor_adjuntos).
+     * Obtiene adjuntos vinculados a una OCP finalizada (enviado = 1).
      *
      * @param int $pedido_proveedor_id
      * @return array
@@ -1113,6 +1116,7 @@ class SeguimientoModel extends Mysql
                 'tb_pedidos_proveedor_adjuntos' AS tabla_origen,
                 'Pedido Proveedor' AS origen_etiqueta
             FROM tb_pedidos_proveedor_adjuntos ppa
+            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppa.pedido_proveedor_id AND pp.enviado = 1
             WHERE ppa.pedido_proveedor_id = :pedido_id
               AND ppa.archivo IS NOT NULL
               AND TRIM(ppa.archivo) != ''
@@ -1127,7 +1131,34 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene las partidas de una orden de compra de cliente (tb_pedidos_cliente_detalle).
+     * Resuelve exclusivamente una OCC finalizada. Un ID explícito nunca se sustituye
+     * por otro pedido del proyecto. Sin ID, selecciona la última OCC finalizada de la venta.
+     * Si se proporcionan ambos IDs deben pertenecer al mismo documento/proyecto.
+     *
+     * @param int $pedido_cliente_id ID de OCC o cero para buscar por venta.
+     * @param int $venta_id ID de venta opcional.
+     * @return array id y venta_id del pedido finalizado o vacío si no corresponde.
+     */
+    public function selectPedidoClienteFinalizado(int $pedido_cliente_id, int $venta_id = 0): array
+    {
+        if ($pedido_cliente_id <= 0 && $venta_id <= 0) return [];
+        $sql = "SELECT id, venta_id FROM tb_pedidos_cliente WHERE enviado = 1";
+        $params = [];
+        if ($pedido_cliente_id > 0) {
+            $sql .= " AND id = :pedido_id";
+            $params['pedido_id'] = $pedido_cliente_id;
+        }
+        if ($venta_id > 0) {
+            $sql .= " AND venta_id = :venta_id";
+            $params['venta_id'] = $venta_id;
+        }
+        $sql .= " ORDER BY id DESC LIMIT 1";
+        return $this->selectModel($sql, $params);
+    }
+
+    /**
+     * Obtiene las partidas de una OCC finalizada (tb_pedidos_cliente_detalle).
+     * No recurre a cotizaciones ni a documentos alternativos cuando no hay partidas.
      *
      * @param int $pedido_cliente_id
      * @param int $venta_id
@@ -1147,7 +1178,7 @@ class SeguimientoModel extends Mysql
                 sap.clave_cliente AS codigo_cliente,
                 ped.num_orden_compra
             FROM tb_pedidos_cliente_detalle pcd
-            LEFT JOIN tb_pedidos_cliente ped ON ped.id = pcd.pedido_id
+            INNER JOIN tb_pedidos_cliente ped ON ped.id = pcd.pedido_id AND ped.enviado = 1
             LEFT JOIN tb_ventas v ON v.id = ped.venta_id
             LEFT JOIN tb_materiales mat ON mat.ccvematerial = pcd.ccvematerial
             LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = pcd.ccvematerial AND sap.cliente_id = ped.cliente_id)
@@ -1159,13 +1190,7 @@ class SeguimientoModel extends Mysql
                 'venta_id'  => $venta_id
             ]);
 
-            // Si no se encontraron partidas por pedido_id, buscar por venta_id usando getPartidasProyecto
-            if (empty($arrResponse) && $venta_id > 0) {
-                $partidasProy = $this->getPartidasProyecto($venta_id);
-                if (!empty($partidasProy['partidas'])) {
-                    return $partidasProy['partidas'];
-                }
-            }
+            // Un pedido vacío permanece vacío: no se incluyen partidas de cotizaciones.
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -1174,7 +1199,7 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene los archivos adjuntos de una orden de compra de cliente (tb_pedidos_cliente_adjuntos).
+     * Obtiene adjuntos vinculados a una OCC finalizada (enviado = 1).
      *
      * @param int $pedido_cliente_id
      * @param int $venta_id
@@ -1192,7 +1217,8 @@ class SeguimientoModel extends Mysql
                 'tb_pedidos_cliente_adjuntos' AS tabla_origen,
                 'Pedido Cliente' AS origen_etiqueta
             FROM tb_pedidos_cliente_adjuntos pca
-            WHERE (pca.pedidos_cliente_id = :pedido_id OR (:pedido_id = 0 AND pca.venta_id = :venta_id))
+            INNER JOIN tb_pedidos_cliente ped ON ped.id = pca.pedidos_cliente_id AND ped.enviado = 1
+            WHERE (pca.pedidos_cliente_id = :pedido_id OR (:pedido_id = 0 AND ped.venta_id = :venta_id))
               AND pca.archivo IS NOT NULL
               AND TRIM(pca.archivo) != ''
             ORDER BY pca.id ASC";

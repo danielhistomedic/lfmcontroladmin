@@ -182,7 +182,40 @@ class Seguimiento extends Controllers
     }
 
     /**
+     * Unifica fechas de los filtros de OCC y calendario antes de consultar MySQL.
+     * Acepta dd/mm/aaaa e ISO por compatibilidad; el número de orden omite el periodo.
+     * @param string $inicio Fecha opcional de inicio.
+     * @param string $fin Fecha opcional de fin.
+     * @param string $orden Número de orden independiente del periodo.
+     * @return array{0:string,1:string} Fechas ISO; ambas vacías sin periodo o al buscar una orden.
+     * @throws \InvalidArgumentException Si falta una fecha, no existe o el rango está invertido.
+     */
+    private function normalizarPeriodoOrdenesCliente(string $inicio, string $fin, string $orden): array
+    {
+        if (trim($orden) !== '') return ['', ''];
+        $inicio = trim($inicio);
+        $fin = trim($fin);
+        if ($inicio === '' && $fin === '') return ['', ''];
+        $fechas = [];
+        foreach ([$inicio, $fin] as $valor) {
+            $formato = preg_match('/^\d{2}\/\d{2}\/\d{4}$/D', $valor) ? 'd/m/Y' : 'Y-m-d';
+            $fecha = \DateTimeImmutable::createFromFormat('!' . $formato, $valor);
+            if (!$fecha || $fecha->format($formato) !== $valor || (int)$fecha->format('Y') < 1000) {
+                throw new \InvalidArgumentException('Ingresa fechas válidas y completas en formato dd/mm/aaaa.');
+            }
+            $fechas[] = $fecha->format('Y-m-d');
+        }
+        if ($fechas[0] > $fechas[1]) {
+            throw new \InvalidArgumentException('La fecha fin debe ser igual o posterior a la fecha inicio.');
+        }
+        return $fechas;
+    }
+
+    /**
      * Obtiene la lista de órdenes de clientes para llenar el DataTable.
+     * POST fecha_ini/fecha_fin: dd/mm/aaaa o ISO; filtro_num_orden omite el periodo.
+     * Requiere permiso de lectura OCC y conserva el alcance por vendedor.
+     * Responde un array JSON; fechas inválidas producen HTTP 422 con respuesta/mensaje.
      *
      * @return json
      */
@@ -210,6 +243,15 @@ class Seguimiento extends Controllers
             $filtro_num_orden = strClean($_POST['filtro_num_orden']   ?? '');
             $filtro_estatus   = strClean($_POST['filtro_estatus']   ?? '');
             $filtro_cliente   = strClean($_POST['filtro_cliente']   ?? '');
+
+            // Unifica clientes nuevos y versiones anteriores sin alterar el contrato de éxito.
+            try {
+                [$fecha_ini, $fecha_fin] = $this->normalizarPeriodoOrdenesCliente($fecha_ini, $fecha_fin, $filtro_num_orden);
+            } catch (\InvalidArgumentException $e) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                die(json_encode(['respuesta' => 'error', 'mensaje' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
+            }
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
@@ -397,6 +439,11 @@ class Seguimiento extends Controllers
 
     /**
      * Obtiene los eventos de fechas estimadas de entrega a clientes para el calendario.
+     * Usa la clasificación compartida con Estatus Cumplimiento de la lista de OCC.
+     * Las partidas sin fecha siguen excluidas por selectFechasEntregaClientes.
+     * POST filtro_num_orden opcional tiene prioridad sobre fecha_ini/fecha_fin.
+     * Fechas dd/mm/aaaa o ISO; conserva permiso OCC y alcance por vendedor.
+     * Fechas inválidas producen HTTP 422 con respuesta/mensaje.
      *
      * @return json
      */
@@ -425,6 +472,16 @@ class Seguimiento extends Controllers
             [ Recibe parámetros de fecha opcionales ]*/
             $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
             $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
+            $filtro_num_orden = trim(strClean($_POST['filtro_num_orden'] ?? ''));
+
+            // Unifica clientes nuevos y versiones anteriores sin alterar el contrato de éxito.
+            try {
+                [$fecha_ini, $fecha_fin] = $this->normalizarPeriodoOrdenesCliente($fecha_ini, $fecha_fin, $filtro_num_orden);
+            } catch (\InvalidArgumentException $e) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                die(json_encode(['respuesta' => 'error', 'mensaje' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
+            }
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
@@ -437,10 +494,10 @@ class Seguimiento extends Controllers
             /*-------------------------------------------
             [ Consulta el Modelo ]*/
             $class_model = new VentasModel;
-            $arrData = $class_model->selectFechasEntregaClientes($fecha_ini, $fecha_fin, $ccveusuario_vendedor);
+            $arrData = $class_model->selectFechasEntregaClientes($fecha_ini, $fecha_fin, $ccveusuario_vendedor, $filtro_num_orden);
 
             $hoy = date('Y-m-d');
-            $limite_proximo = date('Y-m-d', strtotime('+7 days'));
+
 
             $eventos = array();
             $raw_data = array();
@@ -450,74 +507,24 @@ class Seguimiento extends Controllers
             $count_en_tiempo  = 0;
             $count_cancelados = 0;
 
-            $hoy_dt = new DateTime($hoy);
+
 
             foreach ($arrData as $item) {
                 $fecha_estimada = $item['fecha_estimada_entrega'];
-                $fecha_est_dt   = new DateTime($fecha_estimada);
-                $diff           = $hoy_dt->diff($fecha_est_dt);
-                $dias_restantes = (int)$diff->format('%r%a');
-
-                $entregado_val  = intval($item['entregado'] ?? 0);
-
-                if ($entregado_val === 1) {
-                    // 1 = Entregado
-                    $estatus_codigo      = 'entregado';
-                    $estatus_label       = 'Entregado';
-                    $badge_class         = 'bg-primary';
-                    $event_color         = '#0d6efd';
-                    $event_text_color    = '#ffffff';
-                    $tiempo_restante_str = 'Entregado a cliente';
-                    $count_entregados++;
-                } elseif ($entregado_val === 2) {
-                    // 2 = Entrega Cancelada
-                    $estatus_codigo      = 'cancelado';
-                    $estatus_label       = 'Entrega Cancelada';
-                    $badge_class         = 'bg-secondary';
-                    $event_color         = '#6c757d';
-                    $event_text_color    = '#ffffff';
-                    $tiempo_restante_str = 'Entrega cancelada';
-                    $count_cancelados++;
-                } else {
-                    // 0 = Pendiente de Entrega
-                    if ($dias_restantes > 0) {
-                        $tiempo_restante_str = $dias_restantes . ' día' . ($dias_restantes > 1 ? 's' : '');
-                    } elseif ($dias_restantes === 0) {
-                        $tiempo_restante_str = '0 días (Entrega hoy)';
-                    } else {
-                        $tiempo_restante_str = abs($dias_restantes) . ' día' . (abs($dias_restantes) > 1 ? 's' : '') . ' de atraso';
-                    }
-
-                    if ($fecha_estimada < $hoy) {
-                        $estatus_codigo   = 'vencido';
-                        $estatus_label    = 'Vencido (Pendiente)';
-                        $badge_class      = 'bg-danger';
-                        $event_color      = '#dc3545';
-                        $event_text_color = '#ffffff';
-                        $count_vencidos++;
-                    } elseif ($fecha_estimada <= $limite_proximo) {
-                        $estatus_codigo   = 'proximo';
-                        $estatus_label    = 'Próximo a Vencer';
-                        $badge_class      = 'bg-warning text-dark';
-                        $event_color      = '#ffc107';
-                        $event_text_color = '#212529';
-                        $count_proximos++;
-                    } else {
-                        $estatus_codigo   = 'en_tiempo';
-                        $estatus_label    = 'En Tiempo';
-                        $badge_class      = 'bg-success';
-                        $event_color      = '#198754';
-                        $event_text_color = '#ffffff';
-                        $count_en_tiempo++;
-                    }
+                // Clasificación única compartida con el resumen de la lista de OCC.
+                $cumplimiento = VentasModel::clasificarCumplimientoEntregaCliente($item, $hoy);
+                foreach (['dias_restantes', 'tiempo_restante_str', 'estatus_codigo', 'estatus_label', 'badge_class'] as $campo) {
+                    $item[$campo] = $cumplimiento[$campo];
                 }
-
-                $item['dias_restantes']      = $dias_restantes;
-                $item['tiempo_restante_str'] = $tiempo_restante_str;
-                $item['estatus_codigo']      = $estatus_codigo;
-                $item['estatus_label']       = $estatus_label;
-                $item['badge_class']         = $badge_class;
-
+                $event_color = $cumplimiento['event_color'];
+                $event_text_color = $cumplimiento['event_text_color'];
+                switch ($cumplimiento['estatus_codigo']) {
+                    case 'entregado': $count_entregados++; break;
+                    case 'cancelado': $count_cancelados++; break;
+                    case 'vencido': $count_vencidos++; break;
+                    case 'proximo': $count_proximos++; break;
+                    case 'en_tiempo': $count_en_tiempo++; break;
+                }
                 $oc_str = !empty($item['num_orden_compra']) ? $item['num_orden_compra'] : ('Pedido #' . $item['pedido_id']);
                 $partida_str = !empty($item['codigo_partida']) ? $item['codigo_partida'] : '';
                 
@@ -1283,6 +1290,8 @@ class Seguimiento extends Controllers
      * Obtiene el detalle completo de una orden de compra de cliente:
      * partidas (tb_pedidos_cliente_detalle), adjuntos (tb_pedidos_cliente_adjuntos)
      * e historial de seguimiento (tb_ventas_seguimiento).
+     * Cada partida añade cumplimiento_entrega con la regla compartida del calendario (30 días).
+     * Rechaza pedidos no finalizados (enviado distinto de 1) antes de consultar sus datos o historial.
      * URL / AJAX: /seguimiento/getDetallePedidoCliente
      *
      * @return json
@@ -1331,7 +1340,20 @@ class Seguimiento extends Controllers
             /*-------------------------------------------
             [ Consultas a través del Modelo ]*/
             $model = new SeguimientoModel();
+            // La OCC debe estar finalizada; la venta real del encabezado gobierna todo el detalle.
+            $pedidoFinalizado = $model->selectPedidoClienteFinalizado($pedido_id, $venta_id);
+            if (empty($pedidoFinalizado)) {
+                die(json_encode(getResponse('La orden de compra del cliente no está finalizada o no corresponde a la venta indicada.', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+            $pedido_id = (int)$pedidoFinalizado['id'];
+            $venta_id = (int)$pedidoFinalizado['venta_id'];
             $partidas = $model->selectPartidasPedidoCliente($pedido_id, $venta_id);
+            // Mismo cálculo y fecha de referencia que el calendario y el resumen por OCC.
+            $hoy = date('Y-m-d');
+            foreach ($partidas as &$partida) {
+                $partida['cumplimiento_entrega'] = VentasModel::clasificarCumplimientoEntregaCliente($partida, $hoy);
+            }
+            unset($partida);
             $adjuntos = $model->selectAdjuntosPedidoCliente($pedido_id, $venta_id);
 
             // Obtener bitácora de seguimientos

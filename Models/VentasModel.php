@@ -1621,6 +1621,13 @@ class VentasModel extends Mysql
     /**
      * Obtiene la lista completa de órdenes de clientes con su seguimiento para la vista de seguimiento.
      * Une tb_pedidos_cliente con tb_ventas y tb_ventas_seguimiento.
+     * Añade ordenes_proveedor como lista de folio_ocp, fecha_ocp,
+     * fecha_ocp_formateada y proveedor por cada pedido. Incluye todas sus OCP,
+     * ordenadas por fecha e ID, sin multiplicar pedidos ni sus importes.
+     * Expone entregado del pedido de cliente para el Estatus OCC, separado del estatus del proyecto.
+     * Añade cumplimiento_entregas sólo para OCC 0/3; null indica que no aplica.
+     * comparativo_entregas contiene cruces por OCC, venta_detalle_id y codigo_partida.
+     * Un número de orden tiene prioridad sobre el periodo, manteniendo finalización y alcance.
      *
      * @return array $arrResponse
      */
@@ -1635,6 +1642,7 @@ class VentasModel extends Mysql
             $sql = "SELECT
                 pc.id                                                       AS pedido_id,
                 pc.num_orden_compra,
+                pc.entregado,
                 pc.venta_id,
                 v.titulo                                                    AS titulo_venta,
                 v.proyecto_id,
@@ -1697,13 +1705,13 @@ class VentasModel extends Mysql
                 $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
             }
 
-            if (!empty($filtro_num_orden)) {
+            if (trim($filtro_num_orden) !== '') {
                 $sql .= " AND (pc.num_orden_compra LIKE :num_orden_compra OR pc.id LIKE :num_orden_compra_id) ";
-                $arr_values['num_orden_compra']    = '%' . $filtro_num_orden . '%';
-                $arr_values['num_orden_compra_id'] = '%' . $filtro_num_orden . '%';
+                $arr_values['num_orden_compra']    = '%' . trim($filtro_num_orden) . '%';
+                $arr_values['num_orden_compra_id'] = '%' . trim($filtro_num_orden) . '%';
             }
 
-            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+            if (trim($filtro_num_orden) === '' && !empty($fecha_ini) && !empty($fecha_fin)) {
                 $sql .= " AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
                 $arr_values['fecha_ini'] = $fecha_ini;
                 $arr_values['fecha_fin'] = $fecha_fin;
@@ -1724,6 +1732,62 @@ class VentasModel extends Mysql
             /*-------------------------------------------
             [ Ejecuta el Metodo select de MySQL ]*/
             $arrResponse = $this->select($sql, $arr_values);
+
+            // Sólo se consultan OCP de los pedidos que ya pasaron los filtros de acceso.
+            // El lote evita N+1 y la truncación que podría introducir GROUP_CONCAT.
+            if (!empty($arrResponse)) {
+                $pedidoIds = array_values(array_unique(array_column($arrResponse, 'pedido_id')));
+                $ocpValues = [];
+                $ocpParams = [];
+                foreach ($pedidoIds as $index => $pedidoId) {
+                    $param = 'pedido_cliente_' . $index;
+                    $ocpParams[] = ':' . $param;
+                    $ocpValues[$param] = (int)$pedidoId;
+                }
+
+                $sqlOcp = "SELECT pp.pedido_cliente_id,
+                                  pp.folio_ocp,
+                                  pp.fecha_pedido AS fecha_ocp,
+                                  DATE_FORMAT(pp.fecha_pedido, '%d/%m/%Y') AS fecha_ocp_formateada,
+                                  COALESCE(NULLIF(prov.cDatGenRazonSocial, ''),
+                                           NULLIF(prov.cDatGenNombreAbreviado, ''), 'Sin Proveedor') AS proveedor
+                           FROM tb_pedidos_proveedor pp
+                           INNER JOIN tb_pedidos_cliente pc ON pc.id = pp.pedido_cliente_id AND pc.enviado = 1
+                           LEFT JOIN tb_proveedores prov ON prov.icveProveedor = pp.proveedor_id
+                           WHERE pp.enviado = 1 AND pp.pedido_cliente_id IN (" . implode(', ', $ocpParams) . ")
+                           ORDER BY pp.fecha_pedido ASC, pp.id ASC";
+                $ocpPorPedido = [];
+                foreach ($this->select($sqlOcp, $ocpValues) as $ocp) {
+                    $ocpPorPedido[(int)$ocp['pedido_cliente_id']][] = [
+                        'folio_ocp' => $ocp['folio_ocp'],
+                        'fecha_ocp' => $ocp['fecha_ocp'],
+                        'fecha_ocp_formateada' => $ocp['fecha_ocp_formateada'],
+                        'proveedor' => $ocp['proveedor'],
+                    ];
+                }
+                foreach ($arrResponse as &$pedido) {
+                    $pedido['ordenes_proveedor'] = $ocpPorPedido[(int)$pedido['pedido_id']] ?? [];
+                }
+                unset($pedido);
+
+                // El resumen cuenta partidas, no cantidades ni OCP. Sólo se aplica a OCC 0/3.
+                $pedidosPendientes = [];
+                foreach ($arrResponse as $pedido) {
+                    if (in_array((string)($pedido['entregado'] ?? ''), ['0', '3'], true)) {
+                        $pedidosPendientes[] = (int)$pedido['pedido_id'];
+                    }
+                }
+                $resumenes = $this->selectResumenCumplimientoPedidosCliente($pedidosPendientes);
+                foreach ($arrResponse as &$pedido) {
+                    $pedido['cumplimiento_entregas'] = $resumenes[(int)$pedido['pedido_id']] ?? null;
+                }
+                unset($pedido);
+                $comparativos = $this->selectComparativoEntregasClienteProveedor($pedidoIds);
+                foreach ($arrResponse as &$pedido) {
+                    $pedido['comparativo_entregas'] = $comparativos[(int)$pedido['pedido_id']] ?? [];
+                }
+                unset($pedido);
+            }
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -1731,6 +1795,196 @@ class VentasModel extends Mysql
         /*-------------------------------------------
         [ Retorna el array de la consulta ]*/
         return $arrResponse;
+    }
+
+    /**
+     * Consulta por lote las fechas comprometidas de partidas cliente/proveedor.
+     * Sólo recibe OCC ya filtradas por la lista; las OCP deben estar finalizadas
+     * (enviado = 1), igual que el calendario de proveedor. También valida la OCC.
+     * No une recibos, para
+     * evitar duplicación por recepciones parciales. No compara cantidades.
+     *
+     * @param array $pedidoIds Identificadores internos de OCC autorizadas por la lista.
+     * @return array Cruces agrupados por OCC; mantiene cada OCP relacionada individualmente.
+     */
+    public function selectComparativoEntregasClienteProveedor(array $pedidoIds): array
+    {
+        if (empty($pedidoIds)) return [];
+        $params = []; $marcadores = [];
+        foreach (array_values(array_unique($pedidoIds)) as $index => $id) {
+            $clave = 'comparativo_' . $index;
+            $params[$clave] = (int)$id;
+            $marcadores[] = ':' . $clave;
+        }
+        $lista = implode(', ', $marcadores);
+        $clientes = $this->select("SELECT pcd.id, pcd.pedido_id, pcd.venta_detalle_id, pcd.codigo_partida,
+                                         pcd.fecha_estimada_entrega, COALESCE(pcd.entregado, 0) AS entregado
+                                  FROM tb_pedidos_cliente_detalle pcd
+                                  INNER JOIN tb_pedidos_cliente pc ON pc.id = pcd.pedido_id AND pc.enviado = 1
+                                  WHERE pcd.pedido_id IN ($lista)
+                                  ORDER BY pcd.pedido_id, pcd.codigo_partida, pcd.id", $params);
+        if (empty($clientes)) return [];
+        $proveedores = $this->select("SELECT ppd.id, pp.pedido_cliente_id, ppd.venta_detalle_id,
+                                            ppd.codigo_partida, ppd.fecha_estimada_entrega,
+                                            COALESCE(ppd.entregado, 0) AS entregado, pp.folio_ocp,
+                                            COALESCE(NULLIF(prov.cDatGenRazonSocial, ''),
+                                                     NULLIF(prov.cDatGenNombreAbreviado, ''), 'Sin Proveedor') AS proveedor
+                                     FROM tb_pedidos_proveedor_detalle ppd
+                                     INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id
+                                     INNER JOIN tb_pedidos_cliente pc ON pc.id = pp.pedido_cliente_id AND pc.enviado = 1
+                                     LEFT JOIN tb_proveedores prov ON prov.icveProveedor = pp.proveedor_id
+                                     WHERE pp.pedido_cliente_id IN ($lista) AND pp.enviado = 1
+                                     ORDER BY pp.pedido_cliente_id, ppd.codigo_partida, pp.id, ppd.id", $params);
+        return self::compararFechasPartidasClienteProveedor($clientes, $proveedores);
+    }
+
+    /**
+     * Relaciona partidas exclusivamente por OCC, venta_detalle_id positivo y código
+     * exacto. El código sólo se recorta en los extremos; no se usa material.
+     * Duplicados de la clave del cliente son ambiguos y no se asignan automáticamente.
+     * Partidas canceladas del proveedor no se toman como compromisos activos.
+     * Expone entregado_cliente en cada cruce para excluir partidas completadas del riesgo ejecutivo.
+     * Margen = fecha cliente menos fecha proveedor: negativo indica desfase.
+     *
+     * @param array $clientes Partidas originales de las OCC filtradas.
+     * @param array $proveedores Partidas de OCP relacionadas con esas OCC.
+     * @return array Cruces por OCC, sin multiplicar filas de la lista ni sus importes.
+     */
+    public static function compararFechasPartidasClienteProveedor(array $clientes, array $proveedores): array
+    {
+        $clave = static function (array $partida, string $campoPedido): ?string {
+            $ventaId = (int)($partida['venta_detalle_id'] ?? 0);
+            $codigo = trim((string)($partida['codigo_partida'] ?? ''));
+            return $ventaId > 0 && $codigo !== ''
+                ? json_encode([(int)$partida[$campoPedido], $ventaId, $codigo]) : null;
+        };
+        $fecha = static function ($valor): ?string {
+            $texto = (string)($valor ?? '');
+            $dt = DateTimeImmutable::createFromFormat('!Y-m-d', $texto);
+            return $dt && $dt->format('Y-m-d') === $texto ? $texto : null;
+        };
+        $repeticiones = []; $porClave = []; $resultado = [];
+        foreach ($clientes as $cliente) {
+            $key = $clave($cliente, 'pedido_id');
+            if ($key !== null) $repeticiones[$key] = ($repeticiones[$key] ?? 0) + 1;
+        }
+        foreach ($proveedores as $proveedor) {
+            if ((int)($proveedor['entregado'] ?? 0) === 2) continue;
+            $key = $clave($proveedor, 'pedido_cliente_id');
+            if ($key !== null) $porClave[$key][] = $proveedor;
+        }
+        foreach ($clientes as $cliente) {
+            $key = $clave($cliente, 'pedido_id');
+            $base = [
+                'partida_cliente_id' => $cliente['id'], 'codigo_partida' => $cliente['codigo_partida'],
+                // Permite distinguir desfases de partidas aún pendientes en el resumen ejecutivo.
+                'entregado_cliente' => (int)($cliente['entregado'] ?? 0),
+                'fecha_cliente' => $fecha($cliente['fecha_estimada_entrega'] ?? null),
+                'folio_ocp' => null, 'proveedor' => null, 'fecha_proveedor' => null, 'margen_dias' => null,
+            ];
+            $estado = (int)($cliente['entregado'] ?? 0) === 2 ? 'cancelada'
+                : ($key === null ? 'sin_vinculo' : (($repeticiones[$key] ?? 0) > 1 ? 'ambiguo' : null));
+            $coincidencias = $key !== null ? ($porClave[$key] ?? []) : [];
+            if ($estado !== null || empty($coincidencias)) {
+                $base['estado'] = $estado ?? 'sin_ocp';
+                $resultado[(int)$cliente['pedido_id']][] = $base;
+                continue;
+            }
+            foreach ($coincidencias as $proveedor) {
+                $cruce = $base;
+                $cruce['folio_ocp'] = $proveedor['folio_ocp'];
+                $cruce['proveedor'] = $proveedor['proveedor'];
+                $cruce['fecha_proveedor'] = $fecha($proveedor['fecha_estimada_entrega'] ?? null);
+                $cruce['estado'] = 'sin_fecha';
+                if ($cruce['fecha_cliente'] !== null && $cruce['fecha_proveedor'] !== null) {
+                    $cruce['margen_dias'] = (int)(new DateTimeImmutable($cruce['fecha_proveedor']))
+                        ->diff(new DateTimeImmutable($cruce['fecha_cliente']))->format('%r%a');
+                    $cruce['estado'] = $cruce['margen_dias'] < 0 ? 'desfase'
+                        : ($cruce['margen_dias'] === 0 ? 'mismo_dia' : 'antes');
+                }
+                $resultado[(int)$cliente['pedido_id']][] = $cruce;
+            }
+        }
+        return $resultado;
+    }
+
+    /**
+     * Clasifica una partida con las reglas compartidas del calendario de clientes.
+     * El estado 1/2 de la partida prevalece sobre el vencimiento. Hoy y +30 días
+     * son próximos; sin fecha válida para calendario se devuelve sin_fecha.
+     * La fecha de referencia usa la zona horaria configurada por el portal.
+     *
+     * @param array $partida fecha_estimada_entrega y entregado de la partida (no de la OCC).
+     * @param string $hoy Fecha de referencia Y-m-d.
+     * @return array Metadatos de estado, colores y plazo usados por calendario y resumen.
+     */
+    public static function clasificarCumplimientoEntregaCliente(array $partida, string $hoy): array
+    {
+        $fecha = (string)($partida['fecha_estimada_entrega'] ?? '');
+        if ($fecha === '' || str_starts_with($fecha, '0000-00-00')) {
+            return ['estatus_codigo' => 'sin_fecha'];
+        }
+        $dias = (int)(new DateTime($hoy))->diff(new DateTime($fecha))->format('%r%a');
+        $entregado = (int)($partida['entregado'] ?? 0);
+        if ($entregado === 1) {
+            $codigo = 'entregado'; $label = 'Entregado'; $badge = 'bg-primary';
+            $color = '#0d6efd'; $texto = '#ffffff'; $plazo = 'Entregado a cliente';
+        } elseif ($entregado === 2) {
+            $codigo = 'cancelado'; $label = 'Entrega Cancelada'; $badge = 'bg-secondary';
+            $color = '#6c757d'; $texto = '#ffffff'; $plazo = 'Entrega cancelada';
+        } else {
+            $plazo = $dias > 0 ? $dias . ' día' . ($dias > 1 ? 's' : '')
+                : ($dias === 0 ? '0 días (Entrega hoy)' : abs($dias) . ' día' . (abs($dias) > 1 ? 's' : '') . ' de atraso');
+            if ($fecha < $hoy) {
+                $codigo = 'vencido'; $label = 'Vencido (Pendiente)'; $badge = 'bg-danger';
+                $color = '#dc3545'; $texto = '#ffffff';
+            } elseif ($fecha <= date('Y-m-d', strtotime($hoy . ' +30 days'))) {
+                $codigo = 'proximo'; $label = 'Próximo a Vencer'; $badge = 'bg-warning text-dark';
+                $color = '#ffc107'; $texto = '#212529';
+            } else {
+                $codigo = 'en_tiempo'; $label = 'En Tiempo'; $badge = 'bg-success';
+                $color = '#198754'; $texto = '#ffffff';
+            }
+        }
+        return [
+            'dias_restantes' => $dias, 'tiempo_restante_str' => $plazo,
+            'estatus_codigo' => $codigo, 'estatus_label' => $label, 'badge_class' => $badge,
+            'event_color' => $color, 'event_text_color' => $texto,
+        ];
+    }
+
+    /**
+     * Cuenta por lote las partidas de OCC pendientes/parciales ya autorizadas por la lista.
+     * No filtra por fecha de entrega: el periodo de la lista corresponde al pedido padre.
+     * Sin fecha se informa aparte para no confundir ausencia de plazo con entrega en tiempo.
+     *
+     * @param array $pedidoIds Identificadores internos de las OCC 0/3 filtradas.
+     * @param string $hoy Referencia Y-m-d opcional para pruebas; vacío usa la fecha del portal.
+     * @return array Resúmenes por pedido con cinco estados, sin_fecha y total.
+     */
+    public function selectResumenCumplimientoPedidosCliente(array $pedidoIds, string $hoy = ''): array
+    {
+        if (empty($pedidoIds)) return [];
+        $hoy = $hoy !== '' ? $hoy : date('Y-m-d');
+        $resumenes = []; $params = []; $marcadores = [];
+        foreach (array_values(array_unique($pedidoIds)) as $index => $id) {
+            $resumenes[(int)$id] = array_fill_keys(['en_tiempo', 'proximo', 'vencido', 'cancelado', 'entregado', 'sin_fecha', 'total'], 0);
+            $clave = 'cumplimiento_' . $index;
+            $params[$clave] = (int)$id;
+            $marcadores[] = ':' . $clave;
+        }
+        $sql = "SELECT pcd.pedido_id, pcd.fecha_estimada_entrega, COALESCE(pcd.entregado, 0) AS entregado
+                FROM tb_pedidos_cliente_detalle pcd
+                INNER JOIN tb_pedidos_cliente pc ON pc.id = pcd.pedido_id AND pc.enviado = 1
+                WHERE pcd.pedido_id IN (" . implode(', ', $marcadores) . ")";
+        foreach ($this->select($sql, $params) as $partida) {
+            $id = (int)$partida['pedido_id'];
+            if (!isset($resumenes[$id])) continue;
+            $estado = self::clasificarCumplimientoEntregaCliente($partida, $hoy)['estatus_codigo'];
+            $resumenes[$id][$estado]++;
+            $resumenes[$id]['total']++;
+        }
+        return $resumenes;
     }
 
     /**
@@ -1763,13 +2017,14 @@ class VentasModel extends Mysql
 
     /**
      * Obtiene los eventos de entregas estimadas a clientes para el calendario
+     * Si se indica número de orden, omite el periodo y usa la misma búsqueda que la lista.
      * 
      * @param string $fecha_ini
      * @param string $fecha_fin
      * @param string $ccveusuario_vendedor
      * @return array
      */
-    public function selectFechasEntregaClientes(string $fecha_ini = '', string $fecha_fin = '', string $ccveusuario_vendedor = ''): array
+    public function selectFechasEntregaClientes(string $fecha_ini = '', string $fecha_fin = '', string $ccveusuario_vendedor = '', string $filtro_num_orden = ''): array
     {
         $arrResponse = array();
         try {
@@ -1806,12 +2061,17 @@ class VentasModel extends Mysql
                 $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
             }
 
-            if (!empty($fecha_ini) && !empty($fecha_fin)) {
+            if (trim($filtro_num_orden) === '' && !empty($fecha_ini) && !empty($fecha_fin)) {
                 $sql .= " AND DATE(pc.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
                 $arr_values['fecha_ini'] = $fecha_ini;
                 $arr_values['fecha_fin'] = $fecha_fin;
             }
 
+            if (trim($filtro_num_orden) !== '') {
+                $sql .= " AND (pc.num_orden_compra LIKE :num_orden_compra OR pc.id LIKE :num_orden_compra_id) ";
+                $arr_values['num_orden_compra'] = '%' . trim($filtro_num_orden) . '%';
+                $arr_values['num_orden_compra_id'] = '%' . trim($filtro_num_orden) . '%';
+            }
             $sql .= " ORDER BY pcd.fecha_estimada_entrega ASC, pcd.id ASC ";
 
             $arrResponse = $this->select($sql, $arr_values);
