@@ -7,7 +7,7 @@
     <title>Solicitud de Cotización</title>
 </head>
 
-<body style="margin:0;padding:0;background:#eef2f7;font-family:'Segoe UI',Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#eef2f7;font-family: Arial, Helvetica, sans-serif;">
 
     <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f7">
         <tr>
@@ -250,7 +250,7 @@ Kit de asientos McCanna 236080901 para válvula de 10” Incluye 2 piezas (2 pie
 
                             <div style="border-top:1px solid #e5e5e5; margin-top:12px; margin-bottom:10px;"></div>
 
-                            <table cellpadding="0" cellspacing="0" border="0" style="font-family:Calibri, Arial, sans-serif; color:#444; border:1px solid #dcdcdc; border-radius:2px; box-shadow:0 2px 10px rgba(0,0,0,0.08); background:#ffffff; padding:18px;">
+                            <table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, Helvetica, sans-serif; color:#444; border:1px solid #dcdcdc; border-radius:2px; box-shadow:0 2px 10px rgba(0,0,0,0.08); background:#ffffff; padding:18px;">
                                 <tr> <!-- Logo -->
                                     <td style="vertical-align:top; padding-right:20px;"> <img src="https://lfmcontrol.com.mx/Assets/img/lfmcontrol/logo_email_lfm.png" width="150" alt="Logo" style="display:block;"> </td>
                                     <td style="border-left:3px solid #00809F; padding-left:15px; vertical-align:top;">

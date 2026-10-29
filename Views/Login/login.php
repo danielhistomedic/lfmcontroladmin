@@ -22,12 +22,6 @@
 
 
     <!-- Web Fonts  -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800|Shadows+Into+Light" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
 
     <!-- Vendor CSS -->
     <link rel="stylesheet" href="<?= assets(); ?>/vendor/bootstrap/css/bootstrap.css" />
@@ -56,6 +50,7 @@
     <!-- Head Libs -->
     <script src="<?= assets(); ?>/vendor/modernizr/modernizr.js"></script>
 
+    <?php require_once __DIR__ . '/../../Template/font_family.php'; ?>
 </head>
 
 <body class="login-img">
@@ -85,14 +80,12 @@
                         </div>
                     </div>
 
-                    <form id="form" class="row needs-validation mb-2" action="" method="" novalidate="">
+                    <form id="form" class="row needs-validation mb-2" action="<?= base_url(); ?>/Login/validaAcceso" method="post" novalidate="">
 
                         <div class="form-group mb-3">
                             <label for="email">Usuario</label>
                             <div class="input-group">
-                                <input id="email" name="email" type="email" class="form-control " value="<?php if (isset($_GET['usuario'])) {
-                                                                                                                echo $_GET['usuario'];
-                                                                                                            } ?>" required />
+                                <input id="email" name="email" type="email" class="form-control " autocomplete="username" maxlength="45" value="<?= htmlspecialchars(is_string($_GET['usuario'] ?? null) ? $_GET['usuario'] : '', ENT_QUOTES, 'UTF-8'); ?>" required />
                                 <span class="input-group-text">
                                     <i class="bx bx-user text-4"></i>
                                 </span>
@@ -101,15 +94,10 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <!-- <div class="clearfix">
-                                <label for="pass" class="float-start">Contraseña</label>
-                                <a href="pages-recover-password.html" class="float-end">¿Olvidaste tu contraseña?</a>
-                            </div> -->
+                            <label for="pass">Contraseña</label>
                             <div class="input-group position-relative">
-                                <input id="pass" name="pass" type="password" class="form-control " value="<?php if (isset($_GET['pwd'])) {
-                                                                                                                echo $_GET['pwd'];
-                                                                                                            } ?>" required />
-                                <input type="hidden" name="token" value="<?= $data['token'] ?>">
+                                <input id="pass" name="pass" type="password" class="form-control " autocomplete="current-password" required />
+                                <input type="hidden" name="token" value="<?= htmlspecialchars($data['token'], ENT_QUOTES, 'UTF-8'); ?>">
                                 <div class="show-hide-login"><span class="show"> </span></div>
                                 <span class="input-group-text">
                                     <i class="bx bx-lock text-4"></i>
@@ -122,9 +110,8 @@
                             <div class="row ">
                                 <div class="col-8 mt-2">
                                     <div class="checkbox-custom checkbox-default">
-                                        <input id="recordarme" name="recordarme" type="checkbox" />
+                                        <input id="recordarme" name="recordarme" type="checkbox" value="1" />
                                         <label for="recordarme">Recordarme</label>
-                                        <div class="invalid-feedback">Debe marcar la casilla.</div>
                                     </div>
                                 </div>
                                 <div class="col-sm-4 text-end">
@@ -196,7 +183,8 @@
     <!-- Custom -->
     <script src="<?= assets(); ?>/app/js/animate.js?v=<?= version(); ?>"></script>
     <script src="<?= assets(); ?>/app/js/alertas.js?v=<?= version(); ?>"></script>
-    <script src="<?= assets(); ?>/app/js/<?= $data['page_functions_js']; ?>?v=<?= version(); ?>"></script>
+    <!-- Invalidar caché del flujo de acceso sin modificar la versión global del portal. -->
+    <script src="<?= assets(); ?>/app/js/<?= $data['page_functions_js']; ?>?v=<?= version(); ?>.<?= filemtime(__DIR__ . '/../../Assets/app/js/login.js'); ?>"></script>
 
 </body>
 

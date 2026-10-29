@@ -56,7 +56,7 @@ $estado = $estados[$val['status']] ?? $estados['ERROR'];
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-family-report);
             background-color: var(--lfm-bg);
             color: var(--lfm-text);
             min-height: 100vh;
@@ -128,7 +128,7 @@ $estado = $estados[$val['status']] ?? $estados['ERROR'];
         }
 
         .status-title {
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--font-family-report);
             font-weight: 800;
             font-size: 1.5rem;
             letter-spacing: 0.5px;
@@ -149,7 +149,7 @@ $estado = $estados[$val['status']] ?? $estados['ERROR'];
         }
 
         .section-title {
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--font-family-report);
             font-size: 0.85rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -194,7 +194,7 @@ $estado = $estados[$val['status']] ?? $estados['ERROR'];
         .info-value.highlight-total {
             color: var(--lfm-red);
             font-size: 1.3rem;
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--font-family-report);
         }
 
         /* Check list table */
@@ -284,6 +284,7 @@ $estado = $estados[$val['status']] ?? $estados['ERROR'];
             }
         }
     .partidas-table { min-width: 780px; } .partidas-table td { vertical-align: top; } .partida-descripcion { min-width: 220px; white-space: pre-wrap; overflow-wrap: anywhere; } .sello-valor { font-size: .75rem; overflow-wrap: anywhere; } .check-table td { overflow-wrap: anywhere; } </style>
+    <?php require_once __DIR__ . '/../../Template/font_family.php'; ?>
 </head>
 
 <body>

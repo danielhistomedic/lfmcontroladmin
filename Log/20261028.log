@@ -1,0 +1,4 @@
+[2026-10-28T20:31:11.340039-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[42000]: Syntax error or access violation: 1104 The SELECT would examine more than MAX_JOIN_SIZE rows; check your WHERE and use SET SQL_BIG_SELECTS=1 or SET MAX_JOIN_SIZE=# if the SELECT is okay, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 262, codigo: 42000 [] []
+[2026-10-28T20:31:11.659783-06:00] lfmcontrol.WARNING: Datos no encontrados [] []
+[2026-10-28T20:32:52.671802-06:00] lfmcontrol.ERROR: mensaje: SQLSTATE[42000]: Syntax error or access violation: 1104 The SELECT would examine more than MAX_JOIN_SIZE rows; check your WHERE and use SET SQL_BIG_SELECTS=1 or SET MAX_JOIN_SIZE=# if the SELECT is okay, archivo: C:\xampp\htdocs\lfm_admin\Libraries\Core\Mysql.php, linea: 262, codigo: 42000 [] []
+[2026-10-28T20:32:52.737151-06:00] lfmcontrol.WARNING: Datos no encontrados [] []

@@ -1,3 +1,4 @@
+// La familia del texto de ECharts sigue la fuente compartida del portal.
 /* Reporte mensual: una carga global por cambio de filtros. */
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('filtros-ventas-mensuales');
@@ -647,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             backgroundColor: 'transparent',
             tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: value => amount.format(value) + ' proyectos' },
-            textStyle: { fontSize: 11 },
+            textStyle: { fontFamily: getComputedStyle(document.body).fontFamily,  fontSize: 11 },
             grid: { left: 45, right: 20, top: 32, bottom: 95 },
             xAxis: { type: 'category', data: rows.map(row => row.nombre), axisLabel: {
                 interval: 0, color: cascadeText, fontSize: 11, width: 110, overflow: 'break', lineHeight: 14
@@ -672,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const option = cascadeOption(projectCounts, selected);
         option.grid = {left:38,right:12,top:44,bottom:76};
         option.legend = {data:['Proyectos','Declinados'],top:2,right:12,itemWidth:12,itemHeight:9,
-            selectedMode:false,textStyle:{color:cascadeText,fontSize:10}};
+            selectedMode:false,textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:cascadeText,fontSize:10}};
         option.tooltip = {trigger:'axis',renderMode:'richText',formatter:items=>{
             const row=items[0]?.data;
             return row ? projectCounts[items[0].dataIndex].nombre+'\nTotal: '+row.total+
@@ -702,7 +703,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function selectSeller(index) {
         selectedIndex = Number.isInteger(index) && index >= 0 && index < projectCounts.length ? index : -1;
         selector.value = selectedIndex < 0 ? '' : String(selectedIndex);
-        sellerChart.instance.setOption({ series: sellerOption(selectedIndex).series });
+        sellerChart.instance.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },  series: sellerOption(selectedIndex).series });
         statusPanel.hidden = selectedIndex < 0;
         if (selectedIndex < 0) return;
         const seller = projectCounts[selectedIndex];
@@ -744,10 +745,10 @@ document.addEventListener('DOMContentLoaded', function () {
             total:declinedTotal,declined:true,
             estatusIds:[...new Set(rows.filter(row=>Number(row.declinados)>0).map(row=>row.estatus_id==null?'sin_estatus':String(row.estatus_id)))],itemStyle:{color:'#dc3545'}});
         entry.donut = true; entry.height = 360; entry.element.style.height = '360px';
-        entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
-            title:[{text:String(totalProjects),left:'center',top:'37%',textStyle:{color:cascadeText,fontSize:25,fontWeight:600}},
-                {text:'Proyectos del vendedor',left:'center',top:'48%',textStyle:{color:cascadeText,fontSize:10,fontWeight:400}}],
-            legend:{bottom:0,type:'scroll',textStyle:{color:cascadeText,fontSize:10},data:[...new Set(distribution.map(row=>row.name))]},
+        entry.instance.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily }, backgroundColor:'transparent',aria:{enabled:true},
+            title:[{text:String(totalProjects),left:'center',top:'37%',textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:cascadeText,fontSize:25,fontWeight:600}},
+                {text:'Proyectos del vendedor',left:'center',top:'48%',textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:cascadeText,fontSize:10,fontWeight:400}}],
+            legend:{bottom:0,type:'scroll',textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:cascadeText,fontSize:10},data:[...new Set(distribution.map(row=>row.name))]},
             tooltip:{trigger:'item',renderMode:'richText',formatter:params=>{
                 const row=params.data; const percentage=totalProjects ? row.value/totalProjects*100 : 0;
                 if (row.name === 'Declinados') return 'Declinados: '+row.value+' ('+amount.format(percentage)+' %)'+
@@ -831,9 +832,9 @@ document.addEventListener('DOMContentLoaded', function () {
             name:row.nombre,value:sliceValue(row),id:row.id,lista:row.lista,estatusIds:row.estatusIds,itemStyle:{color:row.color}}));
         if(declined>0) slices.push({name:'Declinados',value:declined,declined:true,itemStyle:{color:'#dc3545'}});
         entry.donut=true;entry.height=370;entry.element.style.height='370px';
-        entry.instance.setOption({backgroundColor:'transparent',aria:{enabled:true},
-            legend:{bottom:0,type:'scroll',textStyle:{color:cascadeText,fontSize:10}},
-            title:total?[]:[{text:'Sin proyectos',left:'center',top:'43%',textStyle:{color:cascadeText,fontSize:12}}],
+        entry.instance.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily }, backgroundColor:'transparent',aria:{enabled:true},
+            legend:{bottom:0,type:'scroll',textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:cascadeText,fontSize:10}},
+            title:total?[]:[{text:'Sin proyectos',left:'center',top:'43%',textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:cascadeText,fontSize:12}}],
             tooltip:{trigger:'item',renderMode:'richText',formatter:params=>params.data.name+' | '+params.data.value+' | '+
                 amount.format(total?params.data.value/total*100:0)+' %'},
             series:[{type:'pie',radius:'65%',center:['50%','45%'],

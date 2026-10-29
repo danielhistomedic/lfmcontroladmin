@@ -18,7 +18,7 @@
 
     <style>
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 13px;
             color: #1e293b;
             line-height: 1.4;

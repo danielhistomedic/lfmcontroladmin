@@ -355,7 +355,7 @@ table.dataTable td.dt-control:before {
     box-sizing: content-box;
     text-align: center;
     text-indent: 0 !important;
-    font-family: "Courier New", Courier, monospace;
+    font-family: var(--font-family-report);
     line-height: 1em;
     content: "+";
     background-color: var(--primary-bg-color);

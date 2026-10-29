@@ -7,7 +7,7 @@
     <title>Document</title>
 </head>
 
-<body style="margin:0;padding:0;background:#eef2f7;font-family:'Segoe UI',Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#eef2f7;font-family: Arial, Helvetica, sans-serif;">
 
 
     <table cellpadding="0" cellspacing="0" border="0"

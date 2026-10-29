@@ -1,0 +1,27 @@
+/**
+ * Etiquetas de LFM Control: referencia de los filtros de Órdenes de Compra Clientes.
+ * La capa importante prevalece sobre excepciones de módulos y utilidades del tema,
+ * sin modificar cada formulario ni alterar fuentes de iconos o asociaciones for/id.
+ */
+:root {
+    --lfm-label-font-size: 13px;
+    --lfm-label-font-weight: 600;
+    --lfm-label-color: #008daf;
+}
+html.dark {
+    --lfm-label-color: #58c6de;
+}
+
+@layer lfm-form-labels {
+    :is(label, .form-label, .control-label, .filter-label, .col-form-label) {
+        font-family: var(--font-family-report, Arial, Helvetica, sans-serif) !important;
+        font-size: var(--lfm-label-font-size) !important;
+        font-weight: var(--lfm-label-font-weight) !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Los labels que actúan como botones o avisos de error conservan su color de estado. */
+    :is(label, .form-label, .control-label, .filter-label, .col-form-label):not(.btn):not(.text-danger) {
+        color: var(--lfm-label-color) !important;
+    }
+}

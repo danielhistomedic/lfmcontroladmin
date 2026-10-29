@@ -91,7 +91,9 @@ class UsuariosModel extends Mysql
             $sql .= "WHERE  ";
             $sql .= "u.id = :usuario_id and ";
             $sql .= "empusr.empresa_id = :empresa_id and ";
-            $sql .= "empusr.sucursal_id = :sucursal_id ";
+            // Autenticar solo con asignación, rol y sucursal vigentes del mismo contexto.
+            $sql .= "empusr.sucursal_id = :sucursal_id AND u.activo = 1 AND empusr.activo = 1 ";
+            $sql .= "AND rol.activo = 1 AND suc.activo = 1 AND suc.empresa_id = empusr.empresa_id ";
 
             /*-------------------------------------------
             [ Parametros condicionales, se envía vacío en caso de no aplicar ]*/

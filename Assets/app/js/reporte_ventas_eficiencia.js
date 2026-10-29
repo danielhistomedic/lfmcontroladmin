@@ -1,3 +1,4 @@
+// La familia del texto de ECharts sigue la fuente compartida del portal.
 /* Cantidades e importes del dashboard existente; no realiza consultas adicionales. */
 document.addEventListener('DOMContentLoaded', function () {
     const root = document.getElementById('ventas-financiero-eficiencia');
@@ -77,8 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const labels = periods.map(period=>monthNames[period.month-1]+(years.length>1?' '+period.year:''));
         const rows = periods.map(period => (data.evolucion_mensual || []).find(row =>
             Number(row.anio) === period.year && Number(row.mes) === period.month) || {});
-        evolution.setOption({backgroundColor:'transparent',aria:{enabled:true},
-            legend:{top:0,type:'scroll',textStyle:{color:textColor,fontSize:10}},
+        evolution.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily }, backgroundColor:'transparent',aria:{enabled:true},
+            legend:{top:0,type:'scroll',textStyle:{ fontFamily: getComputedStyle(document.body).fontFamily, color:textColor,fontSize:10}},
             grid:{left:12,right:12,top:65,bottom:35,containLabel:true},
             xAxis:{type:'category',data:labels,axisLabel:{color:textColor,fontSize:10,formatter:value=>value.slice(0,3)+(years.length>1?' '+value.slice(-4):'')}},
             yAxis:[{type:'value',name:'Proyectos',minInterval:1,axisLabel:{color:textColor},nameTextStyle:{color:textColor}},

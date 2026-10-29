@@ -241,7 +241,7 @@
         height: 100% !important;
         max-width: 100% !important;
         max-height: 100% !important;
-        font-family: 'Inter', system-ui, sans-serif !important;
+        font-family: var(--font-family-report) !important;
         border-radius: 12px;
         overflow: hidden;
         background-color: #0b1120 !important;

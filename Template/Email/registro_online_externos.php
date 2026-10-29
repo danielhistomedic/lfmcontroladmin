@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office" style="width:100%;font-family:lato, 'helvetica neue', helvetica, arial, sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;padding:0;Margin:0">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office" style="width:100%;font-family: Arial, Helvetica, sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;padding:0;Margin:0">
 
 <head>
     <meta charset="UTF-8">
@@ -9,16 +9,12 @@
     <meta content="telephone=no" name="format-detection">
     <title>Complemento de Registro de Datos</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@200;300;400;600;700;800;900&amp;display=swap" rel="stylesheet">
-
     <style type="text/css">
 
     </style>
 </head>
 
-<body style="text-align: center;margin: 20px auto;width: 650px;font-family:'Nunito Sans', sans-serif;background-color: #e2e2e2;display: block;position: relative;">
+<body style="text-align: center;margin: 20px auto;width: 650px;font-family: Arial, Helvetica, sans-serif;background-color: #e2e2e2;display: block;position: relative;">
 
     <table align="center" border="0" cellpadding="0" cellspacing="0" style="background-color: #fff; width: 100%; margin: 0; padding: 0; box-sizing: border-box;  border-collapse: collapse;border-spacing: 0;">
 

@@ -1,0 +1,17 @@
+/**
+ * LFM Control: fuente de texto compartida en todas las entradas y controles dinámicos.
+ * Solo cambia la familia: conserva tamaños, pesos, interlineado, colores y estados.
+ * Las fuentes de iconos mantienen su contrato; sus pseudoelementos no se redefinen.
+ */
+:root {
+    --font-family-base: Arial, Helvetica, sans-serif;
+    --font-family-report: var(--font-family-base);
+}
+:root, :root body, :root body :where(*):not(:where(
+    .fa, .fas, .far, .fal, .fat, .fad, .fab, .fass, .fasr, .fasl,
+    [class*="fa-"], .bx, [class*="bx-"], .icons, .file-icon, .fc-icon,
+    [class^="icon-"], [class*=" icon-"],
+    [class*="glyphicon"], [class*="dropify-font"]
+)) {
+    font-family: var(--font-family-report) !important;
+}

@@ -4,3 +4,5 @@ description: "Diseñar, implementar y depurar gráficas Apache ECharts del porta
 ---
 # ECharts — LFM Control
 Leer [instructions.md](instructions.md), [reglas de gráficas](../../rules/echarts.md) y [AGENTS.md](../../../AGENTS.md) antes de modificar gráficas o sus recursos. Aplicar los perfiles de interfaz y QA pertinentes; este perfil no crea agentes ni autoriza descargas o conexiones futuras.
+
+Para presentación de módulos actuales y nuevos aplicar la [fuente estándar Arial, Helvetica, sans-serif](../../rules/controlesforms.md#tipografia-estandar).

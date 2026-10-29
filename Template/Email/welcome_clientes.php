@@ -116,11 +116,11 @@
         }
 
         [style*="Fira Sans"] {
-            font-family: 'Fira Sans', BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif !important;
+            font-family: Arial, Helvetica, sans-serif !important;
         }
 
         [style*="Inter Tight"] {
-            font-family: 'Inter Tight', BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif !important;
+            font-family: Arial, Helvetica, sans-serif !important;
         }
 
         @media only screen and (min-width: 481px) {
@@ -161,7 +161,6 @@
         }
     </style>
     <!--[if !mso]><!-->
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;700&family=Inter+Tight:wght@400;700&display=swap" rel="stylesheet" type="text/css">
     <!--<![endif]-->
     <!--[if mso]>
 <style type="text/css">
@@ -226,7 +225,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t208 style="width:624px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t208 style="width:624px;"><![endif]-->
-                                                                            <h1 class=t214 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:28px;font-weight:700;font-style:normal;font-size:22px;text-decoration:none;text-transform:none;direction:ltr;color:#000000;text-align:center;mso-line-height-rule:exactly;mso-text-raise:2px;">¡Felicidades! <br> <?= $data['nombre_usuario']; ?></h1>
+                                                                            <h1 class=t214 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:28px;font-weight:700;font-style:normal;font-size:22px;text-decoration:none;text-transform:none;direction:ltr;color:#000000;text-align:center;mso-line-height-rule:exactly;mso-text-raise:2px;">¡Felicidades! <br> <?= $data['nombre_usuario']; ?></h1>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -245,7 +244,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t45 style="width:538px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t45 style="width:538px;"><![endif]-->
-                                                                            <p class=t51 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Ha sido creada su cuenta para acceder a nuestra Tienda en Línea, para relizar todas las compras que requiera; puede entrar al sistema dando clic en el botón de abajo, colocando el usuario y contraseña asignados <span class=t215 style="margin-bottom:0;Margin-bottom:0;mso-line-height-rule:exactly;">como se muestra:</span></p>
+                                                                            <p class=t51 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Ha sido creada su cuenta para acceder a nuestra Tienda en Línea, para relizar todas las compras que requiera; puede entrar al sistema dando clic en el botón de abajo, colocando el usuario y contraseña asignados <span class=t215 style="margin-bottom:0;Margin-bottom:0;mso-line-height-rule:exactly;">como se muestra:</span></p>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -298,7 +297,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                                                                                                                     <td class=t131 style="width:600px;">
                                                                                                                                                                         <!--<![endif]-->
                                                                                                                                                                         <!--[if mso]><td class=t131 style="width:600px;"><![endif]-->
-                                                                                                                                                                        <p class=t137 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Inter Tight';line-height:22px;font-weight:700;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Usuario</p>
+                                                                                                                                                                        <p class=t137 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:22px;font-weight:700;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Usuario</p>
                                                                                                                                                                     </td>
                                                                                                                                                                 </tr>
                                                                                                                                                             </table>
@@ -324,7 +323,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                                                                                                                     <td class=t150 style="width:600px;">
                                                                                                                                                                         <!--<![endif]-->
                                                                                                                                                                         <!--[if mso]><td class=t150 style="width:600px;"><![endif]-->
-                                                                                                                                                                        <p class=t156 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Inter Tight';line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;"><?= $data['usuario']; ?></p>
+                                                                                                                                                                        <p class=t156 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;"><?= $data['usuario']; ?></p>
                                                                                                                                                                     </td>
                                                                                                                                                                 </tr>
                                                                                                                                                             </table>
@@ -369,7 +368,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                                                                                                                     <td class=t179 style="width:600px;">
                                                                                                                                                                         <!--<![endif]-->
                                                                                                                                                                         <!--[if mso]><td class=t179 style="width:600px;"><![endif]-->
-                                                                                                                                                                        <p class=t185 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Inter Tight';line-height:22px;font-weight:700;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Contraseña:</p>
+                                                                                                                                                                        <p class=t185 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:22px;font-weight:700;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;">Contraseña:</p>
                                                                                                                                                                     </td>
                                                                                                                                                                 </tr>
                                                                                                                                                             </table>
@@ -395,7 +394,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                                                                                                                     <td class=t198 style="width:600px;">
                                                                                                                                                                         <!--<![endif]-->
                                                                                                                                                                         <!--[if mso]><td class=t198 style="width:600px;"><![endif]-->
-                                                                                                                                                                        <p class=t204 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Inter Tight';line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;"><?= $data['password']; ?></p>
+                                                                                                                                                                        <p class=t204 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:22px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#333333;text-align:left;mso-line-height-rule:exactly;mso-text-raise:2px;"><?= $data['password']; ?></p>
                                                                                                                                                                     </td>
                                                                                                                                                                 </tr>
                                                                                                                                                             </table>
@@ -441,7 +440,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t55 style="width:546px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t55 style="width:546px;"><![endif]-->
-                                                                            <p class=t61 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Recuerde que una vez que inicie sesión por primera vez, deberá cambiar su contraseña de acceso para mayor seguridad de su cuenta</p>
+                                                                            <p class=t61 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Recuerde que una vez que inicie sesión por primera vez, deberá cambiar su contraseña de acceso para mayor seguridad de su cuenta</p>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -466,7 +465,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                                 <div class=t231 style="display:inline-table;text-align:initial;vertical-align:inherit;width:100%;max-width:130px;">
                                                                                     <table role=presentation width=100% cellpadding=0 cellspacing=0 class=t233>
                                                                                         <tr>
-                                                                                            <td class=t234 style="overflow:hidden;background-color:#0055FF;text-align:center;line-height:46px;mso-line-height-rule:exactly;mso-text-raise:9px;border-radius:8px 8px 8px 8px;"><a class="t235" href="<?= WEB_LOGIN . '?usuario=' . $data['usuario'] . '&pwd=' . $data['password']; ?>" style="display:block;margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:46px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;direction:ltr;color:#FFFFFF;text-align:center;mso-line-height-rule:exactly;mso-text-raise:9px;" target=_blank>Inciar Sesión</a></td>
+                                                                                            <td class=t234 style="overflow:hidden;background-color:#0055FF;text-align:center;line-height:46px;mso-line-height-rule:exactly;mso-text-raise:9px;border-radius:8px 8px 8px 8px;"><a class="t235" href="<?= WEB_LOGIN . '?usuario=' . $data['usuario'] . '&pwd=' . $data['password']; ?>" style="display:block;margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:46px;font-weight:500;font-style:normal;font-size:16px;text-decoration:none;direction:ltr;color:#FFFFFF;text-align:center;mso-line-height-rule:exactly;mso-text-raise:9px;" target=_blank>Inciar Sesión</a></td>
                                                                                         </tr>
                                                                                     </table>
                                                                                 </div>
@@ -493,7 +492,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t241 style="width:546px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t241 style="width:546px;"><![endif]-->
-                                                                            <p class=t247 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Para cualquier duda contáctanos en: </p>
+                                                                            <p class=t247 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Para cualquier duda contáctanos en: </p>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -512,7 +511,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t261 style="width:546px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t261 style="width:546px;"><![endif]-->
-                                                                            <p class=t267 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Telefono: <?= $data['telefono_contacto']; ?> </p>
+                                                                            <p class=t267 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">Telefono: <?= $data['telefono_contacto']; ?> </p>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -531,7 +530,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t251 style="width:546px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t251 style="width:546px;"><![endif]-->
-                                                                            <p class=t257 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">email: <?= $data['email_contacto']; ?></p>
+                                                                            <p class=t257 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#121212;text-align:left;mso-line-height-rule:exactly;mso-text-raise:3px;">email: <?= $data['email_contacto']; ?></p>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -550,7 +549,7 @@ td.t19,td.t21{padding-top:60px !important;padding-bottom:60px !important}td.t25{
                                                                         <td class=t35 style="width:546px;">
                                                                             <!--<![endif]-->
                                                                             <!--[if mso]><td class=t35 style="width:546px;"><![endif]-->
-                                                                            <p class=t41 style="margin-bottom:0;Margin-bottom:0;font-family:BlinkMacSystemFont,Segoe UI,Helvetica Neue,Arial,sans-serif,'Fira Sans';line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#BDBDBD;text-align:center;mso-line-height-rule:exactly;mso-text-raise:3px;">Derechos Reservados ©2023</p>
+                                                                            <p class=t41 style="margin-bottom:0;Margin-bottom:0;font-family: Arial, Helvetica, sans-serif;line-height:25px;font-weight:400;font-style:normal;font-size:16px;text-decoration:none;text-transform:none;direction:ltr;color:#BDBDBD;text-align:center;mso-line-height-rule:exactly;mso-text-raise:3px;">Derechos Reservados ©2023</p>
                                                                         </td>
                                                                     </tr>
                                                                 </table>

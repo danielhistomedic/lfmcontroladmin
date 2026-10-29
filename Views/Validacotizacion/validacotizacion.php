@@ -12,9 +12,6 @@
     <link rel="shortcut icon" type="image/x-icon" href="<?= assets(); ?>/img/favicon.ico" />
 
     <!-- Web Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Vendor CSS -->
     <link rel="stylesheet" href="<?= assets(); ?>/vendor/bootstrap/css/bootstrap.css" />
@@ -34,7 +31,7 @@
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-family-report);
             background-color: var(--lfm-bg);
             color: var(--lfm-text);
             min-height: 100vh;
@@ -106,7 +103,7 @@
         }
 
         .status-title {
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--font-family-report);
             font-weight: 800;
             font-size: 1.5rem;
             letter-spacing: 0.5px;
@@ -127,7 +124,7 @@
         }
 
         .section-title {
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--font-family-report);
             font-size: 0.85rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -172,7 +169,7 @@
         .info-value.highlight-total {
             color: var(--lfm-red);
             font-size: 1.3rem;
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--font-family-report);
         }
 
         /* Check list table */
@@ -262,6 +259,7 @@
             }
         }
     </style>
+    <?php require_once __DIR__ . '/../../Template/font_family.php'; ?>
 </head>
 
 <body>

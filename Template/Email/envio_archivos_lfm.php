@@ -1,6 +1,6 @@
   <html>
 
-  <body style='font-family: Arial; background-color:#f4f6f8; padding:20px;'>
+  <body style='font-family: Arial, Helvetica, sans-serif; background-color:#f4f6f8; padding:20px;'>
 
       <div style='max-width:700px; margin:auto; background:#ffffff; padding:20px; border-radius:10px;'>
 

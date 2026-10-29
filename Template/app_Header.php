@@ -211,7 +211,11 @@
                            </li>
                            <li>
 
-                               <a role="menuitem" tabindex="-1" href="<?= base_url(); ?>/logout"><i class="fa-regular fa-arrow-up-left-from-circle"></i> Salir</a>
+                               <!-- Salir requiere una acción explícita protegida contra CSRF. -->
+                               <form method="post" action="<?= base_url(); ?>/logout" class="m-0">
+                                   <input type="hidden" name="token" value="<?= htmlspecialchars((new Session)->getCsrfToken('logout'), ENT_QUOTES, 'UTF-8'); ?>">
+                                   <button type="submit" role="menuitem" class="dropdown-item"><i class="fa-regular fa-arrow-up-left-from-circle"></i> Salir</button>
+                               </form>
                            </li>
                        </ul>
                    </div>

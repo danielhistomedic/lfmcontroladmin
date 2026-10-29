@@ -27,7 +27,6 @@
     <!-- <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800|Shadows+Into+Light" rel="stylesheet" type="text/css"> -->
     <!-- <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"> -->
     <!-- <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet"> -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
 
     <!-- Vendor CSS -->
     <link rel="stylesheet" href="<?= assets(); ?>/vendor/bootstrap/css/bootstrap.css" />
@@ -56,6 +55,7 @@
     <!-- Head Libs -->
     <script src="<?= assets(); ?>/vendor/modernizr/modernizr.js"></script>
 
+    <?php require_once __DIR__ . '/../../Template/font_family.php'; ?>
 </head>
 
 <body class="login-registro-img">

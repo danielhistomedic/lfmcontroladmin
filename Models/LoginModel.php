@@ -1,126 +1,62 @@
 <?php
 
-/**
- * Clase LoginModel
- */
+/** Persistencia de acceso por dispositivo sobre ssf_login_token, sin alterar el esquema. */
 class LoginModel extends Mysql
 {
+    const TABLA = 'login_token';
+    const PREFIJO_TABLA = 'ssf_';
 
-    const TABLA = "login_token";
-    const PREFIJO_TABLA = "ssf_";
-
-
-    /**
-     * Método Constructor de LoginModel.
-     * Inicializa Mysql::__construct
-     */
-    public function __construct()
+    /** Consulta parametrizada; propaga errores para no confundir fallo de base con credenciales inválidas. */
+    private function statement(string $sql, array $values)
     {
-        parent::__construct();
+        $stmt = $this->getConexion()->prepare($sql);
+        if (!$stmt->execute($values)) { throw new RuntimeException('No se pudo consultar el acceso.'); }
+        return $stmt;
     }
 
-
-    /**
-     * Marcar Como expirada la sesión de login token
-     * 
-     * 
-     * @param int $tokenId
-     * estatus expiración de sesión remember
-     * 
-     * @return bool $response
-     * 
-     */
-    public function markAsExpired($tokenId): bool
+    /** Devuelve el usuario y su hash exclusivamente en servidor; nunca serializar este resultado al cliente. */
+    public function findUser(string $username): array
     {
-
-        try {
-
-            $response = false;
-
-            /*-------------------------------------------
-            [ Instruccion sql ]*/
-
-            $sql = "UPDATE " . self::PREFIJO_TABLA . self::TABLA . " SET ";
-            $sql .= "is_expired = :is_expired ";
-            $sql .= "WHERE  ";
-            $sql .= "id = :id";
-
-            /*-------------------------------------------
-            [ Parametros condicionales, se envía vacío en caso de no aplicar ]*/
-            $expired = 1;
-            $arr_values = [
-                'is_expired' => $expired,
-                'id' => $tokenId
-            ];
-
-            /*-------------------------------------------
-            [ Ejecuta el Metodo selectModel de MySQL ]*/
-            $response = $this->update($sql, $arr_values);
-        } catch (\Throwable $th) {
-            getLoggerSystem()->error(getMensajeError($th));
-        }
-
-        /*-------------------------------------------
-        [ Retorna array asociativo con los datos del registro o empty en caso de error ]*/
-        return $response;
+        $rows = $this->statement('SELECT id, usuario, pass, activo FROM ssf_usuarios WHERE usuario = :usuario LIMIT 2',
+            ['usuario' => $username])->fetchAll(PDO::FETCH_ASSOC);
+        return count($rows) === 1 ? $rows[0] : [];
     }
 
-    /**
-     * Insertar nuevo token de cookies
-     * 
-     * @param string $username
-     * Usuario de login token
-     * 
-     * @param string $random_password_hash
-     * password hash random
-     * 
-     * @param string $random_selector_hash
-     * string random selector
-     * 
-     * @param string $expiry_date
-     * gfecha de expiración del remember de login token
-     * 
-     * @return bool $response
-     * 
-     */
+    /** Inserta hashes de token. expiry_date recibe una marca Unix para evitar desfases PHP/MySQL. */
     public function insertToken(string $username, string $random_password_hash, string $random_selector_hash, string $expiry_date): bool
     {
-
-        try {
-
-            $response = false;
-
-            /*-------------------------------------------
-            [ Instruccion sql ]*/
-
-            $sql = "INSERT INTO " . self::PREFIJO_TABLA . self::TABLA . " SET ";
-            $sql .= "usuario = :usuario, ";
-            $sql .= "password_hash = :password_hash, ";
-            $sql .= "selector_hash = :selector_hash, ";
-            $sql .= "expiry_date = :expiry_date ";
-
-            /*-------------------------------------------
-            [ Parametros condicionales, se envía vacío en caso de no aplicar ]*/
-            $expired = 1;
-            $arr_values = [
-                'usuario' => $username,
-                'password_hash' => $random_password_hash,
-                'selector_hash' => $random_selector_hash,
-                'expiry_date' => $expiry_date
-            ];
-
-            /*-------------------------------------------
-            [ Ejecuta el Metodo insert de MySQL ]*/
-            $lastInsertId = $this->insert($sql, $arr_values);
-            if ($lastInsertId > 0) {
-                $response = true;
-            }
-        } catch (\Throwable $th) {
-            getLoggerSystem()->error(getMensajeError($th));
+        if (!ctype_digit($expiry_date) || (int)$expiry_date <= time()) {
+            throw new InvalidArgumentException('Vencimiento de acceso no válido.');
         }
+        $this->statement('INSERT INTO ssf_login_token (usuario, password_hash, selector_hash, expiry_date, is_expired)
+            VALUES (:usuario, :password_hash, :selector_hash, FROM_UNIXTIME(:expiry_date), 0)', [
+            'usuario' => $username, 'password_hash' => $random_password_hash,
+            'selector_hash' => $random_selector_hash, 'expiry_date' => (int)$expiry_date
+        ]);
+        return true;
+    }
 
-        /*-------------------------------------------
-        [ Retorna array asociativo con los datos del registro o empty en caso de error ]*/
-        return $response;
+    /** Solo reconoce el nuevo selector hasheado, vigente y no revocado; omite tokens legacy. */
+    public function findToken(string $selectorHash): array
+    {
+        $rows = $this->statement('SELECT id, usuario, password_hash FROM ssf_login_token
+            WHERE selector_hash = :selector AND is_expired = 0 AND expiry_date > CURRENT_TIMESTAMP LIMIT 2',
+            ['selector' => $selectorHash])->fetchAll(PDO::FETCH_ASSOC);
+        return count($rows) === 1 ? $rows[0] : [];
+    }
+
+    /** Revoca únicamente el token del dispositivo que sale o desmarca Recordarme. */
+    public function expireSelector(string $selectorHash): bool
+    {
+        $this->statement('UPDATE ssf_login_token SET is_expired = 1 WHERE selector_hash = :selector AND is_expired = 0',
+            ['selector' => $selectorHash]);
+        return true;
+    }
+
+    /** Conserva la operación existente de revocación por ID. */
+    public function markAsExpired($tokenId): bool
+    {
+        $this->statement('UPDATE ssf_login_token SET is_expired = 1 WHERE id = :id', ['id' => (int)$tokenId]);
+        return true;
     }
 }

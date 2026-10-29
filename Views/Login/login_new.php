@@ -14,7 +14,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
     <!-- Web Fonts  -->
-    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800|Shadows+Into+Light" rel="stylesheet" type="text/css">
 
     <!-- Vendor CSS -->
     <link rel="stylesheet" href="<?= assets(); ?>/vendor/bootstrap/css/bootstrap.css" />
@@ -36,6 +35,7 @@
     <!-- Head Libs -->
     <script src="<?= assets(); ?>/vendor/modernizr/modernizr.js"></script>
 
+    <?php require_once __DIR__ . '/../../Template/font_family.php'; ?>
 </head>
 
 <body>

@@ -1,0 +1,227 @@
+/**
+ * LFM Control: campos nativos y Select2 con un acabado comÃºn, incluido Login.
+ * La capa importante evita excepciones visuales por mÃ³dulo sin editar vendor.
+ * No cambia atributos, valores, eventos, mÃ¡scaras ni visibilidad de controles auxiliares.
+ */
+:root {
+    --lfm-control-height: 38px;
+    --lfm-control-font-size: 14px;
+    --lfm-control-radius: 5px;
+    --lfm-control-bg: #fff;
+    --lfm-control-text: #1e293b;
+    --lfm-control-border: #cbd5e1;
+    --lfm-control-placeholder: #64748b;
+    --lfm-control-focus: #80bdff;
+    --lfm-control-focus-ring: rgb(80 170 255 / 20%);
+    --lfm-control-focus-shadow: 0 0 6px rgb(0 123 255 / 20%);
+    --lfm-control-outline: 0;
+    --lfm-control-readonly: #edf2f7;
+    --lfm-control-disabled: #e2e8f0;
+    --lfm-control-muted: #526578;
+    --lfm-control-invalid: #dc3545;
+    --lfm-control-valid: #198754;
+    /* Input y textarea: borde azul y halo de la referencia solo mientras tienen el foco. */
+    --lfm-text-control-radius: 5px;
+    --lfm-text-control-bg: #fff;
+    --lfm-text-control-text: #1e293b;
+    --lfm-text-control-border: #cbd5e1;
+    --lfm-text-control-focus: #80bdff;
+    --lfm-text-control-ring: rgb(80 170 255 / 20%);
+    --lfm-text-control-shadow: none;
+    --lfm-text-control-focus-shadow: 0 0 6px rgb(0 123 255 / 20%);
+}
+html.dark {
+    --lfm-control-bg: #fff;
+    --lfm-control-text: #1e293b;
+    --lfm-control-border: #60768c;
+    --lfm-control-placeholder: #64748b;
+    --lfm-control-focus: #80bdff;
+    --lfm-control-focus-ring: rgb(128 189 255 / 24%);
+    --lfm-control-focus-shadow: 0 0 6px rgb(128 189 255 / 24%);
+    --lfm-control-readonly: #303e4c;
+    --lfm-control-disabled: #354452;
+    --lfm-control-muted: #becbd7;
+    --lfm-control-invalid: #ff8792;
+    --lfm-control-valid: #75d3a3;
+    --lfm-text-control-bg: #fff;
+    --lfm-text-control-text: #1e293b;
+    --lfm-text-control-border: #60768c;
+    --lfm-text-control-focus: #80bdff;
+    --lfm-text-control-ring: rgb(128 189 255 / 24%);
+    --lfm-text-control-shadow: none;
+    --lfm-text-control-focus-shadow: 0 0 6px rgb(128 189 255 / 24%);
+}
+
+@layer lfm-form-controls {
+    /* Input y textarea comparten con select/Select2 el fondo blanco y el foco azul. */
+    :where(input, textarea):not(:where(.select2-hidden-accessible, .select2-offscreen, .select2-search__field, .visually-hidden, .sr-only, [hidden], [type="hidden"], [type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"])) {
+        --lfm-control-radius: var(--lfm-text-control-radius);
+        --lfm-control-bg: var(--lfm-text-control-bg);
+        --lfm-control-text: var(--lfm-text-control-text);
+        --lfm-control-border: var(--lfm-text-control-border);
+        --lfm-control-focus: var(--lfm-text-control-focus);
+        --lfm-control-focus-ring: var(--lfm-text-control-ring);
+        --lfm-control-shadow: var(--lfm-text-control-shadow);
+        --lfm-control-focus-shadow: var(--lfm-text-control-focus-shadow);
+        /* El borde y el halo azul constituyen la indicaciÃ³n visible de foco. */
+        --lfm-control-outline: 0;
+    }
+    :is(input, textarea):is([readonly], :disabled, .is-invalid, .is-valid),
+    .was-validated :is(input, textarea):is(:invalid, :valid) { --lfm-control-shadow: none; }
+    /* Conservar accesibilidad sin que las reglas de formularios agranden el select original. */
+    :is(.select2-hidden-accessible, .select2-offscreen) {
+        position: absolute !important;
+        width: 1px !important; height: 1px !important;
+        min-height: 0 !important; max-height: 1px !important;
+        padding: 0 !important; margin: -1px !important; border: 0 !important;
+        overflow: hidden !important; clip: rect(0, 0, 0, 0) !important;
+        clip-path: inset(50%) !important; white-space: nowrap !important;
+    }
+    /* Los originales de Select2 deben seguir ocultos; bÃºsquedas inline conservan su anchura dinÃ¡mica. */
+    :where(
+        input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not(.select2-search__field),
+        select, textarea:not(.select2-search__field),
+        .select2-container .select2-selection,
+        .select2-search--dropdown .select2-search__field
+    ):not(:where(.select2-hidden-accessible, .select2-offscreen, .visually-hidden, .sr-only, [hidden])) {
+        box-sizing: border-box !important;
+        max-width: 100% !important;
+        font-family: var(--font-family-report, Arial, Helvetica, sans-serif) !important;
+        font-size: var(--lfm-control-font-size) !important;
+        font-weight: 400 !important;
+        line-height: 20px !important;
+        padding: 8px 12px !important;
+        border: 1px solid var(--lfm-control-border) !important;
+        border-radius: var(--lfm-control-radius) !important;
+        background-color: var(--lfm-control-bg) !important;
+        color: var(--lfm-control-text) !important;
+        box-shadow: var(--lfm-control-shadow, none) !important;
+    }
+
+    :where(input, select, textarea):not(:where(.select2-hidden-accessible, .select2-offscreen, .select2-search__field, .visually-hidden, .sr-only, [hidden], [type="hidden"], [type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"])) {
+        width: 100% !important;
+    }
+
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select:not([multiple]):not([size]), select[size="0"]:not([multiple]), select[size="1"]:not([multiple]), .select2-selection--single, .select2-search--dropdown .select2-search__field):not(.select2-search__field):not(.select2-hidden-accessible):not(.select2-offscreen):not(.visually-hidden):not(.sr-only):not([hidden]):not([type="hidden"]) {
+        height: var(--lfm-control-height) !important;
+        min-height: var(--lfm-control-height) !important;
+    }
+    .select2-search--dropdown .select2-search__field {
+        height: var(--lfm-control-height) !important;
+        min-height: var(--lfm-control-height) !important;
+    }
+    textarea:not(.select2-search__field):not([hidden]) {
+        min-height: 96px !important;
+        resize: vertical;
+    }
+    select:is([multiple], [size]:not([size="0"]):not([size="1"])):not(.select2-hidden-accessible):not(.select2-offscreen):not([hidden]) {
+        height: auto !important;
+        min-height: 96px !important;
+    }
+
+    :is(input, textarea)::placeholder { color: var(--lfm-control-placeholder) !important; opacity: 1 !important; }
+    :where(input, select, textarea):focus:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], .select2-search__field, .select2-hidden-accessible, .select2-offscreen)),
+    .select2-container--focus .select2-selection, .select2-container--open .select2-selection,
+    .select2-search--dropdown .select2-search__field:focus {
+        border-color: var(--lfm-control-focus) !important;
+        box-shadow: var(--lfm-control-focus-shadow, 0 0 0 3px var(--lfm-control-focus-ring)) !important;
+    }
+    :is(input, select, textarea):focus-visible:not(.select2-hidden-accessible):not([type="hidden"]) {
+        outline: var(--lfm-control-outline, 2px solid var(--lfm-control-focus)) !important;
+        outline-offset: 2px;
+    }
+    :is(input, textarea)[readonly]:not([type="hidden"]) { background-color: var(--lfm-control-readonly) !important; }
+    :is(input, select, textarea):disabled:not([type="hidden"]):not(.select2-hidden-accessible),
+    .select2-container--disabled .select2-selection {
+        background-color: var(--lfm-control-disabled) !important;
+        color: var(--lfm-control-muted) !important;
+        cursor: not-allowed !important;
+        opacity: 1 !important;
+    }
+
+    /* No quitar las imÃ¡genes/flechas nativas ni los indicadores de validaciÃ³n de Bootstrap. */
+    /* Mantener legibles las superficies oscuras de campos bloqueados y adornos. */
+    html.dark :is(input, textarea)[readonly]:not([type="hidden"]),
+    html.dark .input-group > .input-group-text { color: #edf2f7 !important; }
+    html.dark :is(input, textarea)[readonly]::placeholder { color: #bdcbd8 !important; }
+    .form-select { padding-right: 36px !important; }
+    :is(input, select, textarea).is-invalid,
+    .was-validated :is(input, select, textarea):invalid,
+    select.is-invalid + .select2-container .select2-selection,
+    .was-validated select:invalid + .select2-container .select2-selection {
+        border-color: var(--lfm-control-invalid) !important;
+    }
+    :is(input, select, textarea).is-valid,
+    .was-validated :is(input, select, textarea):valid,
+    select.is-valid + .select2-container .select2-selection,
+    .was-validated select:valid + .select2-container .select2-selection {
+        border-color: var(--lfm-control-valid) !important;
+    }
+    :is(input, textarea):is(.is-invalid, .is-valid),
+    .was-validated :is(input, textarea):is(:invalid, :valid) { padding-right: 36px !important; }
+    select.form-select:is(.is-invalid, .is-valid),
+    .was-validated select.form-select:is(:invalid, :valid) { padding-right: 60px !important; }
+
+    .select2-container { max-width: 100% !important; min-width: 0; }
+    .select2-dropdown {
+        font-size: var(--lfm-control-font-size) !important;
+        line-height: 20px !important;
+        background-color: var(--lfm-control-bg) !important;
+        color: var(--lfm-control-text) !important;
+        border-color: var(--lfm-control-border) !important;
+        border-radius: var(--lfm-control-radius) !important;
+    }
+    html.dark .select2-results__option[aria-selected="true"] {
+        background-color: var(--lfm-control-readonly) !important;
+        color: #edf2f7 !important;
+    }
+    .select2-container .select2-results__option--highlighted[aria-selected] {
+        background-color: #006f89 !important; color: #fff !important;
+    }
+    html.dark .select2-container .select2-results__option--highlighted[aria-selected] {
+        background-color: #58c6de !important; color: #163243 !important;
+    }
+    .select2-container .select2-selection--single { padding: 8px 32px 8px 12px !important; }
+    .select2-container .select2-selection--single .select2-selection__rendered {
+        padding: 0 !important; line-height: 20px !important; color: inherit !important;
+    }
+    .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 36px !important; top: 0 !important; right: 8px !important;
+    }
+    .select2-selection__placeholder { color: var(--lfm-control-placeholder) !important; }
+    .select2-container .select2-selection--multiple { min-height: 38px !important; height: auto !important; padding: 4px 8px !important; }
+    .select2-container .select2-search--inline .select2-search__field {
+        height: 26px !important; min-height: 0 !important; margin-top: 0 !important;
+        padding: 0 !important; border: 0 !important; background: transparent !important;
+        color: var(--lfm-control-text) !important; box-shadow: none !important;
+    }
+
+    /* Mantener grupos en una fila y sus adornos alineados, incluido Mostrar/Ocultar de Login. */
+    .input-group > :is(input, select, textarea):not([type="hidden"]):not(.select2-hidden-accessible) {
+        width: 1% !important; min-width: 0 !important; flex: 1 1 auto !important;
+    }
+    .input-group > :is(.input-group-text, .btn) {
+        box-sizing: border-box !important; height: 38px !important; min-height: 38px !important;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .input-group > .input-group-text {
+        border-radius: var(--lfm-control-radius) !important;
+        border-color: var(--lfm-control-border) !important;
+        background-color: var(--lfm-control-readonly) !important; color: var(--lfm-control-text) !important;
+    }
+    .input-group > :is(input, select, textarea):not(:last-child):not([type="hidden"]) {
+        border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;
+    }
+    .input-group > :is(input, select, textarea, .input-group-text):not(:first-child):not([type="hidden"]) {
+        border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important;
+    }
+    .input-group > .input-group-text:has(+ :is(input, select, textarea)) {
+        border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;
+    }
+    .input-group:has(.show-hide-login) > .input-group-text { width: 44px !important; flex: 0 0 44px; padding: 0 !important; }
+    .input-group:has(.show-hide-login) > input { padding-right: 96px !important; background-position: right 62px center !important; }
+    .input-group .show-hide-login { top: 50% !important; right: 54px !important; }
+
+    .dataTables_length select { width: auto !important; display: inline-block; }
+    .dataTables_filter input { width: 220px !important; max-width: 100% !important; }
+}

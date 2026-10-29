@@ -7,7 +7,7 @@
     <title>Solicitud de Cotización</title>
 </head>
 
-<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family: Arial, Helvetica, sans-serif;">
 
     <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f6f9">
         <tr>

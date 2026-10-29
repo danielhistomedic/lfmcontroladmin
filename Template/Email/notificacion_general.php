@@ -6,7 +6,7 @@
     <title>Notificación</title>
 </head>
 
-<body style="margin:0;padding:30px;background:#f3f5f7;font-family:Segoe UI,Arial,sans-serif;">
+<body style="margin:0;padding:30px;background:#f3f5f7;font-family: Arial, Helvetica, sans-serif;">
 
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>

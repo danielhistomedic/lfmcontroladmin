@@ -1,3 +1,4 @@
+// La familia del texto de ECharts sigue la fuente compartida del portal.
 /*==================================================================
 [ Variables ]*/
 
@@ -248,7 +249,7 @@ function graficarTotalGraficoEmpleadosDepartamentos(data) {
     let activos = data.map(d => d.activos);
     let bajas = data.map(d => d.inactivos);
 
-    chartPersonalDepartamentos.setOption({
+    chartPersonalDepartamentos.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
         title: {
             text: 'Departamentos'
         },
@@ -328,7 +329,7 @@ function graficarTotalGraficoEmpleadosPuestos(data) {
     let activos = data.map(d => d.activos);
     let bajas = data.map(d => d.inactivos);
 
-    chartEstado.setOption({
+    chartEstado.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
         title: {
             text: 'Puestos'
         },

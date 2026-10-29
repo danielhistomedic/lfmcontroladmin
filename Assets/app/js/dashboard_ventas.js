@@ -1,3 +1,4 @@
+// La familia del texto de ECharts sigue la fuente compartida del portal.
 /*==================================================================
 [ Variables ]*/
 let fecha_ini_send;
@@ -282,7 +283,7 @@ function loadVentasVsPipeline() {
                 return parseFloat(pctEfectividad.toFixed(2));
             });
 
-            chartVentasVsPipeline.setOption({
+            chartVentasVsPipeline.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'cross' },
@@ -352,7 +353,7 @@ function loadVentasVsPipeline() {
             }, true);
         } else {
             chartVentasVsPipeline.clear();
-            chartVentasVsPipeline.setOption({
+            chartVentasVsPipeline.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 title: { text: 'No hay datos en el periodo', left: 'center', top: 'center' }
             });
         }
@@ -376,7 +377,7 @@ function loadTendencia() {
             const facturadoAmounts = data.map(item => parseFloat(item.sum_facturado_usd || 0));
             const pagadoAmounts = data.map(item => parseFloat(item.sum_pagado_usd || 0));
 
-            chartVentasTendencia.setOption({
+            chartVentasTendencia.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'cross' },
@@ -425,7 +426,7 @@ function loadTendencia() {
             }, true);
         } else {
             chartVentasTendencia.clear();
-            chartVentasTendencia.setOption({
+            chartVentasTendencia.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 title: { text: 'No hay datos en el periodo', left: 'center', top: 'center' }
             });
         }
@@ -449,7 +450,7 @@ function loadVendedores() {
             const names = dataReversed.map(item => item.vendedor || 'Sin Nombre');
             const totals = dataReversed.map(item => parseFloat(item.sum_combined_usd || 0));
 
-            chartVentasVendedor.setOption({
+            chartVentasVendedor.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 tooltip: {
                     trigger: 'axis',
                     formatter: function (params) {
@@ -481,7 +482,7 @@ function loadVendedores() {
                             formatter: function (p) {
                                 return formatUSD(p.value);
                             },
-                            textStyle: { fontSize: 9 }
+                            textStyle: { fontFamily: getComputedStyle(document.body).fontFamily,  fontSize: 9 }
                         }
                     }
                 ]
@@ -540,7 +541,7 @@ function loadVendedores() {
                 tbody.innerHTML = html;
             }
         } else {
-            chartVentasVendedor.setOption({
+            chartVentasVendedor.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 title: { text: 'Sin datos', left: 'center', top: 'center' }
             }, true);
 
@@ -574,7 +575,7 @@ function loadClientes() {
             const names = data.map(item => item.cliente || 'Sin Nombre');
             const totals = data.map(item => parseFloat(item.sum_combined_usd || 0));
 
-            chartVentasCliente.setOption({
+            chartVentasCliente.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 tooltip: {
                     trigger: 'axis',
                     formatter: function (params) {
@@ -606,13 +607,13 @@ function loadClientes() {
                             formatter: function (p) {
                                 return formatUSD(p.value);
                             },
-                            textStyle: { fontSize: 9 }
+                            textStyle: { fontFamily: getComputedStyle(document.body).fontFamily,  fontSize: 9 }
                         }
                     }
                 ]
             }, true);
         } else {
-            chartVentasCliente.setOption({
+            chartVentasCliente.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 title: { text: 'Sin datos', left: 'center', top: 'center' }
             }, true);
         }
@@ -638,7 +639,7 @@ function loadClasificacion() {
                 };
             });
 
-            chartVentasClasificacion.setOption({
+            chartVentasClasificacion.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 tooltip: {
                     trigger: 'item',
                     formatter: function (p) {
@@ -665,7 +666,7 @@ function loadClasificacion() {
                 ]
             }, true);
         } else {
-            chartVentasClasificacion.setOption({
+            chartVentasClasificacion.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 title: { text: 'Sin datos', left: 'center', top: 'center' }
             }, true);
         }
@@ -692,7 +693,7 @@ function loadEstatus() {
                 };
             });
 
-            chartVentasEstatus.setOption({
+            chartVentasEstatus.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 tooltip: {
                     trigger: 'item',
                     formatter: function (p) {
@@ -733,7 +734,7 @@ function loadEstatus() {
                 ]
             }, true);
         } else {
-            chartVentasEstatus.setOption({
+            chartVentasEstatus.setOption({ textStyle: { fontFamily: getComputedStyle(document.body).fontFamily },
                 title: { text: 'Sin datos', left: 'center', top: 'center' }
             }, true);
         }

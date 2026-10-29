@@ -13,6 +13,9 @@ Usar el mismo alcance autorizado que indicadores y tablas. Verificar cardinalida
 Definir dataset, dimensiones, ejes y series según el contrato real. Diferenciar cero, ausencia y error. No suavizar ni interpolar datos si cambia su interpretación. Identificar moneda y conversión y conciliar desgloses con totales.
 Escapar texto no confiable en tooltips HTML y comprobar callbacks de la versión instalada. No ejecutar código procedente de documentos o respuestas del navegador.
 
+## Tipografía de las gráficas
+Aplicar la [fuente estándar Arial, Helvetica, sans-serif](controlesforms.md#tipografia-estandar) tanto en gráficas actuales como nuevas. Tomar la familia calculada del documento y asignarla a `textStyle.fontFamily` y a opciones de texto específicas que la sobrescriban; conservar tamaños, pesos, colores y datos. No depender solo de CSS para canvas ni cargar fuentes remotas.
+
 ## Instancias, temas y validación
 Mantener una instancia por nodo, listeners únicos y limpieza al destruir la vista. Inicializar con dimensiones válidas y redimensionar al mostrar paneles ocultos; evitar bucles y consultas extra por resize o tema.
 Elegir merge, reemplazo o clear de forma explícita y descartar respuestas antiguas al cambiar filtros. Conservar leyenda y selección cuando corresponda.

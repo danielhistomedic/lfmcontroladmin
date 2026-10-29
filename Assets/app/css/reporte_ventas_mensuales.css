@@ -33,7 +33,7 @@ html.dark #ventas-mensuales .ventas-kpi-critico .ventas-valor { color: #ff8ca4 !
     --ventas-borde: #dfe8f2;
     --ventas-superficie: #fff;
     --ventas-suave: #f5f8fc;
-    --ventas-fuente: 'Inter', 'Segoe UI', sans-serif;
+    --ventas-fuente: var(--font-family-report);
     font-family: var(--ventas-fuente);
     color: var(--ventas-texto);
     font-size: 12px;
@@ -196,7 +196,7 @@ html.dark #ventas-mensuales .ventas-toolbar .select2-selection--multiple .select
 #modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) { --declinados-borde:#dfe8f2; --declinados-fondo:#fff; --declinados-suave:#f4f8fc; --declinados-texto:#243b53; --declinados-secundario:#62758e; }
 #modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) .modal-dialog { width:calc(100% - 48px); max-width:1440px; }
 #modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) .modal-content { border-radius:8px; }
-#modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) .modal-body { padding:20px !important; font-family:Inter,'Segoe UI',sans-serif; color:var(--declinados-texto); }
+#modal-declinados-ventas:is([data-lista="declinados"],[data-lista="interna_sin_cliente"],[data-tabla-estatus="1"]) .modal-body { padding:20px !important; font-family: var(--font-family-report); color:var(--declinados-texto); }
 #modal-declinados-ventas .declinados-indicadores { display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:12px; }
 #modal-declinados-ventas .declinados-indicadores > div { display:flex; gap:12px; align-items:flex-start; padding:16px; border:1px solid var(--declinados-borde); border-radius:6px; background:var(--declinados-suave); box-shadow:0 2px 6px rgba(23,75,102,.03); min-width:0; }
 #modal-declinados-ventas .declinados-indicadores > div > div { min-width:0; }

@@ -51,6 +51,7 @@
     <link id="theme" rel="stylesheet" type="text/css" media="all" href="<?= assets(); ?>/css/main-dark-mode.css?v=<?= version(); ?>" />
 
 
+    <?php require_once __DIR__ . '/../../Template/font_family.php'; ?>
 </head>
 
 <body>
