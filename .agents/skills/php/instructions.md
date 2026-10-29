@@ -19,3 +19,5 @@ Al crear o modificar módulos con formularios, incluidos accesos independientes 
 
 En módulos existentes y nuevos con captura o filtros, incluido Login, aplicar el [estándar común de campos](../../rules/controlesforms.md#campos-estandar). Reutilizar form-controls.css, sus variables y la carga compartida; no crear tamaños por módulo ni modificar contratos, tipos, valores o validaciones por un cambio visual.
 Al crear o modificar vistas, incluido Login, garantizar la carga del estándar común: input, textarea y select/Select2 con fondo blanco normal, borde neutro y sin sombra; borde azul claro y sombra suave solo con foco (o Select2 abierto). Conservar texto legible en ambos temas y los estados de validación y readonly/disabled según la regla central.
+
+Al generar vistas con DataTables aplicar el [patrón de Órdenes de Compra Clientes](../../rules/datatables.md). Mantener correspondencia entre encabezados y columns.data, permisos, escape de datos, formatos ortogonales y claves reales para ordenar/exportar. Reutilizar las plantillas y estilos existentes; no cambiar respuestas o consultas por homologar presentación.

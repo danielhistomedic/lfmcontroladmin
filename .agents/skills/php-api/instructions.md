@@ -9,3 +9,5 @@ Verificar éxito, datos inválidos, acceso denegado, recurso ajeno, error contro
 Las acciones se enrutan mediante `index.php?url=controlador/metodo/parametros`; no asumir un router REST independiente. Revisar `getResponse` y el JavaScript consumidor antes de modificar claves como `respuesta`, `mensaje`, `mostrar_mensaje`, `tiempo` o `data`. Conservar POST/formularios e identificadores cifrados cuando sean parte del contrato; el cifrado no sustituye permisos.
 
 Documentar obligatoriamente acciones nuevas o modificadas mediante PHPDoc cuando corresponda: método HTTP, entradas, permisos, respuesta y errores reales. Mantener comentarios y ejemplos del contrato coherentes con los consumidores, retirando los desfasados conforme a la regla PHP 8.2.
+
+Cuando una acción alimente o exporte DataTables, consultar los [contratos de datos y exportación del patrón de Órdenes de Compra Clientes](../../rules/datatables.md). Preservar claves, tipos, permisos, alcance y envoltorio JSON del consumidor real; distinguir carga completa de server-side y no cambiar de modalidad por homologar diseño. La visibilidad de botones no sustituye autorización backend.

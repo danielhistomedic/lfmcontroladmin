@@ -28,10 +28,14 @@ Todos los módulos actuales y nuevos, incluido Login, deben aplicar el [estánda
 Los campos de una línea conservan altura `38px`, Arial/Helvetica/sans-serif de `14px`, peso `400`, interlineado `20px`, padding `8px 12px`, borde de `1px` y radio de `5px`. Los textarea y selects múltiples/de lista conservan su contenido multilínea y altura mínima `96px`.
 Reutilizar `Assets/app/css/form-controls.css`, sus variables `--lfm-control-*` y la carga de `Template/font_family.php`. Mantener Select2, foco, validación, claro/oscuro, readonly/disabled, campos ocultos y controles nativos especiales conforme a la regla. No crear variantes por módulo ni modificar valores, restricciones, máscaras, eventos o contratos por homologar presentación, salvo instrucción explícita del usuario.
 
+## DataTables — diseño y estructura de referencia
+Para crear o modificar tablas en módulos actuales y nuevos, aplicar la [regla de DataTables](.agents/rules/datatables.md), basada en Seguimiento → Órdenes de Compra Clientes. Reutilizar su panel, encabezado turquesa con texto blanco, filtros por columna, scroll horizontal, encabezado fijo, paginación, Excel y visibilidad de columnas según el flujo y los permisos. Conservar las fuentes y controles estándar. Adaptar columnas, IDs, datos y orden al módulo; no copiar reglas comerciales de OCC ni cambiar bibliotecas o contratos por homologar presentación.
+
 ## Reglas
 Leer las reglas relacionadas con el cambio:
 - [Acceso a datos](.agents/rules/accesobasedatos.md).
 - [Formularios y controles](.agents/rules/controlesforms.md).
+- [DataTables: diseño y estructura](.agents/rules/datatables.md), para tablas.
 - [PHP y organización](.agents/rules/php82.md).
 - [Seguridad](.agents/rules/seguridad.md).
 - [UTF-8](.agents/rules/utf8.md).

@@ -5,3 +5,5 @@ description: "Crear y mantener acciones AJAX y respuestas JSON del portal PHP, c
 # php-api — lfm_admin
 Leer [instructions.md](instructions.md) completo y aplicar [AGENTS.md](../../../AGENTS.md) antes de trabajar.
 Leer las reglas aplicables enlazadas desde AGENTS.md. Verificar recursos en el portal real y realizar las fases secuencialmente cuando no exista delegación autorizada.
+
+Para trabajo con DataTables, aplicar el [diseño, estructura y contratos de referencia de Órdenes de Compra Clientes](../../rules/datatables.md), adaptados al módulo.

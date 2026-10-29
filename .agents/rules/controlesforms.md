@@ -50,6 +50,7 @@ Distinguir la acción principal y reutilizar avisos/modales existentes. No asumi
 Agrupar por flujo comercial; no trasladar controles de escritorio ni reglas clínicas al portal.
 
 ## Tablas, filtros y reportes
+Para diseño, estructura e integración de DataTables en módulos actuales y nuevos, aplicar la [referencia de Órdenes de Compra Clientes](datatables.md). Mantener las reglas comunes de fuente, labels y campos por encima de medidas históricas de filtros. Adaptar columnas y contratos al módulo.
 Conservar filtros, selección, orden, paginación y exportaciones autorizadas. Comprobar columnas y alineación al mostrar pestañas, modales o paneles ocultos; ajustar cuando el contenedor sea visible usando la API instalada, sin duplicar instancias, listeners ni peticiones.
 No exportar HTML de acciones ni datos fuera del alcance autorizado. Mantener estados vacío, carga y error; no ocultar fallos de consulta con ceros.
 Alinear importes y cantidades e indicar moneda y unidad. Separar monedas o usar la conversión comercial verificada; no sumar unidades incompatibles ni inventar tipos de cambio. Ordenar fechas por su valor real.
