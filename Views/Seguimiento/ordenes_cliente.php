@@ -3,7 +3,7 @@
 <?php require_once("Template/header_01.php"); ?>
 
 <!-- Estilos exclusivos del módulo, después del tema y de la escala tipográfica común. -->
-<link rel="stylesheet" href="<?= assets() ?>/app/css/seguimiento_ordenes_cliente.css?v=<?= version(); ?>">
+<link rel="stylesheet" href="<?= assets() ?>/app/css/seguimiento_ordenes_cliente.css?v=<?= version(); ?>.<?= filemtime(__DIR__ . '/../../Assets/app/css/seguimiento_ordenes_cliente.css'); ?>">
 <!-- Header Admin 02 -->
 <?php require_once("Template/header_02.php"); ?>
 

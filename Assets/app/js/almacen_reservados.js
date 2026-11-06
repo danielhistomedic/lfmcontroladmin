@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ JS: Almacén - Control de Productos Reservados ]
 ==================================================================*/
@@ -87,7 +88,7 @@ function initDataTableReservados() {
         $(tableElement).find('tbody').empty();
     }
 
-    tableReservados = $(tableElement).DataTable({
+    tableReservados = LfmTables.create($(tableElement), {
         destroy: true,
         processing: true,
         serverSide: false,

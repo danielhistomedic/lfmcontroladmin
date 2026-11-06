@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ Variables de Archivo ]*/
 
@@ -109,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         /*-------------------------------------------
         [ DataTable Inicializa ]*/
         setConfigTable(controllers, 'getAllDatatable');
-        table = $(tableElement).DataTable(configTable);
+        table = LfmTables.create($(tableElement), configTable);
 
         //______Select2 
         $('.form-select').select2({

@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ JS: Almacén - Control de Pases de Salida ]
 ==================================================================*/
@@ -145,7 +146,7 @@ function initDataTablePases() {
         $(tableEl).find('tbody').empty();
     }
 
-    tablePases = $(tableEl).DataTable({
+    tablePases = LfmTables.create($(tableEl), {
         destroy: true,
         processing: true,
         serverSide: false,
@@ -1718,14 +1719,14 @@ function mostrarArchivoEnVisor(adj, btnEl) {
 
 function initReportesTablas() {
     // Tabla Reporte por Cliente
-    tableReporteCli = $('#tableReporteCliente').DataTable({
+    tableReporteCli = LfmTables.create($('#tableReporteCliente'), {
         destroy: true,
         processing: true,
         serverSide: false,
         responsive: true,
         order: [[3, "desc"], [6, "desc"]], // Pendientes desc, promedio desc
         pageLength: 10,
-        language: { url: assets + "/vendor/datatable/es-ES.json" },
+        language: idioma_espanol, // Idioma ya cargado; el archivo es-ES.json no existe en el portal.
         ajax: {
             url: base_url + '/almacen/getReportePases',
             type: 'POST',
@@ -1792,14 +1793,14 @@ function initReportesTablas() {
     });
 
     // Tabla Reporte por Vendedor
-    tableReporteVen = $('#tableReporteVendedor').DataTable({
+    tableReporteVen = LfmTables.create($('#tableReporteVendedor'), {
         destroy: true,
         processing: true,
         serverSide: false,
         responsive: true,
         order: [[3, "desc"], [6, "desc"]], // Pendientes desc, promedio desc
         pageLength: 10,
-        language: { url: assets + "/vendor/datatable/es-ES.json" },
+        language: idioma_espanol, // Idioma ya cargado; el archivo es-ES.json no existe en el portal.
         ajax: {
             url: base_url + '/almacen/getReportePases',
             type: 'POST',

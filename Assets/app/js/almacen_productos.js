@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ JS: Almacén - Productos y Existencias ]
 ==================================================================*/
@@ -72,7 +73,7 @@ function initDataTableProductos() {
         $(tableElement).find('tbody').empty();
     }
 
-    tableProductos = $(tableElement).DataTable({
+    tableProductos = LfmTables.create($(tableElement), {
         destroy: true,
         processing: true,
         serverSide: false,

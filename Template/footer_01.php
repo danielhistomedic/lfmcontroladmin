@@ -95,6 +95,9 @@
 <script src="<?= assets(); ?>/vendor/bootstrap-maxlength/bootstrap-maxlength.js"></script>
 <script src="<?= assets(); ?>/vendor/ios7-switch/ios7-switch.js"></script>
 
+<!-- Diseño DataTables aprobado, después de las extensiones y antes de los módulos. -->
+<script src="<?= assets(); ?>/app/js/datatable-layout.js?v=<?= filemtime(__DIR__ . '/../Assets/app/js/datatable-layout.js'); ?>"></script>
+
 <!-- FILE UPLOADES JS -->
 <script src="<?= assets(); ?>/vendor/fileuploads/js/fileupload.js"></script>
 <script src="<?= assets(); ?>/vendor/fileuploads/js/file-upload.js"></script>

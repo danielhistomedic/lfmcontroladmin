@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ JS: Almacén - Reporte de Notas de Salida ]
 ==================================================================*/
@@ -109,7 +110,7 @@ function initDataTableNotas() {
         $(tableEl).find('tbody').empty();
     }
 
-    tableNotas = $(tableEl).DataTable({
+    tableNotas = LfmTables.create($(tableEl), {
         destroy: true,
         processing: true,
         serverSide: false,

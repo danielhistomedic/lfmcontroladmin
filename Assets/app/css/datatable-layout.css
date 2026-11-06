@@ -1,0 +1,147 @@
+/** Diseño aprobado de Órdenes de Compra Clientes: un solo contenedor. */
+@layer lfm-dt-controls, lfm-dt-table;
+.lfm-dt-wrapper { --lfm-dt-text: #1e293b; --lfm-dt-muted: #475569; }
+html.dark .lfm-dt-wrapper { --lfm-dt-text: #edf2f7; --lfm-dt-muted: #cbd5e1; }
+@layer lfm-dt-table {
+    table.lfm-datatable {
+        font-family: var(--font-family-base, Arial, Helvetica, sans-serif) !important;
+        font-size: var(--font-table-body, 13px) !important;
+        color: var(--lfm-dt-text, #1e293b) !important;
+        border-color: #cbd5e1 !important;
+    }
+    table.lfm-datatable :is(th, td) {
+        vertical-align: middle !important; line-height: 1.4 !important;
+        border-color: #cbd5e1 !important;
+    }
+    table.lfm-datatable th { font-size: var(--font-table-header, 12px) !important; font-weight: 500 !important; padding: 8px 21px 8px 10px !important; }
+    table.lfm-datatable thead tr:first-child > :is(th, td) { background-color: #00809f !important; color: #fff !important; text-align: center !important; }
+    table.lfm-datatable tbody td { font-size: var(--font-table-body, 13px) !important; padding: 7px 10px !important; }
+    table.lfm-datatable .text-end { font-variant-numeric: tabular-nums; }
+    .lfm-dt-wrapper .dataTables_scrollBody thead :is(th, td) { padding-top: 0 !important; padding-bottom: 0 !important; border-top: 0 !important; border-bottom: 0 !important; height: 0 !important; }
+    html.dark table.lfm-datatable { color: #edf2f7 !important; }
+    html.dark table.lfm-datatable :is(th, td) { border-color: #53657d !important; }
+    html.dark table.lfm-datatable tbody tr { --bs-table-bg: #1d2735; --bs-table-color: #edf2f7; --bs-table-striped-bg: #253346; --bs-table-striped-color: #edf2f7; --bs-table-hover-bg: #30425a; --bs-table-hover-color: #edf2f7; }
+}
+
+.lfm-dt-wrapper {
+    padding: 0; margin: 0; border: 0; border-radius: 0;
+    box-shadow: none; background: transparent;
+}
+.lfm-dt-wrapper .lfm-dt-toolbar {
+    display: grid;
+    grid-template-columns: auto auto minmax(175px, 1fr);
+    align-items: center; gap: 20px;
+    margin-bottom: 6px;
+}
+.lfm-dt-wrapper .lfm-dt-search { justify-self: end; min-width: 0; width: 175px; }
+.lfm-dt-wrapper .lfm-dt-search :is(.dataTables_filter, label) { display: block; width: 100%; }
+.lfm-dt-wrapper :is(.dataTables_length, .dataTables_filter, .dt-buttons) {
+    float: none !important; margin: 0 !important;
+}
+.lfm-dt-wrapper .dt-buttons.btn-group { position: static !important; inset: auto !important; }
+.lfm-dt-wrapper .dataTables_filter input { margin-left: 0 !important; }
+.lfm-dt-wrapper .dataTables_length label { display: inline-flex; align-items: center; gap: 14px; margin: 0; }
+.lfm-dt-wrapper .dataTables_length select { width: 80px !important; }
+.lfm-dt-wrapper .lfm-dt-info { margin-top: 10px; }
+.lfm-dt-wrapper .dataTables_info { padding: 0 !important; font-size: 12px; color: var(--lfm-dt-text, #1e293b); }
+.lfm-dt-wrapper .lfm-dt-pagination { display: flex; justify-content: flex-end; margin-top: 18px; }
+.lfm-dt-wrapper .dataTables_paginate { float: none; }
+.lfm-dt-wrapper .pagination { margin: 0; }
+.lfm-dt-wrapper .dataTables_scrollBody { max-width: 100%; overflow-x: auto !important; }
+/* La cabecera interna de medición no ocupa espacio bajo los filtros visibles. */
+.lfm-dt-wrapper .dataTables_scrollBody thead :is(th, td) { padding-top: 0 !important; padding-bottom: 0 !important; border-top: 0 !important; border-bottom: 0 !important; }
+.lfm-dt-wrapper .dataTables_scrollBody thead .dataTables_sizing { height: 0 !important; overflow: hidden !important; }
+
+/* Controles de tabla del diseño aprobado; no afectan otros formularios. */
+@layer lfm-dt-controls {
+    .lfm-dt-wrapper :is(.dataTables_length, .dataTables_filter) label {
+        font-size: 12px !important; font-weight: 400 !important;
+        color: var(--lfm-dt-muted, #475569) !important;
+    }
+}
+@layer lfm-dt-controls {
+    .lfm-dt-wrapper .dataTables_filter input { width: 175px !important; }
+    .lfm-dt-wrapper .dataTables_length select { width: 80px !important; }
+    .lfm-dt-wrapper .lfm-dt-filters input {
+        height: 34px !important; min-height: 34px !important;
+        padding: 6px 8px !important; border-radius: 0 !important;
+    }
+    .lfm-dt-wrapper :is(.dataTables_filter input, .dataTables_length select) { border-radius: 0 !important; }
+}
+@media (max-width: 767px) {
+    .lfm-dt-wrapper .lfm-dt-toolbar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .lfm-dt-wrapper .lfm-dt-search { grid-column: 1 / -1; justify-self: stretch; }
+    .lfm-dt-wrapper .dataTables_filter { text-align: left; }
+    .lfm-dt-wrapper .lfm-dt-pagination { overflow-x: auto; justify-content: flex-start; }
+    .lfm-dt-wrapper .pagination { flex-wrap: wrap; }
+}
+
+/* DataTables ya contiene el scroll horizontal; el menú Columnas puede salir del panel. */
+.lfm-dt-container { overflow: visible; }
+
+/* Mantener las medidas aprobadas en cabeceras flotantes y estilos locales flex. */
+.lfm-dt-wrapper .lfm-dt-search { width: 175px !important; }
+@layer lfm-dt-controls {
+    .lfm-dt-wrapper .dataTables_filter input { flex: 0 0 175px !important; }
+    table.lfm-datatable:is(.fixedHeader-floating, .fixedHeader-locked) .lfm-dt-filters input {
+        height: 34px !important; min-height: 34px !important;
+        padding: 6px 8px !important; border-radius: 0 !important;
+    }
+}
+
+/* Solo superficies que contienen DataTables; se conserva el contenedor existente. */
+@layer lfm-dt-table {
+    html.dark :is(.card, .chart-container, .modal-content):has(.lfm-dt-wrapper),
+    html.dark .card:has(.lfm-dt-wrapper) > .card-body,
+    html.dark .modal-content:has(.lfm-dt-wrapper) > .modal-body {
+        background-color: #1d2735 !important;
+        color: #edf2f7 !important;
+        border-color: #53657d !important;
+    }
+    html.dark .card:has(.lfm-dt-wrapper) > .card-header:not(:is(.bg-primary, .bg-success, .bg-info, .bg-warning, .bg-danger, .bg-dark)),
+    html.dark .modal-content:has(.lfm-dt-wrapper) > .modal-header:not(:is(.bg-primary, .bg-success, .bg-info, .bg-warning, .bg-danger, .bg-dark)),
+    html.dark .chart-container:has(.lfm-dt-wrapper) > .chart-title {
+        background-color: #253346 !important; color: #edf2f7 !important; border-color: #53657d !important;
+    }
+    html.dark .card:has(.lfm-dt-wrapper) > .card-header:not(:is(.bg-primary, .bg-success, .bg-info, .bg-warning, .bg-danger, .bg-dark)) .card-title,
+    html.dark .modal-content:has(.lfm-dt-wrapper) > .modal-header:not(:is(.bg-primary, .bg-success, .bg-info, .bg-warning, .bg-danger, .bg-dark)) .modal-title {
+        color: #edf2f7 !important;
+    }
+    /* Las clases de texto de la tabla no deben heredar tonos oscuros del tema claro.
+       Badges, botones y avisos con superficie propia conservan su color semántico. */
+    html.dark table.lfm-datatable tbody :is(.text-dark, .text-muted, .text-primary):not(:where(.badge, .btn, .bg-light, .bg-white, .bg-warning, .bg-info, .badge *, .btn *, .bg-light *, .bg-white *, .bg-warning *, .bg-info *)) {
+        color: #edf2f7 !important;
+    }
+    html.dark table.lfm-datatable tbody .text-muted:not(:where(.badge, .btn, .badge *, .btn *)) { color: #cbd5e1 !important; }
+    html.dark table.lfm-datatable tbody .text-primary:not(:where(.badge, .btn, .badge *, .btn *)) { color: #8bd5ff !important; }
+    html.dark .lfm-dt-wrapper .page-link { color: #8bd5ff !important; background-color: #253346 !important; border-color: #53657d !important; }
+    html.dark .lfm-dt-wrapper .page-item.active .page-link { color: #fff !important; background-color: #00809f !important; border-color: #00809f !important; }
+    html.dark .lfm-dt-wrapper .page-item.disabled .page-link { color: #cbd5e1 !important; background-color: #253346 !important; }
+    html.dark .lfm-dt-wrapper .dt-buttons :is(.buttons-colvis, .buttons-excel) { color: #8bd5ff !important; border-color: #53657d !important; }
+    html.dark table.lfm-datatable thead .lfm-dt-filters > :is(th, td) { background-color: #253346 !important; }
+    html.dark table.lfm-datatable :is(thead, tbody, tfoot, tr) { border-color: #53657d !important; }
+    html.dark table.lfm-datatable tbody td:not(:where(.bg-light, .bg-white, .bg-warning, .bg-info)) { color: #edf2f7 !important; }
+    html.dark table.lfm-datatable tbody .text-danger:not(:where(.badge, .btn, .badge *, .btn *, .bg-light, .bg-light *, .bg-white, .bg-white *)) { color: #ff8792 !important; }
+    html.dark table.lfm-datatable tbody .text-success:not(:where(.badge, .btn, .badge *, .btn *, .bg-light, .bg-light *, .bg-white, .bg-white *)) { color: #75d3a3 !important; }
+    html.dark table.lfm-datatable tbody .text-warning:not(:where(.badge, .btn, .badge *, .btn *, .bg-light, .bg-light *, .bg-white, .bg-white *)) { color: #ead69b !important; }
+    html.dark table.lfm-datatable tbody .text-info:not(:where(.badge, .btn, .badge *, .btn *, .bg-light, .bg-light *, .bg-white, .bg-white *)) { color: #8bd5ff !important; }
+    html.dark table.lfm-datatable tbody tr.selected :is(.text-dark, .text-muted, .text-primary):not(:where(.badge, .btn, .badge *, .btn *, .bg-light, .bg-light *, .bg-white, .bg-white *, .bg-warning, .bg-warning *, .bg-info, .bg-info *)) { color: #fff !important; }
+    /* Las etiquetas con superficie clara mantienen su texto oscuro, incluso
+       cuando la celda padre utiliza el color claro del tema nocturno. */
+    html.dark table.lfm-datatable :is(.badge, .btn).text-dark:is(.bg-light, .bg-white, .bg-warning, .bg-info, .btn-light, .btn-warning) { color: #1e293b !important; }
+    html.dark :is(.card, .chart-container, .modal-content):has(.lfm-dt-wrapper) > :is(.card-header, .chart-title, .modal-header) .text-muted:not(:where(.badge, .btn, .badge *, .btn *)) { color: #cbd5e1 !important; }
+    html.dark :is(.card, .chart-container, .modal-content):has(.lfm-dt-wrapper) > :is(.card-header, .chart-title, .modal-header) .text-success:not(:where(.badge, .btn, .badge *, .btn *)) { color: #75d3a3 !important; }
+    html.dark :is(.card, .chart-container, .modal-content):has(.lfm-dt-wrapper) > :is(.card-header, .chart-title, .modal-header) .text-primary:not(:where(.badge, .btn, .badge *, .btn *)) { color: #8bd5ff !important; }
+    html.dark .card:has(.lfm-dt-wrapper) > .card-header .nav-link { color: #cbd5e1 !important; background-color: transparent !important; }
+    html.dark .card:has(.lfm-dt-wrapper) > .card-header .nav-link.active { color: #8bd5ff !important; background-color: #253346 !important; border-bottom-color: #8bd5ff !important; }
+}
+
+/* La página actual conserva contraste también al apuntar, enfocar o pulsar. */
+@layer lfm-dt-table {
+    .lfm-dt-wrapper .page-item.active > .page-link,
+    .lfm-dt-wrapper .page-item.active > .page-link:is(:hover, :focus, :active) {
+        color: #fff !important;
+        background-color: #00809f !important;
+        border-color: #00809f !important;
+    }
+}

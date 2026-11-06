@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /**
  * ordenes_cliente.js
  * Módulo: Seguimiento de Órdenes de Compra Clientes
@@ -177,10 +178,12 @@ function fntInicializarTabla() {
 
     if (!document.getElementById(tableElementJS)) return;
 
-    /* Inicializamos lo filtros de columna */
-    var elemento_clone = tableElement + ' thead tr';
-    var elemento_appendto = tableElement + ' thead';
-    $(elemento_clone).clone(true).appendTo(elemento_appendto);
+    /* Cabecera de filtros exclusiva de esta lista; reconstruir sin copiar eventos. */
+    $(tableElement).off('draw.dt.ocTableLayout');
+    if ($.fn.dataTable.isDataTable(tableElement)) $(tableElement).DataTable().destroy();
+    var cabecera = $(tableElement + ' thead');
+    cabecera.find('tr.oc-table-filters').remove();
+    cabecera.find('tr').first().clone(false).addClass('oc-table-filters').appendTo(cabecera);
 
     var elemento_each = tableElement + ' thead tr:eq(1) th';
     $(elemento_each).each(function(i) {
@@ -197,7 +200,7 @@ function fntInicializarTabla() {
         // Filtros legibles y con nombre accesible; se conserva la búsqueda por columna.
         $(this).html('<div class="form-group mb-0"><input type="text" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/></div>');
 
-        $('input', this).attr('aria-label', 'Filtrar ' + title);
+        $('input', this).attr('aria-label', 'Filtrar ' + title).on('click keydown', function (event) { event.stopPropagation(); });
 
         // Evento del input creado en cada columna
         $('input', this).on('keyup change', function() {
@@ -212,7 +215,7 @@ function fntInicializarTabla() {
 
     /*-------------------------------------------
     [ DataTable Inicializa ]*/
-    tableOrdenes = $(tableElement).DataTable({
+    tableOrdenes = LfmTables.create($(tableElement), {
         orderCellsTop: true,
         fixedHeader: true,
         scrollX: "100%",
@@ -226,7 +229,8 @@ function fntInicializarTabla() {
             [5, 10, 25, 50, 100, -1],
             [5, 10, 25, 50, 100, "Todos"]
         ],
-        dom: 'Blfrtip',
+        // Diseño aprobado: el helper compartido conserva la composición revisada.
+        dom: '<"oc-table-toolbar"<"oc-table-length"l><"oc-table-buttons"B><"oc-table-search"f>>rt<"oc-table-info"i><"oc-table-pagination"p>',
         buttons: [{
                 extend: 'excelHtml5',
                 autoFilter: true,
@@ -345,6 +349,10 @@ function fntInicializarTabla() {
             { data: 'ultimo_seguimiento_fecha', className: 'text-center align-middle' },
             { data: 'ultimo_seguimiento_usuario', className: 'text-start align-middle' }
         ],
+        // El nombre accesible se conserva aunque el idioma oculte el texto Buscar.
+        initComplete: function () {
+            $(this.api().table().container()).find('.dataTables_filter input').attr('aria-label', 'Buscar en órdenes de compra de clientes');
+        },
         language: idioma_espanol
     });
 
@@ -359,7 +367,7 @@ function fntInicializarTabla() {
 
     /*-------------------------------------------
     [ DataTable - Se ejecuta después de redibujarse la tabla ]*/
-    $(tableElement).on('draw.dt', function() {
+    $(tableElement).on('draw.dt.ocTableLayout', function() {
         if (tableOrdenes) {
             tableOrdenes.columns.adjust();
         }

@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /**
  * ordenes_proveedor.js
  * Módulo: Seguimiento de Órdenes de Compra a Proveedores
@@ -129,7 +130,7 @@ function fntInicializarTabla() {
 
     /*-------------------------------------------
     [ DataTable Inicializa ]*/
-    tableOrdenes = $(tableElement).DataTable({
+    tableOrdenes = LfmTables.create($(tableElement), {
         orderCellsTop: true,
         fixedHeader: true,
         scrollX: "100%",

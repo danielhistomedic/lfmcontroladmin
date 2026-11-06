@@ -10,4 +10,8 @@ Las acciones se enrutan mediante `index.php?url=controlador/metodo/parametros`; 
 
 Documentar obligatoriamente acciones nuevas o modificadas mediante PHPDoc cuando corresponda: método HTTP, entradas, permisos, respuesta y errores reales. Mantener comentarios y ejemplos del contrato coherentes con los consumidores, retirando los desfasados conforme a la regla PHP 8.2.
 
-Cuando una acción alimente o exporte DataTables, consultar los [contratos de datos y exportación del patrón de Órdenes de Compra Clientes](../../rules/datatables.md). Preservar claves, tipos, permisos, alcance y envoltorio JSON del consumidor real; distinguir carga completa de server-side y no cambiar de modalidad por homologar diseño. La visibilidad de botones no sustituye autorización backend.
+Para acciones que alimentan o exportan DataTables, aplicar los [contratos del diseño aprobado de OCC](../../rules/datatables.md). Conservar claves, tipos, parámetros, alcance, autorización y modalidad de paginación. Las listas especiales conservan su exportador y filtros admitidos; no cambiar el backend ni añadir exportación por una homologación visual.
+
+Cuando una lista requiera ajustes de diseño, conservar las correcciones visuales de la regla central y resolver localización en el cliente con recursos existentes. No cambiar idioma, claves, filtros o paginación del contrato JSON, ni generar consultas adicionales al ajustar cabeceras, modales o pestañas. Una corrección de contraste o localización no autoriza cambios de permisos ni exportadores.
+
+Conservar texto, aria-current y navegación de la página activa; su corrección de contraste pertenece al CSS compartido y no requiere cambios en los contratos de paginación o permisos.

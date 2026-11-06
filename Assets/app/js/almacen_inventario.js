@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ JS: Almacén - Inventario ]
 ==================================================================*/
@@ -110,7 +111,7 @@ function initDataTableInventario() {
         $(tableElement).find('tbody').empty();
     }
 
-    tableInventario = $(tableElement).DataTable({
+    tableInventario = LfmTables.create($(tableElement), {
         destroy: true,
         processing: true,
         serverSide: false,

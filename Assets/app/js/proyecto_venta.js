@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /**
  * proyecto_venta.js
  * Módulo: Seguimiento - Proyecto de Venta
@@ -157,7 +158,7 @@ function fntActualizarFechasPorPeriodo(periodo) {
  * Inicializa la configuración de DataTables para el listado de Proyectos de Venta
  */
 function fntInicializarTablaProyectos() {
-    tableProyectosVenta = $(tableElement).DataTable({
+    tableProyectosVenta = LfmTables.create($(tableElement), {
         orderCellsTop: true,
         fixedHeader: true,
         scrollX: "100%",
@@ -1095,7 +1096,7 @@ function fntRenderPartidasProyecto(partidasObj) {
     $("#tablePartidasProyecto tbody").html(tbodyHtml);
 
     // Re-inicializar DataTables
-    tablePartidasProyecto = $("#tablePartidasProyecto").DataTable({
+    tablePartidasProyecto = LfmTables.create($("#tablePartidasProyecto"), {
         orderCellsTop: true,
         fixedHeader: true,
         scrollX: "100%",

@@ -28,19 +28,23 @@ Todos los módulos actuales y nuevos, incluido Login, deben aplicar el [estánda
 Los campos de una línea conservan altura `38px`, Arial/Helvetica/sans-serif de `14px`, peso `400`, interlineado `20px`, padding `8px 12px`, borde de `1px` y radio de `5px`. Los textarea y selects múltiples/de lista conservan su contenido multilínea y altura mínima `96px`.
 Reutilizar `Assets/app/css/form-controls.css`, sus variables `--lfm-control-*` y la carga de `Template/font_family.php`. Mantener Select2, foco, validación, claro/oscuro, readonly/disabled, campos ocultos y controles nativos especiales conforme a la regla. No crear variantes por módulo ni modificar valores, restricciones, máscaras, eventos o contratos por homologar presentación, salvo instrucción explícita del usuario.
 
-## DataTables — diseño y estructura de referencia
-Para crear o modificar tablas en módulos actuales y nuevos, aplicar la [regla de DataTables](.agents/rules/datatables.md), basada en Seguimiento → Órdenes de Compra Clientes. Reutilizar su panel, encabezado turquesa con texto blanco, filtros por columna, scroll horizontal, encabezado fijo, paginación, Excel y visibilidad de columnas según el flujo y los permisos. Conservar las fuentes y controles estándar. Adaptar columnas, IDs, datos y orden al módulo; no copiar reglas comerciales de OCC ni cambiar bibliotecas o contratos por homologar presentación.
+## DataTables — diseño aprobado
+Las listas actuales y nuevas aplican la [regla del diseño aprobado de Órdenes de Compra Clientes](.agents/rules/datatables.md): un solo contenedor; cantidad, Excel/Columnas y búsqueda en ese orden; filtros compactos; conteo y paginación en líneas separadas. Reutilizar `LfmTables.create()` y `datatable-layout.css/js`, adaptando IDs, columnas y permisos. Las medidas de controles de tabla son excepciones acotadas al wrapper y a sus clones de cabecera flotante; no alteran formularios ni Login. Mantener filtros de 34 px cuadrados también en FixedHeader y búsqueda de 175 px en móvil, modales y pestañas. Aplicar las correcciones de contraste claro/oscuro, paginación activa con número blanco legible en todos sus estados y localización de la regla central; validar con las hojas y vistas reales sin modificar lógica, contratos ni permisos.
 
 ## Reglas
 Leer las reglas relacionadas con el cambio:
 - [Acceso a datos](.agents/rules/accesobasedatos.md).
 - [Formularios y controles](.agents/rules/controlesforms.md).
-- [DataTables: diseño y estructura](.agents/rules/datatables.md), para tablas.
+- [DataTables: diseño aprobado](.agents/rules/datatables.md), para listas.
 - [PHP y organización](.agents/rules/php82.md).
 - [Seguridad](.agents/rules/seguridad.md).
 - [UTF-8](.agents/rules/utf8.md).
 - [Apache ECharts](.agents/rules/echarts.md), para gráficas.
 Las instrucciones explícitas del usuario tienen prioridad sobre estas convenciones.
+
+## Edición directa — preferencia compartida para todos los chats
+El usuario autoriza editar directamente los archivos del proyecto real en `C:\xampp\htdocs\lfm_admin` dentro del alcance de cada tarea solicitada. Esta preferencia rige todos los chats del proyecto: usar temporales únicamente para pruebas y respaldos; no preparar implementaciones en copias intermedias para después trasladarlas al proyecto como flujo habitual. Preservar cambios locales y validar los archivos editados.
+Si las restricciones de la sesión requieren permiso de escritura sobre esa ruta, solicitar la elevación de la herramienta necesaria para editar directamente; esta preferencia no elude el sandbox ni amplía el alcance de la tarea. No autoriza por sí sola acceso a producción, cambios de datos o permisos, despliegues ni otras acciones que requieran autorización específica.
 
 ## Procedimiento
 1. Leer código, dependencias y contratos vigentes; preservar cambios locales del usuario.

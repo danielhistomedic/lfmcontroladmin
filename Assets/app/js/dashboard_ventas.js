@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 // La familia del texto de ECharts sigue la fuente compartida del portal.
 /*==================================================================
 [ Variables ]*/
@@ -925,7 +926,7 @@ function openModalPedidosColocados() {
                 });
                 $('#table_pedidos_colocados thead').append($filterRow);
 
-                tableColocados = $('#table_pedidos_colocados').DataTable({
+                tableColocados = LfmTables.create($('#table_pedidos_colocados'), {
                     orderCellsTop: true,
                     scrollX: "100%",
                     destroy: true,
@@ -1169,7 +1170,7 @@ function openModalPedidosCotizados() {
                 });
                 $('#table_pedidos_cotizados thead').append($filterRow);
 
-                tableCotizados = $('#table_pedidos_cotizados').DataTable({
+                tableCotizados = LfmTables.create($('#table_pedidos_cotizados'), {
                     orderCellsTop: true,
                     scrollX: "100%",
                     destroy: true,
@@ -1383,7 +1384,7 @@ function openModalClientesActivos() {
                 });
                 $('#table_clientes_activos thead').append($filterRow);
 
-                tableClientes = $('#table_clientes_activos').DataTable({
+                tableClientes = LfmTables.create($('#table_clientes_activos'), {
                     orderCellsTop: true,
                     scrollX: "100%",
                     destroy: true,

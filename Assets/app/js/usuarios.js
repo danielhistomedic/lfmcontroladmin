@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 /*==================================================================
 [ Variables ]*/
 var controller = "Usuarios";
@@ -96,7 +97,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         /*-------------------------------------------
         [ DataTable Inicializa ]*/
         setConfigTable(controller, 'getListaRecords');
-        table = $(tableElement).DataTable(configTable);
+        table = LfmTables.create($(tableElement), configTable);
 
         /*-------------------------------------------
         [ DataTable - Se ejecuta después de inicializar la tabla ]*/

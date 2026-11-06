@@ -10,4 +10,4 @@ Para formularios y presentación de módulos actuales o nuevos, incluido Login, 
 
 Para campos de módulos actuales y nuevos, incluido Login, aplicar el [estándar de input, textarea y select](../../rules/controlesforms.md#campos-estandar): fondo blanco y borde neutro sin sombra en reposo; borde azul claro y sombra suave solo con foco, también en Select2.
 
-Para trabajo con DataTables, aplicar el [diseño, estructura y contratos de referencia de Órdenes de Compra Clientes](../../rules/datatables.md), adaptados al módulo.
+Para trabajo con listas, aplicar el [diseño DataTables aprobado de Órdenes de Compra Clientes](../../rules/datatables.md), incluidas sus correcciones de FixedHeader, búsqueda móvil, contraste, paginación activa legible y localización; conservar contratos y permisos del módulo.

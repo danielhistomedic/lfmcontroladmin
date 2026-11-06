@@ -1,3 +1,4 @@
+/** DataTables: diseño aprobado compartido en datatable-layout.js; contrato propio conservado. */
 // La familia del texto de ECharts sigue la fuente compartida del portal.
 /* Reporte mensual: una carga global por cambio de filtros. */
 document.addEventListener('DOMContentLoaded', function () {
@@ -418,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 filterRow.appendChild(th);
             });
             tableElement.tHead.appendChild(filterRow);
-            table = jQuery(tableElement).DataTable({
+            table = LfmTables.create(jQuery(tableElement), {
                 serverSide: true, processing: true, searchDelay: 400,
                 orderCellsTop: true, scrollX: '100%', select: true, order: [],
                 iDisplayLength: 10, lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
