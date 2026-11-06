@@ -6,6 +6,13 @@
 var tableProductos = null;
 var tableElement = '#tableProductosAlmacen';
 
+/** Escapa valores de la base antes de insertarlos en celdas o atributos HTML. */
+function escaparHtmlProducto(valor) {
+    const nodo = document.createElement('span');
+    nodo.textContent = String(valor ?? '');
+    return nodo.innerHTML;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     // Inicializar DataTable al cargar la página
     initDataTableProductos();
@@ -14,15 +21,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const formBuscador = document.getElementById('formBuscadorProductos');
     if (formBuscador) {
         formBuscador.addEventListener('submit', function (e) {
-            e.preventDefault();
-            ejecutarBusqueda();
-        });
-    }
-
-    // Evento clic en botón buscar
-    const btnBuscar = document.getElementById('btnBuscarProducto');
-    if (btnBuscar) {
-        btnBuscar.addEventListener('click', function (e) {
             e.preventDefault();
             ejecutarBusqueda();
         });
@@ -43,12 +41,16 @@ document.addEventListener("DOMContentLoaded", function () {
     if (inputBuscar) {
         inputBuscar.addEventListener('input', function () {
             if (this.value.trim().length > 0) {
-                if (btnLimpiar) btnLimpiar.style.display = 'inline-block';
+                if (btnLimpiar) btnLimpiar.style.display = 'inline-flex';
             } else {
                 if (btnLimpiar) btnLimpiar.style.display = 'none';
             }
         });
     }
+
+    $(tableElement).on('click', '.btn-ver-fotos', function () {
+        abrirModalFotos(this.dataset.fotos, this.dataset.descripcion);
+    });
 });
 
 /**
@@ -69,23 +71,18 @@ function initDataTableProductos() {
     const urlGet = base_url + '/almacen/getProductos';
 
     if ($.fn.DataTable.isDataTable(tableElement)) {
-        $(tableElement).DataTable().destroy();
-        $(tableElement).find('tbody').empty();
+        tableProductos = $(tableElement).DataTable();
+        return;
     }
 
     tableProductos = LfmTables.create($(tableElement), {
-        destroy: true,
         processing: true,
         serverSide: false,
         responsive: false,
         scrollX: true,
+        fixedHeader: true,
         orderCellsTop: true,
-        order: [[2, "asc"]],
-        iDisplayLength: 5,
-        lengthMenu: [
-            [3, 5, 10, 25, 50, 100, -1],
-            [3, 5, 10, 25, 50, 100, "Todos"]
-        ],
+        order: [[4, "asc"]],
         ajax: {
             url: urlGet,
             type: 'POST',
@@ -95,7 +92,7 @@ function initDataTableProductos() {
             },
             dataSrc: function (json) {
                 if (json && json.status) {
-                    mostrarRespuestaInteligente(json.busqueda, json.respuesta_inteligente, json.total_registros);
+                    mostrarRespuestaInteligente(json.busqueda, json.respuesta_inteligente, json.busqueda ? (json.total_con_existencia ?? 0) : json.total_registros);
                     return json.data || [];
                 } else {
                     mostrarRespuestaInteligente('', 'No fue posible realizar la consulta.', 0);
@@ -107,16 +104,21 @@ function initDataTableProductos() {
             {
                 data: 'fotos',
                 className: 'text-center',
+                orderable: false,
+                searchable: false,
                 render: function (data, type, row) {
+                    if (type !== 'display') return '';
                     if (data && data.length > 0) {
                         const firstImg = data[0];
                         const count = data.length;
-                        const descEscaped = encodeURIComponent(row.cDescripcion || '');
-                        const jsonFotos = encodeURIComponent(JSON.stringify(data));
+                        const descEscaped = encodeURIComponent(row.cDescripcion || '').replace(/'/g, '%27');
+                        const jsonFotos = encodeURIComponent(JSON.stringify(data)).replace(/'/g, '%27');
                         return `
                             <div class="position-relative d-inline-block">
-                                <img src="${firstImg}" class="product-img-thumb" title="Ver foto" onclick="abrirModalFotos('${jsonFotos}', '${descEscaped}')">
-                                ${count > 1 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">+${count - 1}</span>` : ''}
+                                <button type="button" class="btn btn-link p-0 btn-ver-fotos" data-fotos="${jsonFotos}" data-descripcion="${descEscaped}" aria-label="Ver fotos del producto">
+                                    <img src="${escaparHtmlProducto(firstImg)}" class="product-img-thumb" alt="Foto del producto">
+                                </button>
+                                ${count > 1 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger product-photo-count">+${count - 1}</span>` : ''}
                             </div>
                         `;
                     } else {
@@ -124,15 +126,37 @@ function initDataTableProductos() {
                     }
                 }
             },
+            // La respuesta ya contiene las tres cantidades del mismo alcance de almacén.
+            {
+                data: 'existencia',
+                className: 'text-center',
+                render: function (data, type) {
+                    const cantidad = Number(data) || 0;
+                    if (type !== 'display') return cantidad;
+                    const clase = cantidad > 0 ? 'bg-info text-dark' : 'bg-secondary';
+                    return `<span class="badge ${clase} badge-stock">${cantidad}</span>`;
+                }
+            },
+            {
+                data: 'reservadas',
+                className: 'text-center',
+                render: function (data, type) {
+                    const cantidad = Number(data) || 0;
+                    if (type !== 'display') return cantidad;
+                    const clase = cantidad > 0 ? 'bg-warning text-dark' : 'bg-secondary';
+                    return `<span class="badge ${clase} badge-stock">${cantidad}</span>`;
+                }
+            },
             {
                 data: 'disponibles',
                 className: 'text-center',
                 render: function (data, type, row) {
-                    const cant = parseInt(row.existencia) || 0;
-                    const res = parseInt(row.reservadas) || 0;
-                    const disp = (data !== undefined && data !== null) ? (parseInt(data) || 0) : (cant - res);
+                    const cant = Number(row.existencia) || 0;
+                    const res = Number(row.reservadas) || 0;
+                    const disp = (data !== undefined && data !== null) ? (Number(data) || 0) : (cant - res);
+                    if (type !== 'display') return disp;
                     const desglose = row.desgloses_almacen ? ` (${row.desgloses_almacen})` : '';
-                    const tooltip = `Existencias: ${cant} | Reservadas: ${res} | Disponibles: ${disp}${desglose}`;
+                    const tooltip = escaparHtmlProducto(`Existencias: ${cant} | Reservadas: ${res} | Disponibles: ${disp}${desglose}`);
                     if (disp > 0) {
                         return `<span class="badge bg-success badge-stock" title="${tooltip}" data-bs-toggle="tooltip">${disp}</span>`;
                     } else if (cant > 0) {
@@ -160,7 +184,10 @@ function initDataTableProductos() {
         ],
         autoWidth: false,
         columnDefs: [
-            { targets: 4, width: "400px", className: "col-descripcion" },
+            { targets: 6, width: "400px", className: "col-descripcion" },
+            { targets: Array.from({length: 15}, (_, i) => i + 4), render: function (data, type) {
+                return type === 'display' ? escaparHtmlProducto(data) : data;
+            } },
             { targets: "_all", defaultContent: "" }
         ],
         dom: 'Blfrtip',
@@ -168,7 +195,7 @@ function initDataTableProductos() {
             {
                 extend: 'excelHtml5',
                 title: 'Productos_y_Existencias_Almacen',
-                exportOptions: { columns: ':visible' }
+                exportOptions: { columns: Array.from({length: 18}, (_, i) => i + 1) }
             },
             {
                 extend: 'colvis',
@@ -178,51 +205,50 @@ function initDataTableProductos() {
         language: idioma_espanol,
         initComplete: function () {
             const api = this.api();
-            const wrapper = $(tableElement).closest('.dataTables_wrapper');
+            // La hoja oculta Excel hasta confirmar el permiso e del módulo.
+            if (typeof menu !== 'undefined') validaPermisoExportar(menu);
 
-            // Asignar eventos de búsqueda por columna a los inputs en la cabecera
-            wrapper.find('thead tr.filters-row th').each(function (colIdx) {
-                const input = $(this).find('input');
-                if (input.length > 0) {
-                    // Evitar que el clic en el input dispare la ordenación
-                    input.on('click', function (e) {
-                        e.stopPropagation();
-                    });
-
-                    // Filtrado en tiempo real con debounce
-                    let timeout = null;
-                    input.on('keyup input change clear', function () {
-                        const val = this.value;
-                        clearTimeout(timeout);
-                        timeout = setTimeout(function () {
-                            if (api.column(colIdx).search() !== val) {
-                                api.column(colIdx).search(val).draw();
-                            }
-                        }, 250);
-                    });
-                }
-            });
-
-            // Botón para resetear todos los filtros de columna
-            wrapper.find('#btnResetColFilters').on('click', function (e) {
+            // Delegar sobre el documento cubre la cabecera visible y el clon de FixedHeader.
+            // El índice explícito conserva el filtro correcto al ocultar columnas con Columnas.
+            $(document).off('.almacenProductosFiltros');
+            let timeoutFiltro = null;
+            $(document).on('click.almacenProductosFiltros keydown.almacenProductosFiltros',
+                '.lfm-dt-filters input.col-filter-input', function (e) { e.stopPropagation(); });
+            $(document).on('input.almacenProductosFiltros change.almacenProductosFiltros',
+                '.lfm-dt-filters input.col-filter-input', function () {
+                    const indice = Number(this.dataset.columnIndex);
+                    if (!Number.isInteger(indice) || indice < 1 || indice > 18) return;
+                    const valor = this.value;
+                    $('.lfm-dt-filters input.col-filter-input[data-column-index="' + indice + '"]').not(this).val(valor);
+                    clearTimeout(timeoutFiltro);
+                    timeoutFiltro = setTimeout(function () {
+                        if (api.column(indice).search() !== valor) api.column(indice).search(valor).draw();
+                    }, 250);
+                });
+            $(document).on('click.almacenProductosFiltros', '.btn-reset-col-filters', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                wrapper.find('thead tr.filters-row input').val('');
+                clearTimeout(timeoutFiltro);
+                $('.lfm-dt-filters input.col-filter-input').val('');
                 api.columns().search('').draw();
+            });
+            $(tableElement).one('destroy.dt.almacenProductosFiltros', function () {
+                clearTimeout(timeoutFiltro);
+                $(document).off('.almacenProductosFiltros');
             });
         },
         drawCallback: function () {
-            // Inicializar tooltips de Bootstrap
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+            // Reutilizar instancias al redibujar para no acumular tooltips.
+            document.querySelectorAll('#tableProductosAlmacen [data-bs-toggle="tooltip"]').forEach(function (elemento) {
+                bootstrap.Tooltip.getOrCreateInstance(elemento);
             });
         }
     });
 }
 
 /**
- * Renderiza la respuesta sintética inteligente del sistema
+ * Renderiza la respuesta de búsqueda y el conteo correspondiente al resumen.
+ * @param {number} total Productos con existencia al buscar o total de filas en la vista general.
  */
 function mostrarRespuestaInteligente(busqueda, respuesta, total) {
     const box = document.getElementById('boxRespuestaInteligente');
@@ -235,7 +261,7 @@ function mostrarRespuestaInteligente(busqueda, respuesta, total) {
         box.style.display = 'block';
         content.innerHTML = respuesta;
         if (badge) {
-            badge.innerText = `${total} Producto(s) Encontrado(s)`;
+            badge.innerText = `${total} ${total === 1 ? 'producto' : 'productos'} con existencia`;
         }
     } else {
         box.style.display = 'block';
@@ -275,9 +301,17 @@ function abrirModalFotos(jsonFotosEnc, descripcionEnc) {
             indicators.innerHTML = '';
             inner.innerHTML = '';
 
-            const total = arrFotos.length;
+            const baseFotos = new URL(base_url + '/Assets/files/productos/', window.location.href);
+            const fotosValidas = arrFotos.filter(url => {
+                try {
+                    const ruta = new URL(url, window.location.href);
+                    return ruta.origin === baseFotos.origin && ruta.pathname.startsWith(baseFotos.pathname);
+                } catch (e) { return false; }
+            });
+            const total = fotosValidas.length;
+            if (!total) return;
 
-            arrFotos.forEach((url, idx) => {
+            fotosValidas.forEach((url, idx) => {
                 // Indicador
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -293,14 +327,27 @@ function abrirModalFotos(jsonFotosEnc, descripcionEnc) {
                 // Slide Item
                 const item = document.createElement('div');
                 item.className = `carousel-item ${idx === 0 ? 'active' : ''} h-100`;
-                item.innerHTML = `
-                    <div class="d-flex flex-column align-items-center justify-content-center h-100 p-3" style="background-color: #0f172a;">
-                        <a href="${url}" target="_blank" title="Haz clic para ver la imagen original en pestaña nueva">
-                            <img src="${url}" data-original-src="${url}" class="img-fluid rounded shadow-lg" style="max-height: 400px; object-fit: contain; background-color: #ffffff; padding: 8px; border: 1px solid #334155;">
-                        </a>
-                        <small class="text-white-50 mt-2"><i class="fa-solid fa-up-right-from-square me-1"></i>Imagen ${idx + 1} de ${total} - Clic en la foto para ver en tamaño original</small>
-                    </div>
-                `;
+                const contenedor = document.createElement('div');
+                contenedor.className = 'd-flex flex-column align-items-center justify-content-center h-100 p-3';
+                contenedor.style.backgroundColor = '#0f172a';
+                const enlace = document.createElement('a');
+                enlace.href = url;
+                enlace.target = '_blank';
+                enlace.rel = 'noopener noreferrer';
+                enlace.title = 'Ver imagen original en pestaña nueva';
+                const imagen = document.createElement('img');
+                imagen.src = url;
+                imagen.setAttribute('data-original-src', url);
+                imagen.alt = `Foto ${idx + 1} del producto`;
+                imagen.className = 'img-fluid rounded shadow-lg';
+                imagen.style.cssText = 'max-height:400px;object-fit:contain;background:#fff;padding:8px;border:1px solid #334155';
+                enlace.appendChild(imagen);
+                contenedor.appendChild(enlace);
+                const texto = document.createElement('small');
+                texto.className = 'text-white-50 mt-2';
+                texto.textContent = `Imagen ${idx + 1} de ${total} - Clic en la foto para ver en tamaño original`;
+                contenedor.appendChild(texto);
+                item.appendChild(contenedor);
                 inner.appendChild(item);
             });
 
@@ -379,6 +426,7 @@ function rotarFotoModal(direccion) {
     const formData = new FormData();
     formData.append('foto', fotoSrc);
     formData.append('direccion', direccion);
+    formData.append('token', document.getElementById('csrfRotarFoto')?.value || '');
 
     fetch(base_url + '/almacen/rotarFoto', {
         method: 'POST',
@@ -417,7 +465,7 @@ function rotarFotoModal(direccion) {
                 }, 2500);
             }
         } else {
-            alert(data.msg || 'No fue posible rotar la fotografía.');
+            alert((data && data.msg) || 'No fue posible rotar la fotografía.');
         }
     })
     .catch(err => {

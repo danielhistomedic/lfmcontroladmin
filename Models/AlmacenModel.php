@@ -47,7 +47,11 @@ class AlmacenModel extends Mysql
                         IFNULL(sap.clave_cliente, '') AS clave_cliente,
                         IFNULL(sap.descripcion_cliente, '') AS descripcion_cliente,
                         IFNULL(m.iExistenciaActual, 0) AS existencia_base,
-                        ftp.img1, ftp.img2, ftp.img3, ftp.img4, ftp.img5,
+                        COALESCE(ftp_clave.img1, ftp_id.img1) AS img1,
+                        COALESCE(ftp_clave.img2, ftp_id.img2) AS img2,
+                        COALESCE(ftp_clave.img3, ftp_id.img3) AS img3,
+                        COALESCE(ftp_clave.img4, ftp_id.img4) AS img4,
+                        COALESCE(ftp_clave.img5, ftp_id.img5) AS img5,
                         (
                             SELECT IFNULL(SUM(ae.iExistenciaActual), 0)
                             FROM tb_almacen_existencias ae
@@ -64,7 +68,7 @@ class AlmacenModel extends Mysql
                             WHERE ae.ccvematerial = m.ccvematerial
                         ) AS disponibles_almacen,
                         (
-                            SELECT GROUP_CONCAT(CONCAT(IFNULL(ca.cdscalmacen, ae.ccvealmacen), ': ', ROUND(ae.iExistenciaActual, 0)) SEPARATOR ' | ')
+                            SELECT GROUP_CONCAT(CONCAT(IFNULL(ca.cdscalmacen, ae.ccvealmacen), ': ', ae.iExistenciaActual) SEPARATOR ' | ')
                             FROM tb_almacen_existencias ae
                             LEFT JOIN cat_almacen ca ON ca.ccvealmacen = ae.ccvealmacen
                             WHERE ae.ccvematerial = m.ccvematerial AND ae.iExistenciaActual > 0
@@ -74,8 +78,22 @@ class AlmacenModel extends Mysql
                     LEFT JOIN cat_submarcas sub ON (sub.id = m.submarca_id)
                     LEFT JOIN cat_claves cla ON (cla.icveclave = m.icveclave)
                     LEFT JOIN cat_categorias cat ON (cat.id = m.categoria_id)
-                    LEFT JOIN tb_materiales_ftp ftp ON (ftp.idDocto = m.ccvematerial OR ftp.idDocto = m.icvematerial)
-                    LEFT JOIN tb_materiales_claves_sap sap ON (sap.ccvematerial = m.ccvematerial)
+                    -- Las tablas auxiliares pueden tener varias filas por material; agregarlas evita duplicar productos.
+                    LEFT JOIN (
+                        SELECT idDocto, MAX(img1) AS img1, MAX(img2) AS img2, MAX(img3) AS img3,
+                               MAX(img4) AS img4, MAX(img5) AS img5
+                        FROM tb_materiales_ftp GROUP BY idDocto
+                    ) ftp_clave ON ftp_clave.idDocto = m.ccvematerial
+                    LEFT JOIN (
+                        SELECT idDocto, MAX(img1) AS img1, MAX(img2) AS img2, MAX(img3) AS img3,
+                               MAX(img4) AS img4, MAX(img5) AS img5
+                        FROM tb_materiales_ftp GROUP BY idDocto
+                    ) ftp_id ON ftp_id.idDocto = m.icvematerial
+                    LEFT JOIN (
+                        SELECT ccvematerial, MIN(clave_cliente) AS clave_cliente,
+                               MIN(descripcion_cliente) AS descripcion_cliente
+                        FROM tb_materiales_claves_sap GROUP BY ccvematerial
+                    ) sap ON sap.ccvematerial = m.ccvematerial
                     WHERE m.iBaja = 0 AND m.cClasificacion = 'PRODUCTO' ";
 
             if (!empty($busqueda)) {
@@ -97,8 +115,9 @@ class AlmacenModel extends Mysql
                             m.cDescripcion LIKE $param OR 
                             m.ccvematerial LIKE $param OR 
                             m.ccveMaterialAlmacen LIKE $param OR 
-                            sap.clave_cliente LIKE $param OR 
-                            sap.descripcion_cliente LIKE $param OR 
+                            EXISTS (SELECT 1 FROM tb_materiales_claves_sap sx
+                                    WHERE sx.ccvematerial = m.ccvematerial
+                                      AND (sx.clave_cliente LIKE $param OR sx.descripcion_cliente LIKE $param)) OR
                             mar.cdscmarca LIKE $param OR 
                             sub.cdscsubmarca LIKE $param OR 
                             cla.cdscclave LIKE $param OR 
@@ -128,8 +147,9 @@ class AlmacenModel extends Mysql
                         $param = ":word_or_" . $i;
                         $wherePartsOr[] = "(
                             m.cDescripcion LIKE $param OR 
-                            sap.clave_cliente LIKE $param OR 
-                            sap.descripcion_cliente LIKE $param OR 
+                            EXISTS (SELECT 1 FROM tb_materiales_claves_sap sx
+                                    WHERE sx.ccvematerial = m.ccvematerial
+                                      AND (sx.clave_cliente LIKE $param OR sx.descripcion_cliente LIKE $param)) OR
                             mar.cdscmarca LIKE $param OR 
                             sub.cdscsubmarca LIKE $param OR 
                             cla.cdscclave LIKE $param OR 
@@ -142,7 +162,7 @@ class AlmacenModel extends Mysql
                     $arrResponse = $this->select($sqlOr, $arrValuesOr);
                     return is_array($arrResponse) ? $arrResponse : [];
                 } else {
-                    $sqlFull = $sqlBase . " AND (m.cDescripcion LIKE :full_search OR m.ccvematerial LIKE :full_search OR sap.clave_cliente LIKE :full_search) ORDER BY m.icvematerial DESC LIMIT 500";
+                    $sqlFull = $sqlBase . " AND (m.cDescripcion LIKE :full_search OR m.ccvematerial LIKE :full_search OR EXISTS (SELECT 1 FROM tb_materiales_claves_sap sx WHERE sx.ccvematerial = m.ccvematerial AND sx.clave_cliente LIKE :full_search)) ORDER BY m.icvematerial DESC LIMIT 500";
                     $arrResponse = $this->select($sqlFull, ['full_search' => "%" . $busqueda . "%"]);
                     return is_array($arrResponse) ? $arrResponse : [];
                 }
@@ -155,6 +175,45 @@ class AlmacenModel extends Mysql
             getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
             return [];
         }
+    }
+
+    /**
+     * Recupera todas las referencias de fotos de los productos listados en lotes.
+     * La selección agregada de img1..img5 puede descartar otras filas FTP válidas.
+     *
+     * @param array $productos Filas de searchProductosAlmacen con Clave e icvematerial.
+     * @return array<string, array<int, string>> Nombres de archivo agrupados por idDocto.
+     */
+    public function getFotosProductosAlmacen(array $productos): array
+    {
+        $identificadores = [];
+        foreach ($productos as $producto) {
+            foreach (['Clave', 'icvematerial'] as $campo) {
+                $id = trim((string) ($producto[$campo] ?? ''));
+                if ($id !== '') $identificadores[$id] = $id;
+            }
+        }
+
+        $fotos = [];
+        foreach (array_chunk(array_values($identificadores), 400) as $lote) {
+            $parametros = [];
+            $valores = [];
+            foreach ($lote as $indice => $id) {
+                $nombre = ':foto_id_' . $indice;
+                $parametros[] = $nombre;
+                $valores[$nombre] = $id;
+            }
+            $sql = 'SELECT idDocto, img1, img2, img3, img4, img5 FROM tb_materiales_ftp '
+                . 'WHERE idDocto IN (' . implode(', ', $parametros) . ')';
+            foreach ($this->select($sql, $valores) as $fila) {
+                $id = trim((string) $fila['idDocto']);
+                for ($i = 1; $i <= 5; $i++) {
+                    $nombre = trim((string) ($fila['img' . $i] ?? ''));
+                    if ($nombre !== '') $fotos[$id][$nombre] = $nombre;
+                }
+            }
+        }
+        return array_map('array_values', $fotos);
     }
 
     /**
@@ -201,6 +260,23 @@ class AlmacenModel extends Mysql
             getLoggerSystem()->error(getMensajeError($th, "AlmacenModel"));
             return [];
         }
+    }
+
+    /**
+     * Confirma que el archivo mostrado pertenece a un producto activo antes de modificarlo.
+     * @param string $fileName Nombre simple del archivo en Assets/files/productos.
+     * @return bool Verdadero si está registrado en alguna de las cinco fotos del producto.
+     */
+    public function fotoPerteneceProductoActivo(string $fileName): bool
+    {
+        $sql = "SELECT m.icvematerial
+                FROM tb_materiales m
+                INNER JOIN tb_materiales_ftp ftp
+                    ON (ftp.idDocto = m.ccvematerial OR ftp.idDocto = m.icvematerial)
+                WHERE m.iBaja = 0 AND m.cClasificacion = 'PRODUCTO'
+                  AND :archivo IN (ftp.img1, ftp.img2, ftp.img3, ftp.img4, ftp.img5)
+                LIMIT 1";
+        return !empty($this->selectModel($sql, [':archivo' => $fileName]));
     }
 
     /**

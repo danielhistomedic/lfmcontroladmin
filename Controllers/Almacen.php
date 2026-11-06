@@ -79,6 +79,8 @@ class Almacen extends Controllers
 
             //Id de Menu para script de Permisos
             $data['menu'] = MOD_ALMACEN_PRODUCTOS;
+            $data['puede_rotar_fotos'] = !empty($this->permisosMod['u']);
+            $data['csrf_rotar_foto'] = $this->session->getCsrfToken('almacen_rotar_foto');
 
             //Header
             $data['page_title']        = !empty($menu['name'])        ? $menu['name']        : 'Productos y Existencias';
@@ -265,13 +267,21 @@ class Almacen extends Controllers
     }
 
     /**
-     * Endpoint AJAX para alimentar el selector de producto (Select2 autocompletado).
-     * URL: /almacen/getSelectProductos
+     * Endpoint AJAX del selector de inventario. Requiere lectura del módulo Inventario.
+     * URL: /almacen/getSelectProductos; devuelve JSON con status y results.
      */
     public function getSelectProductos()
     {
         try {
-            $search = $_POST['q'] ?? $_GET['q'] ?? $_POST['search'] ?? $_GET['search'] ?? '';
+            // El selector pertenece a la vista de inventario; la redirección del constructor no detiene la acción.
+            $permisos = $this->session->getStatus() ? getPermisosGlobal() : [];
+            if (empty($permisos[MOD_ALMACEN_INVENTARIO]['r'])) {
+                http_response_code(403);
+                echo json_encode(['status' => false, 'results' => []], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            $rawSearch = $_POST['q'] ?? $_GET['q'] ?? $_POST['search'] ?? $_GET['search'] ?? '';
+            $search = is_string($rawSearch) ? mb_substr(trim($rawSearch), 0, 100, 'UTF-8') : '';
 
             $almacenModel = new AlmacenModel();
             $arrProductos = $almacenModel->buscarProductosSelect($search);
@@ -290,8 +300,9 @@ class Almacen extends Controllers
 
 
     /**
-     * Endpoint AJAX para obtener productos y respuesta inteligente.
-     * URL: /almacen/getProductos
+     * Endpoint AJAX para obtener productos con permiso de lectura y respuesta de búsqueda; la vista envía POST.
+     * La tabla recibe todos los resultados; el resumen y total_con_existencia solo cuentan stock físico positivo.
+     * URL: /almacen/getProductos; recibe busqueda por POST o GET y responde status, data, total_registros y total_con_existencia.
      */
     public function getProductos()
     {
@@ -306,19 +317,25 @@ class Almacen extends Controllers
                 die();
             }
 
-            $busqueda = $_POST['busqueda'] ?? $_GET['busqueda'] ?? '';
+            $rawBusqueda = $_POST['busqueda'] ?? $_GET['busqueda'] ?? '';
+            $busqueda = is_string($rawBusqueda) ? mb_substr(trim($rawBusqueda), 0, 200, 'UTF-8') : '';
 
             $almacenModel = new AlmacenModel();
             $arrProductos = $almacenModel->searchProductosAlmacen($busqueda);
 
+            // El resumen prioriza stock físico, incluso si está totalmente reservado.
+            $productosConExistencia = array_values(array_filter($arrProductos, static function (array $producto): bool {
+                return (float) ($producto['existencias_almacen'] ?? 0) > 0;
+            }));
+            $totalConExistencia = count($productosConExistencia);
             $respuestaHTML = "";
             if (!empty($busqueda)) {
-                if (!empty($arrProductos)) {
-                    $respuestaHTML = "<div class='fw-bold mb-2' style='color: #1e293b; font-size: 1rem;'>Tenemos:</div>";
+                if ($totalConExistencia > 0) {
+                    $respuestaHTML = "<div class='product-result-intro mb-2'>Tenemos:</div>";
                     $respuestaHTML .= "<ul class='list-unstyled mb-0 ms-1'>";
-                    $topProducts = array_slice($arrProductos, 0, 5);
+                    $topProducts = array_slice($productosConExistencia, 0, 5);
                     foreach ($topProducts as $prod) {
-                        $existencia = floatval($prod['existencias_almacen']) > 0 ? floatval($prod['existencias_almacen']) : floatval($prod['existencia_base']);
+                        $existencia = floatval($prod['existencias_almacen']);
                         $reservadas = floatval($prod['reservadas_almacen'] ?? 0);
                         $disponibles = $existencia - $reservadas;
                         $desgloseStr = !empty($prod['desgloses_almacen']) ? "(" . $prod['desgloses_almacen'] . ")" : "";
@@ -328,56 +345,75 @@ class Almacen extends Controllers
                         
                         $infoCodigos = "";
                         if (!empty($claveStr) && !empty($ccnStr)) {
-                            $infoCodigos = "<span class='badge bg-dark me-1' style='font-size: 0.8rem;'>Clave: " . htmlspecialchars($claveStr) . "</span> <span class='badge bg-secondary me-2' style='font-size: 0.8rem;'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
+                            $infoCodigos = "<span class='product-code-chip me-1'>Clave: " . htmlspecialchars($claveStr) . "</span> <span class='product-code-chip product-code-chip--ccn me-2'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
                         } else if (!empty($claveStr)) {
-                            $infoCodigos = "<span class='badge bg-dark me-2' style='font-size: 0.8rem;'>Clave: " . htmlspecialchars($claveStr) . "</span> ";
+                            $infoCodigos = "<span class='product-code-chip me-2'>Clave: " . htmlspecialchars($claveStr) . "</span> ";
                         } else if (!empty($ccnStr)) {
-                            $infoCodigos = "<span class='badge bg-secondary me-2' style='font-size: 0.8rem;'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
+                            $infoCodigos = "<span class='product-code-chip product-code-chip--ccn me-2'>CCN: " . htmlspecialchars($ccnStr) . "</span> ";
                         }
 
-                        $colorDisponibles = $disponibles > 0 ? '#16a34a' : ($existencia > 0 ? '#dc2626' : '#2563eb');
+                        $claseDisponibles = $disponibles > 0 ? 'product-result-value--available' : ($existencia > 0 ? 'product-result-value--unavailable' : 'product-result-value--empty');
 
                         $respuestaHTML .= "<li class='mb-2 pb-1'>";
-                        $respuestaHTML .= "<div class='fw-bold text-dark' style='font-size: 0.95rem;'>• " . $infoCodigos . htmlspecialchars($prod['cDescripcion']) . "</div>";
-                        $respuestaHTML .= "<div class='ms-3 mt-1' style='font-size: 0.85rem; color: #2563eb; font-weight: 500;'>";
-                        $respuestaHTML .= "<span style='font-size: 0.7rem; vertical-align: middle; margin-right: 3px;'>▪</span> ";
-                        $respuestaHTML .= "Existencias: <strong style='color: #1d4ed8; font-weight: 700;'>" . intval($existencia) . "</strong>, ";
-                        $respuestaHTML .= "Reservadas: <strong style='color: #d97706; font-weight: 700;'>" . intval($reservadas) . "</strong> y ";
-                        $respuestaHTML .= "Disponibles: <strong style='color: " . $colorDisponibles . "; font-weight: 700;'>" . intval($disponibles) . "</strong>";
+                        $respuestaHTML .= "<div class='product-result-name'>• " . $infoCodigos . htmlspecialchars($prod['cDescripcion']) . "</div>";
+                        $respuestaHTML .= "<div class='product-result-details ms-3 mt-1'>";
+                        $respuestaHTML .= "<span class='product-result-marker'>▪</span> ";
+                        $respuestaHTML .= "Existencias: <strong class='product-result-value product-result-value--existencia'>" . $existencia . "</strong>, ";
+                        $respuestaHTML .= "Reservadas: <strong class='product-result-value product-result-value--reservadas'>" . $reservadas . "</strong> y ";
+                        $respuestaHTML .= "Disponibles: <strong class='product-result-value " . $claseDisponibles . "'>" . $disponibles . "</strong>";
                         if (!empty($desgloseStr)) {
-                            $respuestaHTML .= " <span style='color: #64748b; font-size: 0.95em;'>" . htmlspecialchars($desgloseStr) . "</span>";
+                            $respuestaHTML .= " <span class='product-result-warehouse'>" . htmlspecialchars($desgloseStr) . "</span>";
                         }
                         $respuestaHTML .= "</div>";
                         $respuestaHTML .= "</li>";
                     }
                     $respuestaHTML .= "</ul>";
-                    if (count($arrProductos) > 5) {
-                        $respuestaHTML .= "<div class='mt-2 text-muted fst-italic' style='font-size: 0.84rem;'><i class='fa-solid fa-circle-info me-1'></i> *(Y " . (count($arrProductos) - 5) . " producto(s) adicional(es) mostrado(s) en la tabla a continuación)*</div>";
+                    if ($totalConExistencia > 5) {
+                        $respuestaHTML .= "<div class='product-result-more mt-2 text-muted fst-italic'><i class='fa-solid fa-circle-info me-1'></i> *(Y " . ($totalConExistencia - 5) . " producto(s) adicional(es) mostrado(s) en la tabla a continuación)*</div>";
                     }
                 } else {
-                    $respuestaHTML = "<div class='text-danger fw-semibold'><i class='fa-solid fa-circle-exclamation me-1'></i> No se encontraron existencias o productos coincidentes para la búsqueda: \"" . htmlspecialchars($busqueda) . "\".</div>";
+                    $respuestaHTML = "<div class='text-danger fw-semibold'><i class='fa-solid fa-circle-exclamation me-1'></i> No hay productos con existencia en los resultados consultados para la búsqueda: \"" . htmlspecialchars($busqueda) . "\".</div>";
                 }
             } else {
-                $respuestaHTML = "<div class='text-muted'><i class='fa-solid fa-boxes-stacked me-1'></i> Mostrando listado general de productos activos en existencias.</div>";
+                $respuestaHTML = "<div class='text-muted'><i class='fa-solid fa-boxes-stacked me-1'></i> Mostrando hasta 500 productos activos del catálogo.</div>";
             }
+
+            if (count($arrProductos) >= 500) {
+                $respuestaHTML .= "<div class='small text-muted mt-2'>La consulta muestra como máximo 500 productos. Refine la búsqueda para ver otros resultados.</div>";
+            }
+
+            // Consultar todas las filas FTP evita perder fotos cuando MAX/COALESCE elige un archivo vacío o ausente.
+            $fotosPorDocumento = $almacenModel->getFotosProductosAlmacen($arrProductos);
 
             // Preparar filas con fotos preprocesadas
             $arrData = [];
             foreach ($arrProductos as $key => $row) {
-                $existenciaTotal = floatval($row['existencias_almacen']) > 0 ? floatval($row['existencias_almacen']) : floatval($row['existencia_base']);
+                // La vista informa existencias de almacenes; no sustituir cero por el saldo base.
+                $existenciaTotal = floatval($row['existencias_almacen']);
                 $reservadasTotal = floatval($row['reservadas_almacen'] ?? 0);
                 $disponiblesTotal = $existenciaTotal - $reservadasTotal;
 
-                // Fotos
-                $fotos = [];
+                // Conservar las referencias anteriores y añadir las demás filas FTP del mismo producto.
+                $candidatas = [];
                 for ($i = 1; $i <= 5; $i++) {
-                    $imgKey = "img" . $i;
-                    if (!empty($row[$imgKey])) {
-                        $imgFile = trim($row[$imgKey]);
-                        $imgPath = "Assets/files/productos/" . $imgFile;
-                        if (file_exists($imgPath)) {
-                            $fotos[] = base_url() . "/" . $imgPath;
-                        }
+                    if (!empty($row['img' . $i])) $candidatas[] = $row['img' . $i];
+                }
+                foreach (['Clave', 'icvematerial'] as $campo) {
+                    $idFoto = trim((string) ($row[$campo] ?? ''));
+                    foreach ($fotosPorDocumento[$idFoto] ?? [] as $nombre) $candidatas[] = $nombre;
+                }
+
+                $fotos = [];
+                $archivosVistos = [];
+                foreach ($candidatas as $candidata) {
+                    $imgFile = trim((string) $candidata);
+                    if ($imgFile === '' || $imgFile !== basename($imgFile)
+                        || !preg_match('/^[\pL\pN _().-]+$/uD', $imgFile)
+                        || isset($archivosVistos[$imgFile])) continue;
+                    $archivosVistos[$imgFile] = true;
+                    $imgPath = __DIR__ . '/../Assets/files/productos/' . $imgFile;
+                    if (is_file($imgPath)) {
+                        $fotos[] = base_url() . '/Assets/files/productos/' . rawurlencode($imgFile);
                     }
                 }
 
@@ -399,9 +435,9 @@ class Almacen extends Controllers
                     'grupo'              => $row['grupo'],
                     'clave_sat'          => $row['clave_sat'],
                     'clave_cliente'      => $row['clave_cliente'] ?? '',
-                    'existencia'         => intval($existenciaTotal),
-                    'reservadas'         => intval($reservadasTotal),
-                    'disponibles'        => intval($disponiblesTotal),
+                    'existencia'         => $existenciaTotal,
+                    'reservadas'         => $reservadasTotal,
+                    'disponibles'        => $disponiblesTotal,
                     'desgloses_almacen'  => $row['desgloses_almacen'] ?? '',
                     'fotos'              => $fotos
                 ];
@@ -412,6 +448,7 @@ class Almacen extends Controllers
                 'busqueda'              => $busqueda,
                 'respuesta_inteligente' => trim($respuestaHTML),
                 'total_registros'       => count($arrData),
+                'total_con_existencia' => $totalConExistencia,
                 'data'                  => $arrData
             ];
 
@@ -623,19 +660,33 @@ class Almacen extends Controllers
     }
 
     /**
-     * Endpoint AJAX para rotar una fotografía de producto y persistir los cambios en el archivo físico.
-     * URL: /almacen/rotarFoto
+     * POST para rotar una foto registrada de un producto activo.
+     * Requiere permiso de actualización en Productos y token CSRF de la sesión.
+     * URL: /almacen/rotarFoto; devuelve JSON con status, msg y, al guardar, filename/timestamp.
      */
     public function rotarFoto()
     {
         try {
-            if (!$this->session->getStatus()) {
-                echo json_encode(['status' => false, 'msg' => 'Sesión no válida o expirada.'], JSON_UNESCAPED_UNICODE);
+            header('Content-Type: application/json; charset=utf-8');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405);
+                echo json_encode(['status' => false, 'msg' => 'Método no permitido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            $permisos = $this->session->getStatus() ? getPermisosGlobal() : [];
+            if (empty($permisos[MOD_ALMACEN_PRODUCTOS]['u'])) {
+                http_response_code(403);
+                echo json_encode(['status' => false, 'msg' => 'No tiene permiso para modificar fotografías.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            if (!$this->session->validCsrfToken($_POST['token'] ?? null, 'almacen_rotar_foto')) {
+                http_response_code(403);
+                echo json_encode(['status' => false, 'msg' => 'La solicitud de rotación no es válida.'], JSON_UNESCAPED_UNICODE);
                 die();
             }
 
             $fotoUrl = $_POST['foto'] ?? '';
-            $direccion = $_POST['direccion'] ?? 'der'; // 'izq' (antihorario 90°) o 'der' (horario 90°)
+            $direccion = $_POST['direccion'] ?? '';
 
             if (empty($fotoUrl)) {
                 echo json_encode(['status' => false, 'msg' => 'No se especificó la imagen a rotar.'], JSON_UNESCAPED_UNICODE);
@@ -644,11 +695,25 @@ class Almacen extends Controllers
 
             // Obtener solo el nombre del archivo para prevenir Directory Traversal
             $parsedPath = parse_url($fotoUrl, PHP_URL_PATH);
-            $fileName = basename($parsedPath);
-            $filePath = "Assets/files/productos/" . $fileName;
+            $fileName = is_string($parsedPath) ? rawurldecode(basename($parsedPath)) : '';
+            if (!preg_match('/^[\pL\pN _().-]+$/uD', $fileName) || $fileName === '.' || $fileName === '..'
+                || !in_array($direccion, ['izq', 'der'], true)) {
+                http_response_code(400);
+                echo json_encode(['status' => false, 'msg' => 'Fotografía o dirección no válida.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            $folder = realpath(__DIR__ . '/../Assets/files/productos');
+            $filePath = $folder ? realpath($folder . DIRECTORY_SEPARATOR . $fileName) : false;
 
-            if (!file_exists($filePath) || !is_file($filePath)) {
-                echo json_encode(['status' => false, 'msg' => 'El archivo de imagen no fue encontrado: ' . $fileName], JSON_UNESCAPED_UNICODE);
+            if (!$folder || !$filePath || dirname($filePath) !== $folder || !is_file($filePath)) {
+                http_response_code(404);
+                echo json_encode(['status' => false, 'msg' => 'La fotografía no fue encontrada.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            $almacenModel = new AlmacenModel();
+            if (!$almacenModel->fotoPerteneceProductoActivo($fileName)) {
+                http_response_code(403);
+                echo json_encode(['status' => false, 'msg' => 'La fotografía no pertenece a un producto activo.'], JSON_UNESCAPED_UNICODE);
                 die();
             }
 
@@ -662,22 +727,28 @@ class Almacen extends Controllers
             // En PHP GD: imagerotate rota en sentido ANTIHORARIO (counter-clockwise)
             // Girar Izquierda (counter-clockwise 90°): $degrees = 90
             // Girar Derecha (clockwise 90° = 270° counter-clockwise): $degrees = 270
-            $degrees = ($direccion === 'izq' || $direccion === 'left') ? 90 : 270;
+            $degrees = $direccion === 'izq' ? 90 : 270;
 
             $sourceImage = null;
-            switch ($ext) {
-                case 'jpg':
-                case 'jpeg':
-                    $sourceImage = @imagecreatefromjpeg($filePath);
-                    break;
-                case 'png':
-                    $sourceImage = @imagecreatefrompng($filePath);
-                    break;
-                case 'webp':
-                    if (function_exists('imagecreatefromwebp')) {
-                        $sourceImage = @imagecreatefromwebp($filePath);
-                    }
-                    break;
+            // Convertir avisos de GD en un error controlado sin contaminar la respuesta JSON.
+            set_error_handler(static function () { throw new RuntimeException('Imagen no válida para rotación.'); });
+            try {
+                switch ($ext) {
+                    case 'jpg':
+                    case 'jpeg':
+                        $sourceImage = imagecreatefromjpeg($filePath);
+                        break;
+                    case 'png':
+                        $sourceImage = imagecreatefrompng($filePath);
+                        break;
+                    case 'webp':
+                        if (function_exists('imagecreatefromwebp')) {
+                            $sourceImage = imagecreatefromwebp($filePath);
+                        }
+                        break;
+                }
+            } finally {
+                restore_error_handler();
             }
 
             if (!$sourceImage) {
@@ -685,6 +756,12 @@ class Almacen extends Controllers
                 die();
             }
 
+            // Crear un archivo temporal en el mismo directorio para no dañar el original si falla GD.
+            $tempPath = tempnam($folder, 'rot_');
+            if (!$tempPath) {
+                throw new RuntimeException('No se pudo preparar la fotografía temporal.');
+            }
+            $guardado = false;
             // Rotar preservando transparencias o formato original
             if ($ext === 'png') {
                 imagealphablending($sourceImage, false);
@@ -694,24 +771,36 @@ class Almacen extends Controllers
                 if ($rotatedImage) {
                     imagealphablending($rotatedImage, false);
                     imagesavealpha($rotatedImage, true);
-                    imagepng($rotatedImage, $filePath, 9);
+                    $guardado = imagepng($rotatedImage, $tempPath, 9);
                     imagedestroy($rotatedImage);
                 }
             } elseif ($ext === 'webp') {
                 $rotatedImage = imagerotate($sourceImage, $degrees, 0);
                 if ($rotatedImage) {
-                    imagewebp($rotatedImage, $filePath, 95);
+                    $guardado = imagewebp($rotatedImage, $tempPath, 95);
                     imagedestroy($rotatedImage);
                 }
             } else {
                 $rotatedImage = imagerotate($sourceImage, $degrees, 0);
                 if ($rotatedImage) {
-                    imagejpeg($rotatedImage, $filePath, 95);
+                    $guardado = imagejpeg($rotatedImage, $tempPath, 95);
                     imagedestroy($rotatedImage);
                 }
             }
 
             imagedestroy($sourceImage);
+            // En Windows rename() no reemplaza de forma fiable un destino existente.
+            // Conservar una copia para restaurar el original si falla la escritura.
+            $backupPath = tempnam($folder, 'bak_');
+            $backupOk = $backupPath && copy($filePath, $backupPath);
+            if (!$guardado || !$backupOk || !copy($tempPath, $filePath)) {
+                if ($backupOk) copy($backupPath, $filePath);
+                if (is_file($tempPath)) unlink($tempPath);
+                if ($backupPath && is_file($backupPath)) unlink($backupPath);
+                throw new RuntimeException('No se pudo guardar la fotografía rotada.');
+            }
+            unlink($tempPath);
+            unlink($backupPath);
 
             echo json_encode([
                 'status'    => true,
@@ -721,6 +810,8 @@ class Almacen extends Controllers
             ], JSON_UNESCAPED_UNICODE);
             die();
         } catch (\Throwable $th) {
+            if (isset($tempPath) && is_file($tempPath)) unlink($tempPath);
+            if (isset($backupPath) && $backupPath && is_file($backupPath)) unlink($backupPath);
             getLoggerSystem()->error(getMensajeError($th, self::prefijo_msj_error));
             echo json_encode(['status' => false, 'msg' => 'Error inesperado al rotar la imagen.'], JSON_UNESCAPED_UNICODE);
             die();

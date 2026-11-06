@@ -1,0 +1,48 @@
+/* Acciones optativas del portal: conservar las clases Bootstrap y sus contratos. */
+.lfm-btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font: 600 14px/20px var(--font-family-base, Arial, Helvetica, sans-serif);
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.lfm-btn-action--primary {
+    background: #00809f;
+    border-color: #00809f;
+    color: #fff;
+}
+.lfm-btn-action--primary:is(:hover, :focus-visible) {
+    background: #006b85;
+    border-color: #006b85;
+    color: #fff;
+}
+.lfm-btn-action--primary:active { background: #00566b; border-color: #00566b; color: #fff; }
+.lfm-btn-action--quiet {
+    background: #fff;
+    border-color: #94a3b8;
+    color: #334155;
+}
+.lfm-btn-action--quiet:is(:hover, :focus-visible) {
+    background: #f1f5f9;
+    border-color: #64748b;
+    color: #1e293b;
+}
+.lfm-btn-action--quiet:active { background: #e2e8f0; color: #1e293b; }
+.lfm-btn-action--icon { width: 38px; min-width: 38px; padding: 0; }
+.lfm-btn-action:focus-visible {
+    outline: 2px solid #80bdff;
+    outline-offset: 2px;
+    box-shadow: 0 0 6px rgb(0 123 255 / 20%);
+}
+.lfm-btn-action:is(:disabled, .disabled) { opacity: .55; cursor: not-allowed; box-shadow: none; }
+html.dark .lfm-btn-action--quiet { background: #253346; border-color: #60768c; color: #edf2f7; }
+html.dark .lfm-btn-action--quiet:is(:hover, :focus-visible) { background: #30425a; color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+    .lfm-btn-action { transition: none; }
+}
