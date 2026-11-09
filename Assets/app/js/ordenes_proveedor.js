@@ -27,6 +27,9 @@ var registrosPorPaginaSeguimiento = 5;
 var calendarEntregas = null;
 var calendarEventosData = [];
 var calendarFiltroEstatus = 'todos';
+var ordenesProveedorRequest = null;
+var calendarioProveedorRequest = null;
+var detalleProveedorRequest = null;
 
 /* =========================================================
  * DOCUMENT READY
@@ -35,8 +38,8 @@ $(document).ready(function () {
 
     // Establece rango de fecha por defecto (año en curso)
     var hoy = new Date();
-    var primerDia = hoy.getFullYear() + '-01-01';
-    var hoyStr = hoy.toISOString().split('T')[0];
+    var primerDia = '01/01/' + hoy.getFullYear();
+    var hoyStr = '31/12/' + hoy.getFullYear();
     $('#filtro_fecha_ini').val(primerDia);
     $('#filtro_fecha_fin').val(hoyStr);
 
@@ -58,6 +61,7 @@ $(document).ready(function () {
 
     $('#filtro_estatus_orden').on('change', function () {
         fntCargarTabla();
+        fntCargarCalendarioEntregas();
     });
 
     $('#filtro_num_orden, #filtro_proveedor').on('keyup', function (e) {
@@ -74,8 +78,8 @@ $(document).ready(function () {
 
     // Filtros por estatus del calendario
     $(document).on('click', '.btn-filter-cal', function () {
-        $('.btn-filter-cal').removeClass('active');
-        $(this).addClass('active');
+        $('.btn-filter-cal').removeClass('active').attr('aria-pressed', 'false');
+        $(this).addClass('active').attr('aria-pressed', 'true');
         calendarFiltroEstatus = $(this).data('filter');
         fntAplicarFiltroCalendario();
     });
@@ -99,6 +103,10 @@ $(document).ready(function () {
 /**
  * Inicializa el DataTable de órdenes de compra a proveedor.
  */
+function fntTextoCeldaProveedor(data, type) {
+    return type === 'display' ? escapeHtml(data == null ? '' : String(data)) : (data == null ? '' : data);
+}
+
 function fntInicializarTabla() {
 
     if (!document.getElementById(tableElementJS)) return;
@@ -109,22 +117,27 @@ function fntInicializarTabla() {
     $(elemento_clone).clone(true).appendTo(elemento_appendto);
 
     var elemento_each = tableElement + ' thead tr:eq(1) th';
+    var debounceColumna = {};
     $(elemento_each).each(function (i) {
 
+        if (i === 0) {
+            $(this).html('<button type="button" class="btn btn-outline-secondary btn-sm lfm-reset-proveedor" title="Limpiar filtros de columna" aria-label="Limpiar filtros de columna"><i class="fa-regular fa-filter-circle-xmark"></i></button>');
+            return;
+        }
         // Nombre de la columna
         var title = $(this).text();
 
         // Crear el elemento input en cada columna
-        $(this).html('<div class="form-group mb-0"><input type="text" style="max-height: 12px;" class="form-control form-control-sm text-center" placeholder="Filtrar ' + title + '"/></div>');
+        $(this).html('<div class="form-group mb-0"><input type="text" class="form-control form-control-sm text-center" aria-label="Filtrar ' + title + '" placeholder="Filtrar ' + title + '"/></div>');
 
         // Evento del input creado en cada columna
-        $('input', this).on('keyup change', function () {
-            if (tableOrdenes && tableOrdenes.column(i).search() != this.value) {
-                tableOrdenes
-                    .column(i)
-                    .search(this.value)
-                    .draw();
-            }
+        $('input', this).on('click keydown', function (e) { e.stopPropagation(); });
+        $('input', this).on('input', function () {
+            var valor = this.value;
+            clearTimeout(debounceColumna[i]);
+            debounceColumna[i] = setTimeout(function () {
+                if (tableOrdenes && tableOrdenes.column(i).search() !== valor) tableOrdenes.column(i).search(valor).draw();
+            }, 220);
         });
     });
 
@@ -149,11 +162,11 @@ function fntInicializarTabla() {
                 extend: 'excelHtml5',
                 autoFilter: true,
                 sheetName: 'Órdenes Proveedor',
-                extend: 'excel',
                 messageTop: "",
                 title: 'Lista de Órdenes de Compra a Proveedores',
                 exportOptions: {
-                    columns: ':visible'
+                    columns: function (index) { return index !== 0 && tableOrdenes.column(index).visible(); },
+                    format: { body: function (data) { return $('<div>').html(data == null ? '' : String(data)).text().trim(); } }
                 }
             },
             {
@@ -168,50 +181,52 @@ function fntInicializarTabla() {
                 className: 'text-center align-middle',
                 render: function (data, type, row) {
                     var valorDisplay = data || ('Pedido #' + row.pedido_id);
-                    return '<span class="fw-bold text-danger">' + valorDisplay + '</span>';
+                    return '<span class="fw-bold text-danger">' + escapeHtml(valorDisplay) + '</span>';
                 }
             },
             {
                 data: 'proyecto_id',
                 className: 'text-center align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
+                    return '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>';
                 }
             },
             {
                 data: 'fecha_pedido_formateada',
                 className: 'text-center align-middle',
                 render: function (data, type, row) {
-                    return '<span class="text-muted">' + (data || '—') + '</span>';
+                    if (type === 'sort' || type === 'type') return row.fecha_pedido || '';
+                    if (type !== 'display') return data || '';
+                    return '<span class="text-muted">' + escapeHtml((data || '—')) + '</span>';
                 }
             },
             {
                 data: 'proveedor',
                 className: 'text-start align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-primary">' + (data || '—') + '</span>';
+                    return '<span class="fw-bold text-primary">' + escapeHtml((data || '—')) + '</span>';
                 }
             },
             {
                 data: 'cliente',
                 className: 'text-start align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
+                    return '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>';
                 }
             },
-            { data: 'titulo_venta', className: 'text-start align-middle' },
+            { data: 'titulo_venta', className: 'text-start align-middle', render: fntTextoCeldaProveedor },
             {
                 data: 'comprador',
                 className: 'text-start align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + (data || '—') + '</span>';
+                    return '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>';
                 }
             },
             {
                 data: 'monto_formateado',
                 className: 'text-end align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-dark">' + (data || '$0.00') + '</span>';
+                    return '<span class="fw-bold text-dark">' + escapeHtml((data || '$0.00')) + '</span>';
                 }
             },
             { data: 'estatus_orden_badge', className: 'text-center align-middle', orderable: false },
@@ -219,20 +234,22 @@ function fntInicializarTabla() {
             { data: 'partidas_badge', className: 'text-center align-middle', orderable: false },
             { data: 'adjuntos_badge', className: 'text-center align-middle', orderable: false },
             { data: 'seguimientos_badge', className: 'text-center align-middle', orderable: false },
-            { data: 'ultimo_seguimiento_nota_corta', className: 'text-start align-middle' },
-            { data: 'ultimo_seguimiento_fecha', className: 'text-center align-middle' },
-            { data: 'ultimo_seguimiento_usuario', className: 'text-start align-middle' }
+            { data: 'ultimo_seguimiento_nota_corta', className: 'text-start align-middle', render: fntTextoCeldaProveedor },
+            { data: 'ultimo_seguimiento_fecha', className: 'text-center align-middle', render: fntTextoCeldaProveedor },
+            { data: 'ultimo_seguimiento_usuario', className: 'text-start align-middle', render: fntTextoCeldaProveedor }
         ],
         language: idioma_espanol
     });
 
-    /*-------------------------------------------
-    [ DataTable - Se ejecuta después de inicializar la tabla ]*/
-    $(tableElement).on('init.dt', function () {
-        if (typeof menu !== 'undefined') {
-            validaPermisoExportar(menu);
-        }
-        $('.loading-panel-showing').removeClass('loading-panel-showing');
+    // LfmTables vacía la celda de acciones; insertar el botón después de crear la tabla.
+    $(tableElement + ' thead tr:eq(1) th:first').html('<button type="button" class="btn btn-outline-secondary btn-sm lfm-reset-proveedor" title="Limpiar filtros de columna" aria-label="Limpiar filtros de columna"><i class="fa-regular fa-filter-circle-xmark"></i></button>');
+    $(tableElement).one('destroy.dt.lfmProveedorReset', function () { $(document).off('.lfmProveedorReset'); });
+    if (typeof menu !== 'undefined') validaPermisoExportar(menu);
+    $(document).off('click.lfmProveedorReset', '.lfm-reset-proveedor').on('click.lfmProveedorReset', '.lfm-reset-proveedor', function (e) {
+        e.stopPropagation();
+        Object.keys(debounceColumna).forEach(function (indice) { clearTimeout(debounceColumna[indice]); });
+        $(tableElement + ' thead tr:eq(1) input, table.fixedHeader-floating thead tr:eq(1) input').val('');
+        tableOrdenes.columns().search('').draw();
     });
 
     /*-------------------------------------------
@@ -256,15 +273,12 @@ function fntCargarTabla() {
     var filtro_estatus_orden = $('#filtro_estatus_orden').val() ? $('#filtro_estatus_orden').val().trim() : '';
     var filtro_estatus       = '';
 
-    // Limpia tabla
-    if (tableOrdenes !== null) {
-        tableOrdenes.clear().draw();
-    }
+    if (ordenesProveedorRequest) ordenesProveedorRequest.abort();
 
     // Muestra loading
     $('.loading-panel-showing').addClass('loading-panel-showing');
 
-    $.ajax({
+    ordenesProveedorRequest = $.ajax({
         type: 'POST',
         url: base_url + '/seguimiento/getOrdenesProveedorDatatable',
         data: {
@@ -282,19 +296,18 @@ function fntCargarTabla() {
                 tableOrdenes.clear().rows.add(data).draw();
                 fntCalcularKPIs(data);
 
-                tableOrdenes.columns.adjust().draw();
-                setTimeout(function () {
-                    if (tableOrdenes) {
-                        tableOrdenes.columns.adjust().draw();
-                    }
-                }, 150);
+                tableOrdenes.columns.adjust();
+            } else {
+                alertify.error((data && data.msg) || 'Respuesta inválida al cargar órdenes.', 4);
             }
         },
         error: function (xhr, status, error) {
+            if (status === 'abort') return;
             console.error('Error al cargar órdenes de proveedor:', error);
             alertify.error('Error al cargar las órdenes de compra a proveedores.', 4);
         },
         complete: function () {
+            ordenesProveedorRequest = null;
             $('.loading-panel-showing').removeClass('loading-panel-showing');
         }
     });
@@ -399,12 +412,14 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
     $('#sin_seguimientos').addClass('d-none');
     $('#loading_seguimientos').removeClass('d-none');
 
-    $.ajax({
+    if (detalleProveedorRequest) detalleProveedorRequest.abort();
+    detalleProveedorRequest = $.ajax({
         type: 'POST',
         url: base_url + '/seguimiento/getDetallePedidoProveedor',
         data: { pedido_id: pedidoIdEnc },
         dataType: 'json',
         success: function (resp) {
+            if (pedidoIdActual !== pedidoIdEnc) return;
 
             $('#loading_seguimientos').addClass('d-none');
 
@@ -474,6 +489,7 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
             }
         },
         error: function (xhr, status, error) {
+            if (status === 'abort') return;
             console.error('Error al cargar detalle:', error);
             $('#loading_seguimientos').addClass('d-none');
             $('#tbody_partidas_proveedor').html('<tr><td colspan="12" class="text-center p-3 text-danger"><i class="fa-regular fa-circle-exclamation me-1"></i>Error al cargar partidas</td></tr>');
@@ -563,7 +579,7 @@ function fntRenderizarAdjuntos(adjuntos) {
         var fileName = (adj.archivo || '').trim();
         if (!fileName) return;
 
-        var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+        var fileUrl = base_url + '/seguimiento/getArchivoProveedor?pedido_id=' + encodeURIComponent(pedidoIdActual) + '&archivo=' + encodeURIComponent(fileName);
         var fileExt = fileName.split('.').pop().toLowerCase();
 
         var iconClass = 'fa-file-lines text-secondary';
@@ -651,7 +667,7 @@ function fntRenderizarTimelinePagina(pagina) {
 
         if (seg.archivo && seg.archivo.trim() !== '') {
             var fileName = seg.archivo.trim();
-            var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+            var fileUrl = base_url + '/seguimiento/getArchivoProveedor?pedido_id=' + encodeURIComponent(pedidoIdActual) + '&archivo=' + encodeURIComponent(fileName);
             var fileExt = fileName.split('.').pop().toLowerCase();
 
             var iconClass = 'fa-file-lines text-secondary';
@@ -859,13 +875,20 @@ function fntCargarCalendarioEntregas() {
 
     var fecha_ini = $('#filtro_fecha_ini').val().trim();
     var fecha_fin = $('#filtro_fecha_fin').val().trim();
+    var filtro_num_orden = $('#filtro_num_orden').val().trim();
+    var filtro_proveedor = $('#filtro_proveedor').val().trim();
+    var filtro_estatus_orden = $('#filtro_estatus_orden').val();
+    if (calendarioProveedorRequest) calendarioProveedorRequest.abort();
 
-    $.ajax({
+    calendarioProveedorRequest = $.ajax({
         type: 'POST',
         url: base_url + '/seguimiento/getCalendarioEntregasProveedorData',
         data: {
             fecha_ini: fecha_ini,
-            fecha_fin: fecha_fin
+            fecha_fin: fecha_fin,
+            filtro_num_orden: filtro_num_orden,
+            filtro_proveedor: filtro_proveedor,
+            filtro_estatus_orden: filtro_estatus_orden
         },
         dataType: 'json',
         success: function (resp) {
@@ -891,11 +914,16 @@ function fntCargarCalendarioEntregas() {
                         }
                     }
                 }
+            } else {
+                alertify.error((resp && resp.msg) || 'No fue posible consultar el calendario.', 4);
             }
         },
         error: function (xhr, status, error) {
+            if (status === 'abort') return;
             console.error('Error al cargar calendario de entregas de proveedor:', error);
-        }
+            alertify.error('Error al cargar el calendario de entregas.', 4);
+        },
+        complete: function () { calendarioProveedorRequest = null; }
     });
 }
 

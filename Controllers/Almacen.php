@@ -384,6 +384,7 @@ class Almacen extends Controllers
 
             // Consultar todas las filas FTP evita perder fotos cuando MAX/COALESCE elige un archivo vacío o ausente.
             $fotosPorDocumento = $almacenModel->getFotosProductosAlmacen($arrProductos);
+            $ubicacionesPorMaterial = $almacenModel->getUbicacionesProductosAlmacen($arrProductos);
 
             // Preparar filas con fotos preprocesadas
             $arrData = [];
@@ -439,6 +440,7 @@ class Almacen extends Controllers
                     'reservadas'         => $reservadasTotal,
                     'disponibles'        => $disponiblesTotal,
                     'desgloses_almacen'  => $row['desgloses_almacen'] ?? '',
+                    'ubicacion_fisica'   => implode(' | ', $ubicacionesPorMaterial[$row['Clave']] ?? []),
                     'fotos'              => $fotos
                 ];
             }

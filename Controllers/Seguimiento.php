@@ -900,6 +900,14 @@ class Seguimiento extends Controllers
                 $ccveusuario_filtro = strClean($this->session->get('ccveusuario') ?? '');
             }
 
+            if (!$this->session->getStatus() || (int)$this->session->get('rol_id') === 4 && $ccveusuario_filtro === '') {
+                throw new \RuntimeException('Acceso restringido');
+            }
+            [$fecha_ini, $fecha_fin] = $this->normalizarPeriodoOrdenesCliente($fecha_ini, $fecha_fin, '');
+            if (!in_array($filtro_estatus_orden, ['', '1', '2'], true) || mb_strlen($filtro_num_orden) > 200 || mb_strlen($filtro_proveedor) > 200) {
+                throw new \InvalidArgumentException('Filtros no válidos');
+            }
+
             /*-------------------------------------------
             [ Obtiene el array de registros ]*/
             $model = new SeguimientoModel();
@@ -1009,6 +1017,8 @@ class Seguimiento extends Controllers
             }
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            http_response_code($th instanceof \InvalidArgumentException ? 400 : 403);
+            die(json_encode(['status' => false, 'msg' => $th instanceof \InvalidArgumentException ? $th->getMessage() : 'No fue posible consultar las órdenes'], JSON_UNESCAPED_UNICODE));
         }
 
         /*-------------------------------------------
@@ -1047,6 +1057,9 @@ class Seguimiento extends Controllers
             [ Recibe parámetros de fecha opcionales ]*/
             $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
             $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
+            $filtro_num_orden = strClean($_POST['filtro_num_orden'] ?? '');
+            $filtro_proveedor = strClean($_POST['filtro_proveedor'] ?? '');
+            $filtro_estatus_orden = strClean($_POST['filtro_estatus_orden'] ?? '');
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
@@ -1056,10 +1069,18 @@ class Seguimiento extends Controllers
                 $ccveusuario_filtro = strClean($this->session->get('ccveusuario') ?? '');
             }
 
+            if (!$this->session->getStatus() || (int)$this->session->get('rol_id') === 4 && $ccveusuario_filtro === '') {
+                throw new \RuntimeException('Acceso restringido');
+            }
+            [$fecha_ini, $fecha_fin] = $this->normalizarPeriodoOrdenesCliente($fecha_ini, $fecha_fin, '');
+            if (!in_array($filtro_estatus_orden, ['', '1', '2'], true) || mb_strlen($filtro_num_orden) > 200 || mb_strlen($filtro_proveedor) > 200) {
+                throw new \InvalidArgumentException('Filtros no válidos');
+            }
+
             /*-------------------------------------------
             [ Consulta el Modelo ]*/
             $model = new SeguimientoModel();
-            $arrData = $model->selectFechasEntregaProveedores($fecha_ini, $fecha_fin, $ccveusuario_filtro);
+            $arrData = $model->selectFechasEntregaProveedores($fecha_ini, $fecha_fin, $ccveusuario_filtro, $filtro_num_orden, $filtro_proveedor, $filtro_estatus_orden);
 
             $hoy = date('Y-m-d');
             $limite_proximo = date('Y-m-d', strtotime('+7 days'));
@@ -1095,7 +1116,15 @@ class Seguimiento extends Controllers
                     }
                 }
 
-                if ($entregado_val === 1) {
+                if ((int)($item['pedido_enviado'] ?? 1) === 2 || $entregado_val === 2) {
+                    $estatus_codigo = 'cancelado';
+                    $estatus_label = 'Orden/entrega cancelada';
+                    $badge_class = 'bg-secondary';
+                    $event_color = '#6c757d';
+                    $event_text_color = '#ffffff';
+                    $tiempo_restante_str = 'Cancelada';
+                    $count_cancelados++;
+                } elseif ($entregado_val === 1) {
                     // 1 = Entregado
                     $estatus_codigo      = 'entregado';
                     $estatus_label       = 'Entregado';
@@ -1204,6 +1233,8 @@ class Seguimiento extends Controllers
             $arrResponse['raw_data'] = $raw_data;
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            http_response_code($th instanceof \InvalidArgumentException ? 400 : 403);
+            die(json_encode(['respuesta' => 'error', 'msg' => $th instanceof \InvalidArgumentException ? $th->getMessage() : 'No fue posible consultar el calendario'], JSON_UNESCAPED_UNICODE));
         }
 
         /*-------------------------------------------
@@ -1253,7 +1284,12 @@ class Seguimiento extends Controllers
             /*-------------------------------------------
             [ Consultas a través del Modelo ]*/
             $model = new SeguimientoModel();
-            $detallePedido = $model->selectDetallePedidoProveedorCompleto($pedido_id);
+            $rol_id = (int)($this->session->get('rol_id') ?? 0);
+            $ccveusuario_filtro = $rol_id === 4 ? strClean($this->session->get('ccveusuario') ?? '') : '';
+            if (!$this->session->getStatus() || ($rol_id === 4 && $ccveusuario_filtro === '')) {
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+            $detallePedido = $model->selectDetallePedidoProveedorCompleto($pedido_id, $ccveusuario_filtro);
             if (empty($detallePedido)) {
                 die(json_encode(getResponse('No se encontró la orden de compra a proveedor especificada.', 'error'), JSON_UNESCAPED_UNICODE));
             }
@@ -1284,6 +1320,59 @@ class Seguimiento extends Controllers
         /*-------------------------------------------
         [ Retorna respuesta json_encode ]*/
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+    }
+
+    /** Sirve un adjunto solo si pertenece a una orden visible para el usuario. */
+    public function getArchivoProveedor()
+    {
+        $permisos = getPermisosGlobal();
+        if (!$this->session->getStatus() || empty($permisos[MOD_SEGUIMIENTO_ORDENES_PROVEEDOR]['r'])) {
+            http_response_code(403);
+            exit;
+        }
+        $pedido_input = $_GET['pedido_id'] ?? '';
+        $archivo = $_GET['archivo'] ?? '';
+        if (!is_string($pedido_input) || !is_string($archivo) || $archivo === '' || basename($archivo) !== $archivo) {
+            http_response_code(400);
+            exit;
+        }
+        $pedido_id = ctype_digit($pedido_input) ? (int)$pedido_input : (int)openssl_decrypt($pedido_input, METHODENCRIPT, KEY);
+        $rol_id = (int)($this->session->get('rol_id') ?? 0);
+        $usuario = $rol_id === 4 ? (string)($this->session->get('ccveusuario') ?? '') : '';
+        if ($pedido_id <= 0 || ($rol_id === 4 && $usuario === '')) {
+            http_response_code(403);
+            exit;
+        }
+        $model = new SeguimientoModel();
+        $pedido = $model->selectDetallePedidoProveedorCompleto($pedido_id, $usuario);
+        if (!$pedido) {
+            http_response_code(404);
+            exit;
+        }
+        $permitido = false;
+        foreach ($model->selectAdjuntosPedidoProveedor($pedido_id) as $adjunto) {
+            if (($adjunto['archivo'] ?? '') === $archivo) $permitido = true;
+        }
+        $venta_id = (int)($pedido['venta_id'] ?? 0);
+        if (!$permitido && $venta_id > 0) {
+            foreach ((new VentasModel())->selectHistorialSeguimientoVenta($venta_id) as $seguimiento) {
+                if (($seguimiento['archivo'] ?? '') === $archivo) $permitido = true;
+            }
+        }
+        $directorio = realpath(dirname(__DIR__) . '/Assets/files/ventas');
+        $ruta = $directorio ? realpath($directorio . DIRECTORY_SEPARATOR . $archivo) : false;
+        if (!$permitido || !$ruta || dirname($ruta) !== $directorio || !is_file($ruta)) {
+            http_response_code(404);
+            exit;
+        }
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($ruta) ?: 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        $disposicion = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'], true) ? 'inline' : 'attachment';
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: ' . $disposicion . '; filename="' . str_replace(['"', "\r", "\n"], '', $archivo) . '"');
+        header('Content-Length: ' . filesize($ruta));
+        readfile($ruta);
+        exit;
     }
 
     /**

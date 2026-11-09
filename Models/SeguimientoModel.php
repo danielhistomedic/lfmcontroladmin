@@ -870,7 +870,7 @@ class SeguimientoModel extends Mysql
                  WHERE ppa.pedido_proveedor_id = pp.id)                     AS total_adjuntos
             FROM tb_pedidos_proveedor pp
             LEFT JOIN tb_ventas v                  ON v.id = pp.venta_id
-            LEFT JOIN cat_clientes c               ON (c.id = pp.cliente_id OR c.id = v.cliente_id)
+            LEFT JOIN cat_clientes c               ON c.id = COALESCE(NULLIF(pp.cliente_id, 0), v.cliente_id)
             LEFT JOIN tb_proveedores prov          ON prov.icveProveedor = pp.proveedor_id
             LEFT JOIN cat_medico vd                ON vd.ccvemedico = pp.ccveusuario
             LEFT JOIN cat_estatus_proyecto e       ON e.Id = v.estatus_proyecto_id
@@ -881,7 +881,7 @@ class SeguimientoModel extends Mysql
                 ORDER BY fecha DESC, id DESC
                 LIMIT 1
             ) tc ON 1=1
-            WHERE pp.enviado = 1 ";
+            WHERE pp.enviado IN (1, 2) ";
 
             $arr_values = [];
 
@@ -910,7 +910,7 @@ class SeguimientoModel extends Mysql
             }
 
             if (!empty($fecha_ini) && !empty($fecha_fin)) {
-                $sql .= " AND DATE(pp.fecha_pedido) BETWEEN :fecha_ini AND :fecha_fin ";
+                $sql .= " AND pp.fecha_pedido >= :fecha_ini AND pp.fecha_pedido < DATE_ADD(:fecha_fin, INTERVAL 1 DAY) ";
                 $arr_values['fecha_ini'] = $fecha_ini;
                 $arr_values['fecha_fin'] = $fecha_fin;
             }
@@ -937,9 +937,12 @@ class SeguimientoModel extends Mysql
      * @param string $fecha_ini
      * @param string $fecha_fin
      * @param string $ccveusuario
+     * @param string $filtro_num_orden
+     * @param string $filtro_proveedor
+     * @param string $filtro_estatus_orden
      * @return array
      */
-    public function selectFechasEntregaProveedores(string $fecha_ini = '', string $fecha_fin = '', string $ccveusuario = ''): array
+    public function selectFechasEntregaProveedores(string $fecha_ini = '', string $fecha_fin = '', string $ccveusuario = '', string $filtro_num_orden = '', string $filtro_proveedor = '', string $filtro_estatus_orden = ''): array
     {
         $arrResponse = array();
         try {
@@ -973,13 +976,20 @@ class SeguimientoModel extends Mysql
             FROM tb_pedidos_proveedor_detalle ppd
             INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id
             LEFT  JOIN tb_ventas v             ON v.id  = pp.venta_id
-            LEFT  JOIN cat_clientes c          ON (c.id = pp.cliente_id OR c.id = v.cliente_id)
+            LEFT  JOIN cat_clientes c          ON c.id = COALESCE(NULLIF(pp.cliente_id, 0), v.cliente_id)
             LEFT  JOIN tb_proveedores prov     ON prov.icveProveedor = pp.proveedor_id
-            LEFT  JOIN tb_recibos_detalle rd   ON rd.pedido_proveedor_detalle_id = ppd.id
-            LEFT  JOIN tb_recibos r            ON r.cNumRecibo = rd.cNumRecibo
+            -- Elegir el último recibo evita multiplicar la partida por recepciones parciales.
+            LEFT  JOIN tb_recibos r ON r.cNumRecibo = (
+                SELECT rd2.cNumRecibo
+                FROM tb_recibos_detalle rd2
+                INNER JOIN tb_recibos r2 ON r2.cNumRecibo = rd2.cNumRecibo
+                WHERE rd2.pedido_proveedor_detalle_id = ppd.id
+                ORDER BY r2.fchRecibo DESC, r2.cNumRecibo DESC
+                LIMIT 1
+            )
             WHERE ppd.fecha_estimada_entrega IS NOT NULL
               AND ppd.fecha_estimada_entrega != '0000-00-00'
-              AND pp.enviado = 1 ";
+              AND pp.enviado IN (1, 2) ";
 
             $arr_values = [];
 
@@ -989,18 +999,31 @@ class SeguimientoModel extends Mysql
                 $arr_values['ccveusuario_vendedor'] = $ccveusuario;
             }
 
-            if (!empty($fecha_ini) && !empty($fecha_fin)) {
-                $sql .= " AND (
-                    DATE(ppd.fecha_estimada_entrega) BETWEEN :fecha_ini AND :fecha_fin
-                    OR DATE(pp.fecha_pedido) BETWEEN :fecha_ini2 AND :fecha_fin2
-                ) ";
-                $arr_values['fecha_ini']  = $fecha_ini;
-                $arr_values['fecha_fin']  = $fecha_fin;
-                $arr_values['fecha_ini2'] = $fecha_ini;
-                $arr_values['fecha_fin2'] = $fecha_fin;
+            if ($fecha_ini !== '' && $fecha_fin !== '') {
+                // El calendario representa entregas estimadas, no la fecha de creación del pedido.
+                $sql .= " AND ppd.fecha_estimada_entrega >= :fecha_ini
+                          AND ppd.fecha_estimada_entrega < DATE_ADD(:fecha_fin, INTERVAL 1 DAY) ";
+                $arr_values['fecha_ini'] = $fecha_ini;
+                $arr_values['fecha_fin'] = $fecha_fin;
             }
 
-            $sql .= " ORDER BY ppd.fecha_estimada_entrega ASC ";
+            if ($filtro_num_orden !== '') {
+                $sql .= " AND (pp.folio_ocp LIKE :filtro_num_orden OR pp.id LIKE :filtro_num_orden_id OR pp.oa_proveedor LIKE :filtro_oa) ";
+                $arr_values['filtro_num_orden'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_num_orden_id'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_oa'] = '%' . $filtro_num_orden . '%';
+            }
+            if ($filtro_proveedor !== '') {
+                $sql .= " AND (prov.cDatGenRazonSocial LIKE :filtro_proveedor OR prov.cDatGenNombreAbreviado LIKE :filtro_proveedor_abr) ";
+                $arr_values['filtro_proveedor'] = '%' . $filtro_proveedor . '%';
+                $arr_values['filtro_proveedor_abr'] = '%' . $filtro_proveedor . '%';
+            }
+            if ($filtro_estatus_orden !== '') {
+                $sql .= " AND pp.enviado = :filtro_estatus_orden ";
+                $arr_values['filtro_estatus_orden'] = (int)$filtro_estatus_orden;
+            }
+
+            $sql .= " ORDER BY ppd.fecha_estimada_entrega ASC, ppd.id ASC ";
 
             $arrResponse = $this->select($sql, $arr_values);
         } catch (\Throwable $th) {
@@ -1011,12 +1034,12 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene el encabezado de una OCP exclusivamente finalizada (enviado = 1).
+     * Obtiene el encabezado de una OCP activa o cancelada con alcance opcional de vendedor.
      *
      * @param int $pedido_proveedor_id
      * @return array
      */
-    public function selectDetallePedidoProveedorCompleto(int $pedido_proveedor_id): array
+    public function selectDetallePedidoProveedorCompleto(int $pedido_proveedor_id, string $ccveusuario = ''): array
     {
         $arrResponse = array();
         try {
@@ -1044,14 +1067,21 @@ class SeguimientoModel extends Mysql
                 CONCAT_WS(' ', vd.cnombre, vd.cpriapellido, vd.csegapellido) AS comprador_nombre
             FROM tb_pedidos_proveedor pp
             LEFT JOIN tb_proveedores prov    ON prov.icveProveedor = pp.proveedor_id
-            LEFT JOIN cat_clientes c         ON (c.id = pp.cliente_id)
             LEFT JOIN tb_ventas v            ON v.id = pp.venta_id
+            LEFT JOIN cat_clientes c         ON c.id = COALESCE(NULLIF(pp.cliente_id, 0), v.cliente_id)
             LEFT JOIN cat_medico vd          ON vd.ccvemedico = pp.ccveusuario
             LEFT JOIN cat_estatus_proyecto e ON e.Id = v.estatus_proyecto_id
-            WHERE pp.id = :pedido_id AND pp.enviado = 1
-            LIMIT 1";
+            WHERE pp.id = :pedido_id AND pp.enviado IN (1, 2) ";
+            $valores = ['pedido_id' => $pedido_proveedor_id];
+            // El mismo alcance del vendedor se aplica antes de leer partidas y adjuntos.
+            if ($ccveusuario !== '') {
+                $sql .= " AND (pp.ccveusuario = :ccveusuario OR v.ccveusuario_vendedor = :ccveusuario_vendedor) ";
+                $valores['ccveusuario'] = $ccveusuario;
+                $valores['ccveusuario_vendedor'] = $ccveusuario;
+            }
+            $sql .= " LIMIT 1";
 
-            $arrResponse = $this->selectModel($sql, ['pedido_id' => $pedido_proveedor_id]);
+            $arrResponse = $this->selectModel($sql, $valores);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
         }
@@ -1060,7 +1090,7 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene partidas de una OCP finalizada (tb_pedidos_proveedor.enviado = 1).
+     * Obtiene partidas de una OCP activa o cancelada.
      *
      * @param int $pedido_proveedor_id
      * @return array
@@ -1084,9 +1114,16 @@ class SeguimientoModel extends Mysql
                 COALESCE(r.cNumFactura, '') AS factura_serie_folio,
                 COALESCE(r.FolioFiscal, '') AS factura_folio_fiscal
             FROM tb_pedidos_proveedor_detalle ppd
-            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id AND pp.enviado = 1
-            LEFT JOIN tb_recibos_detalle rd ON rd.pedido_proveedor_detalle_id = ppd.id
-            LEFT JOIN tb_recibos r ON r.cNumRecibo = rd.cNumRecibo
+            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppd.pedido_proveedor_id AND pp.enviado IN (1, 2)
+            -- Elegir el último recibo evita multiplicar la partida por recepciones parciales.
+            LEFT JOIN tb_recibos r ON r.cNumRecibo = (
+                SELECT rd2.cNumRecibo
+                FROM tb_recibos_detalle rd2
+                INNER JOIN tb_recibos r2 ON r2.cNumRecibo = rd2.cNumRecibo
+                WHERE rd2.pedido_proveedor_detalle_id = ppd.id
+                ORDER BY r2.fchRecibo DESC, r2.cNumRecibo DESC
+                LIMIT 1
+            )
             WHERE ppd.pedido_proveedor_id = :pedido_id
             ORDER BY ppd.codigo_partida ASC, ppd.id ASC";
 
@@ -1099,7 +1136,7 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene adjuntos vinculados a una OCP finalizada (enviado = 1).
+     * Obtiene adjuntos vinculados a una OCP activa o cancelada.
      *
      * @param int $pedido_proveedor_id
      * @return array
@@ -1116,7 +1153,7 @@ class SeguimientoModel extends Mysql
                 'tb_pedidos_proveedor_adjuntos' AS tabla_origen,
                 'Pedido Proveedor' AS origen_etiqueta
             FROM tb_pedidos_proveedor_adjuntos ppa
-            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppa.pedido_proveedor_id AND pp.enviado = 1
+            INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppa.pedido_proveedor_id AND pp.enviado IN (1, 2)
             WHERE ppa.pedido_proveedor_id = :pedido_id
               AND ppa.archivo IS NOT NULL
               AND TRIM(ppa.archivo) != ''

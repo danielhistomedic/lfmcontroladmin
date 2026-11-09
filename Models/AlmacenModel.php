@@ -217,6 +217,61 @@ class AlmacenModel extends Mysql
     }
 
     /**
+     * Obtiene ubicaciones físicas activas de los productos listados, en lotes.
+     * Muestra la clave de almacén y el código módulo-anaquel-charola sin multiplicar filas del catálogo.
+     *
+     * @param array $productos Filas de searchProductosAlmacen con Clave.
+     * @return array<string, array<int, string>> Posiciones agrupadas por ccvematerial.
+     */
+    public function getUbicacionesProductosAlmacen(array $productos): array
+    {
+        $claves = [];
+        foreach ($productos as $producto) {
+            $clave = trim((string) ($producto['Clave'] ?? ''));
+            if ($clave !== '') $claves[$clave] = $clave;
+        }
+
+        $ubicaciones = [];
+        foreach (array_chunk(array_values($claves), 400) as $lote) {
+            $parametros = [];
+            $valores = [];
+            foreach ($lote as $indice => $clave) {
+                $parametro = ':ubicacion_clave_' . $indice;
+                $parametros[] = $parametro;
+                $valores[$parametro] = $clave;
+            }
+
+            $sql = 'SELECT u.ccvematerial, u.ccvealmacen, u.IdModulo, u.IdAnaquel, u.IdCharola, '
+                . 'cm.modulo, cn.anaquel, cc.charola '
+                . 'FROM tb_materiales_ubicacion u '
+                . 'LEFT JOIN cat_almacen_modulos cm ON cm.Id = u.IdModulo '
+                . 'LEFT JOIN cat_almacen_anaqueles cn ON cn.Id = u.IdAnaquel '
+                . 'LEFT JOIN cat_almacen_charolas cc ON cc.Id = u.IdCharola '
+                . 'WHERE u.iActivo = 1 AND u.ccvematerial IN (' . implode(', ', $parametros) . ') '
+                . 'ORDER BY u.ccvematerial, u.ccvealmacen, u.IdModulo, u.IdAnaquel, u.IdCharola, u.Id';
+
+            foreach ($this->select($sql, $valores) as $fila) {
+                $clave = trim((string) ($fila['ccvematerial'] ?? ''));
+                if ($clave === '') continue;
+
+                $almacen = trim((string) ($fila['ccvealmacen'] ?? ''));
+                $componentes = [];
+                // Mantener los tres segmentos; 00 representa un nivel sin asignar.
+                foreach (['IdModulo' => 'modulo', 'IdAnaquel' => 'anaquel', 'IdCharola' => 'charola'] as $idCampo => $nombreCampo) {
+                    $id = (int) ($fila[$idCampo] ?? 0);
+                    $nombre = trim((string) ($fila[$nombreCampo] ?? ''));
+                    $componentes[] = $nombre !== '' ? $nombre : ($id > 0 ? '#' . $id : '00');
+                }
+                $posicion = 'Almacén: ' . ($almacen !== '' ? $almacen : 'Sin asignar')
+                    . ' / ' . implode('-', $componentes);
+                $ubicaciones[$clave][$posicion] = $posicion;
+            }
+        }
+
+        return array_map('array_values', $ubicaciones);
+    }
+
+    /**
      * Obtiene los almacenes activos de cat_almacen
      * 
      * @return array

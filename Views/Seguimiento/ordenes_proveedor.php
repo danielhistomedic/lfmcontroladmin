@@ -55,6 +55,8 @@
         letter-spacing: 0.5px;
         background-color: #fcfcfc;
     }
+    html.dark .chart-container { background: var(--bs-body-bg, #1f2937); color: var(--bs-body-color, #edf2f7); }
+    html.dark .chart-title { color: var(--bs-body-color, #edf2f7); border-color: #53657d; }
     .bg-primary-lighten { background-color: rgba(13, 110, 253, 0.08) !important; }
     .bg-success-lighten { background-color: rgba(25, 135, 84, 0.08) !important; }
     .bg-info-lighten { background-color: rgba(13, 202, 240, 0.08) !important; }
@@ -286,22 +288,22 @@
                 <!-- Filtros rápidos por estatus -->
                 <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
                     <span class="fs-12 text-muted me-1 fw-semibold">Filtrar en calendario:</span>
-                    <button type="button" class="btn btn-xs btn-outline-secondary active btn-filter-cal" data-filter="todos">
+                    <button type="button" class="btn btn-xs btn-outline-secondary active btn-filter-cal" data-filter="todos" aria-pressed="true">
                         <i class="fa-regular fa-layer-group me-1"></i> Todos
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-danger btn-filter-cal" data-filter="vencido">
+                    <button type="button" class="btn btn-xs btn-outline-danger btn-filter-cal" data-filter="vencido" aria-pressed="false">
                         <i class="fa-regular fa-circle-exclamation me-1"></i> Vencidas
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-warning text-dark btn-filter-cal" data-filter="proximo">
+                    <button type="button" class="btn btn-xs btn-outline-warning text-dark btn-filter-cal" data-filter="proximo" aria-pressed="false">
                         <i class="fa-regular fa-clock me-1"></i> Próximas
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-success btn-filter-cal" data-filter="en_tiempo">
+                    <button type="button" class="btn btn-xs btn-outline-success btn-filter-cal" data-filter="en_tiempo" aria-pressed="false">
                         <i class="fa-regular fa-circle-check me-1"></i> En Tiempo
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-primary btn-filter-cal" data-filter="entregado">
+                    <button type="button" class="btn btn-xs btn-outline-primary btn-filter-cal" data-filter="entregado" aria-pressed="false">
                         <i class="fa-regular fa-box-check me-1"></i> Entregadas
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-secondary btn-filter-cal" data-filter="cancelado">
+                    <button type="button" class="btn btn-xs btn-outline-secondary btn-filter-cal" data-filter="cancelado" aria-pressed="false">
                         <i class="fa-regular fa-ban me-1"></i> Canceladas
                     </button>
                 </div>

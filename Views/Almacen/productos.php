@@ -94,6 +94,22 @@
     #tableProductosAlmacen .badge-stock.bg-success { background: #e3f4e9 !important; border-color: #91cda8; color: #146c43 !important; }
     #tableProductosAlmacen .badge-stock.bg-danger { background: #fde8e8 !important; border-color: #e7aaaa; color: #a3212b !important; }
     #tableProductosAlmacen .badge-stock.bg-secondary { background: #f1f5f9 !important; border-color: #cbd5e1; color: #475569 !important; }
+    /* La posición es un dato, resaltado sin apariencia de botón. */
+    #tableProductosAlmacen .product-location-code {
+        display: inline-block;
+        padding: 2px 6px;
+        border: 1px solid #a9d7e2;
+        border-radius: 4px;
+        background: #e9f5f8;
+        color: #075985;
+        font-weight: var(--font-weight-bold);
+        font-variant-numeric: tabular-nums;
+    }
+    html.dark #tableProductosAlmacen .product-location-code {
+        border-color: #58c6de;
+        background: #274555;
+        color: #e7f9ff;
+    }
     /* Escala común para la respuesta dinámica, la foto y el modal. */
     .product-result-intro { font-size: var(--font-section-title); font-weight: var(--font-weight-semibold); color: #1e293b; }
     .product-result-name { font-size: var(--font-highlight); font-weight: var(--font-weight-bold); line-height: var(--line-height-heading); color: #1e293b; }
@@ -257,6 +273,7 @@
                                 <th>Material</th>
                                 <th>Grupo</th>
                                 <th>Clave SAT</th>
+                                <th>Ubicación física</th>
                             </tr>
                             <tr class="filters-row bg-light">
                                 <th class="p-1 text-center"><button type="button" id="btnResetColFilters" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-reset-col-filters" title="Limpiar filtros de columna" aria-label="Limpiar filtros de columna"><i class="fa-solid fa-filter-circle-xmark"></i></button></th>
@@ -278,6 +295,7 @@
                                 <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" data-column-index="16" placeholder="Material..." style="min-width: 70px;"></th>
                                 <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" data-column-index="17" placeholder="Grupo..." style="min-width: 70px;"></th>
                                 <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" data-column-index="18" placeholder="SAT..." style="min-width: 70px;"></th>
+                                <th class="p-1"><input type="text" class="form-control form-control-sm col-filter-input" data-column-index="19" placeholder="Ubicación..." aria-label="Filtrar ubicación física" style="min-width: 140px;"></th>
                             </tr>
                         </thead>
                         <tbody>

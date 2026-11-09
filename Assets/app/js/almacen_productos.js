@@ -166,6 +166,7 @@ function initDataTableProductos() {
                     }
                 }
             },
+
             { data: 'Clave', className: 'fw-bold text-dark' },
             { data: 'CCN' },
             { data: 'cDescripcion', className: 'col-descripcion' },
@@ -180,7 +181,27 @@ function initDataTableProductos() {
             { data: 'serie' },
             { data: 'material' },
             { data: 'grupo' },
-            { data: 'clave_sat' }
+            { data: 'clave_sat' },
+            // Cada posición activa incluye almacén y, cuando existen, módulo, anaquel y charola.
+            {
+                data: 'ubicacion_fisica',
+                className: 'text-start',
+                render: function (data, type) {
+                    const ubicacion = String(data || '').trim();
+                    if (type !== 'display') return ubicacion;
+                    if (!ubicacion) return '—';
+
+                    return ubicacion.split(' | ').map(function (posicion) {
+                        const separador = ' / ';
+                        const indice = posicion.indexOf(separador);
+                        if (indice < 0) return escaparHtmlProducto(posicion);
+                        const almacen = posicion.slice(0, indice + separador.length);
+                        const codigo = posicion.slice(indice + separador.length);
+                        return escaparHtmlProducto(almacen)
+                            + '<strong class="product-location-code">' + escaparHtmlProducto(codigo) + '</strong>';
+                    }).join(' | ');
+                }
+            }
         ],
         autoWidth: false,
         columnDefs: [
@@ -195,7 +216,7 @@ function initDataTableProductos() {
             {
                 extend: 'excelHtml5',
                 title: 'Productos_y_Existencias_Almacen',
-                exportOptions: { columns: Array.from({length: 18}, (_, i) => i + 1) }
+                exportOptions: { columns: Array.from({length: 19}, (_, i) => i + 1) }
             },
             {
                 extend: 'colvis',
@@ -217,7 +238,7 @@ function initDataTableProductos() {
             $(document).on('input.almacenProductosFiltros change.almacenProductosFiltros',
                 '.lfm-dt-filters input.col-filter-input', function () {
                     const indice = Number(this.dataset.columnIndex);
-                    if (!Number.isInteger(indice) || indice < 1 || indice > 18) return;
+                    if (!Number.isInteger(indice) || indice < 1 || indice > 19) return;
                     const valor = this.value;
                     $('.lfm-dt-filters input.col-filter-input[data-column-index="' + indice + '"]').not(this).val(valor);
                     clearTimeout(timeoutFiltro);
