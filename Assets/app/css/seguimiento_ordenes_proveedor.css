@@ -1,6 +1,4 @@
 /** Ajustes de columnas y estados propios de órdenes a proveedor sobre el diseño OCC. */
-.seguimiento-ordenes-proveedor #panel_filtros .form-control,
-.seguimiento-ordenes-proveedor #panel_filtros .form-select { background: #fff; color: #1e293b; }
 .seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-value { font-size: clamp(24px, 2vw, 36px); }
 .seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-complete { --exec-tone: #146c43; --exec-surface: #eaf6ef; }
 html.dark .seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-complete { --exec-tone: #b7dfc6; --exec-surface: #243d32; }
@@ -17,3 +15,28 @@ html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-warning {
 html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-info { background: #243e4a !important; color: #9ad7f4 !important; border-color: #536d85; }
 html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-primary { background: #283b53 !important; color: #bcd3f2 !important; border-color: #4d6b91; }
 html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-secondary { background: #303a46 !important; color: #d0d7df !important; border-color: #586779; }
+
+/* Las acciones del módulo reutilizan el estándar común; estos ajustes preservan
+ * el tamaño y el ancho de las etiquetas de adjuntos y filtros del calendario. */
+.seguimiento-ordenes-proveedor #panel_filtros .oc-filter-action .lfm-btn-action,
+.seguimiento-ordenes-proveedor .btn-filter-cal { border-radius: 5px; }
+.seguimiento-ordenes-proveedor .btn-filter-cal { padding: 8px 14px; font-weight: 600 !important; }
+.seguimiento-ordenes-proveedor .adjunto-orden-proveedor { max-width: 320px; }
+.seguimiento-ordenes-proveedor .adjunto-seguimiento-proveedor { max-width: 100%; }
+
+/* Datos generales: escala de lectura del portal; los badges mantienen su color
+ * funcional y dejan de heredar el tamaño compacto de las tablas. */
+.seguimiento-ordenes-proveedor .datos-generales-proveedor .vistadatos {
+    font-family: var(--font-family-report) !important;
+    font-size: var(--font-body) !important;
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-normal);
+    letter-spacing: normal;
+    overflow-wrap: anywhere;
+}
+.seguimiento-ordenes-proveedor .datos-generales-proveedor .vistadatos .badge {
+    font-size: var(--font-table-body) !important;
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-normal);
+    white-space: normal;
+}

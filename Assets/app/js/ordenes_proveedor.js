@@ -123,34 +123,20 @@ function fntInicializarTabla() {
 
     if (!document.getElementById(tableElementJS)) return;
 
-    /* Inicializamos los filtros de columna */
-    var elemento_clone = tableElement + ' thead tr';
-    var elemento_appendto = tableElement + ' thead';
-    $(elemento_clone).clone(true).appendTo(elemento_appendto);
-
-    var elemento_each = tableElement + ' thead tr:eq(1) th';
+    // La cabecera se reconstruye sin copiar eventos; FixedHeader usa los mismos índices.
+    $(tableElement).off('draw.dt.lfmProveedorLayout');
+    if ($.fn.dataTable.isDataTable(tableElement)) $(tableElement).DataTable().destroy();
+    var cabecera = $(tableElement + ' thead');
+    cabecera.find('tr.lfm-proveedor-filtros').remove();
+    cabecera.find('tr').first().clone(false).addClass('lfm-proveedor-filtros').appendTo(cabecera);
     var debounceColumna = {};
-    $(elemento_each).each(function (i) {
-
-        if (i === 0) {
-            $(this).html('<button type="button" class="btn btn-outline-secondary btn-sm lfm-reset-proveedor" title="Limpiar filtros de columna" aria-label="Limpiar filtros de columna"><i class="fa-regular fa-filter-circle-xmark"></i></button>');
-            return;
-        }
-        // Nombre de la columna
-        var title = $(this).text();
-
-        // Crear el elemento input en cada columna
-        $(this).html('<div class="form-group mb-0"><input type="text" class="form-control form-control-sm text-center" aria-label="Filtrar ' + title + '" placeholder="Filtrar ' + title + '"/></div>');
-
-        // Evento del input creado en cada columna
-        $('input', this).on('click keydown', function (e) { e.stopPropagation(); });
-        $('input', this).on('input', function () {
-            var valor = this.value;
-            clearTimeout(debounceColumna[i]);
-            debounceColumna[i] = setTimeout(function () {
-                if (tableOrdenes && tableOrdenes.column(i).search() !== valor) tableOrdenes.column(i).search(valor).draw();
-            }, 220);
-        });
+    cabecera.find('tr.lfm-proveedor-filtros th').each(function (i) {
+        if (i === 0) { $(this).empty(); return; }
+        var title = $(this).text().trim();
+        $(this).empty().append(
+            $('<input>', { type: 'text', class: 'form-control form-control-sm text-center col-filter-proveedor',
+                'data-column-index': i, 'aria-label': 'Filtrar ' + title, placeholder: 'Filtrar ' + title })
+        );
     });
 
     /*-------------------------------------------
@@ -178,7 +164,8 @@ function fntInicializarTabla() {
                 title: 'Lista de Órdenes de Compra a Proveedores',
                 exportOptions: {
                     columns: function (index) { return index !== 0 && tableOrdenes.column(index).visible(); },
-                    format: { body: function (data) { return $('<div>').html(data == null ? '' : String(data)).text().trim(); } }
+                    orthogonal: 'export',
+                    format: { body: function (data, row, column, node) { return node ? node.textContent.trim() : String(data == null ? '' : data).trim(); } }
                 }
             },
             {
@@ -193,14 +180,14 @@ function fntInicializarTabla() {
                 className: 'text-center align-middle',
                 render: function (data, type, row) {
                     var valorDisplay = data || ('Pedido #' + row.pedido_id);
-                    return '<span class="fw-bold text-danger">' + escapeHtml(valorDisplay) + '</span>';
+                    return type === 'display' ? '<span class="fw-bold text-danger">' + escapeHtml(valorDisplay) + '</span>' : valorDisplay;
                 }
             },
             {
                 data: 'proyecto_id',
                 className: 'text-center align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>';
+                    return type === 'display' ? '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>' : (data || '');
                 }
             },
             {
@@ -216,14 +203,14 @@ function fntInicializarTabla() {
                 data: 'proveedor',
                 className: 'text-start align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-primary">' + escapeHtml((data || '—')) + '</span>';
+                    return type === 'display' ? '<span class="fw-bold text-primary">' + escapeHtml((data || '—')) + '</span>' : (data || '');
                 }
             },
             {
                 data: 'cliente',
                 className: 'text-start align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>';
+                    return type === 'display' ? '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>' : (data || '');
                 }
             },
             { data: 'titulo_venta', className: 'text-start align-middle', render: fntTextoCeldaProveedor },
@@ -231,18 +218,35 @@ function fntInicializarTabla() {
                 data: 'comprador',
                 className: 'text-start align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>';
+                    return type === 'display' ? '<span class="fw-semibold text-dark">' + escapeHtml((data || '—')) + '</span>' : (data || '');
                 }
             },
             {
                 data: 'monto_formateado',
                 className: 'text-end align-middle',
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-dark">' + escapeHtml((data || '$0.00')) + '</span>';
+                    if (type === 'sort' || type === 'type') return Number(row.monto_pedido) || 0;
+                    return type === 'display' ? '<span class="fw-bold text-dark">' + escapeHtml((data || '$0.00')) + '</span>' : (data || '');
                 }
             },
-            { data: 'estatus_orden_badge', className: 'text-center align-middle', orderable: false },
-            { data: 'estatus_badge', className: 'text-center align-middle', orderable: false },
+            {
+                data: 'estatus_orden_badge',
+                className: 'text-center align-middle',
+                render: function (data, type, row) {
+                    // La ordenación sigue el estado real; filtros y Excel reciben el texto, sin HTML.
+                    if (type === 'sort' || type === 'type') return Number(row.enviado) || 0;
+                    return type === 'display' ? data : (row.estatus_orden_txt || '');
+                }
+            },
+            {
+                data: 'estatus_badge',
+                className: 'text-center align-middle',
+                render: function (data, type, row) {
+                    // El ID refleja la secuencia comercial de estatus del proyecto.
+                    if (type === 'sort' || type === 'type') return Number(row.estatus_proyecto_id) || 0;
+                    return type === 'display' ? data : (row.estatus_proyecto || '');
+                }
+            },
             { data: 'partidas_badge', className: 'text-center align-middle', orderable: false },
             { data: 'adjuntos_badge', className: 'text-center align-middle', orderable: false },
             { data: 'seguimientos_badge', className: 'text-center align-middle', orderable: false },
@@ -253,20 +257,47 @@ function fntInicializarTabla() {
         language: idioma_espanol
     });
 
-    // LfmTables vacía la celda de acciones; insertar el botón después de crear la tabla.
-    $(tableElement + ' thead tr:eq(1) th:first').html('<button type="button" class="btn btn-outline-secondary btn-sm lfm-reset-proveedor" title="Limpiar filtros de columna" aria-label="Limpiar filtros de columna"><i class="fa-regular fa-filter-circle-xmark"></i></button>');
-    $(tableElement).one('destroy.dt.lfmProveedorReset', function () { $(document).off('.lfmProveedorReset'); });
+    // El helper vacía acciones al iniciar. FixedHeader clona este botón al fijar la cabecera.
+    var botonLimpiar = '<button type="button" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet lfm-btn-action--icon lfm-reset-proveedor" title="Limpiar filtros de columna" aria-label="Limpiar filtros de columna"><i class="fa-regular fa-filter-circle-xmark"></i></button>';
+    function asegurarBotonLimpiar() {
+        var cabeceras = $(tableElement).closest('.dataTables_wrapper').find('.dataTables_scrollHead table.ocp-proveedor-table');
+        cabeceras = cabeceras.add($(tableElement)).add($('table.ocp-proveedor-table.fixedHeader-floating, table.ocp-proveedor-table.fixedHeader-locked'));
+        cabeceras.find('thead tr.lfm-proveedor-filtros th:first').each(function () {
+            if (!$(this).find('.lfm-reset-proveedor').length) $(this).html(botonLimpiar);
+        });
+    }
+    asegurarBotonLimpiar();
+    $(document).off('.lfmProveedorFiltros');
+    $(tableElement).one('destroy.dt.lfmProveedorFiltros', function () {
+        $(document).off('.lfmProveedorFiltros');
+        Object.keys(debounceColumna).forEach(function (indice) { clearTimeout(debounceColumna[indice]); });
+    });
     if (typeof menu !== 'undefined') validaPermisoExportar(menu);
-    $(document).off('click.lfmProveedorReset', '.lfm-reset-proveedor').on('click.lfmProveedorReset', '.lfm-reset-proveedor', function (e) {
+
+    // Delegar permite usar los inputs originales y los clones floating/locked.
+    var selectorFiltros = 'table.ocp-proveedor-table .lfm-proveedor-filtros .col-filter-proveedor';
+    $(document).on('click.lfmProveedorFiltros keydown.lfmProveedorFiltros', selectorFiltros, function (e) { e.stopPropagation(); });
+    $(document).on('input.lfmProveedorFiltros', selectorFiltros, function () {
+        var indice = Number(this.getAttribute('data-column-index'));
+        var valor = this.value;
+        $(selectorFiltros + '[data-column-index="' + indice + '"]').not(this).val(valor);
+        clearTimeout(debounceColumna[indice]);
+        debounceColumna[indice] = setTimeout(function () {
+            if (tableOrdenes && tableOrdenes.column(indice).search() !== valor) tableOrdenes.column(indice).search(valor).draw();
+        }, 220);
+    });
+    $(document).on('click.lfmProveedorFiltros', 'table.ocp-proveedor-table .lfm-reset-proveedor', function (e) {
+        e.preventDefault();
         e.stopPropagation();
         Object.keys(debounceColumna).forEach(function (indice) { clearTimeout(debounceColumna[indice]); });
-        $(tableElement + ' thead tr:eq(1) input, table.fixedHeader-floating thead tr:eq(1) input').val('');
+        $(selectorFiltros).val('');
         tableOrdenes.columns().search('').draw();
     });
 
     /*-------------------------------------------
     [ DataTable - Se ejecuta después de redibujarse la tabla ]*/
-    $(tableElement).on('draw.dt', function () {
+    $(tableElement).on('draw.dt.lfmProveedorLayout', function () {
+        asegurarBotonLimpiar();
         if (tableOrdenes) {
             tableOrdenes.columns.adjust();
         }
@@ -388,9 +419,13 @@ function fntVerDetalle(btn) {
         $('#det_fecha_pedido').text(rowData.fecha_pedido_formateada || '—');
         $('#det_tipo_pedido').text(rowData.tipo_pedido || '—');
         $('#det_incoterm').text(rowData.incoterm || '—');
-        $('#det_subtotal').text((rowData.cmoneda || 'USD') + ' $' + (parseFloat(rowData.subtotal_pedido || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })));
-        $('#det_iva').text((rowData.cmoneda || 'USD') + ' $' + (parseFloat(rowData.iva_pedido || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })));
-        $('#det_monto').text(rowData.monto_formateado || '—');
+        if (rowData.montos_ocultos) {
+            $('#det_subtotal, #det_iva, #det_monto').text('- - -');
+        } else {
+            $('#det_subtotal').text((rowData.cmoneda || 'USD') + ' $' + (parseFloat(rowData.subtotal_pedido || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })));
+            $('#det_iva').text((rowData.cmoneda || 'USD') + ' $' + (parseFloat(rowData.iva_pedido || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })));
+            $('#det_monto').text(rowData.monto_formateado || '—');
+        }
     }
 
     pedidoIdActual = pedidoIdEnc;
@@ -470,15 +505,20 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
             }
 
             var moneda = detalle.cmoneda || 'USD';
-            var subtotalNum = parseFloat(detalle.subtotal || 0);
-            var ivaNum = parseFloat(detalle.iva || 0);
-            var totalNum = parseFloat(detalle.total || 0);
-            $('#det_subtotal').text(moneda + ' $' + subtotalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            $('#det_iva').text(moneda + ' $' + ivaNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            $('#det_monto').text(moneda + ' $' + totalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            var montosOcultos = resp.data.montos_ocultos === true;
+            if (montosOcultos) {
+                $('#det_subtotal, #det_iva, #det_monto').text('- - -');
+            } else {
+                var subtotalNum = parseFloat(detalle.subtotal || 0);
+                var ivaNum = parseFloat(detalle.iva || 0);
+                var totalNum = parseFloat(detalle.total || 0);
+                $('#det_subtotal').text(moneda + ' $' + subtotalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $('#det_iva').text(moneda + ' $' + ivaNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $('#det_monto').text(moneda + ' $' + totalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            }
 
             // Renderizar Partidas
-            fntRenderizarPartidas(partidas, moneda);
+            fntRenderizarPartidas(partidas, moneda, montosOcultos);
 
             // Renderizar Adjuntos
             fntRenderizarAdjuntos(adjuntos);
@@ -508,8 +548,9 @@ function fntCargarDetalleCompleto(pedidoIdEnc) {
  * 
  * @param {Array} partidas
  * @param {string} moneda
+ * @param {boolean} montosOcultos Restricción del perfil vendedor informada por el backend.
  */
-function fntRenderizarPartidas(partidas, moneda) {
+function fntRenderizarPartidas(partidas, moneda, montosOcultos) {
     $('#badge_total_partidas').text(partidas.length);
 
     if (!Array.isArray(partidas) || partidas.length === 0) {
@@ -554,8 +595,8 @@ function fntRenderizarPartidas(partidas, moneda) {
         html += '<td class="text-center align-middle fw-bold text-primary">' + cantPedidoProv.toLocaleString('en-US') + '</td>';
         html += '<td class="text-center align-middle fw-bold text-info">' + cantPedidoAlm.toLocaleString('en-US') + '</td>';
         html += '<td class="text-center align-middle">' + escapeHtml(item.unidad_medida || 'PZA') + '</td>';
-        html += '<td class="text-end align-middle">' + moneda + ' $' + pu.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
-        html += '<td class="text-end align-middle fw-bold text-dark">' + moneda + ' $' + imp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>';
+        html += '<td class="text-end align-middle">' + (montosOcultos ? '- - -' : moneda + ' $' + pu.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + '</td>';
+        html += '<td class="text-end align-middle fw-bold text-dark">' + (montosOcultos ? '- - -' : moneda + ' $' + imp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + '</td>';
         html += '<td class="text-center align-middle"><span class="badge bg-light text-dark border">' + escapeHtml(item.tiempo_entrega || '—') + '</span></td>';
         html += '<td class="text-center align-middle fw-semibold text-primary">' + escapeHtml(item.fecha_estimada_formateada || '—') + '</td>';
         html += '<td class="text-center align-middle">' + badgeEntregado + '</td>';
@@ -599,7 +640,7 @@ function fntRenderizarAdjuntos(adjuntos) {
             iconClass = 'fa-file-archive text-warning';
         }
 
-        html += '<a href="' + fileUrl + '" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2 py-2 px-3 shadow-sm" style="border-radius: 8px; max-width: 320px;" title="Abrir ' + escapeHtml(fileName) + '">';
+        html += '<a href="' + fileUrl + '" target="_blank" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet adjunto-orden-proveedor" title="Abrir ' + escapeHtml(fileName) + '">';
         html += '<i class="fa-regular ' + iconClass + ' fs-16"></i>';
         html += '<span class="text-truncate fs-12 fw-semibold" style="max-width: 230px;">' + escapeHtml(fileName) + '</span>';
         html += '<i class="fa-solid fa-arrow-up-right-from-square fs-10 text-muted"></i>';
@@ -691,7 +732,7 @@ function fntRenderizarTimelinePagina(pagina) {
             html += '<span class="fs-12 fw-semibold text-muted d-inline-flex align-items-center">';
             html += '<i class="fa-regular fa-paperclip me-1 text-primary"></i>Adjunto:';
             html += '</span>';
-            html += '<a href="' + fileUrl + '" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2 text-truncate" style="max-width: 100%; font-size: 12px; border-radius: 6px;" title="Abrir ' + escapeHtml(fileName) + '">';
+            html += '<a href="' + fileUrl + '" target="_blank" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet text-truncate adjunto-seguimiento-proveedor" title="Abrir ' + escapeHtml(fileName) + '">';
             html += '<i class="fa-regular ' + iconClass + ' me-1"></i>';
             html += '<span class="text-truncate" style="max-width: 280px;">' + escapeHtml(fileName) + '</span>';
             html += '<i class="fa-solid fa-arrow-up-right-from-square fs-10 ms-1 text-muted"></i>';
@@ -810,7 +851,8 @@ function fntMostrarLista() {
     ventaIdActual = '';
 
     if (tableOrdenes !== null) {
-        tableOrdenes.columns.adjust().draw();
+        tableOrdenes.columns.adjust();
+        if (tableOrdenes.fixedHeader) tableOrdenes.fixedHeader.adjust();
     }
 
     if (calendarEntregas !== null) {

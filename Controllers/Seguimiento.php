@@ -788,6 +788,26 @@ class Seguimiento extends Controllers
     }
 
     /**
+     * Retira importes de una respuesta de órdenes a proveedor para el rol vendedor.
+     * Conserva los totales de conteo de partidas, adjuntos y seguimientos.
+     *
+     * @param array $registro Fila del listado, calendario, encabezado o partida.
+     * @return array Fila sin valores monetarios estructurados.
+     */
+    private function ocultarMontosProveedorVendedor(array $registro): array
+    {
+        foreach ($registro as $campo => $valor) {
+            if (preg_match('/^total_(?:partidas|adjuntos|seguimientos)(?:_|$)/i', (string)$campo)) {
+                continue;
+            }
+            if (preg_match('/(?:^|_)(?:precio|importe|subtotal|iva|impuesto|monto|total|descuento|costo|tipo_cambio)(?:_|$)/i', (string)$campo)) {
+                $registro[$campo] = null;
+            }
+        }
+        return $registro;
+    }
+
+    /**
      * Carga la Vista Ordenes de Compra Proveedores.
      * URL: /seguimiento/ordenesProveedor
      */
@@ -863,6 +883,7 @@ class Seguimiento extends Controllers
 
     /**
      * Obtiene la lista de órdenes a proveedores para llenar el DataTable.
+     * El rol vendedor recibe el monto visible como «- - -» y sin importes crudos.
      * URL / AJAX: /seguimiento/getOrdenesProveedorDatatable
      *
      * @return json
@@ -959,6 +980,11 @@ class Seguimiento extends Controllers
                 $moneda = $arrData[$i]['cmoneda'] ?? 'USD';
                 $monto  = number_format((float)($arrData[$i]['monto_pedido'] ?? 0), 2, '.', ',');
                 $arrData[$i]['monto_formateado'] = $moneda . ' $' . $monto;
+                if ($rol_id === 4) {
+                    $arrData[$i] = $this->ocultarMontosProveedorVendedor($arrData[$i]);
+                    $arrData[$i]['monto_formateado'] = '- - -';
+                    $arrData[$i]['montos_ocultos'] = true;
+                }
 
                 // Total seguimientos badge
                 $total_seg = intval($arrData[$i]['total_seguimientos'] ?? 0);
@@ -1193,6 +1219,10 @@ class Seguimiento extends Controllers
                 $item['estatus_codigo']      = $estatus_codigo;
                 $item['estatus_label']       = $estatus_label;
                 $item['badge_class']         = $badge_class;
+                if ($rol_id === 4) {
+                    // extendedProps y raw_data comparten este registro ya redactado.
+                    $item = $this->ocultarMontosProveedorVendedor($item);
+                }
 
                 $oc_str      = !empty($item['num_orden_compra']) ? $item['num_orden_compra'] : ('Pedido Prov. #' . $item['pedido_id']);
                 $prov_str    = !empty($item['proveedor']) ? $item['proveedor'] : '';
@@ -1246,6 +1276,7 @@ class Seguimiento extends Controllers
      * Obtiene los datos detallados de una orden de compra a proveedor,
      * incluyendo datos generales, partidas (tb_pedidos_proveedor_detalle),
      * adjuntos (tb_pedidos_proveedor_adjuntos) y la bitácora de seguimiento.
+     * Para rol vendedor, elimina importes estructurados antes de emitir JSON.
      * URL / AJAX: /seguimiento/getDetallePedidoProveedor
      *
      * @return json
@@ -1295,6 +1326,10 @@ class Seguimiento extends Controllers
             }
 
             $partidas = $model->selectPartidasPedidoProveedor($pedido_id);
+            if ($rol_id === 4) {
+                $detallePedido = $this->ocultarMontosProveedorVendedor($detallePedido);
+                $partidas = array_map([$this, 'ocultarMontosProveedorVendedor'], $partidas);
+            }
             $adjuntos = $model->selectAdjuntosPedidoProveedor($pedido_id);
 
             // Obtener venta_id para consultar la bitácora de seguimientos
@@ -1307,10 +1342,11 @@ class Seguimiento extends Controllers
 
             $arrResponse = getResponse('Datos encontrados', 'ok', false);
             $arrResponse['data'] = array(
-                'pedido'    => $detallePedido,
-                'partidas'  => $partidas,
-                'adjuntos'  => $adjuntos,
-                'historial' => $historial
+                'pedido'         => $detallePedido,
+                'partidas'       => $partidas,
+                'adjuntos'       => $adjuntos,
+                'historial'      => $historial,
+                'montos_ocultos' => $rol_id === 4
             );
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));

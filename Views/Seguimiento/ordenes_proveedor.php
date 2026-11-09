@@ -66,12 +66,12 @@
                         <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" required="" maxlength="10">
                     </div>
                     <div class="oc-filter-action">
-                        <button type="button" class="btn btn-primary w-100" id="btnFiltrar"><i class="fa-regular fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button>
+                        <button type="button" class="btn btn-primary lfm-btn-action lfm-btn-action--primary w-100" id="btnFiltrar"><i class="fa-regular fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button>
                     </div>
                 </div>
                 <div class="oc-filter-footer">
                     <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>La búsqueda incluye la orden del cliente, el folio OCP, el proveedor y el vendedor. La lista usa fecha de pedido; el calendario, entrega estimada.</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRestablecerFiltros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
+                    <button type="button" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet" id="btnRestablecerFiltros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
                 </div>
             </div>
 
@@ -128,7 +128,7 @@
                 <!-- Tabla de Órdenes -->
                 <div class="table-responsive export-table">
                     <table id="tableOrdenes"
-                           class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100 seguimiento-tabla">
+                           class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100 seguimiento-tabla ocp-proveedor-table">
                         <thead>
                             <tr>
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
@@ -192,22 +192,22 @@
                 <!-- Filtros rápidos por estatus -->
                 <div class="oc-cal-filtros mb-3 d-flex flex-wrap gap-2 align-items-center" role="group" aria-label="Filtrar entregas por cumplimiento">
                     <span class="font-small text-muted me-1 fw-semibold">Filtrar en calendario:</span>
-                    <button type="button" class="btn btn-xs btn-outline-secondary active btn-filter-cal" data-filter="todos" aria-pressed="true">
+                    <button type="button" class="btn lfm-btn-action btn-outline-secondary active btn-filter-cal" data-filter="todos" aria-pressed="true">
                         <i class="fa-regular fa-layer-group me-1"></i> Todos
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-danger btn-filter-cal" data-filter="vencido" aria-pressed="false">
+                    <button type="button" class="btn lfm-btn-action btn-outline-danger btn-filter-cal" data-filter="vencido" aria-pressed="false">
                         <i class="fa-regular fa-circle-exclamation me-1"></i> Vencidas
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-warning text-dark btn-filter-cal" data-filter="proximo" aria-pressed="false">
+                    <button type="button" class="btn lfm-btn-action btn-outline-warning text-dark btn-filter-cal" data-filter="proximo" aria-pressed="false">
                         <i class="fa-regular fa-clock me-1"></i> Próximas
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-success btn-filter-cal" data-filter="en_tiempo" aria-pressed="false">
+                    <button type="button" class="btn lfm-btn-action btn-outline-success btn-filter-cal" data-filter="en_tiempo" aria-pressed="false">
                         <i class="fa-regular fa-circle-check me-1"></i> En Tiempo
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-primary btn-filter-cal" data-filter="entregado" aria-pressed="false">
+                    <button type="button" class="btn lfm-btn-action btn-outline-primary btn-filter-cal" data-filter="entregado" aria-pressed="false">
                         <i class="fa-regular fa-box-check me-1"></i> Entregadas
                     </button>
-                    <button type="button" class="btn btn-xs btn-outline-secondary btn-filter-cal" data-filter="cancelado" aria-pressed="false">
+                    <button type="button" class="btn lfm-btn-action btn-outline-secondary btn-filter-cal" data-filter="cancelado" aria-pressed="false">
                         <i class="fa-regular fa-ban me-1"></i> Canceladas
                     </button>
                 </div>
@@ -234,13 +234,13 @@
 
                 <!-- Botón regresar -->
                 <div class="mb-3">
-                    <button type="button" class="btn btn-primary hvr-float-shadow d-flex justify-content-center align-items-center btnReturnList" id="btnRegresar">
+                    <button type="button" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet btnReturnList" id="btnRegresar">
                         <i class="fa-regular fa-arrow-left me-1"></i> Regresar a la lista
                     </button>
                 </div>
 
                 <!-- Datos generales de la orden -->
-                <div class="mb-4">
+                <div class="mb-4 datos-generales-proveedor">
                     <div class="card border p-0 shadow-sm rounded-3">
                         <div class="card-header bg-header-card border-bottom py-2.5 px-3">
                             <p class="mb-0 fw-600 text-primary fs-13">
@@ -251,83 +251,83 @@
                             <div class="row g-3">
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3 pt-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Folio OCP / Orden:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-danger mb-0" id="det_folio_ocp">—</h6>
+                                    <label class="form-label mb-1">Folio OCP / Orden:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-bold text-danger mb-0" id="det_folio_ocp">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Proveedor:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-primary mb-0" id="det_proveedor">—</h6>
+                                    <label class="form-label mb-1">Proveedor:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-bold text-primary mb-0" id="det_proveedor">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">RFC Proveedor:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_proveedor_rfc">—</h6>
+                                    <label class="form-label mb-1">RFC Proveedor:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_proveedor_rfc">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Contacto Proveedor:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_proveedor_contacto">—</h6>
+                                    <label class="form-label mb-1">Contacto Proveedor:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_proveedor_contacto">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Proyecto Venta:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-dark mb-0" id="det_proyecto_id">—</h6>
+                                    <label class="form-label mb-1">Proyecto Venta:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-bold text-dark mb-0" id="det_proyecto_id">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Cliente:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-bold text-dark mb-0" id="det_cliente">—</h6>
+                                    <label class="form-label mb-1">Cliente:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-bold text-dark mb-0" id="det_cliente">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Proyecto / Título:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_titulo">—</h6>
+                                    <label class="form-label mb-1">Proyecto / Título:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_titulo">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Comprador / Creador:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_comprador">—</h6>
+                                    <label class="form-label mb-1">Comprador / Creador:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_comprador">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Estatus Orden:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break mb-0" id="det_estatus_orden">—</h6>
+                                    <label class="form-label mb-1">Estatus Orden:</label>
+                                    <h6 class="vistadatos text-wrap text-break mb-0" id="det_estatus_orden">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Estatus Proyecto:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break mb-0" id="det_estatus_proyecto">—</h6>
+                                    <label class="form-label mb-1">Estatus Proyecto:</label>
+                                    <h6 class="vistadatos text-wrap text-break mb-0" id="det_estatus_proyecto">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Fecha Pedido:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_fecha_pedido">—</h6>
+                                    <label class="form-label mb-1">Fecha Pedido:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_fecha_pedido">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Tipo Pedido:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_tipo_pedido">—</h6>
+                                    <label class="form-label mb-1">Tipo Pedido:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_tipo_pedido">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Incoterm:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_incoterm">—</h6>
+                                    <label class="form-label mb-1">Incoterm:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_incoterm">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Subtotal:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_subtotal">—</h6>
+                                    <label class="form-label mb-1">Subtotal:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_subtotal">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">IVA:</label>
-                                    <h6 class="vistadatos fs-13 text-wrap text-break fw-semibold text-dark mb-0" id="det_iva">—</h6>
+                                    <label class="form-label mb-1">IVA:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-semibold text-dark mb-0" id="det_iva">—</h6>
                                 </div>
 
                                 <div class="form-group col-12 col-sm-6 col-lg-3">
-                                    <label class="form-label fs-12 fw-bold text-primary mb-1">Monto Total:</label>
-                                    <h6 class="vistadatos fs-14 text-wrap text-break fw-bold text-success mb-0" id="det_monto">—</h6>
+                                    <label class="form-label mb-1">Monto Total:</label>
+                                    <h6 class="vistadatos text-wrap text-break fw-bold text-success mb-0" id="det_monto">—</h6>
                                 </div>
 
                             </div>
@@ -390,7 +390,7 @@
                 </div>
 
                 <!-- Historial de Seguimientos -->
-                <div>
+                <div class="historial-seguimientos">
                     <div class="card border p-0 shadow-sm rounded-3">
                         <div class="card-header bg-header-card border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center">
                             <p class="mb-0 fw-600 text-primary fs-13">
@@ -442,7 +442,7 @@
                 <h5 class="modal-title fw-bold text-primary fs-14" id="modalDetalleEntregaLabel">
                     <i class="fa-regular fa-calendar-lines-pen me-2"></i> Detalle de Fecha Límite de Entrega de Proveedor
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close lfm-btn-action lfm-btn-action--icon" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="row g-3">
@@ -528,7 +528,7 @@
                 </div>
             </div>
             <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
