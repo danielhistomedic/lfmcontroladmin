@@ -26,9 +26,12 @@ var paginaActualSeguimiento = 1;
 var registrosPorPaginaSeguimiento = 5;
 var calendarEntregas = null;
 var calendarEventosData = [];
+var calendarFuenteEventos = null;
 var calendarFiltroEstatus = 'todos';
+var calendarIntervaloVisible = null;
 var ordenesProveedorRequest = null;
 var calendarioProveedorRequest = null;
+var calendarioProveedorSecuencia = 0;
 var detalleProveedorRequest = null;
 
 /* =========================================================
@@ -47,7 +50,6 @@ $(document).ready(function () {
 
     // Inicializa y carga Calendario de Entregas
     fntInicializarCalendarioEntregas();
-    fntCargarCalendarioEntregas();
 
     // Eventos
     $('#btnRestablecerFiltros').on('click', function () {
@@ -98,10 +100,7 @@ $(document).ready(function () {
  * FUNCIONES PRINCIPALES
  * ========================================================= */
 
-/**
- * Inicializa el DataTable de órdenes de compra a proveedor.
- */
-/** Mismo periodo local de Órdenes Cliente: un año calendario atrás hasta hoy. */
+/** Periodo inicial de la lista: un año atrás hasta hoy; el calendario consulta su vista visible. */
 function fntEstablecerPeriodoProveedor() {
     var hoy = new Date();
     var anioAnterior = hoy.getFullYear() - 1;
@@ -119,6 +118,7 @@ function fntTextoCeldaProveedor(data, type) {
     return type === 'display' ? escapeHtml(data == null ? '' : String(data)) : (data == null ? '' : data);
 }
 
+/** Inicializa el DataTable de órdenes de compra a proveedor. */
 function fntInicializarTabla() {
 
     if (!document.getElementById(tableElementJS)) return;
@@ -877,6 +877,11 @@ function fntMostrarDetalle() {
  * CALENDARIO DE ENTREGAS DE PROVEEDORES
  * ========================================================= */
 
+/** Formatea una fecha local sin convertirla a UTC para conservar los límites del calendario. */
+function fntFechaLocalCalendario(fecha) {
+    return fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0') + '-' + String(fecha.getDate()).padStart(2, '0');
+}
+
 /**
  * Inicializa FullCalendar para mostrar las fechas estimadas de entrega de proveedores.
  */
@@ -902,7 +907,18 @@ function fntInicializarCalendarioEntregas() {
         height: 'auto',
         navLinks: true,
         editable: false,
-        dayMaxEvents: true,
+        // Mostrar tres partidas por día y abrir las restantes en el popover compartido con Órdenes Cliente.
+        dayMaxEvents: 3,
+        moreLinkText: function (n) { return 'Ver ' + n + ' más'; },
+        datesSet: function (info) {
+            // FullCalendar entrega un fin exclusivo; consultar hasta el último día visible.
+            var ultimoDiaVisible = new Date(info.end.getFullYear(), info.end.getMonth(), info.end.getDate() - 1);
+            calendarIntervaloVisible = {
+                fecha_ini: fntFechaLocalCalendario(info.start),
+                fecha_fin: fntFechaLocalCalendario(ultimoDiaVisible)
+            };
+            fntCargarCalendarioEntregas();
+        },
         eventClassNames: function (arg) {
             var estatus = arg.event.extendedProps.estatus_codigo || 'todos';
             return ['oc-cal-evento', 'oc-tone-' + (['vencido', 'proximo', 'en_tiempo', 'entregado', 'cancelado'].includes(estatus) ? estatus : 'todos')];
@@ -919,14 +935,18 @@ function fntInicializarCalendarioEntregas() {
 }
 
 /**
- * Consulta las fechas de entrega de proveedores vía AJAX y actualiza el calendario.
+ * Consulta las fechas de entrega del periodo visible y conserva la búsqueda y el alcance del usuario.
  */
 function fntCargarCalendarioEntregas() {
     if (!document.getElementById('calendarEntregas')) return;
 
-    var fecha_ini = $('#filtro_fecha_ini').val().trim();
-    var fecha_fin = $('#filtro_fecha_fin').val().trim();
+    if (!calendarIntervaloVisible) return;
+
+    var fecha_ini = calendarIntervaloVisible.fecha_ini;
+    var fecha_fin = calendarIntervaloVisible.fecha_fin;
     var filtro_num_orden = $('#filtro_num_orden').val().trim();
+    // Ignorar respuestas antiguas cuando el usuario cambia de mes antes de que termine la consulta.
+    var solicitudId = ++calendarioProveedorSecuencia;
     if (calendarioProveedorRequest) calendarioProveedorRequest.abort();
 
     calendarioProveedorRequest = $.ajax({
@@ -939,6 +959,7 @@ function fntCargarCalendarioEntregas() {
         },
         dataType: 'json',
         success: function (resp) {
+            if (solicitudId !== calendarioProveedorSecuencia) return;
             if (resp && resp.respuesta === 'ok') {
                 var resumen = resp.resumen || {};
                 $('#cal_count_total').text(new Intl.NumberFormat('en-US').format(resumen.total || 0));
@@ -955,11 +976,11 @@ function fntCargarCalendarioEntregas() {
             }
         },
         error: function (xhr, status, error) {
-            if (status === 'abort') return;
+            if (solicitudId !== calendarioProveedorSecuencia || status === 'abort') return;
             console.error('Error al cargar calendario de entregas de proveedor:', error);
             alertify.error('Error al cargar el calendario de entregas.', 4);
         },
-        complete: function () { calendarioProveedorRequest = null; }
+        complete: function () { if (solicitudId === calendarioProveedorSecuencia) calendarioProveedorRequest = null; }
     });
 }
 
@@ -969,15 +990,15 @@ function fntCargarCalendarioEntregas() {
 function fntAplicarFiltroCalendario() {
     if (!calendarEntregas) return;
 
-    calendarEntregas.removeAllEvents();
-
     var eventosFiltrados = calendarEventosData.filter(function (evt) {
         if (calendarFiltroEstatus === 'todos') return true;
         return evt.extendedProps && evt.extendedProps.estatus_codigo === calendarFiltroEstatus;
     });
 
-    calendarEntregas.addEventSource(eventosFiltrados);
-    $('#cal_resultado').text(eventosFiltrados.length + ' partidas con fecha en la consulta' + (calendarFiltroEstatus === 'todos' ? '.' : ' para el estatus seleccionado.'));
+    // Mantener una sola fuente; FullCalendar puede recargar las fuentes al cambiar de mes.
+    if (calendarFuenteEventos) calendarFuenteEventos.remove();
+    calendarFuenteEventos = calendarEntregas.addEventSource(eventosFiltrados);
+    $('#cal_resultado').text(eventosFiltrados.length + ' partidas con fecha en el periodo visible' + (calendarFiltroEstatus === 'todos' ? '.' : ' para el estatus seleccionado.'));
 }
 
 /**

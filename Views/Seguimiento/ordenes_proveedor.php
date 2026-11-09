@@ -70,7 +70,7 @@
                     </div>
                 </div>
                 <div class="oc-filter-footer">
-                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>La búsqueda incluye la orden del cliente, el folio OCP, el proveedor y el vendedor. La lista usa fecha de pedido; el calendario, entrega estimada.</span>
+                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>La búsqueda incluye la orden del cliente, el folio OCP, el proveedor y el vendedor. Las fechas filtran la lista por fecha de pedido; el calendario consulta las entregas estimadas del periodo visible.</span>
                     <button type="button" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet" id="btnRestablecerFiltros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
                 </div>
             </div>
