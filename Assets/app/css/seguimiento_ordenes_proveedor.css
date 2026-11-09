@@ -1,0 +1,33 @@
+/** Ajustes de columnas y estados propios de órdenes a proveedor sobre el diseño OCC. */
+.seguimiento-ordenes-proveedor #panel_filtros .oc-filter-main {
+    grid-template-columns: minmax(250px, 1.3fr) repeat(2, minmax(150px, .9fr)) minmax(140px, .8fr) repeat(2, minmax(135px, .75fr)) 135px;
+}
+.seguimiento-ordenes-proveedor #panel_filtros .form-control,
+.seguimiento-ordenes-proveedor #panel_filtros .form-select { background: #fff; color: #1e293b; }
+.seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-value { font-size: clamp(24px, 2vw, 36px); }
+.seguimiento-ordenes-proveedor #panel_kpis #kpi_monto_usd { overflow-wrap: anywhere; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge { border: 1px solid; border-radius: 6px; font-size: var(--font-small); font-weight: 500; padding: .35rem .55rem; white-space: normal; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-success { background: #eaf6ef !important; color: #245b3e !important; border-color: #bedcc9; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-danger { background: #fcebed !important; color: #8b3540 !important; border-color: #ebc4ca; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-warning { background: #fff6df !important; color: #75560b !important; border-color: #ead9a4; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-info { background: #e8f5f8 !important; color: #075985 !important; border-color: #bedfe9; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-primary { background: #eaf1ff !important; color: #315a91 !important; border-color: #c8d6ed; }
+.seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-secondary { background: #eef1f4 !important; color: #4b5563 !important; border-color: #d3d9e0; }
+html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-success { background: #243d32 !important; color: #b7dfc6 !important; border-color: #466d58; }
+html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-danger { background: #432d34 !important; color: #ebbac2 !important; border-color: #78515c; }
+html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-warning { background: #423a25 !important; color: #ead69b !important; border-color: #756540; }
+html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-info { background: #243e4a !important; color: #9ad7f4 !important; border-color: #536d85; }
+html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-primary { background: #283b53 !important; color: #bcd3f2 !important; border-color: #4d6b91; }
+html.dark .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-secondary { background: #303a46 !important; color: #d0d7df !important; border-color: #586779; }
+@media (max-width: 1599px) {
+    .seguimiento-ordenes-proveedor #panel_filtros .oc-filter-main { grid-template-columns: repeat(3, minmax(0, 1fr)) 135px; }
+    .seguimiento-ordenes-proveedor #panel_filtros .oc-filter-brand { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+    .seguimiento-ordenes-proveedor #panel_filtros .oc-filter-main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .seguimiento-ordenes-proveedor #panel_filtros .oc-filter-order,
+    .seguimiento-ordenes-proveedor #panel_filtros .oc-filter-action { grid-column: 1 / -1; }
+}
+@media (max-width: 420px) {
+    .seguimiento-ordenes-proveedor #panel_filtros .oc-filter-main { grid-template-columns: minmax(0, 1fr); }
+}

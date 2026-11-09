@@ -4,71 +4,14 @@
 
 <!-- Theme Custom CSS -->
 <link rel="stylesheet" type="text/css" href="<?= assets() ?>/app/css/chart.css?v=<?= version(); ?>">
-<style>
-    .kpi-card {
-        border-radius: 10px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .kpi-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
-    }
-    .kpi-icon {
-        font-size: 2rem;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-    }
-    .text-amount {
-        font-size: var(--font-report-title);
-        font-weight: var(--font-weight-bold);
-        line-height: var(--line-height-tight);
-    }
-    .text-label {
-        font-size: var(--font-small);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: var(--font-weight-semibold);
-    }
-    .chart-container {
-        background: #ffffff;
-        border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-        margin-bottom: 2rem;
-    }
-    .chart-title {
-        font-size: var(--font-section-title);
-        font-weight: var(--font-weight-semibold);
-        color: #333333;
-        margin-bottom: 1.2rem;
-        border-bottom: 1px solid #f0f0f0;
-        padding-bottom: 0.75rem;
-    }
-    .table-custom th {
-        font-size: var(--font-table-header);
-        font-weight: var(--font-weight-semibold);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        background-color: #fcfcfc;
-    }
-    html.dark .chart-container { background: var(--bs-body-bg, #1f2937); color: var(--bs-body-color, #edf2f7); }
-    html.dark .chart-title { color: var(--bs-body-color, #edf2f7); border-color: #53657d; }
-    .bg-primary-lighten { background-color: rgba(13, 110, 253, 0.08) !important; }
-    .bg-success-lighten { background-color: rgba(25, 135, 84, 0.08) !important; }
-    .bg-info-lighten { background-color: rgba(13, 202, 240, 0.08) !important; }
-    .bg-warning-lighten { background-color: rgba(255, 193, 7, 0.08) !important; }
-    .bg-danger-lighten { background-color: rgba(220, 53, 69, 0.08) !important; }
-</style>
+<link rel="stylesheet" href="<?= assets() ?>/app/css/seguimiento_ordenes_cliente.css?v=<?= version(); ?>.<?= filemtime(__DIR__ . '/../../Assets/app/css/seguimiento_ordenes_cliente.css'); ?>">
+<link rel="stylesheet" href="<?= assets() ?>/app/css/seguimiento_ordenes_proveedor.css?v=<?= version(); ?>.<?= filemtime(__DIR__ . '/../../Assets/app/css/seguimiento_ordenes_proveedor.css'); ?>">
 
 <!-- Header Admin 02 -->
 <?php require_once("Template/header_02.php"); ?>
 
 <!-- CONTENIDO DE VISTA -->
-<section role="main" class="content-body fondo-general">
+<section role="main" class="content-body fondo-general seguimiento-ordenes-cliente seguimiento-ordenes-proveedor">
 
     <header class="page-header">
         <h2><?= $data['page_form_title']; ?></h2>
@@ -100,118 +43,84 @@
                 </div>
             </div>
 
-            <!-- ========== FILTROS ========== -->
-            <div class="row mb-4" id="panel_filtros">
-
-                <div class="form-group col-12 mb-2">
-                    <div class="border-bottom pb-2">
-                        <p class="mb-0 fw-semibold text-primary">
-                            <i class="fa-regular fa-filter text-secondary me-2"></i> Filtros de Búsqueda
-                        </p>
+            <!-- Panel de consulta con los mismos controles y jerarquía visual de Órdenes Cliente. -->
+            <div class="mb-4 report-filters oc-filter-shell" id="panel_filtros" role="region" aria-labelledby="filtro_ordenes_titulo">
+                <div class="oc-filter-main">
+                    <div class="oc-filter-brand">
+                        <span class="oc-filter-icon" aria-hidden="true"><i class="fa-regular fa-truck-ramp-box"></i></span>
+                        <div>
+                            <h3 id="filtro_ordenes_titulo">Órdenes de compra</h3>
+                            <p>Proveedores · Seguimiento de entregas</p>
+                        </div>
+                    </div>
+                    <div class="form-group pt-0 mb-0 oc-filter-order">
+                        <label class="form-label" for="filtro_num_orden"><i class="fa-regular fa-hashtag me-1" aria-hidden="true"></i>Número de orden / Folio OCP</label>
+                        <input type="text" class="form-control" autocomplete="off" name="filtro_num_orden" id="filtro_num_orden" placeholder="Buscar por núm. orden / OCP...">
+                    </div>
+                    <div class="form-group pt-0 mb-0">
+                        <label class="form-label" for="filtro_proveedor"><i class="fa-regular fa-truck me-1" aria-hidden="true"></i>Proveedor</label>
+                        <input type="text" class="form-control" autocomplete="off" name="filtro_proveedor" id="filtro_proveedor" placeholder="Buscar por proveedor...">
+                    </div>
+                    <div class="form-group pt-0 mb-0">
+                        <label class="form-label" for="filtro_estatus_orden"><i class="fa-regular fa-list-check me-1" aria-hidden="true"></i>Estatus orden</label>
+                        <select class="form-control form-select selectpicker" name="filtro_estatus_orden" id="filtro_estatus_orden">
+                            <option value="">Todos los Estatus</option>
+                            <option value="1">Orden Activa</option>
+                            <option value="2">Orden Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="form-group pt-0 mb-0">
+                        <label class="form-label" for="filtro_fecha_ini"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Fecha inicio</label>
+                        <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" required="" maxlength="10">
+                    </div>
+                    <div class="form-group pt-0 mb-0">
+                        <label class="form-label" for="filtro_fecha_fin"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Fecha fin</label>
+                        <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" required="" maxlength="10">
+                    </div>
+                    <div class="oc-filter-action">
+                        <button type="button" class="btn btn-primary w-100" id="btnFiltrar"><i class="fa-regular fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button>
                     </div>
                 </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
-                    <label class="form-label" for="filtro_num_orden">Número Orden / Folio OCP:</label>
-                    <input type="text" class="form-control" autocomplete="off" name="filtro_num_orden" id="filtro_num_orden" placeholder="Buscar por núm. orden / OCP...">
+                <div class="oc-filter-footer">
+                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>La lista usa fecha de pedido; el calendario, fecha estimada de entrega.</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRestablecerFiltros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
                 </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0">
-                    <label class="form-label" for="filtro_proveedor">Proveedor:</label>
-                    <input type="text" class="form-control" autocomplete="off" name="filtro_proveedor" id="filtro_proveedor" placeholder="Buscar por proveedor...">
-                </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
-                    <label class="form-label" for="filtro_estatus_orden">Estatus Orden:</label>
-                    <select class="form-control form-select selectpicker" name="filtro_estatus_orden" id="filtro_estatus_orden">
-                        <option value="">Todos los Estatus</option>
-                        <option value="1">Orden Activa</option>
-                        <option value="2">Orden Cancelada</option>
-                    </select>
-                </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
-                    <label class="form-label" for="filtro_fecha_ini">Fecha Inicio:</label>
-                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
-                           name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" required="" maxlength="10">
-                </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-2 pt-0">
-                    <label class="form-label" for="filtro_fecha_fin">Fecha Fin:</label>
-                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
-                           name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" required="" maxlength="10">
-                </div>
-
-                <div class="form-group col-12 col-sm-6 col-lg-1 pt-0 d-flex align-items-end">
-                    <button type="button" class="btn btn-primary w-100 hvr-float-shadow d-flex justify-content-center align-items-center" id="btnFiltrar" style="height: 38px;">
-                        <i class="fa-regular fa-magnifying-glass me-1"></i> Buscar
-                    </button>
-                </div>
-
             </div>
-            <!-- ========== FIN FILTROS ========== -->
 
-            <!-- ========== KPI CARDS ========== -->
-            <div class="row mb-4" id="panel_kpis">
 
-                <div class="form-group col-12 mb-3">
-                    <div class="border-bottom pb-2">
-                        <p class="mb-0 fw-semibold text-primary">
-                            <i class="fa-regular fa-file-chart-pie me-2 text-secondary"></i> Indicadores de Rendimiento (KPIs)
-                        </p>
+            <!-- Resumen de las órdenes consultadas; las cifras conservan su cálculo actual. -->
+            <section class="row g-3 mb-4" id="panel_kpis" aria-labelledby="resumen_proveedor_titulo">
+                <div class="col-12 d-flex flex-wrap justify-content-between align-items-end gap-2">
+                    <div>
+                        <p class="executive-eyebrow mb-1">Control de entregas</p>
+                        <h3 class="executive-heading mb-0" id="resumen_proveedor_titulo">Resumen ejecutivo</h3>
                     </div>
+                    <span class="executive-scope" id="kpi_proveedor_alcance">Órdenes consultadas</span>
                 </div>
-
-                <!-- KPI Card 1: Total Órdenes Proveedor -->
-                <div class="col-12 col-lg-4 mb-4">
-                    <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body border d-flex align-items-center">
-                            <div class="kpi-icon bg-primary-lighten text-primary me-3">
-                                <i class="fa-solid fa-truck-ramp-box"></i>
-                            </div>
-                            <div class="w-100">
-                                <span class="text-label text-primary d-block mb-1">Total Órdenes Proveedor</span>
-                                <div class="text-amount text-dark" id="kpi_total_ordenes">0</div>
-                                <div class="text-muted text-2">En el periodo</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-12 col-md-4">
+                    <article class="executive-kpi executive-kpi-open h-100">
+                        <div class="executive-kpi-top"><h4>Total órdenes proveedor</h4><i class="fa-regular fa-truck-ramp-box" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="kpi_total_ordenes">0</div>
+                        <p class="executive-kpi-caption mb-0">En el periodo consultado</p>
+                    </article>
                 </div>
-
-                <!-- KPI Card 2: Monto Total Acumulado -->
-                <div class="col-12 col-lg-4 mb-4">
-                    <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body border d-flex align-items-center">
-                            <div class="kpi-icon bg-success-lighten text-success me-3">
-                                <i class="fa-solid fa-circle-dollar-to-slot"></i>
-                            </div>
-                            <div class="w-100">
-                                <span class="text-label text-success d-block mb-1">Monto Acumulado (USD)</span>
-                                <div class="text-amount text-dark" id="kpi_monto_usd">$0.00 USD</div>
-                                <div class="text-muted text-2" id="kpi_monto_mxn">$0.00 MXN</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-12 col-md-4">
+                    <article class="executive-kpi executive-kpi-soon h-100">
+                        <div class="executive-kpi-top"><h4>Monto acumulado (USD)</h4><i class="fa-regular fa-circle-dollar-to-slot" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="kpi_monto_usd">$0.00 USD</div>
+                        <p class="executive-kpi-caption mb-0" id="kpi_monto_mxn">$0.00 MXN</p>
+                    </article>
                 </div>
-
-                <!-- KPI Card 3: Órdenes con Seguimiento -->
-                <div class="col-12 col-lg-4 mb-4">
-                    <div class="card kpi-card shadow-sm border-0 h-100">
-                        <div class="card-body border d-flex align-items-center">
-                            <div class="kpi-icon bg-info-lighten text-info me-3">
-                                <i class="fa-solid fa-timeline"></i>
-                            </div>
-                            <div class="w-100">
-                                <span class="text-label text-info d-block mb-1">Con Seguimiento</span>
-                                <div class="text-amount text-dark" id="kpi_con_seguimiento">0</div>
-                                <div class="text-muted text-2">Órdenes con bitácora</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-12 col-md-4">
+                    <article class="executive-kpi executive-kpi-supplier h-100">
+                        <div class="executive-kpi-top"><h4>Con seguimiento</h4><i class="fa-regular fa-timeline" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="kpi_con_seguimiento">0</div>
+                        <p class="executive-kpi-caption mb-0">Órdenes con bitácora</p>
+                    </article>
                 </div>
+                <div class="col-12"><p class="executive-footnote mb-0">Resumen de órdenes del periodo consultado. Los importes se muestran por moneda.</p></div>
+            </section>
 
-            </div>
-            <!-- ========== FIN KPI CARDS ========== -->
 
             <!-- ========== LISTA DE ÓRDENES PROVEEDOR ========== -->
             <div class="chart-container border mb-4" id="panel_lista_registros">
@@ -224,7 +133,7 @@
                 <!-- Tabla de Órdenes -->
                 <div class="table-responsive export-table">
                     <table id="tableOrdenes"
-                           class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100">
+                           class="table table-bordered text-nowrap table-striped table-hover key-buttons border-bottom w-100 seguimiento-tabla">
                         <thead>
                             <tr>
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
@@ -259,35 +168,35 @@
                 <!-- Encabezado de la sección -->
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center chart-title pb-3 mb-3">
                     <div class="mb-2 mb-md-0">
-                        <span class="fs-16 fw-semibold text-dark">
+                        <span class="font-section-title fw-semibold text-dark">
                             <i class="fa-regular fa-calendar-days text-primary me-2"></i> Calendario de Fechas Límite de Entrega de Proveedores
                         </span>
-                        <p class="text-muted fs-12 mb-0">Estatus de cumplimiento de entregas estimadas por orden a proveedor y partida</p>
+                        <p class="text-muted font-small mb-0">Estatus de cumplimiento de entregas estimadas por orden a proveedor y partida</p>
                     </div>
 
                     <!-- Leyendas y Badges Resumen -->
                     <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <span class="badge bg-danger p-2 fs-12 d-flex align-items-center" title="Partidas de proveedor con fecha de entrega vencida">
+                        <span class="badge oc-indicador oc-tone-vencido p-2 font-small d-flex align-items-center" title="Partidas de proveedor con fecha de entrega vencida">
                             <i class="fa-regular fa-circle-exclamation me-1"></i> Vencidas: <strong id="cal_count_vencidos" class="ms-1">0</strong>
                         </span>
-                        <span class="badge bg-warning text-dark p-2 fs-12 d-flex align-items-center" title="Partidas de proveedor próximas a vencer en 7 días">
+                        <span class="badge oc-indicador oc-tone-proximo p-2 font-small d-flex align-items-center" title="Partidas de proveedor próximas a vencer en 7 días">
                             <i class="fa-regular fa-clock me-1"></i> Próximas (7d): <strong id="cal_count_proximos" class="ms-1">0</strong>
                         </span>
-                        <span class="badge bg-success p-2 fs-12 d-flex align-items-center" title="Partidas de proveedor con entrega en tiempo">
+                        <span class="badge oc-indicador oc-tone-en_tiempo p-2 font-small d-flex align-items-center" title="Partidas de proveedor con entrega en tiempo">
                             <i class="fa-regular fa-circle-check me-1"></i> En Tiempo: <strong id="cal_count_en_tiempo" class="ms-1">0</strong>
                         </span>
-                        <span class="badge bg-primary p-2 fs-12 d-flex align-items-center" title="Partidas ya entregadas por el proveedor (entregado = 1)">
+                        <span class="badge oc-indicador oc-tone-entregado p-2 font-small d-flex align-items-center" title="Partidas ya entregadas por el proveedor (entregado = 1)">
                             <i class="fa-regular fa-box-check me-1"></i> Entregadas: <strong id="cal_count_entregados" class="ms-1">0</strong>
                         </span>
-                        <span class="badge bg-secondary p-2 fs-12 d-flex align-items-center" title="Total de partidas con fecha de entrega de proveedor">
+                        <span class="badge oc-indicador oc-tone-todos p-2 font-small d-flex align-items-center" title="Total de partidas con fecha de entrega de proveedor">
                             Total: <strong id="cal_count_total" class="ms-1">0</strong>
                         </span>
                     </div>
                 </div>
 
                 <!-- Filtros rápidos por estatus -->
-                <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
-                    <span class="fs-12 text-muted me-1 fw-semibold">Filtrar en calendario:</span>
+                <div class="oc-cal-filtros mb-3 d-flex flex-wrap gap-2 align-items-center" role="group" aria-label="Filtrar entregas por cumplimiento">
+                    <span class="font-small text-muted me-1 fw-semibold">Filtrar en calendario:</span>
                     <button type="button" class="btn btn-xs btn-outline-secondary active btn-filter-cal" data-filter="todos" aria-pressed="true">
                         <i class="fa-regular fa-layer-group me-1"></i> Todos
                     </button>
@@ -309,8 +218,10 @@
                 </div>
 
                 <!-- Contenedor de FullCalendar -->
-                <div class="p-2 border rounded bg-light">
-                    <div id="calendarEntregas" style="min-height: 550px;"></div>
+                <p class="oc-cal-ayuda">Fechas estimadas por partida. Selecciona una entrega para ver su detalle; en días con varias partidas, usa «Ver más».</p>
+                <div class="oc-cal-superficie">
+                    <div id="calendarEntregas" aria-label="Calendario de entregas de órdenes a proveedor"></div>
+                    <p id="cal_resultado" class="oc-cal-ayuda mb-0 mt-3" role="status" aria-live="polite"></p>
                 </div>
 
             </div>
@@ -529,7 +440,7 @@
 <!-- FIN CONTENIDO VISTA -->
 
 <!-- Modal Detalle Entrega Proveedor -->
-<div class="modal fade" id="modalDetalleEntrega" tabindex="-1" aria-labelledby="modalDetalleEntregaLabel" aria-hidden="true">
+<div class="modal fade seguimiento-ordenes-cliente seguimiento-ordenes-proveedor" id="modalDetalleEntrega" tabindex="-1" aria-labelledby="modalDetalleEntregaLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light border-bottom py-2.5 px-3">
@@ -617,7 +528,7 @@
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="form-label fs-12 text-muted mb-0">Folio Fiscal (UUID):</label>
-                        <p class="fw-semibold text-break fs-12 text-muted mb-0 font-monospace" id="mdl_factura_folio_fiscal">—</p>
+                        <p class="fw-semibold text-break fs-12 text-muted mb-0" id="mdl_factura_folio_fiscal">—</p>
                     </div>
                 </div>
             </div>

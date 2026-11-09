@@ -35,6 +35,7 @@ var detalleProveedorRequest = null;
  * DOCUMENT READY
  * ========================================================= */
 $(document).ready(function () {
+    $('body').addClass('seguimiento-ordenes-page');
 
     // Establece rango de fecha por defecto (año en curso)
     var hoy = new Date();
@@ -54,6 +55,16 @@ $(document).ready(function () {
     fntCargarCalendarioEntregas();
 
     // Eventos
+    $('#btnRestablecerFiltros').on('click', function () {
+        $('#filtro_num_orden, #filtro_proveedor').val('');
+        $('#filtro_estatus_orden').val('');
+        if ($.fn.selectpicker && $('#filtro_estatus_orden').data('selectpicker')) $('#filtro_estatus_orden').selectpicker('refresh');
+        $('#filtro_fecha_ini').val('01/01/' + new Date().getFullYear());
+        $('#filtro_fecha_fin').val('31/12/' + new Date().getFullYear());
+        fntCargarTabla();
+        fntCargarCalendarioEntregas();
+    });
+
     $('#btnFiltrar').on('click', function () {
         fntCargarTabla();
         fntCargarCalendarioEntregas();
@@ -341,6 +352,7 @@ function fntCalcularKPIs(data) {
     });
 
     $('#kpi_total_ordenes').text(new Intl.NumberFormat('en-US').format(totalOrdenes));
+    $('#kpi_proveedor_alcance').text(new Intl.NumberFormat('en-US').format(totalOrdenes) + ' órdenes consultadas');
     $('#kpi_monto_usd').text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUSD) + ' USD');
     $('#kpi_monto_mxn').text(new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalMXN) + ' MXN');
     $('#kpi_con_seguimiento').text(new Intl.NumberFormat('en-US').format(conSeguimiento));
@@ -856,6 +868,10 @@ function fntInicializarCalendarioEntregas() {
         navLinks: true,
         editable: false,
         dayMaxEvents: true,
+        eventClassNames: function (arg) {
+            var estatus = arg.event.extendedProps.estatus_codigo || 'todos';
+            return ['oc-cal-evento', 'oc-tone-' + (['vencido', 'proximo', 'en_tiempo', 'entregado', 'cancelado'].includes(estatus) ? estatus : 'todos')];
+        },
         eventClick: function (info) {
             info.jsEvent.preventDefault();
             if (info.event && info.event.extendedProps) {
@@ -941,6 +957,7 @@ function fntAplicarFiltroCalendario() {
     });
 
     calendarEntregas.addEventSource(eventosFiltrados);
+    $('#cal_resultado').text(eventosFiltrados.length + ' partidas con fecha en la consulta' + (calendarFiltroEstatus === 'todos' ? '.' : ' para el estatus seleccionado.'));
 }
 
 /**
@@ -998,7 +1015,8 @@ function fntMostrarDetalleEntregaModal(props) {
     }
     $('#mdl_tiempo_restante').html('<span class="' + colorClass + ' fw-bold"><i class="fa-regular fa-clock me-1"></i>' + escapeHtml(tiempoRestante) + '</span>');
 
-    var badgeHtml = '<span class="badge ' + (props.badge_class || 'bg-secondary') + ' fs-12 p-2">' + escapeHtml(props.estatus_label || '—') + '</span>';
+    var tono = ['vencido', 'proximo', 'en_tiempo', 'entregado', 'cancelado'].includes(props.estatus_codigo) ? props.estatus_codigo : 'todos';
+    var badgeHtml = '<span class="badge oc-indicador oc-tone-' + tono + ' font-small p-2">' + escapeHtml(props.estatus_label || '—') + '</span>';
     $('#mdl_estatus_badge').html(badgeHtml);
 
     // Estatus de entrega (tb_pedidos_proveedor_detalle.entregado)
