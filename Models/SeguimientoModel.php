@@ -897,10 +897,26 @@ class SeguimientoModel extends Mysql
             }
 
             if (!empty($filtro_num_orden)) {
-                $sql .= " AND (pp.folio_ocp LIKE :filtro_num_orden OR pp.id LIKE :filtro_num_orden_id OR pp.oa_proveedor LIKE :filtro_oa) ";
+                // Búsqueda única: OCP, orden del cliente, proveedor y vendedor del proyecto.
+                // EXISTS conserva una fila por orden aunque haya otras relaciones comerciales.
+                $sql .= " AND (pp.folio_ocp LIKE :filtro_num_orden
+                          OR pp.id LIKE :filtro_num_orden_id
+                          OR pp.oa_proveedor LIKE :filtro_oa
+                          OR prov.cDatGenRazonSocial LIKE :filtro_prov_nombre
+                          OR prov.cDatGenNombreAbreviado LIKE :filtro_prov_corto
+                          OR EXISTS (SELECT 1 FROM cat_medico vendedor
+                                     WHERE vendedor.ccvemedico = v.ccveusuario_vendedor
+                                       AND CONCAT_WS(' ', vendedor.cnombre, vendedor.cpriapellido, vendedor.csegapellido) LIKE :filtro_vendedor)
+                          OR EXISTS (SELECT 1 FROM tb_pedidos_cliente pc
+                                     WHERE pc.id = pp.pedido_cliente_id
+                                       AND pc.num_orden_compra LIKE :filtro_orden_cliente)) ";
                 $arr_values['filtro_num_orden']    = '%' . $filtro_num_orden . '%';
                 $arr_values['filtro_num_orden_id'] = '%' . $filtro_num_orden . '%';
                 $arr_values['filtro_oa']           = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_prov_nombre'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_prov_corto'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_vendedor'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_orden_cliente'] = '%' . $filtro_num_orden . '%';
             }
 
             if (!empty($filtro_proveedor)) {
@@ -1008,10 +1024,26 @@ class SeguimientoModel extends Mysql
             }
 
             if ($filtro_num_orden !== '') {
-                $sql .= " AND (pp.folio_ocp LIKE :filtro_num_orden OR pp.id LIKE :filtro_num_orden_id OR pp.oa_proveedor LIKE :filtro_oa) ";
+                // Búsqueda única: OCP, orden del cliente, proveedor y vendedor del proyecto.
+                // EXISTS conserva una fila por orden aunque haya otras relaciones comerciales.
+                $sql .= " AND (pp.folio_ocp LIKE :filtro_num_orden
+                          OR pp.id LIKE :filtro_num_orden_id
+                          OR pp.oa_proveedor LIKE :filtro_oa
+                          OR prov.cDatGenRazonSocial LIKE :filtro_prov_nombre
+                          OR prov.cDatGenNombreAbreviado LIKE :filtro_prov_corto
+                          OR EXISTS (SELECT 1 FROM cat_medico vendedor
+                                     WHERE vendedor.ccvemedico = v.ccveusuario_vendedor
+                                       AND CONCAT_WS(' ', vendedor.cnombre, vendedor.cpriapellido, vendedor.csegapellido) LIKE :filtro_vendedor)
+                          OR EXISTS (SELECT 1 FROM tb_pedidos_cliente pc
+                                     WHERE pc.id = pp.pedido_cliente_id
+                                       AND pc.num_orden_compra LIKE :filtro_orden_cliente)) ";
                 $arr_values['filtro_num_orden'] = '%' . $filtro_num_orden . '%';
                 $arr_values['filtro_num_orden_id'] = '%' . $filtro_num_orden . '%';
                 $arr_values['filtro_oa'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_prov_nombre'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_prov_corto'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_vendedor'] = '%' . $filtro_num_orden . '%';
+                $arr_values['filtro_orden_cliente'] = '%' . $filtro_num_orden . '%';
             }
             if ($filtro_proveedor !== '') {
                 $sql .= " AND (prov.cDatGenRazonSocial LIKE :filtro_proveedor OR prov.cDatGenNombreAbreviado LIKE :filtro_proveedor_abr) ";

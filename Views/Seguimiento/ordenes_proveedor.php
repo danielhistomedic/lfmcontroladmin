@@ -54,20 +54,8 @@
                         </div>
                     </div>
                     <div class="form-group pt-0 mb-0 oc-filter-order">
-                        <label class="form-label" for="filtro_num_orden"><i class="fa-regular fa-hashtag me-1" aria-hidden="true"></i>Número de orden / Folio OCP</label>
-                        <input type="text" class="form-control" autocomplete="off" name="filtro_num_orden" id="filtro_num_orden" placeholder="Buscar por núm. orden / OCP...">
-                    </div>
-                    <div class="form-group pt-0 mb-0">
-                        <label class="form-label" for="filtro_proveedor"><i class="fa-regular fa-truck me-1" aria-hidden="true"></i>Proveedor</label>
-                        <input type="text" class="form-control" autocomplete="off" name="filtro_proveedor" id="filtro_proveedor" placeholder="Buscar por proveedor...">
-                    </div>
-                    <div class="form-group pt-0 mb-0">
-                        <label class="form-label" for="filtro_estatus_orden"><i class="fa-regular fa-list-check me-1" aria-hidden="true"></i>Estatus orden</label>
-                        <select class="form-control form-select selectpicker" name="filtro_estatus_orden" id="filtro_estatus_orden">
-                            <option value="">Todos los Estatus</option>
-                            <option value="1">Orden Activa</option>
-                            <option value="2">Orden Cancelada</option>
-                        </select>
+                        <label class="form-label" for="filtro_num_orden"><i class="fa-regular fa-magnifying-glass me-1" aria-hidden="true"></i>Orden, proveedor o vendedor</label>
+                        <input type="text" class="form-control" autocomplete="off" name="filtro_num_orden" id="filtro_num_orden" placeholder="Buscar orden de cliente/proveedor, proveedor o vendedor...">
                     </div>
                     <div class="form-group pt-0 mb-0">
                         <label class="form-label" for="filtro_fecha_ini"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>Fecha inicio</label>
@@ -82,7 +70,7 @@
                     </div>
                 </div>
                 <div class="oc-filter-footer">
-                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>La lista usa fecha de pedido; el calendario, fecha estimada de entrega.</span>
+                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>La búsqueda incluye la orden del cliente, el folio OCP, el proveedor y el vendedor. La lista usa fecha de pedido; el calendario, entrega estimada.</span>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRestablecerFiltros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
                 </div>
             </div>

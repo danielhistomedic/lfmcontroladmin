@@ -37,12 +37,7 @@ var detalleProveedorRequest = null;
 $(document).ready(function () {
     $('body').addClass('seguimiento-ordenes-page');
 
-    // Establece rango de fecha por defecto (año en curso)
-    var hoy = new Date();
-    var primerDia = '01/01/' + hoy.getFullYear();
-    var hoyStr = '31/12/' + hoy.getFullYear();
-    $('#filtro_fecha_ini').val(primerDia);
-    $('#filtro_fecha_fin').val(hoyStr);
+    fntEstablecerPeriodoProveedor();
 
     // Inicializa tabla
     fntInicializarTabla();
@@ -56,11 +51,8 @@ $(document).ready(function () {
 
     // Eventos
     $('#btnRestablecerFiltros').on('click', function () {
-        $('#filtro_num_orden, #filtro_proveedor').val('');
-        $('#filtro_estatus_orden').val('');
-        if ($.fn.selectpicker && $('#filtro_estatus_orden').data('selectpicker')) $('#filtro_estatus_orden').selectpicker('refresh');
-        $('#filtro_fecha_ini').val('01/01/' + new Date().getFullYear());
-        $('#filtro_fecha_fin').val('31/12/' + new Date().getFullYear());
+        $('#filtro_num_orden').val('');
+        fntEstablecerPeriodoProveedor();
         fntCargarTabla();
         fntCargarCalendarioEntregas();
     });
@@ -70,12 +62,7 @@ $(document).ready(function () {
         fntCargarCalendarioEntregas();
     });
 
-    $('#filtro_estatus_orden').on('change', function () {
-        fntCargarTabla();
-        fntCargarCalendarioEntregas();
-    });
-
-    $('#filtro_num_orden, #filtro_proveedor').on('keyup', function (e) {
+    $('#filtro_num_orden').on('keyup', function (e) {
         if (e.key === 'Enter' || e.keyCode === 13) {
             e.preventDefault();
             fntCargarTabla();
@@ -114,6 +101,20 @@ $(document).ready(function () {
 /**
  * Inicializa el DataTable de órdenes de compra a proveedor.
  */
+/** Mismo periodo local de Órdenes Cliente: un año calendario atrás hasta hoy. */
+function fntEstablecerPeriodoProveedor() {
+    var hoy = new Date();
+    var anioAnterior = hoy.getFullYear() - 1;
+    var ultimoDia = new Date(anioAnterior, hoy.getMonth() + 1, 0).getDate();
+    var inicio = new Date(anioAnterior, hoy.getMonth(), Math.min(hoy.getDate(), ultimoDia));
+    [['#filtro_fecha_ini', inicio], ['#filtro_fecha_fin', hoy]].forEach(function (item) {
+        var control = $(item[0]), fecha = item[1];
+        control.val(String(fecha.getDate()).padStart(2, '0') + '/' + String(fecha.getMonth() + 1).padStart(2, '0') + '/' + fecha.getFullYear());
+        if ($.fn.datepicker && control.data('datepicker')) control.datepicker('setDate', fecha);
+        if (control[0]) control[0].setCustomValidity('');
+    });
+}
+
 function fntTextoCeldaProveedor(data, type) {
     return type === 'display' ? escapeHtml(data == null ? '' : String(data)) : (data == null ? '' : data);
 }
@@ -280,8 +281,6 @@ function fntCargarTabla() {
     var fecha_ini            = $('#filtro_fecha_ini').val().trim();
     var fecha_fin            = $('#filtro_fecha_fin').val().trim();
     var filtro_num_orden     = $('#filtro_num_orden').val() ? $('#filtro_num_orden').val().trim() : '';
-    var filtro_proveedor     = $('#filtro_proveedor').val() ? $('#filtro_proveedor').val().trim() : '';
-    var filtro_estatus_orden = $('#filtro_estatus_orden').val() ? $('#filtro_estatus_orden').val().trim() : '';
     var filtro_estatus       = '';
 
     if (ordenesProveedorRequest) ordenesProveedorRequest.abort();
@@ -296,8 +295,6 @@ function fntCargarTabla() {
             fecha_ini: fecha_ini,
             fecha_fin: fecha_fin,
             filtro_num_orden: filtro_num_orden,
-            filtro_proveedor: filtro_proveedor,
-            filtro_estatus_orden: filtro_estatus_orden,
             filtro_estatus: filtro_estatus
         },
         dataType: 'json',
@@ -892,8 +889,6 @@ function fntCargarCalendarioEntregas() {
     var fecha_ini = $('#filtro_fecha_ini').val().trim();
     var fecha_fin = $('#filtro_fecha_fin').val().trim();
     var filtro_num_orden = $('#filtro_num_orden').val().trim();
-    var filtro_proveedor = $('#filtro_proveedor').val().trim();
-    var filtro_estatus_orden = $('#filtro_estatus_orden').val();
     if (calendarioProveedorRequest) calendarioProveedorRequest.abort();
 
     calendarioProveedorRequest = $.ajax({
@@ -902,9 +897,7 @@ function fntCargarCalendarioEntregas() {
         data: {
             fecha_ini: fecha_ini,
             fecha_fin: fecha_fin,
-            filtro_num_orden: filtro_num_orden,
-            filtro_proveedor: filtro_proveedor,
-            filtro_estatus_orden: filtro_estatus_orden
+            filtro_num_orden: filtro_num_orden
         },
         dataType: 'json',
         success: function (resp) {
