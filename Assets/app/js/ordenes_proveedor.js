@@ -322,37 +322,32 @@ function fntCargarTabla() {
 }
 
 /**
- * Calcula los indicadores clave de rendimiento (KPIs) en tiempo real
- * a partir de los datos cargados en la tabla de órdenes a proveedores.
- * 
- * @param {Array} data Lista de registros de órdenes
+ * Resume exclusivamente órdenes finalizadas (enviado = 1) del conjunto consultado.
+ * Los conteos de partidas ya llegan en la respuesta de la lista; no se agregan consultas.
+ * Una recepción parcial también está pendiente de recibir.
+ * @param {Array<Object>} data Órdenes devueltas por el filtro externo.
  */
 function fntCalcularKPIs(data) {
-    var totalOrdenes = data.length;
-    var totalUSD = 0;
-    var totalMXN = 0;
-    var conSeguimiento = 0;
-
+    var resumen = {activas: 0, porRecibir: 0, parciales: 0, completas: 0};
     data.forEach(function (row) {
-        var monto = parseFloat(row.monto_pedido) || 0;
-        var moneda = (row.cmoneda || '').toUpperCase();
-        if (moneda === 'USD') {
-            totalUSD += monto;
-        } else {
-            totalMXN += monto;
+        if (Number(row.enviado) !== 1) return;
+        resumen.activas++;
+        var total = Number(row.total_partidas) || 0;
+        var pendientes = Number(row.total_partidas_pendientes) || 0;
+        var recibidas = Number(row.total_partidas_entregadas) || 0;
+        if (pendientes > 0) {
+            resumen.porRecibir++;
+            if (recibidas > 0) resumen.parciales++;
         }
-
-        var totalSeg = parseInt(row.total_seguimientos) || 0;
-        if (totalSeg > 0) {
-            conSeguimiento++;
-        }
+        if (total > 0 && recibidas === total) resumen.completas++;
     });
 
-    $('#kpi_total_ordenes').text(new Intl.NumberFormat('en-US').format(totalOrdenes));
-    $('#kpi_proveedor_alcance').text(new Intl.NumberFormat('en-US').format(totalOrdenes) + ' órdenes consultadas');
-    $('#kpi_monto_usd').text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUSD) + ' USD');
-    $('#kpi_monto_mxn').text(new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalMXN) + ' MXN');
-    $('#kpi_con_seguimiento').text(new Intl.NumberFormat('en-US').format(conSeguimiento));
+    var formato = new Intl.NumberFormat('es-MX');
+    $('#kpi_total_ordenes').text(formato.format(resumen.activas));
+    $('#kpi_proveedor_alcance').text(formato.format(resumen.activas) + ' órdenes activas');
+    $('#kpi_por_recibir').text(formato.format(resumen.porRecibir));
+    $('#kpi_recepcion_parcial').text(formato.format(resumen.parciales));
+    $('#kpi_recepcion_completa').text(formato.format(resumen.completas));
 }
 
 /* =========================================================
@@ -849,6 +844,7 @@ function fntInicializarCalendarioEntregas() {
 
     calendarEntregas = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
+        initialDate: new Date(), // Abrir en el mes actual; los eventos no cambian la vista.
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -912,17 +908,6 @@ function fntCargarCalendarioEntregas() {
                 calendarEventosData = resp.eventos || [];
                 fntAplicarFiltroCalendario();
 
-                // Navega automáticamente a la fecha del primer evento si cae fuera de la vista actual
-                if (calendarEntregas && calendarEventosData.length > 0) {
-                    var primerEvt = calendarEventosData[0];
-                    if (primerEvt && primerEvt.start) {
-                        var view = calendarEntregas.view;
-                        var evtDate = new Date(primerEvt.start + 'T00:00:00');
-                        if (evtDate < view.currentStart || evtDate >= view.currentEnd) {
-                            calendarEntregas.gotoDate(primerEvt.start);
-                        }
-                    }
-                }
             } else {
                 alertify.error((resp && resp.msg) || 'No fue posible consultar el calendario.', 4);
             }

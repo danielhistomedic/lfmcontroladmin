@@ -85,28 +85,35 @@
                     </div>
                     <span class="executive-scope" id="kpi_proveedor_alcance">Órdenes consultadas</span>
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-sm-6 col-xl-3">
                     <article class="executive-kpi executive-kpi-open h-100">
-                        <div class="executive-kpi-top"><h4>Total órdenes proveedor</h4><i class="fa-regular fa-truck-ramp-box" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-top"><h4>Órdenes activas</h4><i class="fa-regular fa-truck-ramp-box" aria-hidden="true"></i></div>
                         <div class="executive-kpi-value" id="kpi_total_ordenes">0</div>
-                        <p class="executive-kpi-caption mb-0">En el periodo consultado</p>
+                        <p class="executive-kpi-caption mb-0">Finalizadas y enviadas al proveedor</p>
                     </article>
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-sm-6 col-xl-3">
                     <article class="executive-kpi executive-kpi-soon h-100">
-                        <div class="executive-kpi-top"><h4>Monto acumulado (USD)</h4><i class="fa-regular fa-circle-dollar-to-slot" aria-hidden="true"></i></div>
-                        <div class="executive-kpi-value" id="kpi_monto_usd">$0.00 USD</div>
-                        <p class="executive-kpi-caption mb-0" id="kpi_monto_mxn">$0.00 MXN</p>
+                        <div class="executive-kpi-top"><h4>Por recibir</h4><i class="fa-regular fa-box-open" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="kpi_por_recibir">0</div>
+                        <p class="executive-kpi-caption mb-0">Con al menos una partida pendiente</p>
                     </article>
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-sm-6 col-xl-3">
                     <article class="executive-kpi executive-kpi-supplier h-100">
-                        <div class="executive-kpi-top"><h4>Con seguimiento</h4><i class="fa-regular fa-timeline" aria-hidden="true"></i></div>
-                        <div class="executive-kpi-value" id="kpi_con_seguimiento">0</div>
-                        <p class="executive-kpi-caption mb-0">Órdenes con bitácora</p>
+                        <div class="executive-kpi-top"><h4>Recepción parcial</h4><i class="fa-regular fa-boxes-stacked" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="kpi_recepcion_parcial">0</div>
+                        <p class="executive-kpi-caption mb-0">Con partidas recibidas y pendientes</p>
                     </article>
                 </div>
-                <div class="col-12"><p class="executive-footnote mb-0">Resumen de órdenes del periodo consultado. Los importes se muestran por moneda.</p></div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <article class="executive-kpi executive-kpi-complete h-100">
+                        <div class="executive-kpi-top"><h4>Recepción completa</h4><i class="fa-regular fa-box-check" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="kpi_recepcion_completa">0</div>
+                        <p class="executive-kpi-caption mb-0">Todas las partidas recibidas</p>
+                    </article>
+                </div>
+                <div class="col-12"><p class="executive-footnote mb-0">Los indicadores cuentan solo órdenes activas (enviado = 1) de la consulta. «Recepción parcial» también forma parte de «Por recibir».</p></div>
             </section>
 
 

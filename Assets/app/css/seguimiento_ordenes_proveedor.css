@@ -2,7 +2,8 @@
 .seguimiento-ordenes-proveedor #panel_filtros .form-control,
 .seguimiento-ordenes-proveedor #panel_filtros .form-select { background: #fff; color: #1e293b; }
 .seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-value { font-size: clamp(24px, 2vw, 36px); }
-.seguimiento-ordenes-proveedor #panel_kpis #kpi_monto_usd { overflow-wrap: anywhere; }
+.seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-complete { --exec-tone: #146c43; --exec-surface: #eaf6ef; }
+html.dark .seguimiento-ordenes-proveedor #panel_kpis .executive-kpi-complete { --exec-tone: #b7dfc6; --exec-surface: #243d32; }
 .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge { border: 1px solid; border-radius: 6px; font-size: var(--font-small); font-weight: 500; padding: .35rem .55rem; white-space: normal; }
 .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-success { background: #eaf6ef !important; color: #245b3e !important; border-color: #bedcc9; }
 .seguimiento-ordenes-proveedor #tableOrdenes tbody .badge.bg-danger { background: #fcebed !important; color: #8b3540 !important; border-color: #ebc4ca; }
