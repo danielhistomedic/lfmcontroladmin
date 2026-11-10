@@ -93,6 +93,7 @@ class SeguimientoModel extends Mysql
             $sql = "SELECT 
                         v.id,
                         v.proyecto_id,
+                        COALESCE(v.activo, 'ACTIVO') AS activo,
                         v.titulo,
                         v.fecha,
                         DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,
@@ -318,6 +319,7 @@ class SeguimientoModel extends Mysql
             $sql = "SELECT 
                         v.id,
                         v.proyecto_id,
+                        COALESCE(v.activo, 'ACTIVO') AS activo,
                         v.titulo,
                         v.fecha,
                         DATE_FORMAT(v.fecha, '%d/%m/%Y') AS fecha_formateada,

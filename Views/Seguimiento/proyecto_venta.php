@@ -226,6 +226,7 @@
                         <thead>
                             <tr>
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Estatus</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto Venta</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Fecha</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Número OCC</th>
@@ -235,7 +236,7 @@
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Vendedor</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Monto Total</th>
-                                <th class="border-bottom-0 fw-semibold text-center">Estatus</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Etapa del proyecto</th>
                             </tr>
                         </thead>
                     </table>
@@ -313,9 +314,15 @@
                                             <span class="badge bg-primary fs-14 px-3 py-2" id="lblProyectoId">—</span>
                                             <h4 class="m-0 fw-bold text-white fs-16" id="lblTituloProyecto">—</h4>
                                         </div>
-                                        <div>
-                                            <span class="fs-12 text-uppercase text-light me-1">Estatus Actual:</span>
-                                            <span id="lblEstatusBadge" class="badge bg-warning text-dark fs-12 px-3 py-2">—</span>
+                                        <div class="d-flex flex-wrap align-items-center gap-3">
+                                            <div>
+                                                <span class="form-label mb-0 me-1">Estatus:</span>
+                                                <span id="lblEstadoActivoProyecto" class="badge bg-secondary">—</span>
+                                            </div>
+                                            <div>
+                                                <span class="form-label mb-0 me-1">Etapa actual:</span>
+                                                <span id="lblEstatusBadge" class="badge bg-warning text-dark fs-12 px-3 py-2">—</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="card-body p-4 bg-light-subtle">

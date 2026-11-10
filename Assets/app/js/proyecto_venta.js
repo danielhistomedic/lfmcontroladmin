@@ -227,6 +227,12 @@ function fntMarcarSeleccionProyecto() {
     });
 }
 
+/** Regla compartida lista/resumen: CERRADO = declinado; independiente de la etapa comercial. */
+function fntEstadoActivoProyecto(activo) {
+    const declinado = String(activo || 'ACTIVO').trim().toUpperCase() === 'CERRADO';
+    return {texto: declinado ? 'Declinado' : 'Activo', clase: declinado ? 'bg-danger' : 'bg-success'};
+}
+
 /** Folios múltiples: escapar solo la vista; búsqueda, orden y Excel reciben texto plano. */
 function fntRenderOrdenesProyecto(data, type) {
     const folios = Array.isArray(data) ? data.map(String) : [];
@@ -247,7 +253,7 @@ function fntInicializarTablaProyectos() {
         fixedHeader: true,
         scrollX: "100%",
         destroy: true,
-        order: [[1, "desc"]],
+        order: [[2, "desc"]],
         iDisplayLength: 10,
         lengthMenu: [
             [5, 10, 25, 50, 100, -1],
@@ -273,6 +279,15 @@ function fntInicializarTablaProyectos() {
         ],
         columns: [
             { data: "options", orderable: false, className: "text-center align-middle", width: "90px" },
+            {
+                data: "activo", defaultContent: "ACTIVO", width: "110px",
+                className: "text-center align-middle",
+                render: function (data, type) {
+                    const estado = fntEstadoActivoProyecto(data);
+                    if (type !== 'display') return estado.texto;
+                    return '<span class="badge ' + estado.clase + '">' + estado.texto + '</span>';
+                }
+            },
             {
                 data: "proyecto_id",
                 className: "text-center align-middle",
@@ -488,6 +503,11 @@ function fntRenderResumenProyecto(p) {
 
     document.getElementById("lblProyectoId").textContent = p.proyecto_id || "PV-N/A";
     document.getElementById("lblTituloProyecto").textContent = p.titulo || "Sin título especificado";
+    const estadoActivo = fntEstadoActivoProyecto(p.activo);
+    const badgeActivo = document.getElementById('lblEstadoActivoProyecto');
+    badgeActivo.className = 'badge ' + estadoActivo.clase;
+    badgeActivo.textContent = estadoActivo.texto;
+
 
     // Badge de estatus actual
     const badgeEstatus = document.getElementById("lblEstatusBadge");
