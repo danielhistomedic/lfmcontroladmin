@@ -1989,8 +1989,11 @@ class VentasModel extends Mysql
 
     /**
      * Obtiene todos los seguimientos de una venta con historial completo.
+     * @param bool $estricto Proyecto propaga errores; otros consumidores conservan el modo previo.
+     * @return array Historial; [] para ausencia (o fallo en el modo previo).
+     * @throws \Throwable Solo en modo estricto si la consulta falla.
      */
-    public function selectHistorialSeguimientoVenta(int $venta_id): array
+    public function selectHistorialSeguimientoVenta(int $venta_id, bool $estricto = false): array
     {
         $arrResponse = array();
         try {
@@ -2008,8 +2011,9 @@ class VentasModel extends Mysql
                     WHERE vs.venta_id = :venta_id
                     ORDER BY vs.id DESC";
             $arr_values = ['venta_id' => $venta_id];
-            $arrResponse = $this->select($sql, $arr_values);
+            $arrResponse = $estricto ? $this->selectOrFail($sql, $arr_values) : $this->select($sql, $arr_values);
         } catch (\Throwable $th) {
+            if ($estricto) throw $th;
             getLoggerSystem()->error(getMensajeError($th));
         }
         return $arrResponse;

@@ -233,6 +233,20 @@ class Mysql extends Conexion
 
 
 
+    /** Consulta preparada optativa para flujos que distinguen error de ausencia de datos.
+     * Reutiliza la conexión existente; select/selectModel mantienen su contrato previo.
+     * @param bool $unRegistro Devuelve una fila o [] en vez del conjunto completo.
+     * @return array Resultado válido, incluido [] cuando no hay registros.
+     * @throws \RuntimeException Si la conexión, preparación o ejecución falla.
+     */
+    protected function selectOrFail(string $query, array $arrvalues, bool $unRegistro = false): array
+    {
+        if (!$this->conexion) throw new \RuntimeException('Consulta no disponible.');
+        $stm = $this->conexion->prepare($query);
+        if (!$stm || !$stm->execute($arrvalues)) throw new \RuntimeException('No fue posible completar la consulta.');
+        return $unRegistro ? ($stm->fetch(PDO::FETCH_ASSOC) ?: []) : $stm->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /**
      * Método MySQL select
      * 

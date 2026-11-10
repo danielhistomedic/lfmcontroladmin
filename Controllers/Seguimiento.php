@@ -19,14 +19,14 @@ class Seguimiento extends Controllers
      */
     public function __construct()
     {
-        parent::__construct();
-
         /*-------------------------------------------
-        // [ Validación de Sesion ]*/
+        // [ Validación de Sesion antes de cargar modelos ]*/
         $this->session = new Session;
         if (!$this->session->getStatus()) {
             $this->session->redirect('inicio');
+            exit; // La redirección no detiene el despacho del endpoint por sí sola.
         }
+        parent::__construct();
     }
 
     /**
@@ -182,15 +182,16 @@ class Seguimiento extends Controllers
     }
 
     /**
-     * Unifica fechas de los filtros de OCC y calendario antes de consultar MySQL.
+     * Unifica fechas de OCC/calendario y Proyecto antes de consultar MySQL.
      * Acepta dd/mm/aaaa e ISO por compatibilidad; el número de orden omite el periodo.
      * @param string $inicio Fecha opcional de inicio.
      * @param string $fin Fecha opcional de fin.
      * @param string $orden Número de orden independiente del periodo.
+     * @param bool $permitirParcial Admite un solo extremo para los filtros de Proyecto; OCC conserva ambos.
      * @return array{0:string,1:string} Fechas ISO; ambas vacías sin periodo o al buscar una orden.
-     * @throws \InvalidArgumentException Si falta una fecha, no existe o el rango está invertido.
+     * @throws \InvalidArgumentException Si falta una fecha obligatoria, no existe o el rango está invertido.
      */
-    private function normalizarPeriodoOrdenesCliente(string $inicio, string $fin, string $orden): array
+    private function normalizarPeriodoOrdenesCliente(string $inicio, string $fin, string $orden, bool $permitirParcial = false): array
     {
         if (trim($orden) !== '') return ['', ''];
         $inicio = trim($inicio);
@@ -198,6 +199,7 @@ class Seguimiento extends Controllers
         if ($inicio === '' && $fin === '') return ['', ''];
         $fechas = [];
         foreach ([$inicio, $fin] as $valor) {
+            if ($permitirParcial && $valor === '') { $fechas[] = ''; continue; }
             $formato = preg_match('/^\d{2}\/\d{2}\/\d{4}$/D', $valor) ? 'd/m/Y' : 'Y-m-d';
             $fecha = \DateTimeImmutable::createFromFormat('!' . $formato, $valor);
             if (!$fecha || $fecha->format($formato) !== $valor || (int)$fecha->format('Y') < 1000) {
@@ -205,10 +207,100 @@ class Seguimiento extends Controllers
             }
             $fechas[] = $fecha->format('Y-m-d');
         }
-        if ($fechas[0] > $fechas[1]) {
+        if ($fechas[0] !== '' && $fechas[1] !== '' && $fechas[0] > $fechas[1]) {
             throw new \InvalidArgumentException('La fecha fin debe ser igual o posterior a la fecha inicio.');
         }
         return $fechas;
+    }
+
+    /** Identidad de vendedor obligatoria para rol 4; nunca ampliar alcance por sesión incompleta.
+     * @return string|null Clave del vendedor, '' para otros roles, null para acceso inválido.
+     */
+    private function vendedorProyectoSeguimiento(): ?string
+    {
+        if (!$this->session->getStatus()) return null;
+        if ((int)$this->session->get('rol_id') !== 4) return '';
+        $usuario = trim((string)($this->session->get('ccveusuario') ?? ''));
+        return $usuario !== '' ? $usuario : null;
+    }
+
+    /** Valida el ID numérico o cifrado utilizado también por el consumidor de OCC. */
+    private function idProyectoSeguimiento($valor): int
+    {
+        if (!is_string($valor) && !is_int($valor)) return 0;
+        $valor = trim((string)$valor);
+        if ($valor === '' || strlen($valor) > 1024) return 0;
+        if (!ctype_digit($valor)) {
+            if (base64_decode($valor, true) === false) return 0;
+            $valor = openssl_decrypt($valor, METHODENCRIPT, KEY);
+        }
+        return is_string($valor) && ctype_digit($valor) ? max(0, (int)$valor) : 0;
+    }
+
+    /** Autoriza el registro con el mismo alcance que el detalle principal.
+     * @param int $venta_id Proyecto solicitado.
+     * @param bool $compartido Permite lectura OCC solo para historial, adjuntos y descarga compartidos.
+     * @return array Cabecera visible o [] sin permiso/propiedad; no revela proyectos ajenos.
+     */
+    private function proyectoVisibleSeguimiento(int $venta_id, bool $compartido = false): array
+    {
+        $usuario = $this->vendedorProyectoSeguimiento();
+        $permisos = getPermisosGlobal();
+        $lectura = !empty($permisos[MOD_SEGUIMIENTO_PROYECTO_VENTA]['r']);
+        if ($compartido) $lectura = $lectura || !empty($permisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r']);
+        if ($venta_id <= 0 || $usuario === null || !$lectura) return [];
+        return $this->model->getProyectoVentaById($venta_id, $usuario);
+    }
+
+    /** GET venta_id (numérico/cifrado) y archivo: solo archivos vinculados a un proyecto visible.
+     * Requiere lectura Proyecto/OCC y alcance de vendedor. Responde archivo o HTTP 400/404/500.
+     * PDF e imágenes raster conservan la vista previa; los demás tipos se descargan sin ejecutarse.
+     */
+    public function getArchivoProyecto()
+    {
+        try {
+            $venta_id = $this->idProyectoSeguimiento($_GET['venta_id'] ?? '');
+            $archivo = $_GET['archivo'] ?? '';
+            if (!is_string($archivo) || $archivo === '' || strlen($archivo) > 255 ||
+                preg_match('/[\x00-\x1F\x7F\\\\\/]/', $archivo) || basename($archivo) !== $archivo) {
+                http_response_code(400);
+                exit;
+            }
+            if (!$this->proyectoVisibleSeguimiento($venta_id, true)) {
+                http_response_code(404);
+                exit;
+            }
+            // El nombre por sí solo no autoriza: comprobar su vínculo en adjuntos o bitácora.
+            $vinculado = false;
+            foreach ($this->model->getAdjuntosProyectoVenta($venta_id) as $adjunto) {
+                if (trim((string)($adjunto['archivo'] ?? '')) === $archivo) $vinculado = true;
+            }
+            if (!$vinculado) {
+                foreach ((new VentasModel())->selectHistorialSeguimientoVenta($venta_id, true) as $nota) {
+                    if (trim((string)($nota['archivo'] ?? '')) === $archivo) $vinculado = true;
+                }
+            }
+            $directorio = realpath(dirname(__DIR__) . '/Assets/files/ventas');
+            $ruta = $directorio ? realpath($directorio . DIRECTORY_SEPARATOR . $archivo) : false;
+            if (!$vinculado || !$ruta || dirname($ruta) !== $directorio || !is_file($ruta) || !is_readable($ruta)) {
+                http_response_code(404);
+                exit;
+            }
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($ruta) ?: 'application/octet-stream';
+            $inline = in_array($mime, ['application/pdf','image/jpeg','image/png','image/gif','image/webp'], true);
+            header('Content-Type: ' . $mime);
+            header('X-Content-Type-Options: nosniff');
+            header('Cache-Control: private, no-store');
+            header("Content-Security-Policy: sandbox; default-src 'none'");
+            header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"adjunto\"; filename*=UTF-8''" . rawurlencode($archivo));
+            header('Content-Length: ' . filesize($ruta));
+            readfile($ruta);
+            exit;
+        } catch (\Throwable $error) {
+            getLoggerSystem()->error('No se pudo servir un adjunto del seguimiento de proyecto.');
+            http_response_code(500);
+            exit;
+        }
     }
 
     /**
@@ -342,34 +434,29 @@ class Seguimiento extends Controllers
      *
      * @return json
      */
+    // POST venta_id numérico/cifrado: lectura Proyecto/OCC y alcance de vendedor; denegación HTTP 403.
     public function getHistorialSeguimiento()
     {
+        header('Content-Type: application/json; charset=utf-8');
         try {
 
             /*-------------------------------------------
             [ Validación de Permisos ]*/
             $arrPermisos = getPermisosGlobal();
             if (empty($arrPermisos)) {
+                http_response_code(403);
                 die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
             $permisoOrdenes  = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r'] ?? 0;
             $permisoProyecto = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA]['r'] ?? 0;
             if (empty($permisoOrdenes) && empty($permisoProyecto)) {
+                http_response_code(403);
                 die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
             /*-------------------------------------------
             [ Recibe y desencripta / obtiene venta_id ]*/
-            $venta_id_input = strClean($_POST['venta_id'] ?? '');
-            if (empty($venta_id_input)) {
-                die(json_encode(getResponse('Debe seleccionar una orden o proyecto', 'error'), JSON_UNESCAPED_UNICODE));
-            }
-
-            if (is_numeric($venta_id_input)) {
-                $venta_id = intval($venta_id_input);
-            } else {
-                $venta_id = intval(openssl_decrypt($venta_id_input, METHODENCRIPT, KEY));
-            }
+            $venta_id = $this->idProyectoSeguimiento($_POST['venta_id'] ?? '');
 
             if ($venta_id <= 0) {
                 die(json_encode(getResponse('ID de proyecto no válido', 'error'), JSON_UNESCAPED_UNICODE));
@@ -377,12 +464,18 @@ class Seguimiento extends Controllers
 
             /*-------------------------------------------
             [ Obtiene historial ]*/
+            if (!$this->proyectoVisibleSeguimiento($venta_id, true)) {
+                http_response_code(403);
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
             $class_model = new VentasModel;
-            $arrData     = $class_model->selectHistorialSeguimientoVenta($venta_id);
+            $arrData     = $class_model->selectHistorialSeguimientoVenta($venta_id, true);
 
             $arrResponse = getResponse('Datos encontrados', 'ok', false);
             $arrResponse['data'] = $arrData;
         } catch (\Throwable $th) {
+            http_response_code(500);
             getLoggerSystem()->error(getMensajeError($th));
             die(json_encode(getResponse('Código Error: ' . self::prefijo_msj_error . '_1002. Error Desconocido'), JSON_UNESCAPED_UNICODE));
         }
@@ -393,36 +486,36 @@ class Seguimiento extends Controllers
     }
 
     /**
-     * Obtiene los archivos adjuntos del proyecto de venta de las 6 tablas especificadas.
+     * POST venta_id: adjuntos de seis orígenes, solo para un proyecto visible.
+     * Lectura Proyecto/OCC con alcance de vendedor; conserva respuesta/data, HTTP 403 al denegar.
      *
      * @return json
      */
     public function getAdjuntosProyecto()
     {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $arrPermisos = getPermisosGlobal();
             if (empty($arrPermisos)) {
+                http_response_code(403);
                 die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
             $permisoProyecto = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA]['r'] ?? 0;
             $permisoOrdenes  = $arrPermisos[MOD_SEGUIMIENTO_ORDENES_CLIENTE]['r'] ?? 0;
             if (empty($permisoProyecto) && empty($permisoOrdenes)) {
+                http_response_code(403);
                 die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
-            $venta_id_input = strClean($_POST['venta_id'] ?? '');
-            if (empty($venta_id_input)) {
-                die(json_encode(getResponse('Debe seleccionar un proyecto', 'error'), JSON_UNESCAPED_UNICODE));
-            }
-
-            if (is_numeric($venta_id_input)) {
-                $venta_id = intval($venta_id_input);
-            } else {
-                $venta_id = intval(openssl_decrypt($venta_id_input, METHODENCRIPT, KEY));
-            }
+            $venta_id = $this->idProyectoSeguimiento($_POST['venta_id'] ?? '');
 
             if ($venta_id <= 0) {
                 die(json_encode(getResponse('ID de proyecto no válido', 'error'), JSON_UNESCAPED_UNICODE));
+            }
+
+            if (!$this->proyectoVisibleSeguimiento($venta_id, true)) {
+                http_response_code(403);
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
             $arrData = $this->model->getAdjuntosProyectoVenta($venta_id);
@@ -430,6 +523,7 @@ class Seguimiento extends Controllers
             $arrResponse = getResponse('Datos encontrados', 'ok', false);
             $arrResponse['data'] = $arrData;
         } catch (\Throwable $th) {
+            http_response_code(500);
             getLoggerSystem()->error(getMensajeError($th));
             die(json_encode(getResponse('Código Error: ' . self::prefijo_msj_error . '_1003. Error Desconocido'), JSON_UNESCAPED_UNICODE));
         }
@@ -572,13 +666,16 @@ class Seguimiento extends Controllers
     }
 
     /**
-     * Busca proyecto(s) de venta por id/folio y devuelve la información general y checklist del proceso.
+     * POST: busca proyectos visibles por id/folio y devuelve cabecera, checklist y partidas.
+     * El checklist distingue cancelación histórica y las partidas identifican documento/moneda.
+     * Los fallos de consulta responden HTTP 500 y status=false, sin sustituir etapas.
      * URL / AJAX: /seguimiento/buscarProyectoVenta
      * 
      * @return json
      */
     public function buscarProyectoVenta()
     {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $arrResponse = array(
                 'status'    => false,
@@ -614,10 +711,10 @@ class Seguimiento extends Controllers
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
-            $rol_id = intval($this->session->get('rol_id') ?? 0);
-            $ccveusuario_vendedor = '';
-            if ($rol_id === 4) {
-                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            $ccveusuario_vendedor = $this->vendedorProyectoSeguimiento();
+            if ($ccveusuario_vendedor === null) {
+                http_response_code(403);
+                die(json_encode(['status' => false, 'msg' => 'Acceso restringido'], JSON_UNESCAPED_UNICODE));
             }
 
             $model = new SeguimientoModel();
@@ -670,21 +767,29 @@ class Seguimiento extends Controllers
 
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
-            $arrResponse['msg'] = 'Error al procesar la solicitud.';
+            http_response_code(500);
+            $arrResponse['status'] = false;
+            $arrResponse['msg'] = 'No fue posible consultar el proyecto. Intenta nuevamente.';
         }
 
         die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
     }
 
     /**
-     * Obtiene las partidas del proyecto seleccionado vía AJAX.
+     * POST venta_id: partidas de un proyecto visible, con permiso de lectura de Proyecto.
+     * Conserva status/data; responde HTTP 403 sin permiso, vendedor o propiedad.
      * URL / AJAX: /seguimiento/getPartidasProyecto
      */
     public function getPartidasProyecto()
     {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $arrResponse = array('status' => false, 'data' => array());
-            $venta_id = intval($_POST['venta_id'] ?? 0);
+            $venta_id = $this->idProyectoSeguimiento($_POST['venta_id'] ?? '');
+            if (!$this->proyectoVisibleSeguimiento($venta_id)) {
+                http_response_code(403);
+                die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
+            }
             if ($venta_id > 0) {
                 $model = new SeguimientoModel();
                 $arrData = $model->getPartidasProyecto($venta_id);
@@ -693,19 +798,23 @@ class Seguimiento extends Controllers
             }
             die(json_encode($arrResponse, JSON_UNESCAPED_UNICODE));
         } catch (\Throwable $th) {
+            http_response_code(500);
             getLoggerSystem()->error(getMensajeError($th));
             die(json_encode(array('status' => false, 'data' => array()), JSON_UNESCAPED_UNICODE));
         }
     }
 
     /**
-     * Obtiene la lista de proyectos de venta para llenar el DataTable.
+     * POST: lista de proyectos con permiso de lectura y alcance de vendedor.
+     * fecha_ini/fecha_fin admiten dd/mm/aaaa o ISO y extremos abiertos.
+     * Éxito: array JSON (incluido []); errores: HTTP 403/422/500 con respuesta/mensaje.
      * URL / AJAX: /seguimiento/getProyectosVentaDatatable
      * 
      * @return json
      */
     public function getProyectosVentaDatatable()
     {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $arrData = array();
 
@@ -713,15 +822,23 @@ class Seguimiento extends Controllers
             [ Validación de Permisos ]*/
             $arrPermisos = getPermisosGlobal();
             if (empty($arrPermisos)) {
-                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+                http_response_code(403);
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
             $this->permisosMod = $arrPermisos[MOD_SEGUIMIENTO_PROYECTO_VENTA] ?? ['r' => 0, 'c' => 0, 'u' => 0, 'd' => 0];
             if (empty($this->permisosMod['r'])) {
-                die(json_encode($arrData, JSON_UNESCAPED_UNICODE));
+                http_response_code(403);
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
             /*-------------------------------------------
             [ Recibe y limpia parámetros de filtro ]*/
+            foreach (['fecha_ini', 'fecha_fin'] as $campoFecha) {
+                if (isset($_POST[$campoFecha]) && !is_string($_POST[$campoFecha])) {
+                    http_response_code(422);
+                    die(json_encode(getResponse('Ingresa fechas válidas en formato dd/mm/aaaa.', 'error'), JSON_UNESCAPED_UNICODE));
+                }
+            }
             $fecha_ini = strClean($_POST['fecha_ini'] ?? '');
             $fecha_fin = strClean($_POST['fecha_fin'] ?? '');
             $busqueda  = strClean($_POST['busqueda']  ?? '');
@@ -731,20 +848,18 @@ class Seguimiento extends Controllers
 
             /*-------------------------------------------
             [ Filtro Vendedor (rol_id = 4) ]*/
-            $rol_id = intval($this->session->get('rol_id') ?? 0);
-            $ccveusuario_vendedor = '';
-            if ($rol_id === 4) {
-                $ccveusuario_vendedor = strClean($this->session->get('ccveusuario') ?? '');
+            $ccveusuario_vendedor = $this->vendedorProyectoSeguimiento();
+            if ($ccveusuario_vendedor === null) {
+                http_response_code(403);
+                die(json_encode(getResponse('Acceso restringido', 'error'), JSON_UNESCAPED_UNICODE));
             }
 
-            if (!empty($fecha_ini) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_ini)) {
-                $parts = explode('/', $fecha_ini);
-                $fecha_ini = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-            }
-
-            if (!empty($fecha_fin) && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $fecha_fin)) {
-                $parts = explode('/', $fecha_fin);
-                $fecha_fin = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+            // Mismo normalizador que OCC, admitiendo aquí periodos abiertos.
+            try {
+                [$fecha_ini, $fecha_fin] = $this->normalizarPeriodoOrdenesCliente($fecha_ini, $fecha_fin, '', true);
+            } catch (\InvalidArgumentException $error) {
+                http_response_code(422);
+                die(json_encode(getResponse($error->getMessage(), 'error'), JSON_UNESCAPED_UNICODE));
             }
 
             /*-------------------------------------------
@@ -770,7 +885,7 @@ class Seguimiento extends Controllers
                 }
                 $arrData[$i]['estatus_badge'] = '<span class="badge ' . $badge_class . ' fs-11">' . htmlspecialchars($estatus_txt) . '</span>';
 
-                $moneda = !empty($arrData[$i]['cmoneda']) ? $arrData[$i]['cmoneda'] : 'USD';
+                $moneda = !empty($arrData[$i]['cmoneda']) ? $arrData[$i]['cmoneda'] : 'Sin moneda';
                 $monto  = (float)($arrData[$i]['total'] ?? 0);
                 $arrData[$i]['monto_formateado'] = $moneda . ' $' . number_format($monto, 2, '.', ',');
 
@@ -782,7 +897,8 @@ class Seguimiento extends Controllers
             die();
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
-            echo json_encode(array(), JSON_UNESCAPED_UNICODE);
+            http_response_code(500);
+            echo json_encode(getResponse('No fue posible consultar los proyectos.', 'error'), JSON_UNESCAPED_UNICODE);
             die();
         }
     }

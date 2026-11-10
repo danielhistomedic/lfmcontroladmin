@@ -1,0 +1,3 @@
+# Los adjuntos se sirven por Seguimiento/getArchivoProyecto o getArchivoProveedor.
+# PHP conserva acceso al disco; las peticiones HTTP directas quedan denegadas.
+Require all denied

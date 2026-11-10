@@ -1128,7 +1128,7 @@ function fntRenderizarAdjuntos(adjuntos) {
         var fileName = (adj.archivo || '').trim();
         if (!fileName) return;
 
-        var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+        var fileUrl = escapeHtml(base_url + '/seguimiento/getArchivoProyecto?venta_id=' + encodeURIComponent(ventaIdActual) + '&archivo=' + encodeURIComponent(fileName));
         var fileExt = fileName.split('.').pop().toLowerCase();
 
         var iconClass = 'fa-file-lines text-secondary';
@@ -1232,7 +1232,7 @@ function fntRenderizarTimelinePagina(pagina) {
 
         if (seg.archivo && seg.archivo.trim() !== '') {
             var fileName = seg.archivo.trim();
-            var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+            var fileUrl = escapeHtml(base_url + '/seguimiento/getArchivoProyecto?venta_id=' + encodeURIComponent(ventaIdActual) + '&archivo=' + encodeURIComponent(fileName));
             var fileExt = fileName.split('.').pop().toLowerCase();
 
             var iconClass = 'fa-file-lines text-secondary';

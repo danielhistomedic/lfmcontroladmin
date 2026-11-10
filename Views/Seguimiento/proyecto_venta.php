@@ -113,13 +113,46 @@
         border-bottom-color: #0d6efd;
         font-weight: 700;
     }
+
+    /* Correcciones de legibilidad aisladas: mismas tarjetas, tamaños y distribución. */
+    .proyecto-venta-page { --pv-surface: #fff; --pv-soft: #f8fafc; --pv-text: #1e293b; --pv-muted: #475569; --pv-border: #cbd5e1; --pv-select: #e8f2fa; }
+    .proyecto-venta-page .text-muted:not(:where(.badge, .badge *, .btn, .btn *)) { color: var(--pv-muted) !important; }
+    .proyecto-venta-page .text-secondary:not(:where(.badge, .badge *, .btn, .btn *, i)) { color: var(--pv-muted) !important; }
+    .proyecto-venta-page .text-primary:not(:where(.badge, .badge *, .btn, .btn *, i)) { color: #075985 !important; }
+    html.dark .proyecto-venta-page .text-primary:not(:where(.badge, .badge *, .btn, .btn *, i)) { color: #8bd5ff !important; }
+    .proyecto-venta-page #tableProyectosVenta tbody tr.selected-row > td { background-color: var(--pv-select) !important; }
+    .proyecto-venta-page .nav-tabs-proyecto .nav-link:focus-visible { outline: 2px solid #80bdff; outline-offset: 2px; }
+    html.dark .proyecto-venta-page { --pv-surface: #1d2735; --pv-soft: #253346; --pv-text: #edf2f7; --pv-muted: #cbd5e1; --pv-border: #53657d; --pv-select: #304860; background-color: var(--pv-surface) !important; background-image: none !important; }
+    html.dark .proyecto-venta-page :is(#cardResumenProyecto .card-body, #cardChecklistProceso .card-body, #panelPlaceholder .card, .step-card, #timeline_seguimientos .card, #timeline_seguimientos .card-body, #timeline_adjuntos .card, #timeline_adjuntos .card-body) { background-color: var(--pv-surface) !important; color: var(--pv-text); border-color: var(--pv-border) !important; }
+    html.dark .proyecto-venta-page :is(#cardChecklistProceso .card-header, #timeline_seguimientos .card-header, #timeline_adjuntos .card-header, #cardResumenProyecto .bg-light, #timeline_adjuntos .bg-light) { background-color: var(--pv-soft) !important; border-color: var(--pv-border) !important; }
+    html.dark .proyecto-venta-page :is(#cardResumenProyecto, #cardChecklistProceso, #panelPlaceholder, #timeline_seguimientos, #timeline_adjuntos) .text-muted { color: var(--pv-muted) !important; }
+    html.dark .proyecto-venta-page :is(#cardResumenProyecto, #cardChecklistProceso, #panelPlaceholder, #timeline_seguimientos, #timeline_adjuntos) :is(.text-dark, .text-secondary):not(:where(.badge, .btn, .badge *, .btn *)) { color: var(--pv-text) !important; }
+    html.dark .proyecto-venta-page :is(.step-card, #timeline_seguimientos, #timeline_adjuntos) .text-primary:not(:where(.badge, .btn, .badge *, .btn *)) { color: #8bd5ff !important; }
+    html.dark .proyecto-venta-page #lblMontoTotal { color: #75d3a3 !important; }
+    html.dark .proyecto-venta-page .step-card .text-danger:not(:where(.badge, .badge *)) { color: #ff8792 !important; }
+    html.dark .proyecto-venta-page .step-card :is(table, thead, tbody, tr, th, td) { background-color: var(--pv-surface) !important; color: var(--pv-text); border-color: var(--pv-border) !important; }
+    html.dark .proyecto-venta-page .step-card thead th { background-color: var(--pv-soft) !important; }
+    html.dark .proyecto-venta-page #containerChecklistItems .step-card.completed { border-left-color: #198754 !important; }
+    html.dark .proyecto-venta-page #containerChecklistItems .step-card.canceled { border-left-color: #dc3545 !important; }
+    html.dark .proyecto-venta-page #containerChecklistItems .step-card.pending { border-left-color: #adb5bd !important; }
+    html.dark .proyecto-venta-page .timeline-checklist { border-color: var(--pv-border); }
+    html.dark .proyecto-venta-page .badge:is(.bg-light, .bg-white, .bg-warning, .bg-info) { color: #1e293b !important; }
+    html.dark .proyecto-venta-page .nav-tabs-proyecto .nav-item { background: transparent !important; }
+    html.dark .proyecto-venta-page .nav-tabs-proyecto { border-color: var(--pv-border); }
+    html.dark .proyecto-venta-page .nav-tabs-proyecto .nav-link { background: transparent !important; color: var(--pv-muted) !important; }
+    html.dark .proyecto-venta-page .nav-tabs-proyecto .nav-link.active { color: #8bd5ff !important; border-bottom-color: #8bd5ff; }
+    html.dark .proyecto-venta-page #timeline_adjuntos .btn-outline-warning { color: var(--pv-text) !important; }
+    html.dark .proyecto-venta-page #timeline_adjuntos .btn-outline-warning:is(:hover, :active) { color: #1e293b !important; }
+    @media (prefers-reduced-motion: reduce) {
+        .proyecto-venta-page :is(.step-card, .nav-tabs-proyecto .nav-link) { transition: none; }
+    }
 </style>
 
 <!-- Header Admin 02 -->
 <?php require_once("Template/header_02.php"); ?>
 
 <!-- CONTENIDO DE VISTA -->
-<section role="main" class="content-body fondo-general">
+<section role="main" class="content-body fondo-general proyecto-venta-page">
 
     <header class="page-header">
         <h2><?= $data['page_form_title']; ?></h2>

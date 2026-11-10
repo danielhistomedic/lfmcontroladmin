@@ -17,14 +17,23 @@ var registrosPorPaginaSeguimiento = 5;
 var adjuntosProyectoData = [];
 var paginaActualAdjuntos = 1;
 var registrosPorPaginaAdjuntos = 5;
+// Versiones y cancelación: ninguna respuesta anterior puede reemplazar la selección vigente.
+var versionListadoProyecto = 0, versionDetalleProyecto = 0;
+var peticionListadoProyecto = null, peticionHistorialProyecto = null, peticionAdjuntosProyecto = null;
+var controladorDetalleProyecto = null;
+// Memoria solo de la selección vigente: al actualizar/cambiar proyecto se consulta de nuevo.
+var detalleProyectoListo = false, detalleProyectoEnCurso = false, scrollPendienteProyecto = false;
+var estadoColeccionesProyecto = {seguimientos: 'pendiente', adjuntos: 'pendiente'};
+var permisoExcelProyecto = null, consultaPermisoExcelProyecto = false;
+var tablasPermisoExcelProyecto = new Set();
 
 $(document).ready(function () {
 
-    // Ajustar columnas de DataTables al cambiar de pestaña
-    $('button[data-bs-toggle="tab"], a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-        if (tablePartidasProyecto) {
-            tablePartidasProyecto.columns.adjust().draw();
-        }
+    // Consultar cada colección al abrir su pestaña, una sola vez por selección.
+    $('#tabProyectoVenta [data-bs-toggle="tab"], #tabProyectoVenta [data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        fntCargarColeccionesVisiblesProyecto();
+        var destino = $(e.target).attr('data-bs-target') || $(e.target).attr('data-target');
+        if (destino === '#tab-partidas-proyecto' && tablePartidasProyecto) tablePartidasProyecto.columns.adjust();
     });
 
     // 1. Inicializar fechas por defecto según el periodo "este_mes"
@@ -58,7 +67,8 @@ $(document).ready(function () {
 
     // 7. Evento al hacer clic en una fila de la tabla o botón Ver Detalle
     $(tableElement + " tbody").on("click", "tr", function (e) {
-        // Ignorar clics en botones de DataTables exportación si los hubiera dentro
+        // Los botones tienen su propia acción: no ejecutar también la selección de fila.
+        if ($(e.target).closest('button, a, input, select, textarea').length) return;
         const data = tableProyectosVenta ? tableProyectosVenta.row(this).data() : null;
         if (!data) return;
 
@@ -150,8 +160,116 @@ function fntActualizarFechasPorPeriodo(periodo) {
             return;
     }
 
-    $("#filtro_fecha_ini").val(fechaIniStr);
-    $("#filtro_fecha_fin").val(fechaFinStr);
+    [['#filtro_fecha_ini', fechaIniStr], ['#filtro_fecha_fin', fechaFinStr]].forEach(function (item) {
+        var control = $(item[0]), partes = item[1].split('/');
+        if ($.fn.datepicker && control.data('datepicker')) {
+            if (item[1]) control.datepicker('setDate', new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0])));
+            else control.datepicker('reset');
+        }
+        control.val(item[1]);
+        if (control[0]) control[0].setCustomValidity('');
+    });
+}
+
+/** Fecha completa sin parseo regional; vacío representa un extremo abierto. */
+function fntFechaProyectoISO(valor) {
+    valor = String(valor || '').trim();
+    if (!valor) return '';
+    var p, y, m, d;
+    if ((p = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor))) { d = +p[1]; m = +p[2]; y = +p[3]; }
+    else if ((p = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor))) { y = +p[1]; m = +p[2]; d = +p[3]; }
+    else return null;
+    if (y < 1000 || m < 1 || m > 12 || d < 1 || d > new Date(y, m, 0).getDate()) return null;
+    return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+
+/** Valida antes de alterar resultados; Proyecto admite periodos sin uno o ambos extremos. */
+function fntPeriodoProyecto() {
+    var ini = document.getElementById('filtro_fecha_ini'), fin = document.getElementById('filtro_fecha_fin');
+    ini.setCustomValidity(''); fin.setCustomValidity('');
+    var a = fntFechaProyectoISO(ini.value), b = fntFechaProyectoISO(fin.value);
+    var invalido = a === null ? ini : (b === null || (a && b && a > b) ? fin : null);
+    if (invalido) {
+        invalido.setCustomValidity(a !== null && b !== null ? 'La fecha fin debe ser igual o posterior a la fecha inicio.' : 'Ingresa una fecha válida en formato dd/mm/aaaa.');
+        invalido.reportValidity(); return null;
+    }
+    return {fecha_ini: a, fecha_fin: b};
+}
+
+/** No inventar USD cuando falta la moneda; conservar los IDs utilizados por el portal. */
+function fntMonedaProyecto(registro) {
+    if (registro && String(registro.cmoneda || '').trim()) return String(registro.cmoneda).trim();
+    return Number(registro && registro.moneda_id) === 1 ? 'MXN' : (Number(registro && registro.moneda_id) === 3 ? 'USD' : 'Sin moneda');
+}
+
+/** Cancela el detalle y limpia sus datos, sin cambiar la selección usada para recargar la lista. */
+function fntInvalidarDetalleProyecto() {
+    versionDetalleProyecto++;
+    detalleProyectoListo = false; detalleProyectoEnCurso = false;
+    estadoColeccionesProyecto = {seguimientos: 'pendiente', adjuntos: 'pendiente'};
+    if (controladorDetalleProyecto) controladorDetalleProyecto.abort();
+    [peticionHistorialProyecto, peticionAdjuntosProyecto].forEach(function (p) { if (p && p.abort) p.abort(); });
+    historialSeguimientoData = []; adjuntosProyectoData = [];
+    $('#timeline_seguimientos, #timeline_adjuntos').empty();
+    $('#loading_seguimientos, #loading_adjuntos').addClass('d-none');
+    $('#sin_seguimientos, #sin_adjuntos, #containerCoincidencias').addClass('d-none');
+    $('#badge_total_seg, #badge_total_adjuntos, #badge_total_partidas').text('—');
+    $('#lblOrigenPartidasBadge').text('Sin partidas');
+    if (tablePartidasProyecto) tablePartidasProyecto.clear().draw();
+}
+
+/** Estado de colección vacío/error diferenciado dentro del contenedor existente. */
+function fntEstadoColeccionProyecto(tipo, estado) {
+    var seguimiento = tipo === 'seguimientos';
+    $('#loading_' + tipo).toggleClass('d-none', estado !== 'cargando');
+    $('#sin_' + tipo).toggleClass('d-none', estado !== 'vacio' && estado !== 'error');
+    var texto = estado === 'error' ? 'No fue posible consultar ' + (seguimiento ? 'los seguimientos' : 'los archivos adjuntos') + '. Intenta actualizar nuevamente.' :
+        (seguimiento ? 'Este proyecto de venta no tiene seguimientos registrados.' : 'Este proyecto de venta no tiene archivos adjuntos registrados en sus etapas.');
+    $('#sin_' + tipo).attr('data-estado', estado).attr('role', 'status').find('p').text(texto);
+    if (estado === 'vacio' || estado === 'error') $(seguimiento ? '#badge_total_seg' : '#badge_total_adjuntos').text(estado === 'error' ? '—' : '0');
+}
+
+/** Carga diferida sin caché entre proyectos/actualizaciones ni peticiones duplicadas. */
+function fntCargarColeccionesVisiblesProyecto() {
+    if (!detalleProyectoListo || !ventaIdSeleccionado) return;
+    if ($('#tab-detalle-seguimiento').hasClass('active') && ['pendiente', 'error'].includes(estadoColeccionesProyecto.seguimientos)) {
+        fntCargarHistorialSeguimientos(ventaIdSeleccionado, versionDetalleProyecto);
+    }
+    if ($('#tab-adjuntos-proyecto').hasClass('active') && ['pendiente', 'error'].includes(estadoColeccionesProyecto.adjuntos)) {
+        fntCargarAdjuntosProyecto(ventaIdSeleccionado, versionDetalleProyecto);
+    }
+}
+
+/** Permiso Excel una vez por página, aplicado a cada tabla al terminar su inicialización.
+ * No concede permisos ni afecta botones de otros módulos; errores dejan Excel oculto.
+ */
+function fntPermisoExcelProyecto(api) {
+    const tabla = api.table().node();
+    tablasPermisoExcelProyecto.add(tabla);
+    const aplicar = function () {
+        tablasPermisoExcelProyecto.forEach(function (nodo) {
+            if (!$.fn.dataTable.isDataTable(nodo)) return;
+            $($(nodo).DataTable().buttons('.buttons-excel').nodes()).css('display', permisoExcelProyecto === true ? 'inline-flex' : 'none');
+        });
+    };
+    aplicar();
+    if (permisoExcelProyecto !== null || consultaPermisoExcelProyecto || typeof menu === 'undefined' || typeof getFunctionData !== 'function') return;
+    consultaPermisoExcelProyecto = true;
+    getFunctionData('Permisos', 'getPermisosMod', menu, function (respuesta) {
+        permisoExcelProyecto = !!respuesta && Number(respuesta.e) === 1;
+        aplicar();
+    });
+}
+
+/** Refleja la selección también tras paginar/ordenar con filas diferidas. */
+function fntMarcarSeleccionProyecto() {
+    if (!tableProyectosVenta) return;
+    tableProyectosVenta.rows({page: 'current'}).every(function () {
+        const nodo = this.node(), dato = this.data();
+        if (!nodo) return;
+        const seleccionado = ventaIdSeleccionado !== null && String(dato.id) === String(ventaIdSeleccionado);
+        $(nodo).toggleClass('selected-row table-primary', seleccionado).attr('aria-selected', seleccionado ? 'true' : 'false');
+    });
 }
 
 /**
@@ -159,6 +277,10 @@ function fntActualizarFechasPorPeriodo(periodo) {
  */
 function fntInicializarTablaProyectos() {
     tableProyectosVenta = LfmTables.create($(tableElement), {
+        clearColumnFilters: true,
+        initComplete: function () { fntPermisoExcelProyecto(this.api()); },
+        // Solo crear nodos de las filas visitadas; búsqueda/orden/Excel conservan todos los datos.
+        deferRender: true,
         orderCellsTop: true,
         fixedHeader: true,
         scrollX: "100%",
@@ -193,42 +315,51 @@ function fntInicializarTablaProyectos() {
                 data: "proyecto_id",
                 className: "text-center align-middle",
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-dark">' + (data || "—") + '</span>';
+                    return '<span class="fw-bold text-dark">' + fntEscapeHtml((data || "—")) + '</span>';
                 }
             },
             {
                 data: "fecha_formateada",
+                type: 'num',
                 className: "text-center align-middle",
                 render: function (data, type, row) {
-                    return '<span class="text-muted">' + (data || "—") + '</span>';
+                    if (type === 'sort' || type === 'type') {
+                        var iso = fntFechaProyectoISO(String(row.fecha || '').slice(0, 10)) || fntFechaProyectoISO(data);
+                        return iso ? Number(iso.replace(/-/g, '')) : 0;
+                    }
+                    if (type !== 'display') return data || '';
+                    return '<span class="text-muted">' + fntEscapeHtml((data || "—")) + '</span>';
                 }
             },
             {
                 data: "cliente",
                 className: "text-start align-middle",
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-primary">' + (data || "—") + '</span>';
+                    return '<span class="fw-bold text-primary">' + fntEscapeHtml((data || "—")) + '</span>';
                 }
             },
             {
                 data: "titulo",
                 className: "text-start align-middle",
                 render: function (data, type, row) {
-                    return '<span class="fw-semibold text-dark">' + (data || "Sin título") + '</span>';
+                    return '<span class="fw-semibold text-dark">' + fntEscapeHtml((data || "Sin título")) + '</span>';
                 }
             },
             {
                 data: "vendedor",
                 className: "text-start align-middle",
                 render: function (data, type, row) {
-                    return '<span class="text-secondary">' + (data || "—") + '</span>';
+                    return '<span class="text-secondary">' + fntEscapeHtml((data || "—")) + '</span>';
                 }
             },
             {
                 data: "monto_formateado",
+                type: 'num',
                 className: "text-end align-middle",
                 render: function (data, type, row) {
-                    return '<span class="fw-bold text-success">' + (data || "$0.00") + '</span>';
+                    if (type === 'sort' || type === 'type') return Number(row.total) || 0;
+                    if (type !== 'display') return data || '';
+                    return '<span class="fw-bold text-success">' + fntEscapeHtml((data || "$0.00")) + '</span>';
                 }
             },
             { data: "estatus_badge", className: "text-center align-middle", orderable: false }
@@ -236,14 +367,8 @@ function fntInicializarTablaProyectos() {
         language: typeof idioma_espanol !== "undefined" ? idioma_espanol : {}
     });
 
-    $(tableElement).on("init.dt", function () {
-        if (typeof menu !== "undefined" && typeof validaPermisoExportar === "function") {
-            validaPermisoExportar(menu);
-        }
-        $(".loading-panel-showing").removeClass("loading-panel-showing");
-    });
-
-    $(tableElement).on("draw.dt", function () {
+    $(tableElement).off('draw.dt.proyectoSeleccion').on('draw.dt.proyectoSeleccion', function () {
+        fntMarcarSeleccionProyecto();
         if (tableProyectosVenta) {
             tableProyectosVenta.columns.adjust();
         }
@@ -254,68 +379,60 @@ function fntInicializarTablaProyectos() {
  * Carga (o recarga) el DataTable de Proyectos de Venta vía AJAX
  */
 function fntCargarTablaProyectos() {
-    const fechaIni = $("#filtro_fecha_ini").val().trim();
-    const fechaFin = $("#filtro_fecha_fin").val().trim();
-    const busqueda = $("#txtProyectoId").val().trim();
-    const titulo   = $("#filtro_titulo").val().trim();
-    const cliente  = $("#filtro_cliente").val().trim();
-    const vendedor = $("#filtro_vendedor").val().trim();
-
-    if (tableProyectosVenta !== null) {
-        tableProyectosVenta.clear().draw();
-    }
-
-    $(".loading-panel-showing").addClass("loading-panel-showing");
-
-    $.ajax({
-        type: "POST",
-        url: base_url + "/seguimiento/getProyectosVentaDatatable",
-        data: {
-            fecha_ini: fechaIni,
-            fecha_fin: fechaFin,
-            busqueda: busqueda,
-            titulo: titulo,
-            cliente: cliente,
-            vendedor: vendedor
-        },
-        dataType: "json",
+    const periodo = fntPeriodoProyecto();
+    if (!periodo) return;
+    const version = ++versionListadoProyecto;
+    if (peticionListadoProyecto && peticionListadoProyecto.abort) peticionListadoProyecto.abort();
+    fntInvalidarDetalleProyecto();
+    fntMostrarEstadoUI('loading');
+    if (tableProyectosVenta) tableProyectosVenta.clear().draw();
+    peticionListadoProyecto = $.ajax({
+        type: 'POST', url: base_url + '/seguimiento/getProyectosVentaDatatable', dataType: 'json',
+        data: {fecha_ini: periodo.fecha_ini, fecha_fin: periodo.fecha_fin, busqueda: $('#txtProyectoId').val().trim(),
+            titulo: $('#filtro_titulo').val().trim(), cliente: $('#filtro_cliente').val().trim(), vendedor: $('#filtro_vendedor').val().trim()},
         success: function (data) {
-            if (tableProyectosVenta !== null && Array.isArray(data)) {
-                tableProyectosVenta.clear().rows.add(data).draw();
-                tableProyectosVenta.columns.adjust().draw();
-
-                if (data.length > 0) {
-                    // Seleccionar y cargar por defecto el detalle del primer proyecto si no hay selección previa activa
-                    const idACargar = ventaIdSeleccionado ? ventaIdSeleccionado : data[0].id;
-                    const existeEnLista = data.some(item => item.id == idACargar);
-                    const primerId = existeEnLista ? idACargar : data[0].id;
-
-                    fntCargarDetalleProyecto(primerId, false);
-                } else {
-                    fntMostrarEstadoUI("placeholder");
-                }
+            if (version !== versionListadoProyecto) return;
+            if (!Array.isArray(data)) {
+                ventaIdSeleccionado = null; fntMostrarEstadoUI('error', 'La consulta de proyectos no pudo completarse.'); return;
+            }
+            if (tableProyectosVenta) tableProyectosVenta.clear().rows.add(data).draw();
+            if (data.length) {
+                const previo = data.find(item => String(item.id) === String(ventaIdSeleccionado));
+                fntCargarDetalleProyecto(previo ? previo.id : data[0].id, false);
             } else {
-                fntMostrarEstadoUI("placeholder");
+                ventaIdSeleccionado = null;
+                fntMostrarEstadoUI('vacio', 'No hay proyectos para los filtros consultados.');
+                fntEstadoColeccionProyecto('seguimientos', 'vacio'); fntEstadoColeccionProyecto('adjuntos', 'vacio');
+                $('#badge_total_partidas').text(0);
             }
         },
-        error: function (xhr, status, error) {
-            console.error("Error al cargar proyectos de venta:", error);
-            fntMostrarAlerta("Error de conexión al cargar la lista de proyectos.", "error");
-            fntMostrarEstadoUI("placeholder");
+        error: function (xhr, status) {
+            if (version !== versionListadoProyecto || status === 'abort') return;
+            ventaIdSeleccionado = null;
+            fntMostrarEstadoUI('error', (xhr.responseJSON && (xhr.responseJSON.mensaje || xhr.responseJSON.msg)) || 'No fue posible consultar los proyectos. Intenta nuevamente.');
         },
         complete: function () {
-            $(".loading-panel-showing").removeClass("loading-panel-showing");
+            if (version === versionListadoProyecto) $('.loading-panel-showing').removeClass('loading-panel-showing');
         }
     });
 }
 
 /**
- * Consulta el detalle completo y el checklist del proyecto seleccionado
+ * Consulta cabecera/checklist/partidas; las colecciones se consultan al abrir su pestaña.
+ * Una segunda pulsación del mismo proyecto pendiente reutiliza su consulta, sin caché entre actualizaciones.
  */
 function fntCargarDetalleProyecto(ventaId, scrollTo = true) {
     if (!ventaId) return;
-
+    if (detalleProyectoEnCurso && String(ventaId) === String(ventaIdSeleccionado)) {
+        scrollPendienteProyecto = scrollPendienteProyecto || scrollTo;
+        return; // Una segunda pulsación no vuelve a ejecutar el mismo detalle pendiente.
+    }
+    fntInvalidarDetalleProyecto();
+    detalleProyectoEnCurso = true; scrollPendienteProyecto = scrollTo;
+    const version = versionDetalleProyecto;
+    controladorDetalleProyecto = new AbortController();
     ventaIdSeleccionado = ventaId;
+    fntMarcarSeleccionProyecto();
     fntMostrarEstadoUI("loading");
 
     const formData = new FormData();
@@ -323,11 +440,18 @@ function fntCargarDetalleProyecto(ventaId, scrollTo = true) {
 
     fetch(base_url + "/seguimiento/buscarProyectoVenta", {
         method: "POST",
+        signal: controladorDetalleProyecto.signal,
         body: formData
     })
-        .then(res => res.json())
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.msg || data.mensaje || 'No fue posible consultar el proyecto.');
+            return data;
+        })
         .then(data => {
+            if (version !== versionDetalleProyecto || String(ventaId) !== String(ventaIdSeleccionado)) return;
             if (data.status) {
+                if (!data.data || String(data.data.id) !== String(ventaId)) throw new Error('La respuesta no corresponde al proyecto seleccionado.');
                 // Manejo de coincidencias en el select secundario si aplica
                 const containerCoincidencias = document.getElementById("containerCoincidencias");
                 const selectCoincidencias = document.getElementById("selectProyectosCoincidentes");
@@ -351,28 +475,30 @@ function fntCargarDetalleProyecto(ventaId, scrollTo = true) {
                 // Renderizar Resumen, Checklist de Evaluación, Seguimiento, Adjuntos y Partidas del Proyecto
                 fntRenderResumenProyecto(data.data);
                 fntRenderChecklistProceso(data.checklist);
-                fntCargarHistorialSeguimientos(ventaId);
-                fntCargarAdjuntosProyecto(ventaId);
                 fntRenderPartidasProyecto(data.partidas);
-
+                detalleProyectoListo = true;
+                fntEstadoColeccionProyecto('seguimientos', 'pendiente');
+                fntEstadoColeccionProyecto('adjuntos', 'pendiente');
                 fntMostrarEstadoUI("resultado");
+                fntCargarColeccionesVisiblesProyecto();
 
                 // Desplazamiento suave a la sección de detalle si se solicitó explícitamente
-                if (scrollTo) {
+                if (scrollPendienteProyecto) {
                     const elDetalle = document.getElementById("panel_detalle_proyecto");
                     if (elDetalle) {
                         elDetalle.scrollIntoView({ behavior: "smooth", block: "start" });
                     }
                 }
             } else {
-                fntMostrarEstadoUI("placeholder");
+                fntMostrarEstadoUI("vacio", data.msg || "No se encontró el proyecto.");
                 fntMostrarAlerta(data.msg || "No se pudo cargar el detalle del proyecto.", "error");
             }
         })
         .catch(err => {
-            console.error("Error al cargar detalle del proyecto:", err);
-            fntMostrarEstadoUI("placeholder");
-            fntMostrarAlerta("Ocurrió un error en el servidor al consultar el detalle del proyecto.", "error");
+            if (version !== versionDetalleProyecto || err.name === 'AbortError') return;
+            fntMostrarEstadoUI('error', err.message || 'No fue posible consultar el proyecto. Intenta nuevamente.');
+        }).finally(function () {
+            if (version === versionDetalleProyecto) detalleProyectoEnCurso = false;
         });
 }
 
@@ -408,13 +534,13 @@ function fntRenderResumenProyecto(p) {
 
     document.getElementById("lblFecha").textContent = p.fecha_formateada || p.fecha || "—";
 
-    const moneda = p.cmoneda || "USD";
+    const moneda = fntMonedaProyecto(p);
     const total = parseFloat(p.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById("lblMontoTotal").textContent = `${moneda} $${total}`;
 }
 
 /**
- * Renderiza los 7 ítems del checklist de evaluación del proceso
+ * Renderiza las etapas configuradas y distingue cancelación de avance histórico.
  */
 function fntRenderChecklistProceso(checklist) {
     const container = document.getElementById("containerChecklistItems");
@@ -475,17 +601,17 @@ function fntRenderChecklistProceso(checklist) {
                 const desc = parseFloat(r.descuento || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const iva = parseFloat(r.iva || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const tot = parseFloat(r.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const monedaDoc = r.cmoneda || (parseInt(r.moneda_id || 0) === 1 ? "MXN" : (parseInt(r.moneda_id || 0) === 3 ? "USD" : "USD"));
+                const monedaDoc = fntMonedaProyecto(r);
 
                 registrosHtml += `
                     <tr>
-                        <td class="fw-bold text-primary">${folioDoc}</td>
-                        <td>${fechaDoc}</td>
+                        <td class="fw-bold text-primary">${fntEscapeHtml(folioDoc)}</td>
+                        <td>${fntEscapeHtml(fechaDoc)}</td>
                         <td class="text-end">$${sub}</td>
                         ${showDescuento ? `<td class="text-end text-danger">$${desc}</td>` : ''}
                         <td class="text-end">$${iva}</td>
                         <td class="text-end fw-bold text-dark">$${tot}</td>
-                        <td class="text-center"><span class="badge bg-secondary px-2 py-1">${monedaDoc}</span></td>
+                        <td class="text-center"><span class="badge bg-secondary px-2 py-1">${fntEscapeHtml(monedaDoc)}</span></td>
                     </tr>
                 `;
             });
@@ -503,12 +629,12 @@ function fntRenderChecklistProceso(checklist) {
                 <div class="step-card ${cardClass} card p-3 shadow-2xs">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <h5 class="fw-bold text-dark mb-0 fs-15">
-                            <span class="text-secondary me-1">Paso ${numPaso}:</span> ${step.nombre}
+                            <span class="text-secondary me-1">Paso ${numPaso}:</span> ${fntEscapeHtml(step.nombre)}
                         </h5>
                         <div>${statusBadgeHtml}</div>
                     </div>
                     <p class="text-muted mb-0 fs-13 mt-2">
-                        <i class="fa-regular fa-circle-info me-1"></i>${step.mensaje || "Sin detalles disponibles."}
+                        <i class="fa-regular fa-circle-info me-1"></i>${fntEscapeHtml(step.mensaje || "Sin detalles disponibles.")}
                     </p>
                     ${registrosHtml}
                 </div>
@@ -520,7 +646,8 @@ function fntRenderChecklistProceso(checklist) {
 
     // Calcular progreso
     const totalSteps = checklist.length;
-    const porcentaje = Math.round((completadosCount / totalSteps) * 100);
+    const porcentaje = totalSteps ? Math.round((completadosCount / totalSteps) * 100) : 0;
+    const cancelado = checklist.some(step => step.is_cancelado === true);
 
     const bar = document.getElementById("barProgresoChecklist");
     const lblPorcentaje = document.getElementById("lblProgresoPorcentaje");
@@ -530,7 +657,7 @@ function fntRenderChecklistProceso(checklist) {
         bar.setAttribute("aria-valuenow", porcentaje);
     }
     if (lblPorcentaje) {
-        lblPorcentaje.textContent = `${completadosCount} de ${totalSteps} etapas completadas (${porcentaje}%)`;
+        lblPorcentaje.textContent = cancelado ? `Proyecto cancelado · ${completadosCount} de ${totalSteps} etapas con documentos (${porcentaje}% histórico)` : `${completadosCount} de ${totalSteps} etapas completadas (${porcentaje}%)`;
     }
 }
 
@@ -560,11 +687,26 @@ function fntLimpiarFiltro() {
 /**
  * Controla la visibilidad de los páneles de la interfaz
  */
-function fntMostrarEstadoUI(estado) {
+function fntMostrarEstadoUI(estado, mensaje) {
     const pPlaceholder = document.getElementById("panelPlaceholder");
     const pLoading = document.getElementById("panelLoading");
+    if (pPlaceholder) {
+        pPlaceholder.setAttribute('data-estado', estado);
+        pPlaceholder.setAttribute('role', 'status');
+        const titulo = pPlaceholder.querySelector('h4'), texto = pPlaceholder.querySelector('p');
+        if (titulo) titulo.textContent = estado === 'error' ? 'No fue posible completar la consulta' : (estado === 'vacio' ? 'Sin resultados' : 'Consulta de Proyecto de Venta');
+        if (texto) texto.textContent = mensaje || 'Seleccione un proyecto del listado o utilice los filtros para consultar su detalle.';
+    }
     const cResumen = document.getElementById("cardResumenProyecto");
     const cChecklist = document.getElementById("cardChecklistProceso");
+    // El estado también debe ser legible si el usuario permanece en otra pestaña.
+    if (estado === 'loading' || estado === 'error' || estado === 'vacio') {
+        const estadoColeccion = estado === 'loading' ? 'cargando' : estado;
+        fntEstadoColeccionProyecto('seguimientos', estadoColeccion);
+        fntEstadoColeccionProyecto('adjuntos', estadoColeccion);
+        $('#lblOrigenPartidasBadge').text(estado === 'loading' ? 'Consultando partidas…' : (estado === 'error' ? 'Consulta no disponible' : 'Sin partidas'));
+        $('#badge_total_partidas').text(estado === 'vacio' ? '0' : '—');
+    }
 
     if (pPlaceholder) pPlaceholder.classList.add("d-none");
     if (pLoading) pLoading.classList.add("d-none");
@@ -620,36 +762,27 @@ function fntMostrarAlerta(mensaje, tipo = "error") {
 /**
  * Carga el historial de seguimientos (bitácora) para el proyecto seleccionado
  */
-function fntCargarHistorialSeguimientos(ventaId) {
-    $("#timeline_seguimientos").empty();
-    $("#sin_seguimientos").addClass("d-none");
-    $("#loading_seguimientos").removeClass("d-none");
-
-    $.ajax({
-        type: "POST",
-        url: base_url + "/seguimiento/getHistorialSeguimiento",
-        data: { venta_id: ventaId },
-        dataType: "json",
+function fntCargarHistorialSeguimientos(ventaId, version = versionDetalleProyecto) {
+    if (estadoColeccionesProyecto.seguimientos === 'cargando') return;
+    estadoColeccionesProyecto.seguimientos = 'cargando';
+    historialSeguimientoData = [];
+    $('#timeline_seguimientos').empty();
+    fntEstadoColeccionProyecto('seguimientos', 'cargando');
+    peticionHistorialProyecto = $.ajax({
+        type: 'POST', url: base_url + '/seguimiento/getHistorialSeguimiento', data: {venta_id: ventaId}, dataType: 'json',
         success: function (resp) {
-            $("#loading_seguimientos").addClass("d-none");
-
-            if (resp.respuesta !== "ok" || !Array.isArray(resp.data) || resp.data.length === 0) {
-                historialSeguimientoData = [];
-                $("#badge_total_seg").text(0);
-                $("#sin_seguimientos").removeClass("d-none");
-                return;
-            }
-
+            if (version !== versionDetalleProyecto || String(ventaId) !== String(ventaIdSeleccionado)) return;
+            if (!resp || resp.respuesta !== 'ok' || !Array.isArray(resp.data)) { estadoColeccionesProyecto.seguimientos = 'error'; fntEstadoColeccionProyecto('seguimientos', 'error'); return; }
+            estadoColeccionesProyecto.seguimientos = 'listo';
             historialSeguimientoData = resp.data;
-            $("#badge_total_seg").text(historialSeguimientoData.length);
-            fntRenderizarTimelinePagina(1);
+            fntEstadoColeccionProyecto('seguimientos', resp.data.length ? 'datos' : 'vacio');
+            $('#badge_total_seg').text(resp.data.length);
+            if (resp.data.length) fntRenderizarTimelinePagina(1);
         },
-        error: function (xhr, status, error) {
-            historialSeguimientoData = [];
-            $("#badge_total_seg").text(0);
-            $("#loading_seguimientos").addClass("d-none");
-            $("#sin_seguimientos").removeClass("d-none");
-            console.error("Error al cargar historial de seguimiento:", error);
+        error: function (xhr, status) {
+            if (version !== versionDetalleProyecto || String(ventaId) !== String(ventaIdSeleccionado) || status === 'abort') return;
+            estadoColeccionesProyecto.seguimientos = 'error';
+            fntEstadoColeccionProyecto('seguimientos', 'error');
         }
     });
 }
@@ -714,7 +847,7 @@ function fntRenderizarTimelinePagina(pagina) {
 
         if (seg.archivo && seg.archivo.trim() !== '') {
             var fileName = seg.archivo.trim();
-            var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+            var fileUrl = fntEscapeHtml(base_url + '/seguimiento/getArchivoProyecto?venta_id=' + encodeURIComponent(ventaIdSeleccionado) + '&archivo=' + encodeURIComponent(fileName));
             var fileExt = fileName.split('.').pop().toLowerCase();
 
             var fileIconClass = 'fa-file-lines text-secondary';
@@ -838,36 +971,27 @@ function fntEscapeHtml(text) {
 /**
  * Carga los archivos adjuntos vinculados al proyecto de venta de las 6 tablas
  */
-function fntCargarAdjuntosProyecto(ventaId) {
-    $("#timeline_adjuntos").empty();
-    $("#sin_adjuntos").addClass("d-none");
-    $("#loading_adjuntos").removeClass("d-none");
-
-    $.ajax({
-        type: "POST",
-        url: base_url + "/seguimiento/getAdjuntosProyecto",
-        data: { venta_id: ventaId },
-        dataType: "json",
+function fntCargarAdjuntosProyecto(ventaId, version = versionDetalleProyecto) {
+    if (estadoColeccionesProyecto.adjuntos === 'cargando') return;
+    estadoColeccionesProyecto.adjuntos = 'cargando';
+    adjuntosProyectoData = [];
+    $('#timeline_adjuntos').empty();
+    fntEstadoColeccionProyecto('adjuntos', 'cargando');
+    peticionAdjuntosProyecto = $.ajax({
+        type: 'POST', url: base_url + '/seguimiento/getAdjuntosProyecto', data: {venta_id: ventaId}, dataType: 'json',
         success: function (resp) {
-            $("#loading_adjuntos").addClass("d-none");
-
-            if (resp.respuesta !== "ok" || !Array.isArray(resp.data) || resp.data.length === 0) {
-                adjuntosProyectoData = [];
-                $("#badge_total_adjuntos").text(0);
-                $("#sin_adjuntos").removeClass("d-none");
-                return;
-            }
-
+            if (version !== versionDetalleProyecto || String(ventaId) !== String(ventaIdSeleccionado)) return;
+            if (!resp || resp.respuesta !== 'ok' || !Array.isArray(resp.data)) { estadoColeccionesProyecto.adjuntos = 'error'; fntEstadoColeccionProyecto('adjuntos', 'error'); return; }
+            estadoColeccionesProyecto.adjuntos = 'listo';
             adjuntosProyectoData = resp.data;
-            $("#badge_total_adjuntos").text(adjuntosProyectoData.length);
-            fntRenderizarTimelineAdjuntosPagina(1);
+            fntEstadoColeccionProyecto('adjuntos', resp.data.length ? 'datos' : 'vacio');
+            $('#badge_total_adjuntos').text(resp.data.length);
+            if (resp.data.length) fntRenderizarTimelineAdjuntosPagina(1);
         },
-        error: function (xhr, status, error) {
-            adjuntosProyectoData = [];
-            $("#badge_total_adjuntos").text(0);
-            $("#loading_adjuntos").addClass("d-none");
-            $("#sin_adjuntos").removeClass("d-none");
-            console.error("Error al cargar adjuntos del proyecto:", error);
+        error: function (xhr, status) {
+            if (version !== versionDetalleProyecto || String(ventaId) !== String(ventaIdSeleccionado) || status === 'abort') return;
+            estadoColeccionesProyecto.adjuntos = 'error';
+            fntEstadoColeccionProyecto('adjuntos', 'error');
         }
     });
 }
@@ -898,7 +1022,7 @@ function fntRenderizarTimelineAdjuntosPagina(pagina) {
 
     itemsPagina.forEach(function (adj, indexInPage) {
         var fileName = (adj.archivo || '').trim();
-        var fileUrl = base_url + '/Assets/files/ventas/' + encodeURIComponent(fileName);
+        var fileUrl = fntEscapeHtml(base_url + '/seguimiento/getArchivoProyecto?venta_id=' + encodeURIComponent(ventaIdSeleccionado) + '&archivo=' + encodeURIComponent(fileName));
         var fileExt = fileName.split('.').pop().toLowerCase();
 
         var fileIconClass = 'fa-file-lines text-warning';
@@ -1051,7 +1175,11 @@ function fntRenderPartidasProyecto(partidasObj) {
     } else if (origenEtiqueta.indexOf("Proyecto") !== -1) {
         badgeClass = "badge bg-secondary fs-12 px-2.5 py-1";
     }
-    $("#lblOrigenPartidasBadge").attr("class", badgeClass).text(origenEtiqueta);
+    var documento = partidasObj && partidasObj.documento ? partidasObj.documento : (partidas[0] || {});
+    var monedaPartidas = fntMonedaProyecto(documento);
+    var folioDocumento = documento.folio || documento.folio_documento || documento.documento_id || '';
+    var detalleOrigen = origenEtiqueta + (folioDocumento ? ' · ' + (origenEtiqueta === 'Proyecto de Venta' ? 'Documento: ' : 'Último documento: ') + folioDocumento : '') + (partidas.length ? ' · ' + monedaPartidas : '');
+    $('#lblOrigenPartidasBadge').attr('class', badgeClass).attr('title', detalleOrigen).addClass('text-wrap').text(detalleOrigen);
 
     // Destruir DataTable previo si existe
     if (tablePartidasProyecto !== null) {
@@ -1059,6 +1187,7 @@ function fntRenderPartidasProyecto(partidasObj) {
         tablePartidasProyecto = null;
     }
 
+    // Los datos comerciales son texto: escapar antes de admitir solo saltos de línea.
     // Llenar filas en el tbody
     var tbodyHtml = "";
     if (partidas.length > 0) {
@@ -1068,8 +1197,8 @@ function fntRenderPartidasProyecto(partidasObj) {
             var clave = item.clave || "—";
             var ccn = item.ccn || "—";
             var codCliente = item.codigo_cliente || "—";
-            var desc = item.descripcion ? String(item.descripcion).replace(/\r?\n/g, "<br>") : "Sin descripción";
-            var descAdic = item.descripcion_adicional ? String(item.descripcion_adicional).replace(/\r?\n/g, "<br>") : "—";
+            var desc = item.descripcion ? fntEscapeHtml(item.descripcion).replace(/\r?\n/g, "<br>") : "Sin descripción";
+            var descAdic = item.descripcion_adicional ? fntEscapeHtml(item.descripcion_adicional).replace(/\r?\n/g, "<br>") : "—";
             var cant = parseFloat(item.cantidad || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             var prec = parseFloat(item.precio_unitario || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             var descMonto = parseFloat(item.descuento || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1078,17 +1207,17 @@ function fntRenderPartidasProyecto(partidasObj) {
 
             tbodyHtml += '<tr>' +
                 '<td class="text-center fw-bold text-muted">' + num + '</td>' +
-                '<td class="text-center fw-bold text-primary">' + cod + '</td>' +
-                '<td class="text-center">' + clave + '</td>' +
-                '<td class="text-center">' + ccn + '</td>' +
-                '<td class="text-center">' + codCliente + '</td>' +
+                '<td class="text-center fw-bold text-primary">' + fntEscapeHtml(cod) + '</td>' +
+                '<td class="text-center">' + fntEscapeHtml(clave) + '</td>' +
+                '<td class="text-center">' + fntEscapeHtml(ccn) + '</td>' +
+                '<td class="text-center">' + fntEscapeHtml(codCliente) + '</td>' +
                 '<td class="text-wrap" style="min-width: 350px; white-space: pre-wrap;">' + desc + '</td>' +
                 '<td class="text-wrap" style="min-width: 450px; white-space: pre-wrap;">' + descAdic + '</td>' +
                 '<td class="text-end fw-semibold">' + cant + '</td>' +
-                '<td class="text-end">$ ' + prec + '</td>' +
-                '<td class="text-end">$ ' + descMonto + '</td>' +
-                '<td class="text-end">$ ' + impImpuesto + '</td>' +
-                '<td class="text-end fw-bold text-dark">$ ' + sub + '</td>' +
+                '<td class="text-end">' + fntEscapeHtml(monedaPartidas) + ' $ ' + prec + '</td>' +
+                '<td class="text-end">' + fntEscapeHtml(monedaPartidas) + ' $ ' + descMonto + '</td>' +
+                '<td class="text-end">' + fntEscapeHtml(monedaPartidas) + ' $ ' + impImpuesto + '</td>' +
+                '<td class="text-end fw-bold text-dark">' + fntEscapeHtml(monedaPartidas) + ' $ ' + sub + '</td>' +
                 '</tr>';
         });
     }
@@ -1097,6 +1226,8 @@ function fntRenderPartidasProyecto(partidasObj) {
 
     // Re-inicializar DataTables
     tablePartidasProyecto = LfmTables.create($("#tablePartidasProyecto"), {
+        clearColumnFilters: true,
+        initComplete: function () { fntPermisoExcelProyecto(this.api()); },
         orderCellsTop: true,
         fixedHeader: true,
         scrollX: "100%",

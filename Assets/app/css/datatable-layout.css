@@ -145,3 +145,25 @@ html.dark .lfm-dt-wrapper { --lfm-dt-text: #edf2f7; --lfm-dt-muted: #cbd5e1; }
         border-color: #00809f !important;
     }
 }
+
+/* Acción optativa de limpieza: excepción acotada a la cabecera de tabla y sus clones. */
+@layer lfm-dt-controls {
+    :is(.lfm-dt-wrapper, table.lfm-datatable.fixedHeader-floating, table.lfm-datatable.fixedHeader-locked) .lfm-dt-clear-columns {
+        width: 34px !important; height: 34px !important; min-height: 34px !important;
+        padding: 6px !important; border-radius: 0 !important; line-height: 20px !important;
+        color: #475569; border-color: #94a3b8; background-color: #fff;
+    }
+    html.dark :is(.lfm-dt-wrapper, table.lfm-datatable.fixedHeader-floating, table.lfm-datatable.fixedHeader-locked) .lfm-dt-clear-columns { color: #edf2f7; background-color: #253346; border-color: #60768c; }
+    :is(.lfm-dt-wrapper, table.lfm-datatable.fixedHeader-floating, table.lfm-datatable.fixedHeader-locked) .lfm-dt-clear-columns:focus-visible { outline: 2px solid #80bdff; outline-offset: 2px; }
+}
+
+@layer lfm-dt-controls {
+    .lfm-dt-filter-tools { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .lfm-dt-filter-tools > :is(input, select) { min-width: 34px !important; width: 34px !important; flex: 1 1 34px; }
+    .lfm-dt-filter-tools > .lfm-dt-clear-columns { flex: 0 0 34px; }
+}
+
+/* La cabecera de medición no ofrece controles duplicados al teclado. */
+@layer lfm-dt-controls {
+    .lfm-dt-wrapper .dataTables_scrollBody thead :is(input, select, button) { visibility: hidden !important; }
+}

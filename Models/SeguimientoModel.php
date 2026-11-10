@@ -17,6 +17,7 @@ class SeguimientoModel extends Mysql
      * @param string $busqueda
      * @param string $ccveusuario_vendedor
      * @return array
+     * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
     public function buscarProyectosVenta(string $busqueda, string $ccveusuario_vendedor = ''): array
     {
@@ -60,9 +61,10 @@ class SeguimientoModel extends Mysql
 
             $sql .= " ORDER BY v.id DESC LIMIT 20";
 
-            $arrResponse = $this->select($sql, $arr_values);
+            $arrResponse = $this->selectOrFail($sql, $arr_values);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            throw $th;
         }
 
         return $arrResponse;
@@ -74,6 +76,7 @@ class SeguimientoModel extends Mysql
      * @param int $venta_id
      * @param string $ccveusuario_vendedor
      * @return array
+     * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
     public function getProyectoVentaById(int $venta_id, string $ccveusuario_vendedor = ''): array
     {
@@ -115,20 +118,23 @@ class SeguimientoModel extends Mysql
                 $arr_values['ccveusuario_vendedor'] = $ccveusuario_vendedor;
             }
 
-            $arrResponse = $this->selectModel($sql, $arr_values);
+            $arrResponse = $this->selectOrFail($sql, $arr_values, true);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            throw $th;
         }
 
         return $arrResponse;
     }
 
     /**
-     * Evalúa el checklist del proceso para los estatus ID 1 al 7
+     * Evalúa documentos por etapa; en estatus 2 conserva avance histórico y marca cancelación.
+     * Las consultas fallidas se propagan; no equivalen a etapas sin documentos.
      * 
      * @param int $venta_id
      * @param int $estatus_proyecto_id
      * @return array
+     * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
     public function getChecklistProceso(int $venta_id, int $estatus_proyecto_id): array
     {
@@ -137,7 +143,7 @@ class SeguimientoModel extends Mysql
         try {
             // Obtener del catálogo de estatus del 1 al 7 (excluyendo el Id 2 - Cancelado)
             $sqlCat = "SELECT Id, cEstatus FROM cat_estatus_proyecto WHERE Id IN (1, 3, 4, 5, 6, 7) ORDER BY Id ASC";
-            $arrCat = $this->select($sqlCat, []);
+            $arrCat = $this->selectOrFail($sqlCat, []);
 
             foreach ($arrCat as $cat) {
                 $catId = (int)$cat['Id'];
@@ -147,7 +153,7 @@ class SeguimientoModel extends Mysql
                     'id'            => $catId,
                     'nombre'        => $nombreEstatus,
                     'completado'    => false,
-                    'is_cancelado'  => false,
+                    'is_cancelado'  => $estatus_proyecto_id === 2,
                     'mensaje'       => '',
                     'registros'     => array()
                 );
@@ -156,9 +162,9 @@ class SeguimientoModel extends Mysql
                     case 1:
                         // Id 1: OPORTUNIDAD DE VENTA (INICIO PROCESO) - Checar si hay registro en tb_ventas
                         $sqlVenta = "SELECT id, proyecto_id, titulo, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, total, subtotal, COALESCE(descuento, 0) AS descuento, iva, moneda_id, 
-                                     CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                     CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda 
                                      FROM tb_ventas WHERE id = :vId";
-                        $regVenta = $this->select($sqlVenta, ['vId' => $venta_id]);
+                        $regVenta = $this->selectOrFail($sqlVenta, ['vId' => $venta_id]);
                         if (!empty($regVenta)) {
                             $item['completado'] = true;
                             $item['mensaje']    = 'Registro de Oportunidad de Venta generado.';
@@ -171,11 +177,11 @@ class SeguimientoModel extends Mysql
                     case 3:
                         // Id 3: EN PROCESO DE COTIZACION - Checar si hay registro en tb_compras_cotizaciones
                         $sqlCc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
-                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda 
                                   FROM tb_compras_cotizaciones 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
-                        $regCc = $this->select($sqlCc, ['vId' => $venta_id]);
+                        $regCc = $this->selectOrFail($sqlCc, ['vId' => $venta_id]);
                         if (!empty($regCc)) {
                             $item['completado'] = true;
                             $item['mensaje']    = count($regCc) . ' cotización(es) de compras finalizada(s).';
@@ -188,11 +194,11 @@ class SeguimientoModel extends Mysql
                     case 4:
                         // Id 4: COTIZACION INTERNA ELABORADA - Checar si hay registro en tb_compras_cotizacion_interna
                         $sqlCi = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, iva, total, enviado, moneda_id, 
-                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda 
                                   FROM tb_compras_cotizacion_interna 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
-                        $regCi = $this->select($sqlCi, ['vId' => $venta_id]);
+                        $regCi = $this->selectOrFail($sqlCi, ['vId' => $venta_id]);
                         if (!empty($regCi)) {
                             $item['completado'] = true;
                             $item['mensaje']    = count($regCi) . ' cotización(es) interna(s) finalizada(s).';
@@ -205,11 +211,11 @@ class SeguimientoModel extends Mysql
                     case 5:
                         // Id 5: COTIZACION CLIENTE ELABORADA - Checar si hay registro en tb_ventas_cotizacion_cliente
                         $sqlVc = "SELECT id, folio_cotizacion, fecha, DATE_FORMAT(fecha, '%d/%m/%Y') AS fecha_formateada, subtotal, COALESCE(descuento, 0) AS descuento, iva, total, enviado, moneda_id, 
-                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda 
                                   FROM tb_ventas_cotizacion_cliente 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
-                        $regVc = $this->select($sqlVc, ['vId' => $venta_id]);
+                        $regVc = $this->selectOrFail($sqlVc, ['vId' => $venta_id]);
                         if (!empty($regVc)) {
                             $item['completado'] = true;
                             $item['mensaje']    = count($regVc) . ' cotización(es) a cliente finalizada(s).';
@@ -231,13 +237,13 @@ class SeguimientoModel extends Mysql
                                          COALESCE(pc.iva, 0) AS iva, 
                                          COALESCE(pc.total, 0) AS total, 
                                          pc.enviado, 
-                                         COALESCE(v.moneda_id, 3) AS moneda_id, 
-                                         CASE WHEN COALESCE(v.moneda_id, 3) = 1 THEN 'MXN' WHEN COALESCE(v.moneda_id, 3) = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                         v.moneda_id AS moneda_id, 
+                                         CASE WHEN v.moneda_id = 1 THEN 'MXN' WHEN v.moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda 
                                   FROM tb_pedidos_cliente pc
                                   LEFT JOIN tb_ventas v ON v.id = pc.venta_id
                                   WHERE pc.venta_id = :vId AND pc.enviado = 1 
                                   ORDER BY pc.id DESC";
-                        $regOc = $this->select($sqlOc, ['vId' => $venta_id]);
+                        $regOc = $this->selectOrFail($sqlOc, ['vId' => $venta_id]);
                         if (!empty($regOc)) {
                             $item['completado'] = true;
                             $item['mensaje']    = count($regOc) . ' orden(es) de compra / cotización cliente confirmada(s).';
@@ -250,11 +256,11 @@ class SeguimientoModel extends Mysql
                     case 7:
                         // Id 7: ORDEN COMPRA PROVEEDOR (PEDIDO ELABORADO) - Checar si hay registro en tb_pedidos_proveedor
                         $sqlPp = "SELECT id, folio_ocp, fecha_pedido, DATE_FORMAT(fecha_pedido, '%d/%m/%Y') AS fecha_formateada, subtotal, COALESCE(descuento, 0) AS descuento, iva, total, enviado, moneda_id, 
-                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE 'USD' END AS cmoneda 
+                                  CASE WHEN moneda_id = 1 THEN 'MXN' WHEN moneda_id = 3 THEN 'USD' ELSE '' END AS cmoneda 
                                   FROM tb_pedidos_proveedor 
                                   WHERE venta_id = :vId AND enviado = 1 
                                   ORDER BY id DESC";
-                        $regPp = $this->select($sqlPp, ['vId' => $venta_id]);
+                        $regPp = $this->selectOrFail($sqlPp, ['vId' => $venta_id]);
                         if (!empty($regPp)) {
                             $item['completado'] = true;
                             $item['mensaje']    = count($regPp) . ' orden(es) de compra a proveedor finalizada(s).';
@@ -269,6 +275,7 @@ class SeguimientoModel extends Mysql
             }
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            throw $th;
         }
 
         return $checklist;
@@ -285,6 +292,7 @@ class SeguimientoModel extends Mysql
      * @param string $vendedor
      * @param string $ccveusuario_vendedor
      * @return array
+     * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
     public function selectProyectosVentaSeguimiento(
         string $fecha_ini = '',
@@ -361,17 +369,19 @@ class SeguimientoModel extends Mysql
 
             $sql .= " ORDER BY v.id DESC";
 
-            $arrResponse = $this->select($sql, $arr_values);
+            $arrResponse = $this->selectOrFail($sql, $arr_values);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            throw $th;
         }
 
         return $arrResponse;
     }
 
     /**
-     * Obtiene todos los archivos adjuntos vinculados a un proyecto de venta
-     * ordenados por las 6 tablas especificadas:
+     * Obtiene todos los adjuntos del proyecto en una sola consulta UNION ALL.
+     * Conserva duplicados, campos y orden por origen/id; no modifica autorización ni filtros.
+     * Orígenes:
      * 1. tb_ventas_adjuntos
      * 2. tb_compras_cotizaciones_adjuntos
      * 3. tb_compras_cotizacion_interna_adjuntos
@@ -381,6 +391,7 @@ class SeguimientoModel extends Mysql
      *
      * @param int $venta_id
      * @return array
+     * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
     public function getAdjuntosProyectoVenta(int $venta_id): array
     {
@@ -402,10 +413,7 @@ class SeguimientoModel extends Mysql
                     LEFT JOIN cat_medico u ON u.ccvemedico = va.ccveusuario
                     WHERE va.venta_id = :venta_id AND va.archivo IS NOT NULL AND TRIM(va.archivo) != ''
                     ORDER BY va.id ASC";
-            $res1 = $this->select($sql1, ['venta_id' => $venta_id]);
-            if (!empty($res1)) {
-                $arrResponse = array_merge($arrResponse, $res1);
-            }
+
 
             // 2. tb_compras_cotizaciones_adjuntos
             $sql2 = "SELECT 
@@ -422,10 +430,7 @@ class SeguimientoModel extends Mysql
                     FROM tb_compras_cotizaciones_adjuntos ca
                     WHERE ca.venta_id = :venta_id AND ca.archivo IS NOT NULL AND TRIM(ca.archivo) != ''
                     ORDER BY ca.id ASC";
-            $res2 = $this->select($sql2, ['venta_id' => $venta_id]);
-            if (!empty($res2)) {
-                $arrResponse = array_merge($arrResponse, $res2);
-            }
+
 
             // 3. tb_compras_cotizacion_interna_adjuntos
             $sql3 = "SELECT 
@@ -442,10 +447,7 @@ class SeguimientoModel extends Mysql
                     FROM tb_compras_cotizacion_interna_adjuntos cia
                     WHERE cia.venta_id = :venta_id AND cia.archivo IS NOT NULL AND TRIM(cia.archivo) != ''
                     ORDER BY cia.id ASC";
-            $res3 = $this->select($sql3, ['venta_id' => $venta_id]);
-            if (!empty($res3)) {
-                $arrResponse = array_merge($arrResponse, $res3);
-            }
+
 
             // 4. tb_ventas_cotizacion_cliente_adjuntos
             $sql4 = "SELECT 
@@ -462,10 +464,7 @@ class SeguimientoModel extends Mysql
                     FROM tb_ventas_cotizacion_cliente_adjuntos vca
                     WHERE vca.venta_id = :venta_id AND vca.archivo IS NOT NULL AND TRIM(vca.archivo) != ''
                     ORDER BY vca.id ASC";
-            $res4 = $this->select($sql4, ['venta_id' => $venta_id]);
-            if (!empty($res4)) {
-                $arrResponse = array_merge($arrResponse, $res4);
-            }
+
 
             // 5. Adjuntos de OCC exclusivamente finalizadas; un archivo no valida su encabezado.
             $sql5 = "SELECT 
@@ -483,10 +482,7 @@ class SeguimientoModel extends Mysql
                     INNER JOIN tb_pedidos_cliente pc ON pc.id = pca.pedidos_cliente_id AND pc.enviado = 1
                     WHERE pca.venta_id = :venta_id AND pca.archivo IS NOT NULL AND TRIM(pca.archivo) != ''
                     ORDER BY pca.id ASC";
-            $res5 = $this->select($sql5, ['venta_id' => $venta_id]);
-            if (!empty($res5)) {
-                $arrResponse = array_merge($arrResponse, $res5);
-            }
+
 
             // 6. Adjuntos de OCP exclusivamente finalizadas (enviado = 1).
             $sql6 = "SELECT 
@@ -504,19 +500,35 @@ class SeguimientoModel extends Mysql
                     INNER JOIN tb_pedidos_proveedor pp ON pp.id = ppa.pedido_proveedor_id AND pp.enviado = 1
                     WHERE ppa.venta_id = :venta_id AND ppa.archivo IS NOT NULL AND TRIM(ppa.archivo) != ''
                     ORDER BY ppa.id ASC";
-            $res6 = $this->select($sql6, ['venta_id' => $venta_id]);
-            if (!empty($res6)) {
-                $arrResponse = array_merge($arrResponse, $res6);
+
+            // Un viaje a la conexión conserva los seis orígenes y su orden anterior.
+            // Parámetros distintos: compatible también con PDO sin emulación de preparados.
+            $origenes = [];
+            $parametros = [];
+            foreach ([$sql1, $sql2, $sql3, $sql4, $sql5, $sql6] as $indice => $consulta) {
+                $orden = $indice + 1;
+                $consulta = preg_replace('/\s+ORDER BY [a-z]+\.id ASC$/', '', trim($consulta));
+                $consulta = preg_replace('/^SELECT\s+/', 'SELECT ' . $orden . ' AS orden_origen, ', $consulta, 1);
+                $origenes[] = str_replace(':venta_id', ':venta_id_' . $orden, $consulta);
+                $parametros['venta_id_' . $orden] = $venta_id;
             }
+            $sql = 'SELECT id, venta_id, archivo, comentarios, fecha, fecha_formateada, nombre_usuario,
+                           tabla_origen, origen_etiqueta, badge_color
+                    FROM (' . implode(' UNION ALL ', $origenes) . ') adjuntos_proyecto
+                    ORDER BY orden_origen ASC, id ASC';
+            $arrResponse = $this->selectOrFail($sql, $parametros);
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
+            throw $th;
         }
 
         return $arrResponse;
     }
 
     /**
-     * Obtiene la lista de partidas del proyecto de venta en orden de prioridad:
+     * Obtiene partidas del último documento con filas en la etapa de mayor prioridad.
+     * Incluye documento/moneda; un error se propaga sin sustituirlo por etapas anteriores.
+     * Orden de prioridad:
      * 1) tb_pedidos_cliente_detalle (si tb_pedidos_cliente.enviado = 1)
      * 2) tb_ventas_cotizacion_cliente_detalle (si tb_ventas_cotizacion_cliente.enviado IN (1, 0))
      * 3) tb_compras_cotizacion_interna_detalle (si tb_compras_cotizacion_interna.enviado = 1)
@@ -524,6 +536,7 @@ class SeguimientoModel extends Mysql
      * 
      * @param int $venta_id
      * @return array
+     * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
     public function getPartidasProyecto(int $venta_id): array
     {
@@ -548,6 +561,9 @@ class SeguimientoModel extends Mysql
                 return array(
                     'id'                     => $row['id'] ?? 0,
                     'folio_documento'        => $row['Folio_Documento'] ?? '',
+                    'documento_id'           => (int)($row['documento_id'] ?? 0),
+                    'moneda_id'              => isset($row['moneda_id']) ? (int)$row['moneda_id'] : null,
+                    'cmoneda'                => (int)($row['moneda_id'] ?? 0) === 1 ? 'MXN' : ((int)($row['moneda_id'] ?? 0) === 3 ? 'USD' : ''),
                     'codigo_partida'         => $cod,
                     'descripcion'            => !empty($row['descripcion']) ? $row['descripcion'] : 'Sin descripción',
                     'descripcion_adicional'  => $row['descripcion_adicional'] ?? '',
@@ -574,6 +590,8 @@ class SeguimientoModel extends Mysql
             // =========================================================================
             $sql1 = "SELECT
                        pdet.id,
+                       ped.id AS documento_id,
+                       v.moneda_id AS moneda_id,
                        ped.num_orden_compra AS Folio_Documento,
                        vd.codigo_partida,
                        IFNULL(pdet.descripcion, vd.descripcion) AS descripcion,
@@ -604,7 +622,7 @@ class SeguimientoModel extends Mysql
                        ORDER BY vd.codigo_partida ASC, pdet.id ASC";
 
             try {
-                $res1 = $this->select($sql1, ['venta_id' => $venta_id]);
+                $res1 = $this->selectOrFail($sql1, ['venta_id' => $venta_id]);
                 if (!empty($res1)) {
                     $partidas1 = array();
                     foreach ($res1 as $row) {
@@ -614,11 +632,20 @@ class SeguimientoModel extends Mysql
                         $arrResponse['origen_tabla']    = 'tb_pedidos_cliente_detalle';
                         $arrResponse['origen_etiqueta'] = 'Orden de Compra Cliente';
                         $arrResponse['partidas']        = $partidas1;
+                        // Se conserva el último documento con partidas, sin sumar revisiones.
+                        $arrResponse['documento'] = [
+                            'id' => $partidas1[0]['documento_id'],
+                            'folio' => $partidas1[0]['folio_documento'],
+                            'moneda_id' => $partidas1[0]['moneda_id'],
+                            'cmoneda' => $partidas1[0]['cmoneda'],
+                            'criterio' => "Último documento con partidas de la etapa"
+                        ];
                         return $arrResponse;
                     }
                 }
             } catch (\Throwable $e1) {
                 getLoggerSystem()->error('Error Prioridad 1 Partidas: ' . getMensajeError($e1));
+                throw $e1;
             }
 
             // =========================================================================
@@ -626,6 +653,8 @@ class SeguimientoModel extends Mysql
             // =========================================================================
             $sql2 = "SELECT
                        pdet.id,
+                       ped.id AS documento_id,
+                       ped.moneda_id AS moneda_id,
                        ped.folio_cotizacion AS Folio_Documento,
                        vd.codigo_partida,
                        IFNULL(pdet.descripcion_proveedor, vd.descripcion) AS descripcion,
@@ -656,7 +685,7 @@ class SeguimientoModel extends Mysql
                        ORDER BY vd.codigo_partida ASC, pdet.id ASC";
 
             try {
-                $res2 = $this->select($sql2, ['venta_id' => $venta_id]);
+                $res2 = $this->selectOrFail($sql2, ['venta_id' => $venta_id]);
                 if (!empty($res2)) {
                     $partidas2 = array();
                     foreach ($res2 as $row) {
@@ -666,11 +695,20 @@ class SeguimientoModel extends Mysql
                         $arrResponse['origen_tabla']    = 'tb_ventas_cotizacion_cliente_detalle';
                         $arrResponse['origen_etiqueta'] = 'Cotización de Cliente';
                         $arrResponse['partidas']        = $partidas2;
+                        // Se conserva el último documento con partidas, sin sumar revisiones.
+                        $arrResponse['documento'] = [
+                            'id' => $partidas2[0]['documento_id'],
+                            'folio' => $partidas2[0]['folio_documento'],
+                            'moneda_id' => $partidas2[0]['moneda_id'],
+                            'cmoneda' => $partidas2[0]['cmoneda'],
+                            'criterio' => "Último documento con partidas de la etapa"
+                        ];
                         return $arrResponse;
                     }
                 }
             } catch (\Throwable $e2) {
                 getLoggerSystem()->error('Error Prioridad 2 Partidas: ' . getMensajeError($e2));
+                throw $e2;
             }
 
             // =========================================================================
@@ -678,6 +716,8 @@ class SeguimientoModel extends Mysql
             // =========================================================================
             $sql3 = "SELECT
                        pdet.id,
+                       ped.id AS documento_id,
+                       ped.moneda_id AS moneda_id,
                        ped.folio_cotizacion AS Folio_Documento,
                        vd.codigo_partida,
                        IFNULL(pdet.descripcion_proveedor, vd.descripcion) AS descripcion,
@@ -708,7 +748,7 @@ class SeguimientoModel extends Mysql
                        ORDER BY vd.codigo_partida ASC, pdet.id ASC";
 
             try {
-                $res3 = $this->select($sql3, ['venta_id' => $venta_id]);
+                $res3 = $this->selectOrFail($sql3, ['venta_id' => $venta_id]);
                 if (!empty($res3)) {
                     $partidas3 = array();
                     foreach ($res3 as $row) {
@@ -718,11 +758,20 @@ class SeguimientoModel extends Mysql
                         $arrResponse['origen_tabla']    = 'tb_compras_cotizacion_interna_detalle';
                         $arrResponse['origen_etiqueta'] = 'Cotización Interna';
                         $arrResponse['partidas']        = $partidas3;
+                        // Se conserva el último documento con partidas, sin sumar revisiones.
+                        $arrResponse['documento'] = [
+                            'id' => $partidas3[0]['documento_id'],
+                            'folio' => $partidas3[0]['folio_documento'],
+                            'moneda_id' => $partidas3[0]['moneda_id'],
+                            'cmoneda' => $partidas3[0]['cmoneda'],
+                            'criterio' => "Último documento con partidas de la etapa"
+                        ];
                         return $arrResponse;
                     }
                 }
             } catch (\Throwable $e3) {
                 getLoggerSystem()->error('Error Prioridad 3 Partidas: ' . getMensajeError($e3));
+                throw $e3;
             }
 
             // =========================================================================
@@ -730,6 +779,8 @@ class SeguimientoModel extends Mysql
             // =========================================================================
             $sql4 = "SELECT
                        pdet.id,
+                       ped.id AS documento_id,
+                       ped.moneda_id AS moneda_id,
                        ped.proyecto_id AS Folio_Documento,
                        pdet.codigo_partida,
                        pdet.descripcion AS descripcion,
@@ -754,7 +805,7 @@ class SeguimientoModel extends Mysql
                        ORDER BY pdet.codigo_partida ASC, pdet.id ASC";
 
             try {
-                $res4 = $this->select($sql4, ['venta_id' => $venta_id]);
+                $res4 = $this->selectOrFail($sql4, ['venta_id' => $venta_id]);
                 if (!empty($res4)) {
                     $partidas4 = array();
                     foreach ($res4 as $row) {
@@ -764,14 +815,24 @@ class SeguimientoModel extends Mysql
                         $arrResponse['origen_tabla']    = 'tb_ventas_detalle';
                         $arrResponse['origen_etiqueta'] = 'Proyecto de Venta';
                         $arrResponse['partidas']        = $partidas4;
+                        // Se conserva el último documento con partidas, sin sumar revisiones.
+                        $arrResponse['documento'] = [
+                            'id' => $partidas4[0]['documento_id'],
+                            'folio' => $partidas4[0]['folio_documento'],
+                            'moneda_id' => $partidas4[0]['moneda_id'],
+                            'cmoneda' => $partidas4[0]['cmoneda'],
+                            'criterio' => "Proyecto de venta"
+                        ];
                         return $arrResponse;
                     }
                 }
             } catch (\Throwable $e4) {
                 getLoggerSystem()->error('Error Prioridad 4 Partidas: ' . getMensajeError($e4));
+                throw $e4;
             }
         } catch (\Throwable $th) {
             getLoggerSystem()->error('Error getPartidasProyecto: ' . getMensajeError($th));
+            throw $th;
         }
 
         return $arrResponse;

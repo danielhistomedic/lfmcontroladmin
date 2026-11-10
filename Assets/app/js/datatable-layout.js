@@ -7,6 +7,7 @@
     if (!$ || !$.fn.dataTable) return;
 
     const menu = [[5, 10, 25, 50, 100, -1], [5, 10, 25, 50, 100, 'Todos']];
+    const filterTimers = new WeakMap();
     const actionName = /^(?:opciones|acciones|acción|accion|options|actions)$/i;
 
     /** Identifica columnas de acciones por contrato o encabezado, sin asumir un índice. */
@@ -18,7 +19,10 @@
         }, []);
     }
 
-    /** Completa filtros simples y conserva los eventos de filtros especializados existentes. */
+    /** Completa filtros simples y conserva los eventos especializados existentes.
+     * clearColumnFilters=true agrega limpieza solo para la instancia solicitante:
+     * cancela debounce y borra búsquedas de columna, conservando búsqueda global y visibilidad.
+     */
     function filters(table, options, actions) {
         const head = table.tHead;
         const rows = Array.from(head.rows);
@@ -30,6 +34,8 @@
         filterRows.forEach(old => old.remove());
         if (!row) return;
         row.classList.add('lfm-dt-filters');
+        const timers = new Set();
+        filterTimers.set(table, timers);
         const newRow = row.cells.length === 0;
         Array.from(titles.cells).forEach(function (header, index) {
             const cell = newRow ? document.createElement('th') : row.cells[index];
@@ -44,16 +50,23 @@
                 input.type = 'search';
                 input.className = 'form-control text-center';
                 cell.appendChild(input);
+                input.dataset.lfmGeneratedFilter = '1';
+            }
+            // Reconstruir la tabla no debe conservar closures de temporizadores anteriores.
+            if (input && input.dataset.lfmGeneratedFilter === '1') {
+                $(input).off('.lfmFilter');
                 let timer;
                 $(input).on('input.lfmFilter keyup.lfmFilter change.lfmFilter', function () {
-                    clearTimeout(timer);
+                    clearTimeout(timer); timers.delete(timer);
                     timer = setTimeout(function () {
+                        timers.delete(timer);
                         if (!$.fn.dataTable.isDataTable(table)) return;
                         const api = $(table).DataTable();
                         if (api.column(index).search() !== input.value) api.column(index).search(input.value).draw();
                     }, options.serverSide ? (options.searchDelay || 400) : 150);
+                    timers.add(timer);
                 });
-                $(table).one('destroy.dt.lfmFilter', function () { clearTimeout(timer); });
+                $(table).one('destroy.dt.lfmFilter', function () { clearTimeout(timer); timers.delete(timer); });
             }
             if (input) {
                 const label = 'Filtrar ' + header.textContent.trim();
@@ -62,6 +75,33 @@
                 $(input).off('.lfmFilterFocus').on('click.lfmFilterFocus keydown.lfmFilterFocus', function (event) { event.stopPropagation(); });
             }
         });
+        if (options.clearColumnFilters === true && row.cells[0]) {
+            row.cells[0].querySelectorAll('.lfm-dt-clear-columns').forEach(nodo => nodo.remove());
+            const boton = document.createElement('button');
+            boton.type = 'button'; boton.className = 'btn btn-outline-secondary lfm-dt-clear-columns';
+            boton.title = 'Limpiar filtros de columna'; boton.setAttribute('aria-label', boton.title);
+            boton.innerHTML = '<i class="fa-regular fa-filter-circle-xmark" aria-hidden="true"></i>';
+            $(boton).on('click.lfmClearColumns', function (event) {
+                event.preventDefault(); event.stopPropagation();
+                if (!$.fn.dataTable.isDataTable(table)) return;
+                (filterTimers.get(table) || []).forEach(timer => clearTimeout(timer));
+                if (filterTimers.has(table)) filterTimers.get(table).clear();
+                const api = $(table).DataTable();
+                // Se vacían también los nodos originales y la cabecera movida por FixedHeader.
+                $(api.table().header()).find('.lfm-dt-filters input, .lfm-dt-filters select').val('');
+                $(table).find('.lfm-dt-filters input, .lfm-dt-filters select').val('');
+                api.columns().search('').draw();
+            });
+            $(boton).on('keydown.lfmClearColumns', event => event.stopPropagation());
+            let grupo = row.cells[0].querySelector('.lfm-dt-filter-tools');
+            if (!grupo) {
+                grupo = document.createElement('div'); grupo.className = 'lfm-dt-filter-tools';
+                const filtroPrimero = row.cells[0].querySelector('input, select');
+                if (filtroPrimero) grupo.appendChild(filtroPrimero);
+                row.cells[0].appendChild(grupo);
+            }
+            grupo.appendChild(boton);
+        }
     }
 
     /** Conserva exportadores especiales y limita los genéricos a datos visibles. */
