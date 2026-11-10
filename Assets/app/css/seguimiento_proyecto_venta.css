@@ -1,0 +1,89 @@
+/** Seguimiento de proyectos: mismo esquema visual que Órdenes de Compra Clientes.
+ * Familia, labels, campos, botones y DataTables conservan sus recursos centrales. */
+.proyecto-venta-page {
+    --pv-accent: #075985;
+    --pv-green-bg: #eaf6ef; --pv-green-text: #245b3e; --pv-green-border: #bedcc9;
+    --pv-amber-bg: #fff6df; --pv-amber-text: #75560b; --pv-amber-border: #ead9a4;
+    --pv-red-bg: #fcebed; --pv-red-text: #8b3540; --pv-red-border: #ebc4ca;
+    --pv-blue-bg: #eaf1ff; --pv-blue-text: #315a91; --pv-blue-border: #c8d6ed;
+    --pv-gray-bg: #eef1f4; --pv-gray-text: #4b5563; --pv-gray-border: #d3d9e0;
+    --pv-cyan-bg: #e9f6fa; --pv-cyan-text: #155d70; --pv-cyan-border: #bfe1ea;
+    font-family: var(--font-family-report);
+    font-size: var(--font-body, 14px);
+    line-height: var(--line-height-normal, 1.5);
+    color: var(--pv-text);
+}
+html.dark .proyecto-venta-page {
+    --pv-accent: #8bd5ff;
+    --pv-green-bg: #243d32; --pv-green-text: #b7dfc6; --pv-green-border: #466d58;
+    --pv-amber-bg: #423a25; --pv-amber-text: #ead69b; --pv-amber-border: #756540;
+    --pv-red-bg: #432d34; --pv-red-text: #ebbac2; --pv-red-border: #78515c;
+    --pv-blue-bg: #283b53; --pv-blue-text: #bcd3f2; --pv-blue-border: #4d6b91;
+    --pv-gray-bg: #303a46; --pv-gray-text: #d0d7df; --pv-gray-border: #586779;
+    --pv-cyan-bg: #253e49; --pv-cyan-text: #b5e0ee; --pv-cyan-border: #496d7d;
+}
+.proyecto-venta-page #panel_filtros.pv-filter-shell {
+    padding: 1.25rem; background: var(--pv-surface);
+    border: 1px solid #b2c4d7; border-radius: 8px;
+    box-shadow: 0 2px 5px rgb(15 40 70 / 10%), 0 8px 20px rgb(15 40 70 / 10%);
+}
+.proyecto-venta-page .pv-filter-main { display: grid; grid-template-columns: minmax(250px, 1.4fr) minmax(150px, .85fr) minmax(145px, .8fr) minmax(145px, .8fr) 135px; gap: 1rem; align-items: end; }
+.proyecto-venta-page .pv-filter-brand { display: flex; align-items: center; gap: .875rem; align-self: center; min-width: 0; }
+.proyecto-venta-page .pv-filter-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 10px; background: #eaf4fc; color: var(--pv-accent); font-size: 22px; }
+.proyecto-venta-page .pv-filter-brand h3 { margin: 0 0 .375rem; color: var(--pv-text); font-size: var(--font-report-title, 20px); font-weight: var(--font-weight-bold, 700); line-height: var(--line-height-heading, 1.25); }
+.proyecto-venta-page .pv-filter-brand p { margin: 0; color: var(--pv-muted); font-size: var(--font-small, 12px); line-height: var(--line-height-normal, 1.5); }
+.proyecto-venta-page .pv-filter-extra { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.proyecto-venta-page .pv-filter-main > *, .proyecto-venta-page .pv-filter-extra > * { min-width: 0; }
+.proyecto-venta-page .pv-filter-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--pv-border); color: var(--pv-muted); font-size: var(--font-small, 12px); }
+.proyecto-venta-page :is(#panel_lista_proyectos, #cardResumenProyecto > section, #cardChecklistProceso > section, #tab-detalle-seguimiento > .card, #tab-adjuntos-proyecto > .card, #tab-partidas-proyecto > .card) {
+    border: 1px solid #b2c4d7 !important; border-radius: 8px !important;
+    background-color: var(--pv-surface); box-shadow: 0 2px 5px rgb(15 40 70 / 10%), 0 8px 20px rgb(15 40 70 / 10%) !important;
+}
+.proyecto-venta-page #panel_lista_proyectos { padding: 1.25rem; }
+.proyecto-venta-page :is(#panel_lista_proyectos > .chart-title, #cardResumenProyecto .card-header, #cardChecklistProceso .card-header, #tab-detalle-seguimiento > .card > .card-header, #tab-adjuntos-proyecto > .card > .card-header, #tab-partidas-proyecto > .card > .card-header) {
+    background: linear-gradient(90deg, #e9f5f8, #f4f8fc) !important; color: var(--pv-accent) !important;
+    border-left: 3px solid #008daf !important; border-bottom: 1px solid #b2c4d7 !important;
+    border-radius: 6px; padding: .875rem 1rem !important;
+    font-size: var(--font-highlight, 15px); font-weight: var(--font-weight-semibold, 600); line-height: var(--line-height-heading, 1.25);
+}
+.proyecto-venta-page :is(#cardResumenProyecto, #cardChecklistProceso, #tab-detalle-seguimiento, #tab-adjuntos-proyecto, #tab-partidas-proyecto) .card-header :is(h3, h4, p.card-title, p.fw-600) { color: var(--pv-accent) !important; font-size: var(--font-highlight, 15px) !important; font-weight: 600 !important; }
+.proyecto-venta-page #cardResumenProyecto .card-header > div > .text-light { color: var(--pv-muted) !important; }
+.proyecto-venta-page #cardResumenProyecto .card-body { padding: 1.25rem !important; }
+.proyecto-venta-page #cardResumenProyecto .card-body .bg-white { background-color: var(--pv-soft) !important; border-color: var(--pv-border) !important; box-shadow: none !important; }
+.proyecto-venta-page #tabProyectoVenta .nav-link { font-family: var(--font-family-report); font-size: var(--font-body, 14px); line-height: 1.5; }
+.proyecto-venta-page #tabProyectoVenta .nav-link.active { color: var(--pv-accent) !important; background-color: var(--pv-soft) !important; border-bottom-color: #008daf; }
+/* Los tonos y pesos coinciden con los badges suaves de OCC; los datos no son botones. */
+.proyecto-venta-page :is(#panel_lista_proyectos, #panel_detalle_proyecto) .badge {
+    --pv-badge-bg: var(--pv-gray-bg); --pv-badge-text: var(--pv-gray-text); --pv-badge-border: var(--pv-gray-border);
+    background: var(--pv-badge-bg) !important; color: var(--pv-badge-text) !important; border: 1px solid var(--pv-badge-border) !important;
+    border-radius: 6px; padding: .35em .65em !important; font-family: var(--font-family-report); font-size: var(--font-small, 12px) !important; font-weight: 500 !important; line-height: 1.35; letter-spacing: normal; white-space: normal;
+}
+.proyecto-venta-page :is(#panel_lista_proyectos, #panel_detalle_proyecto) .badge.bg-success { --pv-badge-bg: var(--pv-green-bg); --pv-badge-text: var(--pv-green-text); --pv-badge-border: var(--pv-green-border); }
+.proyecto-venta-page :is(#panel_lista_proyectos, #panel_detalle_proyecto) .badge.bg-warning { --pv-badge-bg: var(--pv-amber-bg); --pv-badge-text: var(--pv-amber-text); --pv-badge-border: var(--pv-amber-border); }
+.proyecto-venta-page :is(#panel_lista_proyectos, #panel_detalle_proyecto) .badge.bg-danger { --pv-badge-bg: var(--pv-red-bg); --pv-badge-text: var(--pv-red-text); --pv-badge-border: var(--pv-red-border); }
+.proyecto-venta-page :is(#panel_lista_proyectos, #panel_detalle_proyecto) .badge.bg-primary { --pv-badge-bg: var(--pv-blue-bg); --pv-badge-text: var(--pv-blue-text); --pv-badge-border: var(--pv-blue-border); }
+.proyecto-venta-page :is(#panel_lista_proyectos, #panel_detalle_proyecto) .badge.bg-info { --pv-badge-bg: var(--pv-cyan-bg); --pv-badge-text: var(--pv-cyan-text); --pv-badge-border: var(--pv-cyan-border); }
+.proyecto-venta-page .timeline-badge { box-shadow: none; border: 1px solid var(--pv-gray-border); background: var(--pv-gray-bg); color: var(--pv-gray-text); }
+.proyecto-venta-page .timeline-badge.badge-completed { background: var(--pv-green-bg); color: var(--pv-green-text); border-color: var(--pv-green-border); }
+.proyecto-venta-page .timeline-badge.badge-canceled { background: var(--pv-red-bg); color: var(--pv-red-text); border-color: var(--pv-red-border); }
+.proyecto-venta-page .timeline-badge.badge-active { background: var(--pv-blue-bg); color: var(--pv-blue-text); border-color: var(--pv-blue-border); }
+.proyecto-venta-page :is(.timeline-seguimiento, .timeline-adjuntos) .card { border-color: #c2d3e3 !important; border-radius: 6px; box-shadow: 0 2px 6px rgb(15 40 70 / 8%) !important; }
+.proyecto-venta-page #timeline_seguimientos .card-header, .proyecto-venta-page #timeline_adjuntos .card-header { background: var(--pv-soft) !important; border-color: var(--pv-border) !important; }
+.proyecto-venta-page :is(#timeline_seguimientos, #timeline_adjuntos) .lfm-btn-action { font-size: var(--font-small, 12px); }
+html.dark .proyecto-venta-page :is(#panel_filtros.pv-filter-shell, #panel_lista_proyectos, #cardResumenProyecto > section, #cardChecklistProceso > section, #tab-detalle-seguimiento > .card, #tab-adjuntos-proyecto > .card, #tab-partidas-proyecto > .card) { border-color: #60768c !important; box-shadow: 0 2px 6px rgb(0 0 0 / 25%), 0 8px 22px rgb(0 0 0 / 30%) !important; }
+html.dark .proyecto-venta-page :is(#panel_lista_proyectos > .chart-title, #cardResumenProyecto .card-header, #cardChecklistProceso .card-header, #tab-detalle-seguimiento > .card > .card-header, #tab-adjuntos-proyecto > .card > .card-header, #tab-partidas-proyecto > .card > .card-header) { background: linear-gradient(90deg, #243e4a, #263749) !important; border-left-color: #58c6de !important; border-bottom-color: #60768c !important; }
+html.dark .proyecto-venta-page .pv-filter-icon { background: #243e50; }
+html.dark .proyecto-venta-page #cardResumenProyecto .card-body .bg-white { background-color: var(--pv-soft) !important; }
+@media (max-width: 1199px) {
+    .proyecto-venta-page .pv-filter-main { grid-template-columns: repeat(3, minmax(0, 1fr)) 135px; }
+    .proyecto-venta-page .pv-filter-brand { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+    .proyecto-venta-page .pv-filter-main, .proyecto-venta-page .pv-filter-extra { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .proyecto-venta-page :is(.pv-filter-brand, .pv-filter-period, .pv-filter-action) { grid-column: 1 / -1; }
+    .proyecto-venta-page #panel_filtros.pv-filter-shell { padding: .875rem; }
+    .proyecto-venta-page .pv-filter-footer { align-items: flex-start; flex-direction: column; }
+    .proyecto-venta-page #panel_lista_proyectos > .chart-title { flex-wrap: wrap; gap: .5rem; }
+}
+@media (max-width: 420px) { .proyecto-venta-page .pv-filter-main, .proyecto-venta-page .pv-filter-extra { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .proyecto-venta-page .progress-bar-animated { animation: none; } }

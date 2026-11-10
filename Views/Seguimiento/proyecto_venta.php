@@ -147,6 +147,9 @@
         .proyecto-venta-page :is(.step-card, .nav-tabs-proyecto .nav-link) { transition: none; }
     }
 </style>
+<!-- Presentación propia: esquema visual compartido con Órdenes de Compra Clientes. -->
+<link rel="stylesheet" href="<?= assets(); ?>/app/css/seguimiento_proyecto_venta.css?v=<?= filemtime(__DIR__ . '/../../Assets/app/css/seguimiento_proyecto_venta.css'); ?>">
+
 
 <!-- Header Admin 02 -->
 <?php require_once("Template/header_02.php"); ?>
@@ -184,81 +187,31 @@
                 </div>
             </div>
 
-            <!-- ========== FILTROS DE BÚSQUEDA ========== -->
-            <div class="row mb-4" id="panel_filtros">
-
-                <div class="form-group col-12 mb-2">
-                    <div class="border-bottom pb-2">
-                        <p class="mb-0 fw-semibold text-primary">
-                            <i class="fa-regular fa-filter text-secondary me-2"></i> Filtros de Búsqueda de Proyectos
-                        </p>
+            <!-- Consulta homologada con OCC: mismos controles y combinación de filtros. -->
+            <section class="mb-4 report-filters pv-filter-shell" id="panel_filtros" aria-labelledby="filtro_proyectos_titulo">
+                <div class="pv-filter-main">
+                    <div class="pv-filter-brand">
+                        <span class="pv-filter-icon" aria-hidden="true"><i class="fa-sharp fa-light fa-diagram-project"></i></span>
+                        <div><h3 id="filtro_proyectos_titulo">Proyectos de venta</h3><p>Seguimiento · Evaluación del proceso</p></div>
                     </div>
-                </div>
-
-                <!-- Fila 1 -->
-                <!-- Filtro por Periodo -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_periodo">Período:</label>
-                    <select class="form-select" id="filtro_periodo" name="filtro_periodo">
+                    <div class="form-group pt-0 mb-0 pv-filter-period"><label class="form-label" for="filtro_periodo">Período</label><select class="form-select" id="filtro_periodo" name="filtro_periodo">
                         <option value="este_mes" selected>Este Mes</option>
                         <option value="mes_anterior">Mes Anterior</option>
                         <option value="ano_actual">Año Actual</option>
                         <option value="ultimos_30">Últimos 30 días</option>
                         <option value="personalizado">Personalizado</option>
                         <option value="todos">Todos los Periodos</option>
-                    </select>
+                    </select></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_fecha_ini">Fecha inicio</label><input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                           name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" maxlength="10"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_fecha_fin">Fecha fin</label><input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                           name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" maxlength="10"></div>
+                    <div class="pv-filter-action"><button type="button" class="btn btn-primary w-100 lfm-btn-action lfm-btn-action--primary" id="btnFiltrar"><i class="fa-regular fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button></div>
                 </div>
-
-                <!-- Fecha Inicio -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_fecha_ini">Fecha Inicio:</label>
-                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
-                           name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" maxlength="10">
+                <div class="pv-filter-extra"><div class="form-group pt-0 mb-0 "><label class="form-label" for="txtProyectoId">Clave / Folio</label><input type="text" class="form-control" id="txtProyectoId" name="proyecto_id" placeholder="Ej. 18654 ó PV-2026-18654" autocomplete="off"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_titulo">Título / Proyecto</label><input type="text" class="form-control" id="filtro_titulo" name="filtro_titulo" placeholder="Ej. LNN MANZANILLO..." autocomplete="off"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_cliente">Cliente</label><input type="text" class="form-control" id="filtro_cliente" name="filtro_cliente" placeholder="Nombre comercial o razón social" autocomplete="off"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_vendedor">Vendedor</label><input type="text" class="form-control" id="filtro_vendedor" name="filtro_vendedor" placeholder="Nombre del vendedor" autocomplete="off"></div></div>
+                <div class="pv-filter-footer">
+                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>Las fechas y los filtros se aplican en conjunto.</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary lfm-btn-action lfm-btn-action--quiet" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" title="Restablecer filtros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
                 </div>
-
-                <!-- Fecha Fin -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_fecha_fin">Fecha Fin:</label>
-                    <input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
-                           name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" maxlength="10">
-                </div>
-
-                <!-- Clave / Folio -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="txtProyectoId">Clave / Folio:</label>
-                    <input type="text" class="form-control" id="txtProyectoId" name="proyecto_id" placeholder="Ej. 18654 ó PV-2026-18654" autocomplete="off">
-                </div>
-
-                <!-- Fila 2 -->
-                <!-- Título / Proyecto -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_titulo">Título / Proyecto:</label>
-                    <input type="text" class="form-control" id="filtro_titulo" name="filtro_titulo" placeholder="Ej. LNN MANZANILLO..." autocomplete="off">
-                </div>
-
-                <!-- Cliente -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_cliente">Cliente:</label>
-                    <input type="text" class="form-control" id="filtro_cliente" name="filtro_cliente" placeholder="Nombre comercial o razón social" autocomplete="off">
-                </div>
-
-                <!-- Vendedor -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2">
-                    <label class="form-label fw-semibold text-dark mb-1" for="filtro_vendedor">Vendedor:</label>
-                    <input type="text" class="form-control" id="filtro_vendedor" name="filtro_vendedor" placeholder="Nombre del vendedor" autocomplete="off">
-                </div>
-
-                <!-- Botones Acciones -->
-                <div class="form-group col-12 col-sm-6 col-lg-3 pt-0 mb-2 d-flex align-items-end gap-2">
-                    <button type="button" class="btn btn-primary flex-fill hvr-float-shadow d-flex justify-content-center align-items-center" id="btnFiltrar" style="height: 38px;">
-                        <i class="fa-regular fa-magnifying-glass me-1"></i> Buscar
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary px-3 d-flex justify-content-center align-items-center" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" style="height: 38px;" title="Limpiar Filtros">
-                        <i class="fa-regular fa-eraser me-1"></i> Limpiar
-                    </button>
-                </div>
-
-            </div>
+            </section>
             <!-- ========== FIN FILTROS ========== -->
 
             <!-- ========== PRIMERA SECCIÓN: LISTA DE PROYECTOS DE VENTA (DATATABLE) ========== -->

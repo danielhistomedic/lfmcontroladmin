@@ -240,6 +240,15 @@ function fntCargarColeccionesVisiblesProyecto() {
     }
 }
 
+/** Solo presentación: las variantes bg-* siguen conservando el significado del servidor.
+ * La hoja propia define los tonos suaves; no heredar texto de badges del tema general.
+ */
+function fntHomologarPresentacionProyecto() {
+    $('.proyecto-venta-page .badge').removeClass('text-dark text-white');
+    $('#tableProyectosVenta .btnVerDetalleProyecto').addClass('lfm-btn-action lfm-btn-action--primary');
+    $('#timeline_seguimientos a.btn, #timeline_adjuntos a.btn').removeClass('btn-outline-warning text-dark').addClass('btn-outline-secondary lfm-btn-action lfm-btn-action--quiet');
+}
+
 /** Permiso Excel una vez por página, aplicado a cada tabla al terminar su inicialización.
  * No concede permisos ni afecta botones de otros módulos; errores dejan Excel oculto.
  */
@@ -263,6 +272,7 @@ function fntPermisoExcelProyecto(api) {
 
 /** Refleja la selección también tras paginar/ordenar con filas diferidas. */
 function fntMarcarSeleccionProyecto() {
+    fntHomologarPresentacionProyecto();
     if (!tableProyectosVenta) return;
     tableProyectosVenta.rows({page: 'current'}).every(function () {
         const nodo = this.node(), dato = this.data();
@@ -688,6 +698,7 @@ function fntLimpiarFiltro() {
  * Controla la visibilidad de los páneles de la interfaz
  */
 function fntMostrarEstadoUI(estado, mensaje) {
+    fntHomologarPresentacionProyecto();
     const pPlaceholder = document.getElementById("panelPlaceholder");
     const pLoading = document.getElementById("panelLoading");
     if (pPlaceholder) {
@@ -928,6 +939,7 @@ function fntRenderizarTimelinePagina(pagina) {
     }
 
     $('#timeline_seguimientos').html(html);
+    fntHomologarPresentacionProyecto();
 }
 
 function fntObtenerRangoPaginas(paginaActual, totalPaginas) {
@@ -1146,6 +1158,7 @@ function fntRenderizarTimelineAdjuntosPagina(pagina) {
     }
 
     $('#timeline_adjuntos').html(html);
+    fntHomologarPresentacionProyecto();
 }
 
 /**
@@ -1257,6 +1270,8 @@ function fntRenderPartidasProyecto(partidasObj) {
         ],
         language: typeof idioma_espanol !== "undefined" ? idioma_espanol : {}
     });
+
+    fntHomologarPresentacionProyecto();
 
     setTimeout(function () {
         if (tablePartidasProyecto) {
