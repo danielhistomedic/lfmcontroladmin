@@ -224,6 +224,65 @@ class Seguimiento extends Controllers
         return $usuario !== '' ? $usuario : null;
     }
 
+    /** Omite costos de proveedor en todos los niveles del payload; no altera cantidades/folios. */
+    private function retirarImportesProyecto(array $datos): array
+    {
+        $datos = $this->ocultarMontosProveedorVendedor($datos);
+        foreach ($datos as &$valor) {
+            if (is_array($valor)) $valor = $this->retirarImportesProyecto($valor);
+        }
+        unset($valor);
+        return $datos;
+    }
+
+    /** IDs de catálogo (3 y 7), independientes de su posición visual en el checklist. */
+    private function protegerChecklistProyectoVendedor(array $checklist): array
+    {
+        if ((int)$this->session->get('rol_id') !== 4) return $checklist;
+        foreach ($checklist as &$paso) {
+            if (in_array((int)($paso['id'] ?? 0), [3, 7], true)) {
+                $paso = $this->retirarImportesProyecto($paso);
+                $paso['importes_restringidos'] = true;
+            }
+        }
+        unset($paso);
+        return $checklist;
+    }
+
+    /** Reconoce documentos de proveedor por tabla real o etiqueta del origen del servidor. */
+    private function origenProveedorProyecto(array $datos): bool
+    {
+        $tabla = (string)($datos['origen_tabla'] ?? '');
+        if (in_array($tabla, ['tb_compras_cotizaciones', 'tb_compras_cotizaciones_detalle', 'tb_pedidos_proveedor', 'tb_pedidos_proveedor_detalle'], true)) return true;
+        $etiqueta = (string)($datos['origen_etiqueta'] ?? '');
+        return stripos($etiqueta, 'proveedor') !== false;
+    }
+
+    /** Solo costos de orígenes proveedor; las partidas de cliente/internas conservan importes. */
+    private function protegerPartidasProyectoVendedor(array $datos): array
+    {
+        if ((int)$this->session->get('rol_id') !== 4) return $datos;
+        if ($this->origenProveedorProyecto($datos)) {
+            $datos = $this->retirarImportesProyecto($datos);
+            $datos['importes_restringidos'] = true;
+        } else {
+            foreach (($datos['partidas'] ?? []) as $indice => $partida) {
+                if ($this->origenProveedorProyecto($partida)) {
+                    $datos['partidas'][$indice] = $this->retirarImportesProyecto($partida);
+                    $datos['partidas'][$indice]['importes_restringidos'] = true;
+                }
+            }
+        }
+        return $datos;
+    }
+
+    /** Restricción también en la descarga: no basta con ocultar enlaces en la lista. */
+    private function adjuntoProveedorProyectoRestringido(array $adjunto): bool
+    {
+        return (int)$this->session->get('rol_id') === 4 && in_array($adjunto['tabla_origen'] ?? '',
+            ['tb_compras_cotizaciones_adjuntos', 'tb_pedidos_proveedor_adjuntos'], true);
+    }
+
     /** Valida el ID numérico o cifrado utilizado también por el consumidor de OCC. */
     private function idProyectoSeguimiento($valor): int
     {
@@ -273,7 +332,14 @@ class Seguimiento extends Controllers
             // El nombre por sí solo no autoriza: comprobar su vínculo en adjuntos o bitácora.
             $vinculado = false;
             foreach ($this->model->getAdjuntosProyectoVenta($venta_id) as $adjunto) {
-                if (trim((string)($adjunto['archivo'] ?? '')) === $archivo) $vinculado = true;
+                if (trim((string)($adjunto['archivo'] ?? '')) === $archivo) {
+                    // Denegar incluso si el mismo nombre aparece en la bitácora.
+                    if ($this->adjuntoProveedorProyectoRestringido($adjunto)) {
+                        http_response_code(404);
+                        exit;
+                    }
+                    $vinculado = true;
+                }
             }
             if (!$vinculado) {
                 foreach ((new VentasModel())->selectHistorialSeguimientoVenta($venta_id, true) as $nota) {
@@ -519,6 +585,7 @@ class Seguimiento extends Controllers
             }
 
             $arrData = $this->model->getAdjuntosProyectoVenta($venta_id);
+            $arrData = array_values(array_filter($arrData, fn($adjunto) => !$this->adjuntoProveedorProyectoRestringido($adjunto)));
 
             $arrResponse = getResponse('Datos encontrados', 'ok', false);
             $arrResponse['data'] = $arrData;
@@ -728,8 +795,8 @@ class Seguimiento extends Controllers
                     $partidasData = $model->getPartidasProyecto($proyectoData['id']);
                     $arrResponse['status']    = true;
                     $arrResponse['data']      = $proyectoData;
-                    $arrResponse['checklist'] = $checklist;
-                    $arrResponse['partidas']  = $partidasData;
+                    $arrResponse['checklist'] = $this->protegerChecklistProyectoVendedor($checklist);
+                    $arrResponse['partidas']  = $this->protegerPartidasProyectoVendedor($partidasData);
                     $arrResponse['msg']       = 'Proyecto localizado correctamente';
                 } else {
                     $arrResponse['msg'] = 'No se encontró el proyecto seleccionado.';
@@ -750,8 +817,8 @@ class Seguimiento extends Controllers
                 $arrResponse['status']    = true;
                 $arrResponse['data']      = $proyectoData;
                 $arrResponse['proyectos'] = $listaProyectos;
-                $arrResponse['checklist'] = $checklist;
-                $arrResponse['partidas']  = $partidasData;
+                $arrResponse['checklist'] = $this->protegerChecklistProyectoVendedor($checklist);
+                $arrResponse['partidas']  = $this->protegerPartidasProyectoVendedor($partidasData);
                 $arrResponse['msg']       = 'Proyecto localizado correctamente';
             } else {
                 // Múltiples coincidencias -> Devolver lista para que el usuario elija y cargar por defecto el primero
@@ -761,8 +828,8 @@ class Seguimiento extends Controllers
                 $arrResponse['status']    = true;
                 $arrResponse['data']      = $proyectoData;
                 $arrResponse['proyectos'] = $listaProyectos;
-                $arrResponse['checklist'] = $checklist;
-                $arrResponse['partidas']  = $partidasData;
+                $arrResponse['checklist'] = $this->protegerChecklistProyectoVendedor($checklist);
+                $arrResponse['partidas']  = $this->protegerPartidasProyectoVendedor($partidasData);
                 $arrResponse['msg']       = 'Se encontraron ' . count($listaProyectos) . ' proyectos coincidentes.';
             }
 
@@ -794,6 +861,7 @@ class Seguimiento extends Controllers
             if ($venta_id > 0) {
                 $model = new SeguimientoModel();
                 $arrData = $model->getPartidasProyecto($venta_id);
+                $arrData = $this->protegerPartidasProyectoVendedor($arrData);
                 $arrResponse['status'] = true;
                 $arrResponse['data']   = $arrData;
             }

@@ -593,15 +593,16 @@ function fntRenderChecklistProceso(checklist) {
                 const iva = parseFloat(r.iva || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const tot = parseFloat(r.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const monedaDoc = fntMonedaProyecto(r);
+                const restringido = step.importes_restringidos === true || r.importes_restringidos === true;
 
                 registrosHtml += `
                     <tr>
                         <td class="fw-bold text-primary">${fntEscapeHtml(folioDoc)}</td>
                         <td>${fntEscapeHtml(fechaDoc)}</td>
-                        <td class="text-end">$${sub}</td>
-                        ${showDescuento ? `<td class="text-end text-danger">$${desc}</td>` : ''}
-                        <td class="text-end">$${iva}</td>
-                        <td class="text-end fw-bold text-dark">$${tot}</td>
+                        <td class="text-end">${restringido ? '- - -' : '$' + sub}</td>
+                        ${showDescuento ? `<td class="text-end text-danger">${restringido ? '- - -' : '$' + desc}</td>` : ''}
+                        <td class="text-end">${restringido ? '- - -' : '$' + iva}</td>
+                        <td class="text-end fw-bold text-dark">${restringido ? '- - -' : '$' + tot}</td>
                         <td class="text-center"><span class="badge bg-secondary px-2 py-1">${fntEscapeHtml(monedaDoc)}</span></td>
                     </tr>
                 `;
@@ -1183,6 +1184,7 @@ function fntRenderPartidasProyecto(partidasObj) {
     if (partidas.length > 0) {
         partidas.forEach(function (item, index) {
             var num = index + 1;
+            var restringido = partidasObj.importes_restringidos === true || item.importes_restringidos === true;
             var cod = item.codigo_partida || "—";
             var clave = item.clave || "—";
             var ccn = item.ccn || "—";
@@ -1204,10 +1206,10 @@ function fntRenderPartidasProyecto(partidasObj) {
                 '<td class="text-wrap" style="min-width: 350px; white-space: pre-wrap;">' + desc + '</td>' +
                 '<td class="text-wrap" style="min-width: 450px; white-space: pre-wrap;">' + descAdic + '</td>' +
                 '<td class="text-end fw-semibold">' + cant + '</td>' +
-                '<td class="text-end">' + fntEscapeHtml(monedaPartidas) + ' $ ' + prec + '</td>' +
-                '<td class="text-end">' + fntEscapeHtml(monedaPartidas) + ' $ ' + descMonto + '</td>' +
-                '<td class="text-end">' + fntEscapeHtml(monedaPartidas) + ' $ ' + impImpuesto + '</td>' +
-                '<td class="text-end fw-bold text-dark">' + fntEscapeHtml(monedaPartidas) + ' $ ' + sub + '</td>' +
+                '<td class="text-end">' + (restringido ? '- - -' : fntEscapeHtml(monedaPartidas) + ' $ ' + prec) + '</td>' +
+                '<td class="text-end">' + (restringido ? '- - -' : fntEscapeHtml(monedaPartidas) + ' $ ' + descMonto) + '</td>' +
+                '<td class="text-end">' + (restringido ? '- - -' : fntEscapeHtml(monedaPartidas) + ' $ ' + impImpuesto) + '</td>' +
+                '<td class="text-end fw-bold text-dark">' + (restringido ? '- - -' : fntEscapeHtml(monedaPartidas) + ' $ ' + sub) + '</td>' +
                 '</tr>';
         });
     }
