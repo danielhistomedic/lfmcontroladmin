@@ -26,9 +26,8 @@ var paginaActualSeguimiento = 1;
 var registrosPorPaginaSeguimiento = 5;
 var calendarEntregas = null;
 var calendarEventosData = [];
-var calendarFuenteEventos = null;
+var calendarConsultaClave = null;
 var calendarFiltroEstatus = 'todos';
-var calendarIntervaloVisible = null;
 var ordenesProveedorRequest = null;
 var calendarioProveedorRequest = null;
 var calendarioProveedorSecuencia = 0;
@@ -877,21 +876,97 @@ function fntMostrarDetalle() {
  * CALENDARIO DE ENTREGAS DE PROVEEDORES
  * ========================================================= */
 
-/** Formatea una fecha local sin convertirla a UTC para conservar los límites del calendario. */
+/** Conserva los límites locales de FullCalendar al enviarlos como fechas ISO. */
 function fntFechaLocalCalendario(fecha) {
     return fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0') + '-' + String(fecha.getDate()).padStart(2, '0');
 }
 
+/** Filtra las partidas ya consultadas, igual que el calendario de Órdenes Cliente. */
+function fntEventosFiltradosCalendarioProveedor() {
+    var eventos = calendarEventosData.filter(function (evt) {
+        return calendarFiltroEstatus === 'todos'
+            || (evt.extendedProps && evt.extendedProps.estatus_codigo === calendarFiltroEstatus);
+    });
+    $('#cal_resultado').text(eventos.length + ' partidas con fecha en el periodo visible'
+        + (calendarFiltroEstatus === 'todos' ? '.' : ' para el estatus seleccionado.'));
+    return eventos;
+}
+
+/** Actualiza las leyendas con las partidas del periodo visible devueltas por el servidor. */
+function fntResumenCalendarioProveedor(resumen) {
+    var formato = new Intl.NumberFormat('en-US');
+    $('#cal_count_total').text(formato.format(resumen.total || 0));
+    $('#cal_count_entregados').text(formato.format(resumen.entregados || 0));
+    $('#cal_count_vencidos').text(formato.format(resumen.vencidos || 0));
+    $('#cal_count_proximos').text(formato.format(resumen.proximos || 0));
+    $('#cal_count_en_tiempo').text(formato.format(resumen.en_tiempo || 0));
+}
+
 /**
- * Inicializa FullCalendar para mostrar las fechas estimadas de entrega de proveedores.
+ * FullCalendar solicita el intervalo visible cada vez que se cambia de mes, semana o lista.
+ * La búsqueda conserva el contrato AJAX y el servidor mantiene el alcance por vendedor.
  */
+function fntConsultarEventosCalendarioProveedor(info, successCallback, failureCallback) {
+    var fechaIni = fntFechaLocalCalendario(info.start);
+    var ultimoDia = new Date(info.end.getFullYear(), info.end.getMonth(), info.end.getDate() - 1);
+    var fechaFin = fntFechaLocalCalendario(ultimoDia);
+    var busqueda = $('#filtro_num_orden').val().trim();
+    var clave = fechaIni + '|' + fechaFin + '|' + busqueda;
+
+    // Los cambios de estatus reutilizan las partidas del mismo periodo sin otra consulta.
+    if (calendarConsultaClave === clave) {
+        successCallback(fntEventosFiltradosCalendarioProveedor());
+        return;
+    }
+
+    var solicitudId = ++calendarioProveedorSecuencia;
+    if (calendarioProveedorRequest) calendarioProveedorRequest.abort();
+    $('#cal_resultado').text('Cargando partidas del periodo visible...');
+
+    calendarioProveedorRequest = $.ajax({
+        type: 'POST',
+        url: base_url + '/seguimiento/getCalendarioEntregasProveedorData',
+        data: {
+            fecha_ini: fechaIni,
+            fecha_fin: fechaFin,
+            filtro_num_orden: busqueda
+        },
+        dataType: 'json',
+        success: function (resp) {
+            if (solicitudId !== calendarioProveedorSecuencia) return;
+            if (resp && resp.respuesta === 'ok' && Array.isArray(resp.eventos)) {
+                calendarEventosData = resp.eventos;
+                calendarConsultaClave = clave;
+                fntResumenCalendarioProveedor(resp.resumen || {});
+                successCallback(fntEventosFiltradosCalendarioProveedor());
+            } else {
+                var mensaje = (resp && resp.msg) || 'No fue posible consultar el calendario.';
+                $('#cal_resultado').text(mensaje);
+                failureCallback(new Error(mensaje));
+                alertify.error(mensaje, 4);
+            }
+        },
+        error: function (xhr, status, error) {
+            if (solicitudId !== calendarioProveedorSecuencia || status === 'abort') return;
+            $('#cal_resultado').text('No fue posible cargar las entregas. Intenta actualizar de nuevo.');
+            console.error('Error al cargar calendario de entregas de proveedor:', error);
+            failureCallback(new Error('No fue posible cargar las entregas.'));
+            alertify.error('Error al cargar el calendario de entregas.', 4);
+        },
+        complete: function () {
+            if (solicitudId === calendarioProveedorSecuencia) calendarioProveedorRequest = null;
+        }
+    });
+}
+
+/** Inicializa la vista de proveedores con el diseño y acceso por teclado de Órdenes Cliente. */
 function fntInicializarCalendarioEntregas() {
     var calendarEl = document.getElementById('calendarEntregas');
     if (!calendarEl || typeof FullCalendar === 'undefined') return;
 
     calendarEntregas = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        initialDate: new Date(), // Abrir en el mes actual; los eventos no cambian la vista.
+        initialDate: new Date(),
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -907,21 +982,28 @@ function fntInicializarCalendarioEntregas() {
         height: 'auto',
         navLinks: true,
         editable: false,
-        // Mostrar tres partidas por día y abrir las restantes en el popover compartido con Órdenes Cliente.
         dayMaxEvents: 3,
         moreLinkText: function (n) { return 'Ver ' + n + ' más'; },
-        datesSet: function (info) {
-            // FullCalendar entrega un fin exclusivo; consultar hasta el último día visible.
-            var ultimoDiaVisible = new Date(info.end.getFullYear(), info.end.getMonth(), info.end.getDate() - 1);
-            calendarIntervaloVisible = {
-                fecha_ini: fntFechaLocalCalendario(info.start),
-                fecha_fin: fntFechaLocalCalendario(ultimoDiaVisible)
-            };
-            fntCargarCalendarioEntregas();
+        noEventsText: 'No hay entregas para este mes y filtro.',
+        allDayText: 'Todo el día',
+        events: fntConsultarEventosCalendarioProveedor,
+        eventClassNames: function (info) {
+            var estado = info.event.extendedProps.estatus_codigo || 'todos';
+            return ['oc-cal-evento', 'oc-tone-' + (['vencido', 'proximo', 'en_tiempo', 'entregado', 'cancelado'].includes(estado) ? estado : 'todos')];
         },
-        eventClassNames: function (arg) {
-            var estatus = arg.event.extendedProps.estatus_codigo || 'todos';
-            return ['oc-cal-evento', 'oc-tone-' + (['vencido', 'proximo', 'en_tiempo', 'entregado', 'cancelado'].includes(estatus) ? estatus : 'todos')];
+        eventDidMount: function (info) {
+            var texto = info.event.title + ' · ' + (info.event.extendedProps.estatus_label || 'Sin estatus');
+            info.el.title = texto;
+            info.el.setAttribute('aria-label', texto);
+            info.el.setAttribute('tabindex', '0');
+            info.el.setAttribute('role', 'button');
+            info.el.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    fntMostrarDetalleEntregaModal(info.event.extendedProps);
+                }
+            }, true);
         },
         eventClick: function (info) {
             info.jsEvent.preventDefault();
@@ -934,73 +1016,17 @@ function fntInicializarCalendarioEntregas() {
     calendarEntregas.render();
 }
 
-/**
- * Consulta las fechas de entrega del periodo visible y conserva la búsqueda y el alcance del usuario.
- */
+/** Actualiza el calendario después de cambiar la búsqueda común, sin alterar su mes. */
 function fntCargarCalendarioEntregas() {
-    if (!document.getElementById('calendarEntregas')) return;
-
-    if (!calendarIntervaloVisible) return;
-
-    var fecha_ini = calendarIntervaloVisible.fecha_ini;
-    var fecha_fin = calendarIntervaloVisible.fecha_fin;
-    var filtro_num_orden = $('#filtro_num_orden').val().trim();
-    // Ignorar respuestas antiguas cuando el usuario cambia de mes antes de que termine la consulta.
-    var solicitudId = ++calendarioProveedorSecuencia;
-    if (calendarioProveedorRequest) calendarioProveedorRequest.abort();
-
-    calendarioProveedorRequest = $.ajax({
-        type: 'POST',
-        url: base_url + '/seguimiento/getCalendarioEntregasProveedorData',
-        data: {
-            fecha_ini: fecha_ini,
-            fecha_fin: fecha_fin,
-            filtro_num_orden: filtro_num_orden
-        },
-        dataType: 'json',
-        success: function (resp) {
-            if (solicitudId !== calendarioProveedorSecuencia) return;
-            if (resp && resp.respuesta === 'ok') {
-                var resumen = resp.resumen || {};
-                $('#cal_count_total').text(new Intl.NumberFormat('en-US').format(resumen.total || 0));
-                $('#cal_count_entregados').text(new Intl.NumberFormat('en-US').format(resumen.entregados || 0));
-                $('#cal_count_vencidos').text(new Intl.NumberFormat('en-US').format(resumen.vencidos || 0));
-                $('#cal_count_proximos').text(new Intl.NumberFormat('en-US').format(resumen.proximos || 0));
-                $('#cal_count_en_tiempo').text(new Intl.NumberFormat('en-US').format(resumen.en_tiempo || 0));
-
-                calendarEventosData = resp.eventos || [];
-                fntAplicarFiltroCalendario();
-
-            } else {
-                alertify.error((resp && resp.msg) || 'No fue posible consultar el calendario.', 4);
-            }
-        },
-        error: function (xhr, status, error) {
-            if (solicitudId !== calendarioProveedorSecuencia || status === 'abort') return;
-            console.error('Error al cargar calendario de entregas de proveedor:', error);
-            alertify.error('Error al cargar el calendario de entregas.', 4);
-        },
-        complete: function () { if (solicitudId === calendarioProveedorSecuencia) calendarioProveedorRequest = null; }
-    });
-}
-
-/**
- * Aplica el filtro por estatus seleccionado en los eventos del calendario.
- */
-function fntAplicarFiltroCalendario() {
     if (!calendarEntregas) return;
-
-    var eventosFiltrados = calendarEventosData.filter(function (evt) {
-        if (calendarFiltroEstatus === 'todos') return true;
-        return evt.extendedProps && evt.extendedProps.estatus_codigo === calendarFiltroEstatus;
-    });
-
-    // Mantener una sola fuente; FullCalendar puede recargar las fuentes al cambiar de mes.
-    if (calendarFuenteEventos) calendarFuenteEventos.remove();
-    calendarFuenteEventos = calendarEntregas.addEventSource(eventosFiltrados);
-    $('#cal_resultado').text(eventosFiltrados.length + ' partidas con fecha en el periodo visible' + (calendarFiltroEstatus === 'todos' ? '.' : ' para el estatus seleccionado.'));
+    calendarConsultaClave = null;
+    calendarEntregas.refetchEvents();
 }
 
+/** Vuelve a dibujar el estatus elegido a partir de las partidas ya consultadas. */
+function fntAplicarFiltroCalendario() {
+    if (calendarEntregas) calendarEntregas.refetchEvents();
+}
 /**
  * Muestra el modal con los detalles completos de la fecha límite de entrega seleccionada.
  * 
