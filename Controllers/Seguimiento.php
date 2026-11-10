@@ -719,9 +719,10 @@ class Seguimiento extends Controllers
 
             $model = new SeguimientoModel();
 
+            // El resumen solicita los mismos folios de documentos que el listado.
             // Si se especificó un venta_id directamente
             if ($venta_id_select > 0) {
-                $proyectoData = $model->getProyectoVentaById($venta_id_select, $ccveusuario_vendedor);
+                $proyectoData = $model->getProyectoVentaById($venta_id_select, $ccveusuario_vendedor, true);
                 if (!empty($proyectoData)) {
                     $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
                     $partidasData = $model->getPartidasProyecto($proyectoData['id']);
@@ -743,7 +744,7 @@ class Seguimiento extends Controllers
                 $arrResponse['msg'] = 'No se encontraron proyectos de venta con la clave ingresada: "' . htmlspecialchars($proyecto_id_input) . '"';
             } elseif (count($listaProyectos) === 1) {
                 // Exactamente 1 coincidencia
-                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor);
+                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor, true);
                 $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
                 $partidasData = $model->getPartidasProyecto($proyectoData['id']);
                 $arrResponse['status']    = true;
@@ -754,7 +755,7 @@ class Seguimiento extends Controllers
                 $arrResponse['msg']       = 'Proyecto localizado correctamente';
             } else {
                 // Múltiples coincidencias -> Devolver lista para que el usuario elija y cargar por defecto el primero
-                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor);
+                $proyectoData = $model->getProyectoVentaById($listaProyectos[0]['id'], $ccveusuario_vendedor, true);
                 $checklist    = $model->getChecklistProceso($proyectoData['id'], $proyectoData['estatus_proyecto_id']);
                 $partidasData = $model->getPartidasProyecto($proyectoData['id']);
                 $arrResponse['status']    = true;

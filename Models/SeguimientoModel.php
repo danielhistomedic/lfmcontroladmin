@@ -75,10 +75,11 @@ class SeguimientoModel extends Mysql
      * 
      * @param int $venta_id
      * @param string $ccveusuario_vendedor
+     * @param bool $incluirDocumentos Solicitar folios solo al renderizar el detalle autorizado.
      * @return array
      * @throws \Throwable Ante fallo de consulta; [] representa únicamente ausencia válida.
      */
-    public function getProyectoVentaById(int $venta_id, string $ccveusuario_vendedor = ''): array
+    public function getProyectoVentaById(int $venta_id, string $ccveusuario_vendedor = '', bool $incluirDocumentos = false): array
     {
         $arrResponse = array();
 
@@ -119,6 +120,11 @@ class SeguimientoModel extends Mysql
             }
 
             $arrResponse = $this->selectOrFail($sql, $arr_values, true);
+            // Las verificaciones de visibilidad conservan una consulta; solo el resumen pide folios.
+            if ($incluirDocumentos && $arrResponse !== []) {
+                $arrResponse = $this->agregarDocumentosProyectos([$arrResponse])[0];
+            }
+
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
             throw $th;
@@ -282,11 +288,14 @@ class SeguimientoModel extends Mysql
     }
 
     /**
-     * Obtiene la lista de proyectos de venta para el DataTable de Seguimiento
+     * Obtiene proyectos para el DataTable, con ordenes_compra_cliente y folios_ocp_proveedor
+     * como arrays de folios únicos de órdenes finalizadas, de más reciente a más antigua.
+     * folios_facturas incluye serie/folio de facturas vinculadas por venta_id con UUID
+     * y fecha de timbrado, sin cancelación por fecha, contabilidad ni estado SAT.
      * 
      * @param string $fecha_ini
      * @param string $fecha_fin
-     * @param string $busqueda
+     * @param string $busqueda Proyecto, cliente, vendedor, OCC/OCP finalizada o folio/serie de factura activa y timbrada.
      * @param string $titulo
      * @param string $cliente
      * @param string $vendedor
@@ -347,9 +356,35 @@ class SeguimientoModel extends Mysql
                 $arr_values['fecha_fin'] = $fecha_fin;
             }
 
-            if (!empty($busqueda)) {
-                $sql .= " AND (v.proyecto_id LIKE :term OR v.titulo LIKE :term OR c.nombre_comercial LIKE :term OR c.razon_social LIKE :term OR CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido) LIKE :term) ";
-                $arr_values['term'] = '%' . $busqueda . '%';
+            if (trim($busqueda) !== '') {
+                // EXISTS evita duplicar proyectos con varias órdenes. Solo órdenes finalizadas,
+                // vinculadas por venta_id, dentro del mismo grupo OR de la búsqueda general.
+                // Facturas: misma regla de activas/timbradas de folios_facturas, sin ampliar fechas ni permisos.
+                // Parámetros únicos para mantener compatibilidad con preparaciones PDO nativas.
+                $sql .= " AND (v.proyecto_id LIKE :busq_proyecto
+                          OR v.titulo LIKE :busq_titulo
+                          OR c.nombre_comercial LIKE :busq_comercial
+                          OR c.razon_social LIKE :busq_razon
+                          OR CONCAT_WS(' ', u.cnombre, u.cpriapellido, u.csegapellido) LIKE :busq_vendedor
+                          OR EXISTS (SELECT 1 FROM tb_pedidos_cliente pc_busq
+                                     WHERE pc_busq.venta_id = v.id AND pc_busq.enviado = 1
+                                       AND pc_busq.num_orden_compra LIKE :busq_occ)
+                          OR EXISTS (SELECT 1 FROM tb_pedidos_proveedor pp_busq
+                                     WHERE pp_busq.venta_id = v.id AND pp_busq.enviado = 1
+                                       AND pp_busq.folio_ocp LIKE :busq_ocp)
+                          OR EXISTS (SELECT 1 FROM tb_facturas f_busq
+                                     WHERE f_busq.venta_id = v.id
+                                       AND TRIM(COALESCE(f_busq.folio, '')) <> ''
+                                       AND TRIM(COALESCE(f_busq.uuid, '')) <> ''
+                                       AND f_busq.fch_timbrado IS NOT NULL AND f_busq.fch_timbrado > '0000-00-00 00:00:00'
+                                       AND (f_busq.fch_cancelacion IS NULL OR f_busq.fch_cancelacion = '0000-00-00')
+                                       AND COALESCE(f_busq.cancelada_contabilidad, 0) = 0
+                                       AND LOWER(TRIM(COALESCE(f_busq.sat_Estado, ''))) NOT IN ('cancelado', 'cancelada')
+                                       AND (f_busq.folio LIKE :busq_factura
+                                            OR CONCAT_WS('-', NULLIF(TRIM(f_busq.serie), ''), TRIM(f_busq.folio)) LIKE :busq_factura_serie))) ";
+                foreach (['busq_proyecto', 'busq_titulo', 'busq_comercial', 'busq_razon', 'busq_vendedor', 'busq_occ', 'busq_ocp', 'busq_factura', 'busq_factura_serie'] as $campoBusqueda) {
+                    $arr_values[$campoBusqueda] = '%' . trim($busqueda) . '%';
+                }
             }
 
             if (!empty($titulo)) {
@@ -370,11 +405,87 @@ class SeguimientoModel extends Mysql
             $sql .= " ORDER BY v.id DESC";
 
             $arrResponse = $this->selectOrFail($sql, $arr_values);
+            $arrResponse = $this->agregarDocumentosProyectos($arrResponse);
+
         } catch (\Throwable $th) {
             getLoggerSystem()->error(getMensajeError($th));
             throw $th;
         }
 
+        return $arrResponse;
+    }
+
+    /**
+     * Completa folios únicos para proyectos ya autorizados. Misma regla en lista y resumen.
+     * @param array $arrResponse Filas de proyecto que superaron filtros y alcance por usuario.
+     * @return array Filas con arrays OCC/OCP finalizadas y facturas activas/timbradas.
+     * @throws \Throwable Ante fallo de cualquiera de las consultas de documentos.
+     */
+    private function agregarDocumentosProyectos(array $arrResponse): array
+    {
+        // Arrays aditivos al contrato del listado. No agregar JOIN que multiplique proyectos
+        // ni GROUP_CONCAT sujeto a truncamiento; consulta por lotes, nunca una por fila.
+        $indiceProyectos = [];
+        foreach ($arrResponse as $indice => &$proyecto) {
+            $proyecto['ordenes_compra_cliente'] = [];
+            $proyecto['folios_ocp_proveedor'] = [];
+            $proyecto['folios_facturas'] = [];
+            $indiceProyectos[(int)$proyecto['id']] = $indice;
+        }
+        unset($proyecto);
+        foreach (array_chunk(array_keys($indiceProyectos), 250) as $idsProyecto) {
+            $parametros = [];
+            $paramsCliente = [];
+            $paramsProveedor = [];
+            foreach ($idsProyecto as $i => $idProyecto) {
+                $paramsCliente[] = ':occ_' . $i;
+                $paramsProveedor[] = ':ocp_' . $i;
+                $parametros['occ_' . $i] = $idProyecto;
+                $parametros['ocp_' . $i] = $idProyecto;
+            }
+            // Solo IDs que ya pasaron los filtros y el alcance por usuario del listado.
+            $sqlOrdenes = "SELECT id, venta_id, num_orden_compra AS folio, 'cliente' AS tipo
+                           FROM tb_pedidos_cliente
+                           WHERE enviado = 1 AND venta_id IN (" . implode(',', $paramsCliente) . ")
+                           UNION ALL
+                           SELECT id, venta_id, folio_ocp AS folio, 'proveedor' AS tipo
+                           FROM tb_pedidos_proveedor
+                           WHERE enviado = 1 AND venta_id IN (" . implode(',', $paramsProveedor) . ")
+                           ORDER BY venta_id, tipo, id DESC";
+            foreach ($this->selectOrFail($sqlOrdenes, $parametros) as $orden) {
+                $indice = $indiceProyectos[(int)$orden['venta_id']] ?? null;
+                $folio = trim((string)($orden['folio'] ?? ''));
+                if ($indice === null || $folio === '') continue;
+                $campo = $orden['tipo'] === 'cliente' ? 'ordenes_compra_cliente' : 'folios_ocp_proveedor';
+                if (!in_array($folio, $arrResponse[$indice][$campo], true)) {
+                    $arrResponse[$indice][$campo][] = $folio;
+                }
+            }
+            // Solo timbradas (UUID y fecha) y sin cancelación registrada. No inferir
+            // significados de estatus_factura_id sin su catálogo ni consultar al SAT.
+            $parametrosFacturas = array_filter($parametros, static fn($clave) => str_starts_with($clave, 'occ_'), ARRAY_FILTER_USE_KEY);
+            $sqlFacturas = "SELECT venta_id, serie, folio
+                            FROM tb_facturas
+                            WHERE venta_id IN (" . implode(',', $paramsCliente) . ")
+                              AND TRIM(COALESCE(uuid, '')) <> ''
+                              AND fch_timbrado IS NOT NULL AND fch_timbrado > '0000-00-00 00:00:00'
+                              AND (fch_cancelacion IS NULL OR fch_cancelacion = '0000-00-00')
+                              AND COALESCE(cancelada_contabilidad, 0) = 0
+                              AND LOWER(TRIM(COALESCE(sat_Estado, ''))) NOT IN ('cancelado', 'cancelada')
+                            ORDER BY venta_id, id DESC";
+            foreach ($this->selectOrFail($sqlFacturas, $parametrosFacturas) as $factura) {
+                $indice = $indiceProyectos[(int)$factura['venta_id']] ?? null;
+                $folio = trim((string)($factura['folio'] ?? ''));
+                if ($indice === null || $folio === '') continue;
+                $serie = trim((string)($factura['serie'] ?? ''));
+                // Conservar folios que ya incluyen la serie; no generar F-F-123.
+                $prefijado = $serie !== '' && preg_match('/^' . preg_quote($serie, '/') . '[-\s\/]/i', $folio);
+                if ($serie !== '' && !$prefijado) $folio = $serie . '-' . $folio;
+                if (!in_array($folio, $arrResponse[$indice]['folios_facturas'], true)) {
+                    $arrResponse[$indice]['folios_facturas'][] = $folio;
+                }
+            }
+        }
         return $arrResponse;
     }
 

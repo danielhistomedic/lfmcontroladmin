@@ -36,8 +36,8 @@ $(document).ready(function () {
         if (destino === '#tab-partidas-proyecto' && tablePartidasProyecto) tablePartidasProyecto.columns.adjust();
     });
 
-    // 1. Inicializar fechas por defecto según el periodo "este_mes"
-    fntActualizarFechasPorPeriodo("este_mes");
+    // 1. Un año calendario hacia atrás, también al restablecer los filtros.
+    fntRestablecerFechasProyecto();
 
     // 2. Inicializar DataTable
     fntInicializarTablaProyectos();
@@ -45,20 +45,14 @@ $(document).ready(function () {
     // 3. Cargar datos del DataTable
     fntCargarTablaProyectos();
 
-    // 4. Escuchar cambio en el select de periodo
-    $("#filtro_periodo").on("change", function () {
-        const periodo = $(this).val();
-        fntActualizarFechasPorPeriodo(periodo);
-    });
-
-    // 5. Escuchar clic en botón Buscar
+    // Actualizar aplica la búsqueda general y las fechas completas.
     $("#btnFiltrar").on("click", function (e) {
         e.preventDefault();
         fntCargarTablaProyectos();
     });
 
     // 6. Escuchar Enter en inputs de filtro
-    $("#txtProyectoId, #filtro_fecha_ini, #filtro_fecha_fin, #filtro_titulo, #filtro_cliente, #filtro_vendedor").on("keypress", function (e) {
+    $("#txtProyectoId, #filtro_fecha_ini, #filtro_fecha_fin").on("keypress", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
             fntCargarTablaProyectos();
@@ -108,65 +102,16 @@ $(document).ready(function () {
     });
 });
 
-/**
- * Actualiza los campos de fecha inicial y final según el periodo seleccionado
- */
-function fntActualizarFechasPorPeriodo(periodo) {
+/** Restablece un año calendario hasta hoy; el 29 de febrero se ajusta al último día válido. */
+function fntRestablecerFechasProyecto() {
     const hoy = new Date();
-    let fechaIniStr = "";
-    let fechaFinStr = "";
-
-    const formatDDMMYYYY = (d) => {
-        const dd = String(d.getDate()).padStart(2, "0");
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const yyyy = d.getFullYear();
-        return `${dd}/${mm}/${yyyy}`;
-    };
-
-    switch (periodo) {
-        case "este_mes": {
-            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            fechaIniStr = formatDDMMYYYY(primerDia);
-            fechaFinStr = formatDDMMYYYY(hoy);
-            break;
-        }
-        case "mes_anterior": {
-            const primerDiaMesAnt = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-            const ultimoDiaMesAnt = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-            fechaIniStr = formatDDMMYYYY(primerDiaMesAnt);
-            fechaFinStr = formatDDMMYYYY(ultimoDiaMesAnt);
-            break;
-        }
-        case "ano_actual": {
-            const primerDiaAno = new Date(hoy.getFullYear(), 0, 1);
-            fechaIniStr = formatDDMMYYYY(primerDiaAno);
-            fechaFinStr = formatDDMMYYYY(hoy);
-            break;
-        }
-        case "ultimos_30": {
-            const hace30 = new Date();
-            hace30.setDate(hoy.getDate() - 30);
-            fechaIniStr = formatDDMMYYYY(hace30);
-            fechaFinStr = formatDDMMYYYY(hoy);
-            break;
-        }
-        case "todos": {
-            fechaIniStr = "";
-            fechaFinStr = "";
-            break;
-        }
-        case "personalizado":
-        default:
-            return;
-    }
-
-    [['#filtro_fecha_ini', fechaIniStr], ['#filtro_fecha_fin', fechaFinStr]].forEach(function (item) {
-        var control = $(item[0]), partes = item[1].split('/');
-        if ($.fn.datepicker && control.data('datepicker')) {
-            if (item[1]) control.datepicker('setDate', new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0])));
-            else control.datepicker('reset');
-        }
-        control.val(item[1]);
+    const anioInicio = hoy.getFullYear() - 1;
+    const diaInicio = Math.min(hoy.getDate(), new Date(anioInicio, hoy.getMonth() + 1, 0).getDate());
+    const inicio = new Date(anioInicio, hoy.getMonth(), diaInicio);
+    [['#filtro_fecha_ini', inicio], ['#filtro_fecha_fin', hoy]].forEach(function (item) {
+        const control = $(item[0]), fecha = item[1];
+        if ($.fn.datepicker && control.data('datepicker')) control.datepicker('setDate', fecha);
+        control.val(String(fecha.getDate()).padStart(2, '0') + '/' + String(fecha.getMonth() + 1).padStart(2, '0') + '/' + fecha.getFullYear());
         if (control[0]) control[0].setCustomValidity('');
     });
 }
@@ -282,6 +227,13 @@ function fntMarcarSeleccionProyecto() {
     });
 }
 
+/** Folios múltiples: escapar solo la vista; búsqueda, orden y Excel reciben texto plano. */
+function fntRenderOrdenesProyecto(data, type) {
+    const folios = Array.isArray(data) ? data.map(String) : [];
+    if (type !== 'display') return folios.join(', ');
+    return folios.length ? folios.map(fntEscapeHtml).join('<br>') : '—';
+}
+
 /**
  * Inicializa la configuración de DataTables para el listado de Proyectos de Venta
  */
@@ -342,6 +294,21 @@ function fntInicializarTablaProyectos() {
                 }
             },
             {
+                data: "ordenes_compra_cliente", defaultContent: "", width: "180px",
+                className: "text-start align-middle",
+                render: fntRenderOrdenesProyecto
+            },
+            {
+                data: "folios_ocp_proveedor", defaultContent: "", width: "180px",
+                className: "text-start align-middle",
+                render: fntRenderOrdenesProyecto
+            },
+            {
+                data: "folios_facturas", defaultContent: "", width: "180px",
+                className: "text-start align-middle",
+                render: fntRenderOrdenesProyecto
+            },
+            {
                 data: "cliente",
                 className: "text-start align-middle",
                 render: function (data, type, row) {
@@ -372,7 +339,8 @@ function fntInicializarTablaProyectos() {
                     return '<span class="fw-bold text-success">' + fntEscapeHtml((data || "$0.00")) + '</span>';
                 }
             },
-            { data: "estatus_badge", className: "text-center align-middle", orderable: false }
+            // 205 px: aproximadamente 60% más que los 128 px del diseño anterior.
+            { data: "estatus_badge", className: "text-center align-middle pv-col-estatus", width: "205px", orderable: false }
         ],
         language: typeof idioma_espanol !== "undefined" ? idioma_espanol : {}
     });
@@ -398,8 +366,8 @@ function fntCargarTablaProyectos() {
     if (tableProyectosVenta) tableProyectosVenta.clear().draw();
     peticionListadoProyecto = $.ajax({
         type: 'POST', url: base_url + '/seguimiento/getProyectosVentaDatatable', dataType: 'json',
-        data: {fecha_ini: periodo.fecha_ini, fecha_fin: periodo.fecha_fin, busqueda: $('#txtProyectoId').val().trim(),
-            titulo: $('#filtro_titulo').val().trim(), cliente: $('#filtro_cliente').val().trim(), vendedor: $('#filtro_vendedor').val().trim()},
+        // El backend ya busca en folio, título, cliente y vendedor; conserva su alcance por usuario.
+        data: {fecha_ini: periodo.fecha_ini, fecha_fin: periodo.fecha_fin, busqueda: $('#txtProyectoId').val().trim()},
         success: function (data) {
             if (version !== versionListadoProyecto) return;
             if (!Array.isArray(data)) {
@@ -547,6 +515,19 @@ function fntRenderResumenProyecto(p) {
     const moneda = fntMonedaProyecto(p);
     const total = parseFloat(p.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById("lblMontoTotal").textContent = `${moneda} $${total}`;
+    // Las filas se crean como texto: conservar folios múltiples sin interpretar HTML.
+    [['lblOrdenesCliente', p.ordenes_compra_cliente], ['lblFoliosProveedor', p.folios_ocp_proveedor], ['lblFoliosFacturas', p.folios_facturas]].forEach(function (item) {
+        const destino = document.getElementById(item[0]);
+        destino.replaceChildren();
+        const folios = Array.isArray(item[1]) ? item[1] : [];
+        if (!folios.length) { destino.textContent = '—'; return; }
+        folios.forEach(function (folio) {
+            const linea = document.createElement('div');
+            linea.textContent = String(folio);
+            destino.appendChild(linea);
+        });
+    });
+
 }
 
 /**
@@ -683,12 +664,8 @@ function fntSeleccionarProyecto(ventaId) {
  * Limpia los filtros y restablece al estado por defecto
  */
 function fntLimpiarFiltro() {
-    $("#filtro_periodo").val("este_mes");
-    fntActualizarFechasPorPeriodo("este_mes");
+    fntRestablecerFechasProyecto();
     $("#txtProyectoId").val("");
-    $("#filtro_titulo").val("");
-    $("#filtro_cliente").val("");
-    $("#filtro_vendedor").val("");
 
     ventaIdSeleccionado = null;
     fntCargarTablaProyectos();
@@ -1240,6 +1217,11 @@ function fntRenderPartidasProyecto(partidasObj) {
     // Re-inicializar DataTables
     tablePartidasProyecto = LfmTables.create($("#tablePartidasProyecto"), {
         clearColumnFilters: true,
+        // # es un consecutivo: sin búsqueda ni filtro; conserva orden y exportación.
+        // El helper compartido mantiene el botón de limpiar en esta primera celda.
+        columns: Array.from(document.querySelector('#tablePartidasProyecto thead tr').cells, function (_, indice) {
+            return indice === 0 ? {searchable: false} : {};
+        }),
         initComplete: function () { fntPermisoExcelProyecto(this.api()); },
         orderCellsTop: true,
         fixedHeader: true,

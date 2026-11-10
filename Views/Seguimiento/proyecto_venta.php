@@ -187,28 +187,23 @@
                 </div>
             </div>
 
-            <!-- Consulta homologada con OCC: mismos controles y combinación de filtros. -->
+            <!-- Búsqueda general y fechas completas; se combinan sin alterar el alcance autorizado. -->
             <section class="mb-4 report-filters pv-filter-shell" id="panel_filtros" aria-labelledby="filtro_proyectos_titulo">
                 <div class="pv-filter-main">
                     <div class="pv-filter-brand">
                         <span class="pv-filter-icon" aria-hidden="true"><i class="fa-sharp fa-light fa-diagram-project"></i></span>
                         <div><h3 id="filtro_proyectos_titulo">Proyectos de venta</h3><p>Seguimiento · Evaluación del proceso</p></div>
+                    </div>                    <div class="form-group pt-0 mb-0 pv-filter-search">
+                        <label class="form-label" for="txtProyectoId">Buscar proyecto</label>
+                        <input type="text" class="form-control" id="txtProyectoId" name="proyecto_id" placeholder="Proyecto, cliente, vendedor, orden o factura" aria-describedby="ayuda_buscar_proyecto" autocomplete="off">
                     </div>
-                    <div class="form-group pt-0 mb-0 pv-filter-period"><label class="form-label" for="filtro_periodo">Período</label><select class="form-select" id="filtro_periodo" name="filtro_periodo">
-                        <option value="este_mes" selected>Este Mes</option>
-                        <option value="mes_anterior">Mes Anterior</option>
-                        <option value="ano_actual">Año Actual</option>
-                        <option value="ultimos_30">Últimos 30 días</option>
-                        <option value="personalizado">Personalizado</option>
-                        <option value="todos">Todos los Periodos</option>
-                    </select></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_fecha_ini">Fecha inicio</label><input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
+                    <div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_fecha_ini">Fecha inicio</label><input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
                            name="filtro_fecha_ini" id="filtro_fecha_ini" placeholder="dd/mm/aaaa" maxlength="10"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_fecha_fin">Fecha fin</label><input type="text" class="form-control inputDateMask" autocomplete="off" data-toggle="datepicker" 
                            name="filtro_fecha_fin" id="filtro_fecha_fin" placeholder="dd/mm/aaaa" maxlength="10"></div>
                     <div class="pv-filter-action"><button type="button" class="btn btn-primary w-100 lfm-btn-action lfm-btn-action--primary" id="btnFiltrar"><i class="fa-regular fa-arrows-rotate me-1" aria-hidden="true"></i>Actualizar</button></div>
                 </div>
-                <div class="pv-filter-extra"><div class="form-group pt-0 mb-0 "><label class="form-label" for="txtProyectoId">Clave / Folio</label><input type="text" class="form-control" id="txtProyectoId" name="proyecto_id" placeholder="Ej. 18654 ó PV-2026-18654" autocomplete="off"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_titulo">Título / Proyecto</label><input type="text" class="form-control" id="filtro_titulo" name="filtro_titulo" placeholder="Ej. LNN MANZANILLO..." autocomplete="off"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_cliente">Cliente</label><input type="text" class="form-control" id="filtro_cliente" name="filtro_cliente" placeholder="Nombre comercial o razón social" autocomplete="off"></div><div class="form-group pt-0 mb-0 "><label class="form-label" for="filtro_vendedor">Vendedor</label><input type="text" class="form-control" id="filtro_vendedor" name="filtro_vendedor" placeholder="Nombre del vendedor" autocomplete="off"></div></div>
                 <div class="pv-filter-footer">
-                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>Las fechas y los filtros se aplican en conjunto.</span>
+                    <span><i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i><span id="ayuda_buscar_proyecto">Incluye órdenes de compra finalizadas y folios de facturas activas y timbradas, con o sin serie. La búsqueda y las fechas se aplican en conjunto.</span></span>
                     <button type="button" class="btn btn-sm btn-outline-secondary lfm-btn-action lfm-btn-action--quiet" id="btnLimpiarFiltro" onclick="fntLimpiarFiltro()" title="Restablecer filtros"><i class="fa-regular fa-filter-circle-xmark me-1" aria-hidden="true"></i>Restablecer filtros</button>
                 </div>
             </section>
@@ -233,6 +228,9 @@
                                 <th class="border-bottom-0 fw-semibold text-center">Opciones</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto Venta</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Fecha</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Número OCC</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Folio OCP</th>
+                                <th class="border-bottom-0 fw-semibold text-center">Folios de facturas</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Cliente</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Proyecto / Título</th>
                                 <th class="border-bottom-0 fw-semibold text-center">Vendedor</th>
@@ -344,6 +342,24 @@
                                                 <div class="p-3 bg-white rounded border h-100 shadow-2xs">
                                                     <small class="text-muted d-block text-uppercase fw-semibold fs-11">Monto Oportunidad / Venta</small>
                                                     <span class="fw-bold text-success fs-15 d-block" id="lblMontoTotal">—</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Números OCC</small>
+                                                    <div class="fw-semibold text-dark fs-14 text-break" id="lblOrdenesCliente">—</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Folios OCP</small>
+                                                    <div class="fw-semibold text-dark fs-14 text-break" id="lblFoliosProveedor">—</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="p-3 bg-white rounded border h-100 shadow-2xs">
+                                                    <small class="text-muted d-block text-uppercase fw-semibold fs-11">Facturas activas y timbradas</small>
+                                                    <div class="fw-semibold text-dark fs-14 text-break" id="lblFoliosFacturas">—</div>
                                                 </div>
                                             </div>
                                         </div>
