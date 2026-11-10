@@ -100,3 +100,43 @@ table.lfm-datatable.fixedHeader-locked .pv-col-estatus {
 @media (min-width: 1400px) {
     .proyecto-venta-page :is(#tab-detalle-seguimiento, #tab-adjuntos-proyecto) > .card { width: 50%; }
 }
+
+/* Resumen ejecutivo: cuatro cifras de decisión, con superficies suaves y sin cabeceras de tabla. */
+.proyecto-venta-page #pv_panel_kpis .executive-eyebrow { color: var(--pv-muted); font-size: var(--font-small); font-weight: var(--font-weight-medium); letter-spacing: .06em; text-transform: uppercase; }
+.proyecto-venta-page #pv_panel_kpis .executive-heading { color: var(--pv-text); font-family: var(--font-family-report); font-size: 18px; font-weight: var(--font-weight-semibold); }
+.proyecto-venta-page #pv_panel_kpis .executive-scope { padding: .375rem .75rem; border: 1px solid var(--pv-border); border-radius: 20px; color: var(--pv-muted); font-size: var(--font-small); background: var(--pv-surface); }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi {
+    position: relative;
+    --exec-tone: #075985;
+    --exec-surface: #f0f7fc;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.125rem;
+    background: var(--exec-surface);
+    border: 1px solid var(--pv-border);
+    border-top: 3px solid var(--exec-tone);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(15, 40, 70, .06);
+    min-width: 0;
+}
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-late { --exec-tone: #8b3540; --exec-surface: #fff4f5; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-soon { --exec-tone: #75560b; --exec-surface: #fff9eb; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-supplier { --exec-tone: #654b8e; --exec-surface: #f7f3fc; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-top h4 { margin: 0; font-family: var(--font-family-report); color: var(--pv-text); font-size: var(--font-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-heading); }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-top > i { display: flex; justify-content: center; align-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; background: var(--pv-surface); color: var(--exec-tone); font-size: 16px; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-value { color: var(--exec-tone); font-size: 36px; font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); margin: .625rem 0 .5rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-caption { margin-top: auto; color: var(--pv-muted); font-size: var(--font-small); line-height: var(--line-height-normal); }
+.proyecto-venta-page #pv_panel_kpis .executive-footnote { color: var(--pv-muted); font-size: var(--font-small); line-height: var(--line-height-normal); }
+html.dark .proyecto-venta-page #pv_panel_kpis .executive-kpi-open { --exec-tone: #9ad7f4; --exec-surface: #203448; }
+html.dark .proyecto-venta-page #pv_panel_kpis .executive-kpi-late { --exec-tone: #edbac3; --exec-surface: #382a36; }
+html.dark .proyecto-venta-page #pv_panel_kpis .executive-kpi-soon { --exec-tone: #ead69b; --exec-surface: #383427; }
+html.dark .proyecto-venta-page #pv_panel_kpis .executive-kpi-supplier { --exec-tone: #d4c3ef; --exec-surface: #302c43; }
+
+/* Interacción del resumen: conserva colores y cifras al filtrar. */
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-filter { position: absolute; inset: 0; z-index: 1; border: 0; border-radius: inherit; padding: 0; background: transparent; cursor: pointer; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-filter:disabled { cursor: default; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi-filter:focus-visible { outline: 3px solid var(--exec-tone); outline-offset: 3px; }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi.is-selected { box-shadow: 0 0 0 2px var(--exec-tone), 0 3px 10px rgba(15, 40, 70, .12); }
+.proyecto-venta-page #pv_panel_kpis .executive-kpi:has(.executive-kpi-filter:enabled:hover) { border-color: var(--exec-tone); }
+.proyecto-venta-page .pv-executive-filter-notice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; padding: .625rem .875rem; background: var(--pv-soft); border: 1px solid var(--pv-border); border-radius: 6px; color: var(--pv-accent); font-size: var(--font-small); }

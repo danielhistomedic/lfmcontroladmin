@@ -2,7 +2,7 @@
 
 //******************************** */
 // [ Versión del Sistema ]
-const VERSION_SYS = "1.0.64";
+const VERSION_SYS = "1.0.66";
 const DIR = __DIR__;
 
 //******************************** */

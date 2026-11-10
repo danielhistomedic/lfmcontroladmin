@@ -26,8 +26,18 @@ var detalleProyectoListo = false, detalleProyectoEnCurso = false, scrollPendient
 var estadoColeccionesProyecto = {seguimientos: 'pendiente', adjuntos: 'pendiente'};
 var permisoExcelProyecto = null, consultaPermisoExcelProyecto = false;
 var tablasPermisoExcelProyecto = new Set();
+var filtroEjecutivoProyecto = '';
+var resumenEjecutivoProyectoListo = false;
 
 $(document).ready(function () {
+    // Filtro local independiente: no reemplaza búsquedas, columnas, fechas ni permisos.
+    $('#pv_panel_kpis').on('click.filtroEjecutivo', '[data-kpi-proyecto]', function () {
+        if (!this.disabled) fntAplicarFiltroEjecutivoProyecto(this.dataset.kpiProyecto);
+    });
+    $('#pv_quitar_filtro_ejecutivo').on('click.filtroEjecutivo', function () {
+        fntAplicarFiltroEjecutivoProyecto('');
+    });
+
 
     // Consultar cada colección al abrir su pestaña, una sola vez por selección.
     $('#tabProyectoVenta [data-bs-toggle="tab"], #tabProyectoVenta [data-toggle="tab"]').on('shown.bs.tab', function (e) {
@@ -244,6 +254,10 @@ function fntRenderOrdenesProyecto(data, type) {
  * Inicializa la configuración de DataTables para el listado de Proyectos de Venta
  */
 function fntInicializarTablaProyectos() {
+    if (!$.fn.dataTable.ext.search.includes(fntFiltrarIndicadorProyecto)) {
+        $.fn.dataTable.ext.search.push(fntFiltrarIndicadorProyecto);
+    }
+
     tableProyectosVenta = LfmTables.create($(tableElement), {
         clearColumnFilters: true,
         initComplete: function () { fntPermisoExcelProyecto(this.api()); },
@@ -368,6 +382,84 @@ function fntInicializarTablaProyectos() {
     });
 }
 
+/** Una sola definición para tarjetas y filas: los folios ya vienen autorizados del servidor. */
+function fntIndicadoresEjecutivosProyecto(proyecto) {
+    const activo = fntEstadoActivoProyecto(proyecto.activo).clase !== 'bg-danger';
+    const tieneFolios = valores => Array.isArray(valores) && valores.some(v => String(v == null ? '' : v).trim() !== '');
+    const occ = tieneFolios(proyecto.ordenes_compra_cliente);
+    // Id 5: Cotización cliente elaborada (Pedido Cotizado), sin incluir otras etapas.
+    // Esta definición compartida mantiene iguales el conteo de la tarjeta y su filtro.
+    return {activos: activo, por_colocar: activo && Number(proyecto.estatus_proyecto_id) === 5,
+        por_facturar: activo && occ && !tieneFolios(proyecto.folios_facturas), declinados: !activo};
+}
+
+/** DataTables comparte sus predicados: limitar este filtro exclusivamente a la lista de proyectos. */
+function fntFiltrarIndicadorProyecto(settings, datosBusqueda, indice, fila) {
+    if (settings.nTable.id !== 'tableProyectosVenta' || !filtroEjecutivoProyecto) return true;
+    const proyecto = fila || (settings.aoData[indice] && settings.aoData[indice]._aData);
+    return !!proyecto && fntIndicadoresEjecutivosProyecto(proyecto)[filtroEjecutivoProyecto] === true;
+}
+
+/** Marca la tarjeta sin cambiar sus cifras; comunica el filtro vigente y permite retirarlo. */
+function fntSincronizarFiltroEjecutivoProyecto() {
+    const nombres = {activos: 'Proyectos activos', por_colocar: 'Por colocar', por_facturar: 'Por facturar', declinados: 'Declinados'};
+    document.querySelectorAll('#pv_panel_kpis [data-kpi-proyecto]').forEach(function (boton) {
+        const elegido = boton.dataset.kpiProyecto === filtroEjecutivoProyecto;
+        boton.disabled = !resumenEjecutivoProyectoListo;
+        boton.setAttribute('aria-pressed', elegido ? 'true' : 'false');
+        boton.closest('.executive-kpi').classList.toggle('is-selected', elegido);
+    });
+    const aviso = document.getElementById('pv_aviso_filtro_ejecutivo');
+    aviso.classList.toggle('d-none', !filtroEjecutivoProyecto);
+    document.getElementById('pv_texto_filtro_ejecutivo').textContent = filtroEjecutivoProyecto
+        ? 'Filtro ejecutivo: ' + nombres[filtroEjecutivoProyecto] + '. Se conservan las búsquedas de la tabla.' : '';
+}
+
+/** Solo redibuja la tabla; no consulta datos ni altera su búsqueda/visibilidad/selección. */
+function fntAplicarFiltroEjecutivoProyecto(indicador) {
+    if (!['', 'activos', 'por_colocar', 'por_facturar', 'declinados'].includes(indicador)) return;
+    if (indicador && !resumenEjecutivoProyectoListo) return;
+    filtroEjecutivoProyecto = indicador;
+    fntSincronizarFiltroEjecutivoProyecto();
+    if (tableProyectosVenta) tableProyectosVenta.draw();
+}
+
+/** Conteos de proyectos únicos del resultado autorizado completo, no de la página visible.
+ * Por colocar y por facturar son subconjuntos de activos. No se suman importes ni monedas.
+ * Las OCC/facturas del payload ya cumplen sus reglas de finalización/timbrado en servidor.
+ */
+function fntCalcularResumenEjecutivoProyecto(datos) {
+    const proyectos = new Map();
+    datos.forEach(function (p) { if (p && p.id != null) proyectos.set(String(p.id), p); });
+    const conteos = {total: proyectos.size, activos: 0, por_colocar: 0, por_facturar: 0, declinados: 0};
+    proyectos.forEach(function (p) {
+        const indicadores = fntIndicadoresEjecutivosProyecto(p);
+        Object.keys(indicadores).forEach(function (clave) { if (indicadores[clave]) conteos[clave]++; });
+    });
+    return conteos;
+}
+
+/** Carga/error no equivalen a ceros. Solo el listado actualiza estos indicadores. */
+function fntActualizarResumenEjecutivoProyecto(estado, datos = []) {
+    const panel = document.getElementById('pv_panel_kpis');
+    if (!panel) return;
+    panel.setAttribute('aria-busy', estado === 'cargando' ? 'true' : 'false');
+    resumenEjecutivoProyectoListo = estado === 'ok';
+    fntSincronizarFiltroEjecutivoProyecto();
+    const conteos = estado === 'ok' ? fntCalcularResumenEjecutivoProyecto(datos) : null;
+    const numero = new Intl.NumberFormat('es-MX');
+    ['activos', 'por_colocar', 'por_facturar', 'declinados'].forEach(function (clave) {
+        document.getElementById('pv_kpi_' + clave).textContent = conteos ? numero.format(conteos[clave]) : '—';
+    });
+    document.getElementById('pv_kpi_total').textContent = conteos
+        ? numero.format(conteos.total) + (conteos.total === 1 ? ' proyecto consultado' : ' proyectos consultados')
+        : (estado === 'cargando' ? 'Consultando proyectos…' : 'Consulta no disponible');
+    document.getElementById('pv_kpi_nota').textContent = conteos
+        ? (conteos.total ? 'Por colocar y por facturar son subconjuntos de activos. ' : 'No hay proyectos para los filtros consultados. ')
+            + 'Pulsa una tarjeta para filtrar. Los conteos corresponden al período y buscador superior, sin reducirse por los filtros de la tabla.'
+        : (estado === 'cargando' ? 'Consultando los resultados del período y la búsqueda.' : 'No fue posible calcular el resumen. Actualiza la consulta para intentar de nuevo.');
+}
+
 /**
  * Carga (o recarga) el DataTable de Proyectos de Venta vía AJAX
  */
@@ -375,6 +467,7 @@ function fntCargarTablaProyectos() {
     const periodo = fntPeriodoProyecto();
     if (!periodo) return;
     const version = ++versionListadoProyecto;
+    fntActualizarResumenEjecutivoProyecto('cargando');
     if (peticionListadoProyecto && peticionListadoProyecto.abort) peticionListadoProyecto.abort();
     fntInvalidarDetalleProyecto();
     fntMostrarEstadoUI('loading');
@@ -386,21 +479,26 @@ function fntCargarTablaProyectos() {
         success: function (data) {
             if (version !== versionListadoProyecto) return;
             if (!Array.isArray(data)) {
+                fntActualizarResumenEjecutivoProyecto('error');
                 ventaIdSeleccionado = null; fntMostrarEstadoUI('error', 'La consulta de proyectos no pudo completarse.'); return;
             }
+            fntActualizarResumenEjecutivoProyecto('ok', data);
             if (tableProyectosVenta) tableProyectosVenta.clear().rows.add(data).draw();
-            if (data.length) {
-                const previo = data.find(item => String(item.id) === String(ventaIdSeleccionado));
-                fntCargarDetalleProyecto(previo ? previo.id : data[0].id, false);
+            const candidatos = filtroEjecutivoProyecto && tableProyectosVenta
+                ? tableProyectosVenta.rows({search: 'applied'}).data().toArray() : data;
+            if (candidatos.length) {
+                const previo = candidatos.find(item => String(item.id) === String(ventaIdSeleccionado));
+                fntCargarDetalleProyecto(previo ? previo.id : candidatos[0].id, false);
             } else {
                 ventaIdSeleccionado = null;
-                fntMostrarEstadoUI('vacio', 'No hay proyectos para los filtros consultados.');
+                fntMostrarEstadoUI('vacio', data.length ? 'No hay proyectos para la combinación de filtros de la lista.' : 'No hay proyectos para los filtros consultados.');
                 fntEstadoColeccionProyecto('seguimientos', 'vacio'); fntEstadoColeccionProyecto('adjuntos', 'vacio');
                 $('#badge_total_partidas').text(0);
             }
         },
         error: function (xhr, status) {
             if (version !== versionListadoProyecto || status === 'abort') return;
+            fntActualizarResumenEjecutivoProyecto('error');
             ventaIdSeleccionado = null;
             fntMostrarEstadoUI('error', (xhr.responseJSON && (xhr.responseJSON.mensaje || xhr.responseJSON.msg)) || 'No fue posible consultar los proyectos. Intenta nuevamente.');
         },
@@ -685,6 +783,8 @@ function fntSeleccionarProyecto(ventaId) {
  * Limpia los filtros y restablece al estado por defecto
  */
 function fntLimpiarFiltro() {
+    filtroEjecutivoProyecto = '';
+    fntSincronizarFiltroEjecutivoProyecto();
     fntRestablecerFechasProyecto();
     $("#txtProyectoId").val("");
 

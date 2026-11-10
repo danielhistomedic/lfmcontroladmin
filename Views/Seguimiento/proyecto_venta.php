@@ -209,6 +209,50 @@
             </section>
             <!-- ========== FIN FILTROS ========== -->
 
+            <!-- Resumen del conjunto autorizado: no suma monedas ni repite consultas. -->
+            <section class="row g-3 mb-4" id="pv_panel_kpis" aria-labelledby="pv_resumen_titulo" aria-busy="true">
+                <div class="col-12 d-flex flex-wrap justify-content-between align-items-end gap-2">
+                    <div>
+                        <p class="executive-eyebrow mb-1">Control comercial</p>
+                        <h3 class="executive-heading mb-0" id="pv_resumen_titulo">Resumen ejecutivo</h3>
+                    </div>
+                    <span class="executive-scope" id="pv_kpi_total" role="status" aria-live="polite">Consultando proyectos…</span>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <article class="executive-kpi executive-kpi-open h-100" aria-labelledby="pv_kpi_activos_titulo">
+                        <button type="button" class="executive-kpi-filter" data-kpi-proyecto="activos" aria-labelledby="pv_kpi_activos_titulo" aria-describedby="pv_kpi_activos" aria-controls="tableProyectosVenta" aria-pressed="false" disabled></button>
+                        <div class="executive-kpi-top"><h4 id="pv_kpi_activos_titulo">Proyectos activos</h4><i class="fa-regular fa-diagram-project" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="pv_kpi_activos">—</div>
+                        <p class="executive-kpi-caption mb-0">Cartera activa, excluye proyectos declinados</p>
+                    </article>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <article class="executive-kpi executive-kpi-soon h-100" aria-labelledby="pv_kpi_por_colocar_titulo">
+                        <button type="button" class="executive-kpi-filter" data-kpi-proyecto="por_colocar" aria-labelledby="pv_kpi_por_colocar_titulo" aria-describedby="pv_kpi_por_colocar" aria-controls="tableProyectosVenta" aria-pressed="false" disabled></button>
+                        <div class="executive-kpi-top"><h4 id="pv_kpi_por_colocar_titulo">Por colocar</h4><i class="fa-regular fa-cart-shopping" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="pv_kpi_por_colocar">—</div>
+                        <p class="executive-kpi-caption mb-0">Activos en Pedido Cotizado (cotización cliente elaborada)</p>
+                    </article>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <article class="executive-kpi executive-kpi-supplier h-100" aria-labelledby="pv_kpi_por_facturar_titulo">
+                        <button type="button" class="executive-kpi-filter" data-kpi-proyecto="por_facturar" aria-labelledby="pv_kpi_por_facturar_titulo" aria-describedby="pv_kpi_por_facturar" aria-controls="tableProyectosVenta" aria-pressed="false" disabled></button>
+                        <div class="executive-kpi-top"><h4 id="pv_kpi_por_facturar_titulo">Por facturar</h4><i class="fa-regular fa-file-invoice-dollar" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="pv_kpi_por_facturar">—</div>
+                        <p class="executive-kpi-caption mb-0">Activos con OCC y sin factura activa y timbrada</p>
+                    </article>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <article class="executive-kpi executive-kpi-late h-100" aria-labelledby="pv_kpi_declinados_titulo">
+                        <button type="button" class="executive-kpi-filter" data-kpi-proyecto="declinados" aria-labelledby="pv_kpi_declinados_titulo" aria-describedby="pv_kpi_declinados" aria-controls="tableProyectosVenta" aria-pressed="false" disabled></button>
+                        <div class="executive-kpi-top"><h4 id="pv_kpi_declinados_titulo">Declinados</h4><i class="fa-regular fa-circle-xmark" aria-hidden="true"></i></div>
+                        <div class="executive-kpi-value" id="pv_kpi_declinados">—</div>
+                        <p class="executive-kpi-caption mb-0">Proyectos marcados como declinados</p>
+                    </article>
+                </div>
+                <div class="col-12"><p class="executive-footnote mb-0" id="pv_kpi_nota">Consultando los resultados del período y la búsqueda.</p></div>
+            </section>
+
             <!-- ========== PRIMERA SECCIÓN: LISTA DE PROYECTOS DE VENTA (DATATABLE) ========== -->
             <div class="chart-container border mb-4" id="panel_lista_proyectos">
 
@@ -217,6 +261,11 @@
                         <i class="fa-regular fa-bars-staggered text-primary me-2"></i> Lista de Proyectos de Venta
                     </div>
                     <small class="text-muted fw-normal fs-12">Haga clic en un registro de la lista para ver su detalle de seguimiento</small>
+                </div>
+
+                <div class="pv-executive-filter-notice d-none mb-3" id="pv_aviso_filtro_ejecutivo" role="status">
+                    <span id="pv_texto_filtro_ejecutivo"></span>
+                    <button type="button" class="btn btn-outline-secondary lfm-btn-action lfm-btn-action--quiet" id="pv_quitar_filtro_ejecutivo">Quitar filtro ejecutivo</button>
                 </div>
 
                 <!-- Tabla de Proyectos de Venta -->
